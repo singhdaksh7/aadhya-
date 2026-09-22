@@ -1,7 +1,9 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { useSiteSettings } from "../hooks/useSiteSettings";
 
 export default function Footer() {
+  const { supportEmail, supportPhone } = useSiteSettings();
   return (
     <footer className="border-t border-charcoal/10 bg-ivory-dark/90 text-charcoal">
       <div className="mx-auto max-w-7xl px-5 py-16 sm:px-8">
@@ -16,7 +18,8 @@ export default function Footer() {
             </p>
             <div className="pt-2 text-xs text-charcoal-soft space-y-1">
               <p>📍 Crafted with care in India</p>
-              <p>✉️ concierge@aadyahome.com</p>
+              {supportEmail && <p>✉️ {supportEmail}</p>}
+              {supportPhone && <p>📞 {supportPhone}</p>}
             </div>
           </div>
 

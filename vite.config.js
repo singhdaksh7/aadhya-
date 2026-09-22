@@ -17,6 +17,9 @@ export default defineConfig({
     // This directory has an unrelated nested project under .kilo/ — scope
     // Vitest strictly to our own test directory so it never picks that up.
     include: ["tests/**/*.{test,spec}.{js,jsx}"],
-    exclude: ["node_modules", "server", ".kilo", "dist"],
+    // tests/e2e is Playwright's suite, not Vitest's — it uses
+    // test.describe.configure(), which Playwright's runner requires and
+    // Vitest rejects.
+    exclude: ["node_modules", "server", ".kilo", "dist", "tests/e2e"],
   },
 })

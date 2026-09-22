@@ -1,0 +1,106 @@
+name: aadya
+
+services:
+  aadya-db:
+    image: postgres:16-alpine
+    container_name: aadya-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-aadya}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-aadya}
+    volumes:
+      - aadya_postgres_data:/var/lib/postgresql/data
+    # No host port published — Postgres is reachable only from other
+    # containers on the aadya_internal network, never from the internet.
+    networks:
+      - aadya_internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-aadya} -d ${POSTGRES_DB:-aadya}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  aadya-api:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: aadya-api
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      # Built from the same POSTGRES_* values as aadya-db so the two can
+      # never drift apart — do not also set DATABASE_URL in .env.production.
+      DATABASE_URL: postgresql://${POSTGRES_USER:-aadya}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@aadya-db:5432/${POSTGRES_DB:-aadya}?schema=public
+    depends_on:
+      aadya-db:
+        condition: service_healthy
+    volumes:
+      - aadya_uploads:/app/uploads
+    networks:
+      - aadya_internal
+      - aadya_public
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:'+ (process.env.PORT||4100) +'/api/health').then(r=>r.ok?process.exit(0):process.exit(1)).catch(()=>process.exit(1))\""]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    labels:
+      # --- Traefik integration ---
+      # These labels are INACTIVE unless this service also joins the actual
+      # Traefik network below (see "aadya_public" under networks: at the
+      # bottom of this file) — replace <TRAEFIK_NETWORK> and
+      # <CERT_RESOLVER_NAME> with the real names from `docker inspect` on
+      # the existing Traefik container before enabling. Do not invent them.
+      - "traefik.enable=true"
+      - "traefik.http.routers.aadya-api.rule=Host(`api-store.${DOMAIN:-example.com}`)"
+      - "traefik.http.routers.aadya-api.entrypoints=websecure"
+      - "traefik.http.routers.aadya-api.tls.certresolver=${TRAEFIK_CERT_RESOLVER:-le}"
+      - "traefik.http.services.aadya-api.loadbalancer.server.port=4100"
+      - "traefik.docker.network=${TRAEFIK_NETWORK:-traefik_public}"
+
+  aadya-web:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+        VITE_API_URL: ${VITE_API_URL:?VITE_API_URL is required at build time, e.g. https://api-store.example.com/api}
+    container_name: aadya-web
+    restart: unless-stopped
+    networks:
+      - aadya_public
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:80/"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.aadya-web.rule=Host(`store.${DOMAIN:-example.com}`)"
+      - "traefik.http.routers.aadya-web.entrypoints=websecure"
+      - "traefik.http.routers.aadya-web.tls.certresolver=${TRAEFIK_CERT_RESOLVER:-le}"
+      - "traefik.http.services.aadya-web.loadbalancer.server.port=80"
+      - "traefik.docker.network=${TRAEFIK_NETWORK:-traefik_public}"
+
+volumes:
+  aadya_postgres_data:
+  aadya_uploads:
+
+networks:
+  # Private network shared only between aadya-api and aadya-db — Postgres is
+  # never reachable from aadya_public or the host.
+  aadya_internal:
+    driver: bridge
+  # aadya-api and aadya-web join this one. If an existing Traefik proxy
+  # already owns host ports 80/443, make this network EXTERNAL and point it
+  # at Traefik's actual network name (`docker network ls` on the VPS) instead
+  # of letting compose create a fresh isolated one — otherwise Traefik can't
+  # reach these containers. Example:
+  #   aadya_public:
+  #     external: true
+  #     name: traefik_public
+  aadya_public:
+    driver: bridge

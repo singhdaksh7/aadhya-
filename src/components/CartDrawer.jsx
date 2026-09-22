@@ -4,16 +4,16 @@ import { useCart } from "../context/CartContext";
 import { IconClose, IconCart } from "./icons";
 import { formatInr } from "../lib/format";
 import { EmptyCartState } from "./ui/EmptyState";
-
-const FREE_SHIPPING_THRESHOLD = 2499;
+import { useSiteSettings } from "../hooks/useSiteSettings";
 
 export default function CartDrawer() {
   const { items, isOpen, setIsOpen, removeItem, setQuantity, subtotal, lineTotal, isLoading } = useCart();
+  const { freeShippingThreshold } = useSiteSettings();
 
   if (!isOpen) return null;
 
-  const freeShippingProgress = Math.min(100, Math.round((subtotal / FREE_SHIPPING_THRESHOLD) * 100));
-  const amountNeeded = FREE_SHIPPING_THRESHOLD - subtotal;
+  const freeShippingProgress = Math.min(100, Math.round((subtotal / freeShippingThreshold) * 100));
+  const amountNeeded = freeShippingThreshold - subtotal;
 
   return (
     <div className="fixed inset-0 z-50">
@@ -36,7 +36,7 @@ export default function CartDrawer() {
 
         {/* Free Delivery Progress Bar */}
         <div className="bg-beige-light/70 px-6 py-3 border-b border-charcoal/10 text-xs">
-          {subtotal >= FREE_SHIPPING_THRESHOLD ? (
+          {subtotal >= freeShippingThreshold ? (
             <p className="font-semibold text-green-deep">🎉 You unlocked Free Pan-India Shipping!</p>
           ) : (
             <p className="text-charcoal-soft">
@@ -137,7 +137,7 @@ export default function CartDrawer() {
               </div>
               <div className="flex justify-between">
                 <span>Shipping</span>
-                <span>{subtotal >= FREE_SHIPPING_THRESHOLD ? "FREE" : "Calculated at checkout"}</span>
+                <span>{subtotal >= freeShippingThreshold ? "FREE" : "Calculated at checkout"}</span>
               </div>
               <p className="text-[11px] text-charcoal-soft/80">Taxes included. Free 7-day returns.</p>
             </div>

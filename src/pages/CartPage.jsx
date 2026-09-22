@@ -3,11 +3,11 @@ import { Link } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { formatInr } from "../lib/format";
 import { EmptyCartState } from "../components/ui/EmptyState";
-
-const FREE_SHIPPING_THRESHOLD = 2499;
+import { useSiteSettings } from "../hooks/useSiteSettings";
 
 export default function CartPage() {
   const { items, isLoading, removeItem, setQuantity, subtotal, lineTotal } = useCart();
+  const { freeShippingThreshold, standardShippingAmount } = useSiteSettings();
   const [promoCode, setPromoCode] = useState("");
   const [promoApplied, setPromoApplied] = useState(false);
   const [promoError, setPromoError] = useState("");
@@ -23,7 +23,7 @@ export default function CartPage() {
   };
 
   const discount = promoApplied ? Math.round(subtotal * 0.1) : 0;
-  const shippingFee = subtotal >= FREE_SHIPPING_THRESHOLD || subtotal === 0 ? 0 : 150;
+  const shippingFee = subtotal >= freeShippingThreshold || subtotal === 0 ? 0 : standardShippingAmount;
   const finalTotal = subtotal - discount + shippingFee;
 
   return (

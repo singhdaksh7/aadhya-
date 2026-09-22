@@ -3,10 +3,8 @@ import { NavLink, Link, useLocation } from "react-router-dom";
 import { IconMenu, IconClose, IconCart } from "./icons";
 import { useCart } from "../context/CartContext";
 import { useCustomerAuth } from "../context/CustomerAuthContext";
-import { fetchSiteSettings } from "../lib/api";
+import { useSiteSettings } from "../hooks/useSiteSettings";
 import SearchModal from "./SearchModal";
-
-const DEFAULT_ANNOUNCEMENT = "Free delivery above ₹2,499 • Pan-India Express Shipping • Crafted by Master Indian Artisans";
 
 const NAV_LINKS = [
   { to: "/shop", label: "Home Decor" },
@@ -24,23 +22,12 @@ export default function Navbar() {
   const { count, setIsOpen: setCartDrawerOpen } = useCart();
   const location = useLocation();
   const { user } = useCustomerAuth();
-  const [announcement, setAnnouncement] = useState(DEFAULT_ANNOUNCEMENT);
+  const { announcementBar } = useSiteSettings();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  useEffect(() => {
-    // Settings are optional site dressing — a missing/failed fetch falls
-    // back to the default copy rather than showing an empty bar or an error.
-    fetchSiteSettings()
-      .then((res) => {
-        const bar = res.data?.announcementBar;
-        if (bar?.active && bar.text) setAnnouncement(bar.text);
-      })
-      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -50,9 +37,11 @@ export default function Navbar() {
   return (
     <>
       {/* Top Announcement Bar */}
-      <div className="bg-charcoal px-4 py-2 text-center text-xs font-medium tracking-wide text-ivory">
-        <span>{announcement}</span>
-      </div>
+      {announcementBar?.active && announcementBar?.text && (
+        <div className="bg-charcoal px-4 py-2 text-center text-xs font-medium tracking-wide text-ivory">
+          <span>{announcementBar.text}</span>
+        </div>
+      )}
 
       {/* Main Sticky Header */}
       <header

@@ -17,8 +17,38 @@ dist-ssr
 !.vscode/extensions.json
 .idea
 .DS_Store
+Thumbs.db
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+
+# Environment files
+.env
+.env.*
+!.env.example
+!.env.development
+!.env.production.example
+
+server/.env
+server/.env.*
+!server/.env.example
+
+# Server deps/build
+server/node_modules/
+server/dist/
+
+# Test / coverage output
+coverage/
+playwright-report/
+test-results/
+*.log
+
+# Uploaded product images (persisted via Docker volume in prod)
+server/uploads/*
+!server/uploads/products/.gitkeep
+
+# Local AI-tooling / editor metadata (never useful to other contributors)
+.kilo/
+.netlify/

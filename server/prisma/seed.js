@@ -220,11 +220,20 @@ async function seedExpandedDemo() {
   for (const [index, title] of ["New Arrivals", "Best Sellers", "Home Sanctuary", "Reading Room"].entries()) { const collection = await prisma.collection.upsert({ where: { slug: slugify(title) }, update: { isActive: true, sortOrder: index }, create: { title, slug: slugify(title), description: `Demo ${title} collection`, isActive: true, sortOrder: index } }); for (const [position, product] of products.filter((p) => index === 3 ? p.productType === "BOOK" : index === 1 ? p.isBestSeller : index === 0 ? p.isNewArrival : p.productType === "PHYSICAL").slice(0, 12).entries()) await prisma.collectionProduct.upsert({ where: { collectionId_productId: { collectionId: collection.id, productId: product.id } }, update: { sortOrder: position }, create: { collectionId: collection.id, productId: product.id, sortOrder: position } }); }
 }
 
+// `npm run seed` always creates the first admin user — that's required for
+// every environment, including production. It only seeds the demo catalog
+// (placeholder books/products/collections) when explicitly opted into via
+// SEED_DEMO_CATALOG=true or `npm run seed:demo`, so production launches
+// never get populated with demo merchandising by accident.
 async function main() {
   await seedAdmin();
-  await seedBooksCategoryAndProducts();
-  await seedShopCategoriesAndProducts();
-  await seedExpandedDemo();
+  if (process.env.SEED_DEMO_CATALOG === "true") {
+    await seedBooksCategoryAndProducts();
+    await seedShopCategoriesAndProducts();
+    await seedExpandedDemo();
+  } else {
+    console.log("SEED_DEMO_CATALOG is not 'true' — skipping demo catalog seed.");
+  }
 }
 
 main()

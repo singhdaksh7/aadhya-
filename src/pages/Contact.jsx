@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { SectionHeading, Button } from "../components/ui";
 import { IconCheck } from "../components/icons";
+import { useSiteSettings } from "../hooks/useSiteSettings";
 
 const enquiryTypes = ["Training", "Consultation", "Research", "Events", "Shop", "General"];
 
 export default function Contact() {
+  const { supportEmail, supportPhone } = useSiteSettings();
   const [submitted, setSubmitted] = useState(false);
   const [form, setForm] = useState({
     name: "",
@@ -99,11 +101,11 @@ export default function Contact() {
         <div className="space-y-6">
           <div className="rounded-2xl border border-charcoal/10 bg-white/50 p-6">
             <p className="text-xs uppercase tracking-wide text-charcoal-soft/70">Email</p>
-            <p className="mt-1 text-sm text-charcoal-soft">Contact email to be added by client.</p>
+            <p className="mt-1 text-sm text-charcoal-soft">{supportEmail || "Contact email to be added by client."}</p>
           </div>
           <div className="rounded-2xl border border-charcoal/10 bg-white/50 p-6">
             <p className="text-xs uppercase tracking-wide text-charcoal-soft/70">Phone</p>
-            <p className="mt-1 text-sm text-charcoal-soft">Contact number to be added by client.</p>
+            <p className="mt-1 text-sm text-charcoal-soft">{supportPhone || "Contact number to be added by client."}</p>
           </div>
           <div className="rounded-2xl border border-charcoal/10 bg-white/50 p-6">
             <p className="text-xs uppercase tracking-wide text-charcoal-soft/70">Location</p>
