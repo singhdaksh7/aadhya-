@@ -1,0 +1,402 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AdminRole {
+  SUPER_ADMIN
+  ADMIN
+}
+
+enum ProductType {
+  BOOK
+  PHYSICAL
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+model AdminUser {
+  id           String    @id @default(uuid())
+  name         String
+  email        String    @unique
+  passwordHash String
+  role         AdminRole @default(ADMIN)
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([email])
+}
+
+model Customer {
+  id              String                @id @default(uuid())
+  name            String
+  email           String                @unique
+  phone           String?
+  passwordHash    String
+  isActive        Boolean               @default(true)
+  emailVerifiedAt DateTime?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  addresses       Address[]
+  orders          Order[]
+  refreshSessions CustomerRefreshSession[]
+  passwordResets  PasswordResetToken[]
+  cart            Cart?
+
+  @@index([email])
+}
+
+model Address {
+  id           String   @id @default(uuid())
+  customerId   String
+  label        String
+  fullName     String
+  phone        String
+  addressLine1 String
+  addressLine2 String?
+  city         String
+  state        String
+  postalCode   String
+  country      String   @default("India")
+  isDefault    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  customer     Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+}
+
+model CustomerRefreshSession {
+  id         String   @id @default(uuid())
+  customerId String
+  tokenHash  String   @unique
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  createdAt  DateTime @default(now())
+  userAgent  String?
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@index([expiresAt])
+}
+
+model PasswordResetToken {
+  id         String   @id @default(uuid())
+  customerId String
+  tokenHash  String   @unique
+  expiresAt  DateTime
+  usedAt     DateTime?
+  createdAt  DateTime @default(now())
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@index([expiresAt])
+}
+
+model Cart {
+  id         String     @id @default(uuid())
+  customerId String     @unique
+  updatedAt  DateTime   @updatedAt
+  customer   Customer   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  items      CartItem[]
+}
+
+model CartItem {
+  id        String  @id @default(uuid())
+  cartId    String
+  productId String
+  variantId String?
+  quantity  Int
+  cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variant   ProductVariant? @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@unique([cartId, productId, variantId])
+  @@index([productId])
+}
+
+model Category {
+  id          String   @id @default(uuid())
+  name        String
+  slug        String   @unique
+  description String?
+  parentId    String?
+  image       String?
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  parent   Category?  @relation("CategoryToSubcategory", fields: [parentId], references: [id], onDelete: SetNull)
+  children Category[] @relation("CategoryToSubcategory")
+  products Product[]
+
+  @@index([parentId])
+  @@index([isActive])
+}
+
+model Product {
+  id               String      @id @default(uuid())
+  name             String
+  slug             String      @unique
+  shortDescription String?
+  description      String?
+  productType      ProductType
+  categoryId       String
+  sku              String?     @unique
+  price            Decimal     @db.Decimal(10, 2)
+  salePrice        Decimal?    @db.Decimal(10, 2)
+  stockQuantity    Int         @default(0)
+  trackInventory   Boolean     @default(true)
+  isFeatured       Boolean     @default(false)
+  isBestSeller     Boolean     @default(false)
+  isNewArrival     Boolean     @default(false)
+  isActive         Boolean     @default(true)
+  seoTitle         String?
+  seoDescription   String?
+  attributes       Json?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  category   Category            @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  images     ProductImage[]
+  bookDetail ProductBookDetails?
+  orderItems OrderItem[]
+  cartItems  CartItem[]
+  collections CollectionProduct[]
+  variants   ProductVariant[]
+
+  @@index([categoryId])
+  @@index([productType])
+  @@index([isActive])
+  @@index([isFeatured])
+  @@index([isBestSeller])
+  @@index([isNewArrival])
+}
+
+// Variant stock is authoritative whenever a product has active variants.
+// Product.stockQuantity remains authoritative only for products without them.
+model ProductVariant {
+  id            String   @id @default(uuid())
+  productId     String
+  name          String
+  sku           String   @unique
+  priceOverride Decimal? @db.Decimal(10, 2)
+  stockQuantity Int      @default(0)
+  isActive      Boolean  @default(true)
+  attributes    Json?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  product   Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  cartItems CartItem[]
+  orderItems OrderItem[]
+
+  @@index([productId])
+  @@index([productId, isActive])
+}
+
+model Collection {
+  id          String              @id @default(uuid())
+  title       String
+  slug        String              @unique
+  description String?
+  heroImage   String?
+  isActive    Boolean             @default(true)
+  sortOrder   Int                 @default(0)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  products    CollectionProduct[]
+
+  @@index([isActive])
+}
+
+model CollectionProduct {
+  collectionId String
+  productId    String
+  sortOrder    Int        @default(0)
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  product      Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([collectionId, productId])
+  @@index([productId])
+}
+
+model ProductBookDetails {
+  id              String  @id @default(uuid())
+  productId       String  @unique
+  author          String?
+  isbn            String?
+  publisher       String?
+  language        String?
+  pageCount       Int?
+  edition         String?
+  publicationYear Int?
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model ProductImage {
+  id        String   @id @default(uuid())
+  productId String
+  url       String
+  altText   String?
+  sortOrder Int      @default(0)
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+}
+
+model Order {
+  id             String        @id @default(uuid())
+  // Postgres-backed autoincrement (a real sequence) — never count()+1. The
+  // human-readable orderNumber is derived from this after the row exists
+  // (see orders.service.js) so it can never collide under concurrency.
+  orderSeq       Int           @default(autoincrement())
+  orderNumber    String        @unique
+  customerName   String
+  customerEmail  String
+  customerPhone  String
+  customerId     String?
+  status         OrderStatus   @default(PENDING)
+  paymentStatus  PaymentStatus @default(PENDING)
+  subtotal       Decimal       @db.Decimal(10, 2)
+  shippingAmount Decimal       @db.Decimal(10, 2) @default(0)
+  discountAmount Decimal       @db.Decimal(10, 2) @default(0)
+  taxAmount      Decimal       @db.Decimal(10, 2) @default(0)
+  totalAmount    Decimal       @db.Decimal(10, 2)
+  currency       String        @default("INR")
+  notes          String?
+  // SHA-256 hash of the high-entropy confirmation token — the raw token is
+  // returned to the browser once at order-creation time and never stored.
+  accessTokenHash String
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  paidAt         DateTime?
+  cancelledAt    DateTime?
+
+  items   OrderItem[]
+  address OrderAddress?
+  payments Payment[]
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  @@index([orderNumber])
+  @@index([customerEmail])
+  @@index([customerId])
+  @@index([status])
+  @@index([paymentStatus])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id                   String      @id @default(uuid())
+  orderId              String
+  productId            String?
+  variantId            String?
+  productNameSnapshot  String
+  productSlugSnapshot  String
+  skuSnapshot          String?
+  unitPrice            Decimal     @db.Decimal(10, 2)
+  quantity             Int
+  lineTotal            Decimal     @db.Decimal(10, 2)
+  productTypeSnapshot  ProductType
+  imageSnapshot        String?
+  variantNameSnapshot  String?
+  variantSkuSnapshot   String?
+  variantAttributesSnapshot Json?
+  variantPriceSnapshot Decimal? @db.Decimal(10, 2)
+
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  variant ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([productId])
+  @@index([variantId])
+}
+
+model OrderAddress {
+  id            String  @id @default(uuid())
+  orderId       String  @unique
+  fullName      String
+  phone         String
+  addressLine1  String
+  addressLine2  String?
+  city          String
+  state         String
+  postalCode    String
+  country       String  @default("India")
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model Payment {
+  id                String        @id @default(uuid())
+  orderId           String
+  provider          String        @default("razorpay")
+  providerOrderId   String?
+  providerPaymentId String?
+  status            PaymentStatus @default(PENDING)
+  amount            Decimal       @db.Decimal(10, 2)
+  currency          String        @default("INR")
+  method            String?
+  rawReference      String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([providerOrderId])
+  @@index([providerPaymentId])
+}
+
+// Idempotency ledger for gateway webhooks — one row per (provider, eventId).
+// A unique-constraint violation on insert is how we detect and short-circuit
+// a replayed webhook delivery instead of reprocessing it.
+model WebhookEvent {
+  id          String   @id @default(uuid())
+  provider    String
+  eventId     String
+  eventType   String
+  processedAt DateTime @default(now())
+  metadata    Json?
+
+  @@unique([provider, eventId])
+}
+
+model SiteSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+model NewsletterSubscriber {
+  id          String   @id @default(uuid())
+  email       String   @unique
+  consentedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+}

@@ -1,0 +1,12 @@
+import { asyncHandler } from "../../utils/asyncHandler.js"; import { ok, created } from "../../utils/apiResponse.js"; import { CUSTOMER_REFRESH_COOKIE_NAME, customerRefreshCookieOptions } from "../../utils/tokens.js"; import * as service from "./customer-auth.service.js"; import * as v from "./customer-auth.validators.js"; import { sendPasswordResetEmail } from "../email/email.service.js";
+const issue = (res, data, status = ok) => { res.cookie(CUSTOMER_REFRESH_COOKIE_NAME, data.refreshToken, customerRefreshCookieOptions()); const { refreshToken: _refreshToken, ...safe } = data; status(res, safe); };
+export const register = asyncHandler(async (req,res) => issue(res, await service.register(v.registerSchema.parse(req.body), req.get("user-agent")), created));
+export const login = asyncHandler(async (req,res) => issue(res, await service.login(v.loginSchema.parse(req.body), req.get("user-agent"))));
+export const refresh = asyncHandler(async (req,res) => issue(res, await service.refresh(req.cookies?.[CUSTOMER_REFRESH_COOKIE_NAME], req.get("user-agent"))));
+export const logout = asyncHandler(async (req,res) => { await service.logout(req.cookies?.[CUSTOMER_REFRESH_COOKIE_NAME]); res.clearCookie(CUSTOMER_REFRESH_COOKIE_NAME, { path: "/api/auth" }); ok(res,{loggedOut:true}); });
+export const me = asyncHandler(async (req,res) => ok(res,{customer:req.customer}));
+export const profile = asyncHandler(async (req,res) => ok(res,{customer:req.customer}));
+export const updateProfile = asyncHandler(async (req,res) => ok(res,{customer:await service.updateProfile(req.customer.id,v.profileSchema.parse(req.body))}));
+export const changePassword = asyncHandler(async (req,res) => { await service.changePassword(req.customer.id,v.changePasswordSchema.parse(req.body)); res.clearCookie(CUSTOMER_REFRESH_COOKIE_NAME,{path:"/api/auth"}); ok(res,{changed:true}); });
+export const forgotPassword = asyncHandler(async (req,res) => { const reset = await service.createReset(v.forgotPasswordSchema.parse(req.body).email); if (reset) await sendPasswordResetEmail(reset); ok(res,{message:"If an account exists for this email, password reset instructions have been sent."}); });
+export const resetPassword = asyncHandler(async (req,res) => { await service.resetPassword(v.resetPasswordSchema.parse(req.body)); ok(res,{reset:true}); });

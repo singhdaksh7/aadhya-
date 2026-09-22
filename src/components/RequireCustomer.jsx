@@ -1,0 +1,2 @@
+import { Navigate,useLocation } from "react-router-dom"; import { useCustomerAuth } from "../context/CustomerAuthContext";
+export default function RequireCustomer({children}){const {status}=useCustomerAuth(),loc=useLocation();if(status==="loading")return <div className="py-20 text-center text-charcoal-soft">Loading…</div>;return status==="authenticated"?children:<Navigate replace to={`/login?returnTo=${encodeURIComponent(loc.pathname+loc.search)}`}/>}

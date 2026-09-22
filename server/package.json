@@ -1,0 +1,41 @@
+{
+  "name": "aadya-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Aadya Society commerce backend (catalog + admin foundation)",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:migrate:deploy": "prisma migrate deploy",
+    "prisma:studio": "prisma studio",
+    "seed": "node prisma/seed.js",
+    "test:setup": "node scripts/prepare-test-db.js",
+    "test": "set NODE_ENV=test&& npm run test:setup && vitest run"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1137.0",
+    "@prisma/client": "^6.3.0",
+    "argon2": "^0.45.1",
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1",
+    "nodemailer": "^10.0.10",
+    "razorpay": "^2.9.8",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "prisma": "^6.3.0",
+    "supertest": "^7.0.0",
+    "vitest": "^3.0.5"
+  }
+}

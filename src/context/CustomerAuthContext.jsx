@@ -1,0 +1,14 @@
+import { createContext,useCallback,useContext,useEffect,useRef,useState } from "react";
+import { customerLogin,customerLogout,customerRefresh,customerRegister,setAccessToken } from "../lib/api";
+const Context=createContext({ user: null, status: "unauthenticated", login: async () => {}, register: async () => {}, logout: async () => {} });
+export function CustomerAuthProvider({children}){const [user,setUser]=useState(null),[status,setStatus]=useState("loading");const bootstrapped=useRef(false);useEffect(()=>{
+  // The customer refresh token is single-use (rotated on every call), so
+  // React 18/19 StrictMode's dev-only double-invocation of this effect would
+  // otherwise fire two concurrent /refresh requests against the same
+  // pre-rotation cookie: one succeeds, the other 401s on the now-revoked
+  // token, and depending on which settles last the user can be dropped back
+  // to "unauthenticated" despite holding a perfectly valid session. Guard so
+  // the real network call only ever fires once per mount.
+  if(bootstrapped.current)return;bootstrapped.current=true;
+  customerRefresh().then(r=>{setAccessToken(r.data.accessToken);setUser(r.data.customer);setStatus("authenticated")}).catch(()=>{setAccessToken(null);setStatus("unauthenticated")})},[]);const signIn=useCallback(async(data,register=false)=>{const r=await (register?customerRegister(data):customerLogin(data));setAccessToken(r.data.accessToken);setUser(r.data.customer);setStatus("authenticated");return r.data.customer},[]);const logout=useCallback(async()=>{try{await customerLogout()}finally{setAccessToken(null);setUser(null);setStatus("unauthenticated")}},[]);return <Context.Provider value={{user,status,login:d=>signIn(d),register:d=>signIn(d,true),logout}}>{children}</Context.Provider>}
+export function useCustomerAuth(){return useContext(Context)}
