@@ -46,7 +46,7 @@ test-results/
 *.log
 
 # Uploaded product images (persisted via Docker volume in prod)
-server/uploads/*
+server/uploads/
 !server/uploads/products/.gitkeep
 
 # Local AI-tooling / editor metadata (never useful to other contributors)
