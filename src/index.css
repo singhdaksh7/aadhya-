@@ -23,7 +23,7 @@ html {
 }
 
 body {
-  background-color: var(--color-ivory);
+  background-color: #FFFFFF;
   color: var(--color-charcoal);
   font-family: var(--font-sans);
 }
@@ -51,3 +51,31 @@ body {
 .animate-fade-up {
   animation: fade-up 0.7s ease-out both;
 }
+
+@keyframes marquee-ticker {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee-ticker {
+  display: flex;
+  width: max-content;
+  animation: marquee-ticker 25s linear infinite;
+}
+
+.animate-marquee-ticker:hover,
+.animate-marquee-ticker:focus-within {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee-ticker {
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
