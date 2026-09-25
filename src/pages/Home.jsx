@@ -67,7 +67,7 @@ export default function Home() {
       {/* 1. HERO SECTION */}
       <section className="relative overflow-hidden bg-ivory-dark/60 py-16 sm:py-24">
         <div className="mx-auto max-w-7xl px-5 sm:px-8">
-          <div className="grid items-center gap-12 lg:grid-cols-12">
+          <div className="grid items-center gap-10 sm:gap-12 lg:grid-cols-12">
             <div className="space-y-6 lg:col-span-6 animate-fade-up">
               <span className="inline-block rounded-full bg-beige-light px-3.5 py-1 text-xs font-semibold uppercase tracking-widest text-terracotta">
                 Aadya Home &amp; Lifestyle
@@ -78,7 +78,7 @@ export default function Home() {
               <p className="max-w-xl text-base leading-relaxed text-charcoal-soft sm:text-lg">
                 Discover handcrafted oil lamps, unglazed clay vessels, linen textiles, and slow design books crafted to bring warmth and quiet grace to your sanctuary.
               </p>
-              <div className="flex flex-wrap items-center gap-4 pt-2">
+              <div className="flex flex-wrap items-center gap-4 pt-2 pb-4 sm:pb-0">
                 <Link
                   to="/shop"
                   className="rounded-full bg-terracotta px-8 py-3.5 text-xs font-semibold uppercase tracking-wider text-ivory transition hover:bg-terracotta/90 shadow-md"
@@ -95,7 +95,7 @@ export default function Home() {
             </div>
 
             {/* Editorial Hero Visual Grid */}
-            <div className="lg:col-span-6 animate-fade-up">
+            <div className="lg:col-span-6 animate-fade-up pt-4 sm:pt-0">
               <div className="grid grid-cols-2 gap-4">
                 <div className="overflow-hidden rounded-3xl shadow-lg aspect-[3/4]">
                   <img
@@ -144,8 +144,8 @@ export default function Home() {
                   className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
                 />
               </div>
-              <div className="p-4 text-center">
-                <h3 className="font-serif-display text-base text-charcoal transition group-hover:text-terracotta">
+              <div className="p-3.5 sm:p-4 text-center flex flex-col justify-center flex-1">
+                <h3 className="font-serif-display text-sm sm:text-base leading-snug text-charcoal transition group-hover:text-terracotta line-clamp-2">
                   {cat.name}
                 </h3>
                 <p className="mt-1 text-xs text-charcoal-soft">{cat.itemCount} items</p>
@@ -178,11 +178,11 @@ export default function Home() {
                 </Link>
               </div>
             </div>
-            <div className="lg:col-span-6 aspect-square sm:aspect-video lg:aspect-auto h-full min-h-[340px]">
+            <div className="lg:col-span-6 aspect-square sm:aspect-video lg:aspect-auto h-full min-h-[340px] overflow-hidden group">
               <img
                 src={featuredCollection.heroImage}
                 alt={featuredCollection.name}
-                className="h-full w-full object-cover"
+                className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
               />
             </div>
           </div>

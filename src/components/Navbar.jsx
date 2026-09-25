@@ -38,7 +38,7 @@ export default function Navbar() {
     <>
       {/* Top Announcement Bar */}
       {announcementBar?.active && announcementBar?.text && (
-        <div className="bg-charcoal px-4 py-2 text-center text-xs font-medium tracking-wide text-ivory">
+        <div className="bg-charcoal px-4 py-2.5 text-center text-xs font-medium tracking-wide text-ivory leading-normal">
           <span>{announcementBar.text}</span>
         </div>
       )}
@@ -88,9 +88,9 @@ export default function Navbar() {
             {/* Prominent Search Bar / Button */}
             <button
               onClick={() => setSearchOpen(true)}
-              className="flex items-center gap-2 rounded-full border border-charcoal/15 bg-white/80 px-3.5 py-1.5 text-xs text-charcoal-soft transition hover:border-terracotta hover:text-charcoal sm:w-48 lg:w-56"
+              className="flex items-center gap-2 rounded-full border border-charcoal/15 bg-white/80 px-3.5 py-1.5 text-xs text-charcoal-soft transition hover:border-terracotta hover:text-charcoal w-auto sm:w-36 md:w-44 lg:w-56"
             >
-              <svg className="h-4 w-4 text-charcoal/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="h-4 w-4 text-charcoal/50 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
               <span className="hidden sm:inline truncate">Search home decor...</span>

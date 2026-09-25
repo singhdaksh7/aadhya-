@@ -136,44 +136,53 @@ export default function AdminCategories() {
         </div>
       </form>
 
-      <div className="mt-8">
+      <div className="mt-8 overflow-x-auto rounded-2xl border border-charcoal/10">
         {status === "loading" && <LoadingNotice />}
         {status === "error" && <ErrorNotice message="Unable to load categories." />}
         {status === "ready" && (
-          <table className="w-full text-left text-sm">
-            <thead className="text-xs uppercase tracking-wide text-charcoal-soft">
+          <table className="w-full min-w-[600px] text-left text-sm">
+            <thead className="bg-ivory-dark text-xs uppercase tracking-wide text-charcoal-soft">
               <tr>
-                <th className="px-3 py-2">Name</th>
-                <th className="px-3 py-2">Slug</th>
-                <th className="px-3 py-2">Parent</th>
-                <th className="px-3 py-2">Products</th>
-                <th className="px-3 py-2">Status</th>
-                <th className="px-3 py-2">Actions</th>
+                <th className="px-4 py-3">Name</th>
+                <th className="px-4 py-3">Slug</th>
+                <th className="px-4 py-3">Parent</th>
+                <th className="px-4 py-3">Products</th>
+                <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-charcoal/10">
               {categories.map((c) => (
                 <tr key={c.id}>
-                  <td className="px-3 py-2 font-medium text-charcoal">{c.name}</td>
-                  <td className="px-3 py-2 text-charcoal-soft">{c.slug}</td>
-                  <td className="px-3 py-2 text-charcoal-soft">
+                  <td className="px-4 py-3 font-medium text-charcoal">{c.name}</td>
+                  <td className="px-4 py-3 text-charcoal-soft">{c.slug}</td>
+                  <td className="px-4 py-3 text-charcoal-soft">
                     {categories.find((p) => p.id === c.parentId)?.name || "—"}
                   </td>
-                  <td className="px-3 py-2 text-charcoal-soft">{c._count?.products ?? 0}</td>
-                  <td className="px-3 py-2">
+                  <td className="px-4 py-3 text-charcoal-soft">{c._count?.products ?? 0}</td>
+                  <td className="px-4 py-3">
                     <span className={c.isActive ? "text-green-deep" : "text-charcoal-soft"}>
                       {c.isActive ? "Active" : "Inactive"}
                     </span>
                   </td>
-                  <td className="px-3 py-2">
-                    <div className="flex gap-3 text-xs">
-                      <button onClick={() => startEdit(c)} className="underline">
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2 whitespace-nowrap text-xs">
+                      <button
+                        onClick={() => startEdit(c)}
+                        className="rounded-full border border-charcoal/20 bg-white px-3 py-1 font-medium text-charcoal transition hover:border-terracotta hover:text-terracotta"
+                      >
                         Edit
                       </button>
-                      <button onClick={() => toggleActive(c)} className="underline">
+                      <button
+                        onClick={() => toggleActive(c)}
+                        className="rounded-full border border-sage/40 bg-sage-light/50 px-3 py-1 font-medium text-green-deep transition hover:bg-sage-light"
+                      >
                         {c.isActive ? "Deactivate" : "Activate"}
                       </button>
-                      <button onClick={() => remove(c)} className="text-terracotta underline">
+                      <button
+                        onClick={() => remove(c)}
+                        className="rounded-full border border-terracotta/20 bg-terracotta/5 px-3 py-1 font-medium text-terracotta transition hover:bg-terracotta hover:text-ivory"
+                      >
                         Delete
                       </button>
                     </div>

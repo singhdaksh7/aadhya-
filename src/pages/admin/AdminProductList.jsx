@@ -117,14 +117,23 @@ export default function AdminProductList() {
                   </td>
                   <td className="px-4 py-3 text-charcoal-soft">{product.isFeatured ? "Yes" : "—"}</td>
                   <td className="px-4 py-3">
-                    <div className="flex gap-3 whitespace-nowrap text-xs">
-                      <Link to={`/admin/products/${product.id}`} className="text-charcoal underline underline-offset-2">
+                    <div className="flex items-center gap-2 whitespace-nowrap text-xs">
+                      <Link
+                        to={`/admin/products/${product.id}`}
+                        className="rounded-full border border-charcoal/20 bg-white px-3 py-1 font-medium text-charcoal transition hover:border-terracotta hover:text-terracotta"
+                      >
                         Edit
                       </Link>
-                      <button onClick={() => toggleActive(product)} className="text-charcoal-soft underline underline-offset-2">
+                      <button
+                        onClick={() => toggleActive(product)}
+                        className="rounded-full border border-sage/40 bg-sage-light/50 px-3 py-1 font-medium text-green-deep transition hover:bg-sage-light"
+                      >
                         {product.isActive ? "Deactivate" : "Activate"}
                       </button>
-                      <button onClick={() => remove(product)} className="text-terracotta underline underline-offset-2">
+                      <button
+                        onClick={() => remove(product)}
+                        className="rounded-full border border-terracotta/20 bg-terracotta/5 px-3 py-1 font-medium text-terracotta transition hover:bg-terracotta hover:text-ivory"
+                      >
                         Delete
                       </button>
                     </div>

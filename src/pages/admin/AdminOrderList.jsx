@@ -115,7 +115,10 @@ export default function AdminOrderList() {
                     <StatusPill value={order.status} />
                   </td>
                   <td className="px-4 py-3">
-                    <Link to={`/admin/orders/${order.id}`} className="text-xs text-charcoal underline underline-offset-2">
+                    <Link
+                      to={`/admin/orders/${order.id}`}
+                      className="inline-block rounded-full border border-charcoal/20 bg-white px-3 py-1 text-xs font-medium text-charcoal transition hover:border-terracotta hover:text-terracotta"
+                    >
                       View
                     </Link>
                   </td>
@@ -151,19 +154,24 @@ export default function AdminOrderList() {
   );
 }
 
-const STATUS_TONE = {
-  PAID: "text-green-deep",
-  CONFIRMED: "text-green-deep",
-  DELIVERED: "text-green-deep",
-  PENDING: "text-charcoal-soft",
-  PROCESSING: "text-charcoal-soft",
-  SHIPPED: "text-charcoal-soft",
-  FAILED: "text-terracotta",
-  CANCELLED: "text-terracotta",
-  REFUNDED: "text-terracotta",
-  PARTIALLY_REFUNDED: "text-terracotta",
+const STATUS_PILL_STYLE = {
+  PAID: "bg-sage-light/80 text-green-deep border-sage/40",
+  CONFIRMED: "bg-sage-light/80 text-green-deep border-sage/40",
+  DELIVERED: "bg-sage-light/80 text-green-deep border-sage/40",
+  PENDING: "bg-beige-light text-charcoal-soft border-charcoal/15",
+  PROCESSING: "bg-beige-light text-charcoal border-charcoal/20",
+  SHIPPED: "bg-sage-light/40 text-green-deep border-sage/30",
+  FAILED: "bg-terracotta/10 text-terracotta border-terracotta/20",
+  CANCELLED: "bg-terracotta/10 text-terracotta border-terracotta/20",
+  REFUNDED: "bg-terracotta/10 text-terracotta border-terracotta/20",
+  PARTIALLY_REFUNDED: "bg-terracotta/10 text-terracotta border-terracotta/20",
 };
 
 export function StatusPill({ value }) {
-  return <span className={`text-xs font-medium ${STATUS_TONE[value] || "text-charcoal-soft"}`}>{value}</span>;
+  const cls = STATUS_PILL_STYLE[value] || "bg-ivory-dark text-charcoal-soft border-charcoal/10";
+  return (
+    <span className={`inline-block rounded-full border px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${cls}`}>
+      {value}
+    </span>
+  );
 }

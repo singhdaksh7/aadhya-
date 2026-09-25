@@ -306,7 +306,7 @@ export default function ProductCatalog({
                 <select
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="w-full rounded-xl border border-charcoal/20 bg-white p-3 text-sm text-charcoal"
+                  className="w-full min-h-[44px] rounded-xl border border-charcoal/20 bg-white px-4 py-3 text-sm text-charcoal focus:border-terracotta focus:outline-none"
                 >
                   <option value="all">All Categories</option>
                   {categories.map((c) => (
@@ -321,7 +321,7 @@ export default function ProductCatalog({
                 <select
                   value={selectedCollection}
                   onChange={(e) => setSelectedCollection(e.target.value)}
-                  className="w-full rounded-xl border border-charcoal/20 bg-white p-3 text-sm text-charcoal"
+                  className="w-full min-h-[44px] rounded-xl border border-charcoal/20 bg-white px-4 py-3 text-sm text-charcoal focus:border-terracotta focus:outline-none"
                 >
                   <option value="all">All Collections</option>
                   {collections.map((c) => (
@@ -331,7 +331,7 @@ export default function ProductCatalog({
               </div>
 
               {/* In Stock */}
-              <label className="flex items-center gap-3 text-sm text-charcoal cursor-pointer">
+              <label className="flex min-h-[44px] items-center gap-3 rounded-xl border border-charcoal/10 bg-white px-4 py-2.5 text-sm text-charcoal cursor-pointer hover:border-charcoal/20">
                 <input
                   type="checkbox"
                   checked={inStockOnly}
@@ -345,7 +345,7 @@ export default function ProductCatalog({
                 onClick={() => {
                   setMobileFilterOpen(false);
                 }}
-                className="w-full rounded-full bg-terracotta py-3 text-xs font-semibold uppercase tracking-wider text-ivory"
+                className="w-full min-h-[44px] rounded-full bg-terracotta py-3 text-xs font-semibold uppercase tracking-wider text-ivory shadow hover:bg-terracotta/90"
               >
                 Apply Filters
               </button>

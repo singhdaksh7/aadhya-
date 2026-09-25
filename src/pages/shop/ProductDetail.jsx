@@ -150,18 +150,22 @@ export default function ProductDetail() {
 
           {/* Gallery Thumbnails */}
           {images.length > 1 && (
-            <div className="flex gap-3 overflow-x-auto pb-2">
-              {images.map((img, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setActiveImageIdx(idx)}
-                  className={`h-20 w-20 shrink-0 overflow-hidden rounded-2xl border-2 transition ${
-                    idx === activeImageIdx ? "border-terracotta scale-95" : "border-transparent opacity-70 hover:opacity-100"
-                  }`}
-                >
-                  <img src={img} alt="" className="h-full w-full object-cover" />
-                </button>
-              ))}
+            <div className="relative group/thumbs">
+              <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none snap-x">
+                {images.map((img, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setActiveImageIdx(idx)}
+                    className={`h-20 w-20 shrink-0 snap-start overflow-hidden rounded-2xl border-2 transition ${
+                      idx === activeImageIdx ? "border-terracotta scale-95" : "border-transparent opacity-70 hover:opacity-100"
+                    }`}
+                  >
+                    <img src={img} alt="" className="h-full w-full object-cover" />
+                  </button>
+                ))}
+              </div>
+              {/* Fade gradient masks on edges for visual scroll hint */}
+              <div className="pointer-events-none absolute right-0 top-0 bottom-2 w-8 bg-gradient-to-l from-ivory via-ivory/40 to-transparent" />
             </div>
           )}
         </div>
@@ -359,6 +363,35 @@ export default function ProductDetail() {
           </div>
         </section>
       )}
+
+      {/* Mobile Sticky Purchase Bar (<768px) */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-charcoal/10 bg-ivory/95 px-4 py-3 shadow-2xl backdrop-blur-md md:hidden">
+        <div className="mx-auto flex max-w-md items-center justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-xs font-serif-display font-medium text-charcoal">{product.name}</p>
+            <p className="text-sm font-bold text-terracotta">{formatInr(salePrice ?? price)}</p>
+          </div>
+          <button
+            onClick={handleAddToCart}
+            disabled={outOfStock || maxQty <= 0}
+            className={`flex items-center justify-center gap-1.5 rounded-full px-5 py-2.5 text-xs font-semibold uppercase tracking-wider text-ivory shadow transition ${
+              addedNotice
+                ? "bg-sage"
+                : outOfStock || maxQty <= 0
+                ? "bg-charcoal/30 text-charcoal/50 cursor-not-allowed"
+                : "bg-terracotta hover:bg-terracotta/90"
+            }`}
+          >
+            {addedNotice ? (
+              <><IconCheck className="h-3.5 w-3.5" /> Added</>
+            ) : outOfStock ? (
+              "Sold Out"
+            ) : (
+              <><IconCart className="h-3.5 w-3.5" /> Add to Cart</>
+            )}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
