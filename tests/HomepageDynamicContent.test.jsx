@@ -13,7 +13,9 @@ describe("Phase F.1 dynamic homepage content", () => {
       { id: "newsletter", type: "NEWSLETTER", settings: { eyebrow: "Circle", title: "Custom newsletter", description: "Custom newsletter text", buttonLabel: "Join now", placeholder: "Your address" } },
       { id: "new", type: "NEW_ARRIVALS", settings: { title: "Custom arrivals", ctaLabel: "See fresh" } },
       { id: "best", type: "BEST_SELLERS", settings: { title: "Custom best", ctaLabel: "See favourites" } },
-    ]} /></BrowserRouter>);
+      { id: "featured", type: "FEATURED_COLLECTION", settings: { title: "Custom feature", ctaLabel: "Open feature", ctaUrl: "/collections/selected" } },
+    ]} featuredCollection={{ name: "Fallback collection", slug: "fallback", description: "Fallback description" }} /></BrowserRouter>);
     ["Custom trust", "Custom assurance", "Custom look", "Custom card", "Open edit", "Custom shelf", "Read all", "Custom story", "Custom editorial body", "Custom newsletter", "Join now", "Custom arrivals", "See fresh", "Custom best", "See favourites"].forEach((copy) => expect(screen.getByText(copy)).toBeInTheDocument());
+    expect(screen.getByRole("link", { name: /open feature/i })).toHaveAttribute("href", "/collections/selected");
   });
 });

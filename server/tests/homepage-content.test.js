@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_HOMEPAGE_CONTENT, mergeMissingSettings, validateHomepageSettings } from "../src/modules/pages/homepage-content.js";
+import { DEFAULT_HOMEPAGE_CONTENT, mergeMissingSettings, settingsEqual, validateHomepageSettings } from "../src/modules/pages/homepage-content.js";
 
 describe("Phase F.1 homepage content validation", () => {
   it("accepts trust, shop-look, editorial, and newsletter settings", () => {
@@ -20,5 +20,9 @@ describe("Phase F.1 homepage content validation", () => {
     expect(merged.buttonLabel).toBe("Subscribe");
     const existingItems = [{ id: "custom", title: "Custom", description: "Custom", icon: "heart" }];
     expect(mergeMissingSettings("TRUST_STRIP", { items: existingItems }).items).toEqual(existingItems);
+  });
+
+  it("treats equivalent JSON settings as equal regardless of key order", () => {
+    expect(settingsEqual({ title: "Custom", nested: { limit: 3 } }, { nested: { limit: 3 }, title: "Custom" })).toBe(true);
   });
 });

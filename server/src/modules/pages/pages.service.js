@@ -1,6 +1,6 @@
 import { prisma } from "../../lib/prisma.js";
 import { ApiError } from "../../utils/ApiError.js";
-import { DEFAULT_HOMEPAGE_CONTENT, mergeMissingSettings, validateHomepageSettings } from "./homepage-content.js";
+import { DEFAULT_HOMEPAGE_CONTENT, mergeMissingSettings, settingsEqual, validateHomepageSettings } from "./homepage-content.js";
 
 // Default seed sections for Aadya Storefront in approved visual order
 const DEFAULT_HOMEPAGE_SECTIONS = [
@@ -52,7 +52,7 @@ export async function ensureDefaultHomepage() {
   // configured by an admin is replaced and no section is recreated.
   const changed = homePage.sections.filter((section) => {
     const merged = mergeMissingSettings(section.type, section.settings);
-    return JSON.stringify(merged) !== JSON.stringify(section.settings || {});
+    return !settingsEqual(merged, section.settings || {});
   });
   if (changed.length) {
     await prisma.$transaction(changed.map((section) => prisma.pageSection.update({
