@@ -48,20 +48,20 @@ model AdminUser {
 }
 
 model Customer {
-  id              String                @id @default(uuid())
-  name            String
-  email           String                @unique
-  phone           String?
-  passwordHash    String
-  isActive        Boolean               @default(true)
-  emailVerifiedAt DateTime?
-  createdAt       DateTime              @default(now())
-  updatedAt       DateTime              @updatedAt
-  addresses       Address[]
-  orders          Order[]
-  refreshSessions CustomerRefreshSession[]
-  passwordResets  PasswordResetToken[]
-  cart            Cart?
+  id                String                 @id @default(uuid())
+  name              String
+  email             String                 @unique
+  phone             String?
+  passwordHash      String
+  isActive          Boolean                @default(true)
+  emailVerifiedAt   DateTime?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  addresses         Address[]
+  orders            Order[]
+  refreshSessions   CustomerRefreshSession[]
+  passwordResets    PasswordResetToken[]
+  cart              Cart?
   couponRedemptions CouponRedemption[]
 
   @@index([email])
@@ -123,13 +123,13 @@ model Cart {
 }
 
 model CartItem {
-  id        String  @id @default(uuid())
+  id        String          @id @default(uuid())
   cartId    String
   productId String
   variantId String?
   quantity  Int
-  cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
-  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  cart      Cart            @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product   Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
   variant   ProductVariant? @relation(fields: [variantId], references: [id], onDelete: Cascade)
 
   @@unique([cartId, productId, variantId])
@@ -184,19 +184,19 @@ enum NavigationItemType {
 }
 
 model NavigationItem {
-  id         String             @id @default(uuid())
-  menuId     String
-  parentId   String?
-  title      String
-  url        String?
-  type       NavigationItemType @default(CUSTOM)
-  targetId   String?
-  sortOrder  Int                @default(0)
-  isActive   Boolean            @default(true)
-  icon       String?
-  badgeText  String?
-  createdAt  DateTime           @default(now())
-  updatedAt  DateTime           @updatedAt
+  id        String             @id @default(uuid())
+  menuId    String
+  parentId  String?
+  title     String
+  url       String?
+  type      NavigationItemType @default(CUSTOM)
+  targetId  String?
+  sortOrder Int                @default(0)
+  isActive  Boolean            @default(true)
+  icon      String?
+  badgeText String?
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
 
   menu     NavigationMenu   @relation(fields: [menuId], references: [id], onDelete: Cascade)
   parent   NavigationItem?  @relation("NavItemToSubItem", fields: [parentId], references: [id], onDelete: Cascade)
@@ -231,29 +231,29 @@ enum CouponTargetType {
 }
 
 model Product {
-  id                  String      @id @default(uuid())
+  id                  String              @id @default(uuid())
   name                String
-  slug                String      @unique
+  slug                String              @unique
   brand               String?
   shortDescription    String?
   description         String?
   productType         ProductType
   categoryId          String
-  sku                 String?     @unique
-  price               Decimal     @db.Decimal(10, 2)
-  salePrice           Decimal?    @db.Decimal(10, 2)
-  mrp                 Decimal?    @db.Decimal(10, 2)
-  costPrice           Decimal?    @db.Decimal(10, 2)
-  stockQuantity       Int         @default(0)
-  lowStockThreshold   Int         @default(5)
-  trackInventory      Boolean     @default(true)
-  isFeatured          Boolean     @default(false)
-  isBestSeller        Boolean     @default(false)
-  isNewArrival        Boolean     @default(false)
-  isTrending          Boolean     @default(false)
-  isActive            Boolean     @default(true)
-  sortOrder           Int         @default(0)
-  tags                String[]    @default([])
+  sku                 String?             @unique
+  price               Decimal             @db.Decimal(10, 2)
+  salePrice           Decimal?            @db.Decimal(10, 2)
+  mrp                 Decimal?            @db.Decimal(10, 2)
+  costPrice           Decimal?            @db.Decimal(10, 2)
+  stockQuantity       Int                 @default(0)
+  lowStockThreshold   Int                 @default(5)
+  trackInventory      Boolean             @default(true)
+  isFeatured          Boolean             @default(false)
+  isBestSeller        Boolean             @default(false)
+  isNewArrival        Boolean             @default(false)
+  isTrending          Boolean             @default(false)
+  isActive            Boolean             @default(true)
+  sortOrder           Int                 @default(0)
+  tags                String[]            @default([])
   materials           String?
   dimensions          String?
   careInstructions    String?
@@ -264,8 +264,8 @@ model Product {
   seoDescription      String?
   ogImage             String?
   attributes          Json?
-  createdAt           DateTime    @default(now())
-  updatedAt           DateTime    @updatedAt
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
 
   category   Category            @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   images     ProductImage[]
@@ -285,8 +285,6 @@ model Product {
   @@index([sortOrder])
 }
 
-// Variant stock is authoritative whenever a product has active variants.
-// Product.stockQuantity remains authoritative only for products without them.
 model ProductVariant {
   id            String   @id @default(uuid())
   productId     String
@@ -299,7 +297,7 @@ model ProductVariant {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  product   Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product   Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
   cartItems CartItem[]
   orderItems OrderItem[]
 
@@ -372,29 +370,29 @@ model ProductImage {
 }
 
 model Order {
-  id             String        @id @default(uuid())
-  orderSeq       Int           @default(autoincrement())
-  orderNumber    String        @unique
-  customerName   String
-  customerEmail  String
-  customerPhone  String
-  customerId     String?
-  status         OrderStatus   @default(PENDING)
-  paymentStatus  PaymentStatus @default(PENDING)
-  subtotal       Decimal       @db.Decimal(10, 2)
-  shippingAmount Decimal       @db.Decimal(10, 2) @default(0)
-  discountAmount Decimal       @db.Decimal(10, 2) @default(0)
-  taxAmount      Decimal       @db.Decimal(10, 2) @default(0)
-  totalAmount    Decimal       @db.Decimal(10, 2)
-  currency       String        @default("INR")
-  couponCode     String?
-  couponId       String?
-  notes          String?
+  id              String        @id @default(uuid())
+  orderSeq        Int           @default(autoincrement())
+  orderNumber     String        @unique
+  customerName    String
+  customerEmail   String
+  customerPhone   String
+  customerId      String?
+  status          OrderStatus   @default(PENDING)
+  paymentStatus   PaymentStatus @default(PENDING)
+  subtotal        Decimal       @db.Decimal(10, 2)
+  shippingAmount  Decimal       @db.Decimal(10, 2) @default(0)
+  discountAmount  Decimal       @db.Decimal(10, 2) @default(0)
+  taxAmount       Decimal       @db.Decimal(10, 2) @default(0)
+  totalAmount     Decimal       @db.Decimal(10, 2)
+  currency        String        @default("INR")
+  couponCode      String?
+  couponId        String?
+  notes           String?
   accessTokenHash String
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-  paidAt         DateTime?
-  cancelledAt    DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  paidAt          DateTime?
+  cancelledAt     DateTime?
 
   items            OrderItem[]
   address          OrderAddress?
@@ -412,25 +410,25 @@ model Order {
 }
 
 model OrderItem {
-  id                   String      @id @default(uuid())
-  orderId              String
-  productId            String?
-  variantId            String?
-  productNameSnapshot  String
-  productSlugSnapshot  String
-  skuSnapshot          String?
-  unitPrice            Decimal     @db.Decimal(10, 2)
-  quantity             Int
-  lineTotal            Decimal     @db.Decimal(10, 2)
-  productTypeSnapshot  ProductType
-  imageSnapshot        String?
-  variantNameSnapshot  String?
-  variantSkuSnapshot   String?
+  id                         String          @id @default(uuid())
+  orderId                    String
+  productId                  String?
+  variantId                  String?
+  productNameSnapshot        String
+  productSlugSnapshot        String
+  skuSnapshot                String?
+  unitPrice                  Decimal         @db.Decimal(10, 2)
+  quantity                   Int
+  lineTotal                  Decimal         @db.Decimal(10, 2)
+  productTypeSnapshot        ProductType
+  imageSnapshot              String?
+  variantNameSnapshot        String?
+  variantSkuSnapshot         String?
   variantAttributesSnapshot Json?
-  variantPriceSnapshot Decimal? @db.Decimal(10, 2)
+  variantPriceSnapshot       Decimal?        @db.Decimal(10, 2)
 
-  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  order   Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
   variant ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
 
   @@index([orderId])
@@ -439,16 +437,16 @@ model OrderItem {
 }
 
 model OrderAddress {
-  id            String  @id @default(uuid())
-  orderId       String  @unique
-  fullName      String
-  phone         String
-  addressLine1  String
-  addressLine2  String?
-  city          String
-  state         String
-  postalCode    String
-  country       String  @default("India")
+  id           String  @id @default(uuid())
+  orderId      String  @unique
+  fullName     String
+  phone        String
+  addressLine1 String
+  addressLine2 String?
+  city         String
+  state        String
+  postalCode   String
+  country      String  @default("India")
 
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 }
@@ -474,9 +472,6 @@ model Payment {
   @@index([providerPaymentId])
 }
 
-// Idempotency ledger for gateway webhooks — one row per (provider, eventId).
-// A unique-constraint violation on insert is how we detect and short-circuit
-// a replayed webhook delivery instead of reprocessing it.
 model WebhookEvent {
   id          String   @id @default(uuid())
   provider    String
@@ -526,25 +521,31 @@ model Page {
   slug           String        @unique
   pageType       PageType      @default(STANDARD)
   status         PageStatus    @default(DRAFT)
+  content        String?       @db.Text
+  featuredImage  String?
+  excerpt        String?       @db.Text
   seoTitle       String?
-  seoDescription String?
+  seoDescription String?       @db.Text
   publishedAt    DateTime?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
-  sections       PageSection[]
+
+  sections PageSection[]
 
   @@index([slug])
   @@index([status])
+  @@index([pageType])
 }
 
 model PageSection {
   id        String   @id @default(uuid())
   pageId    String
   type      String
-  name      String
+  name      String?
   settings  Json?
   content   Json?
   isEnabled Boolean  @default(true)
+  isActive  Boolean  @default(true)
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -665,3 +666,80 @@ model CouponRedemption {
   @@index([customerEmail])
 }
 
+model BlogPost {
+  id             String     @id @default(uuid())
+  title          String
+  slug           String     @unique
+  excerpt        String?    @db.Text
+  featuredImage  String?
+  content        String     @db.Text
+  author         String?    @default("Aadya Editorial")
+  category       String?
+  tags           Json?
+  isFeatured     Boolean    @default(false)
+  status         PageStatus @default(DRAFT)
+  publishDate    DateTime   @default(now())
+  seoTitle       String?
+  seoDescription String?    @db.Text
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@index([slug])
+  @@index([status])
+  @@index([publishDate])
+  @@index([category])
+  @@index([isFeatured])
+}
+
+model FAQCategory {
+  id        String    @id @default(uuid())
+  name      String
+  slug      String    @unique
+  sortOrder Int       @default(0)
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  items FAQItem[]
+
+  @@index([isActive])
+  @@index([sortOrder])
+}
+
+model FAQItem {
+  id         String      @id @default(uuid())
+  categoryId String
+  question   String
+  answer     String      @db.Text
+  sortOrder  Int         @default(0)
+  isActive   Boolean     @default(true)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  category FAQCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@index([categoryId])
+  @@index([isActive])
+  @@index([sortOrder])
+}
+
+model MediaAsset {
+  id               String   @id @default(uuid())
+  fileName         String
+  originalName     String
+  url              String
+  storageKey       String
+  storageDriver    String   @default("local")
+  mimeType         String
+  size             Int
+  width            Int?
+  height           Int?
+  altText          String?
+  title            String?
+  createdByAdminId String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([createdAt])
+  @@index([storageKey])
+}

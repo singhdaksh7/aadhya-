@@ -23,8 +23,11 @@ import navigationRouter from "../modules/navigation/navigation.routes.js";
 import { publicPagesRouter, adminPagesRouter } from "../modules/pages/pages.routes.js";
 import { publicBannersRouter, adminBannersRouter } from "../modules/banners/banners.routes.js";
 import { publicPromosRouter, adminPromosRouter } from "../modules/promos/promos.routes.js";
-
 import { publicCouponRouter, adminCouponRouter } from "../modules/coupons/coupon.routes.js";
+import { publicPageRouter, adminPageRouter } from "../modules/pages/page.routes.js";
+import { publicBlogRouter, adminBlogRouter } from "../modules/blog/blog.routes.js";
+import { publicFaqRouter, adminFaqRouter } from "../modules/faq/faq.routes.js";
+import { adminMediaRouter } from "../modules/media/media.routes.js";
 
 const router = Router();
 
@@ -38,9 +41,16 @@ router.use("/coupons", publicCouponRouter);
 router.use("/settings", publicSettingsRouter);
 router.use("/newsletter", newsletterRouter);
 router.use("/navigation", navigationRouter);
-router.use("/pages", publicPagesRouter);
 router.use("/banners", publicBannersRouter);
 router.use("/promos", publicPromosRouter);
+
+// Pages APIs: Specific /home route BEFORE parameterized /:slug route!
+router.use("/pages", publicPagesRouter);
+router.use("/pages", publicPageRouter);
+
+// Phase E CMS Public APIs
+router.use("/blog", publicBlogRouter);
+router.use("/faqs", publicFaqRouter);
 
 // Thin convenience wrapper — Books are Products with productType=BOOK,
 // this must never grow its own product/business logic (see product.service.js).
@@ -76,9 +86,16 @@ router.use("/admin/coupons", adminCouponRouter);
 router.use("/admin/settings", adminSettingsRouter);
 router.use("/admin/customers", adminCustomerRouter);
 router.use("/admin/admin-users", adminUserRouter);
-router.use("/admin/pages", adminPagesRouter);
 router.use("/admin/banners", adminBannersRouter);
 router.use("/admin/promos", adminPromosRouter);
+
+// Admin Pages APIs: Specific /home route BEFORE parameterized /:id route!
+router.use("/admin/pages", adminPagesRouter);
+router.use("/admin/pages", adminPageRouter);
+
+router.use("/admin/blog", adminBlogRouter);
+router.use("/admin/faqs", adminFaqRouter);
+router.use("/admin/media", adminMediaRouter);
 
 router.get(
   "/admin/dashboard",

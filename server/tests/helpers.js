@@ -37,6 +37,10 @@ export async function resetDb() {
   await prisma.coupon.deleteMany();
   await prisma.banner.deleteMany();
   await prisma.promoMessage.deleteMany();
+  await prisma.mediaAsset.deleteMany();
+  await prisma.fAQItem.deleteMany();
+  await prisma.fAQCategory.deleteMany();
+  await prisma.blogPost.deleteMany();
   await prisma.adminUser.deleteMany();
   await prisma.customer.deleteMany();
 }
@@ -148,3 +152,4 @@ export async function createRawResetToken(customerId, { expired = false, used = 
   });
   return token;
 }
+

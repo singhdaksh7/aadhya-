@@ -14,6 +14,10 @@ const links = [
   { to: "/admin/coupons", label: "Coupons" },
   { to: "/admin/navigation", label: "Navigation" },
   { to: "/admin/orders", label: "Orders" },
+  { to: "/admin/pages", label: "Pages (CMS)" },
+  { to: "/admin/blog", label: "Blog Journal" },
+  { to: "/admin/faqs", label: "FAQ CMS" },
+  { to: "/admin/media", label: "Media Library" },
   { to: "/admin/settings", label: "Settings" },
 ];
 

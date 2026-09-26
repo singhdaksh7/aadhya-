@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { CartProvider } from "./context/CartContext";
 import { BrochureProvider } from "./context/BrochureContext";
 import { AdminAuthProvider } from "./context/AdminAuthContext";
@@ -52,6 +52,15 @@ import AdminHomepageBuilder from "./pages/admin/AdminHomepageBuilder";
 import AdminBanners from "./pages/admin/AdminBanners";
 import AdminPromos from "./pages/admin/AdminPromos";
 
+import CmsPage from "./pages/CmsPage";
+import BlogList from "./pages/BlogList";
+import BlogDetail from "./pages/BlogDetail";
+
+import AdminPages from "./pages/admin/AdminPages";
+import AdminBlog from "./pages/admin/AdminBlog";
+import AdminFaq from "./pages/admin/AdminFaq";
+import AdminMedia from "./pages/admin/AdminMedia";
+
 // Policy Pages Component
 function PolicyPage({ title, eyebrow = "Customer Policies", children }) {
   return (
@@ -87,6 +96,11 @@ function SiteLayout() {
               <Route path="/new-arrivals" element={<ProductCatalog eyebrow="Fresh Drops" title="New Arrivals" />} />
               <Route path="/best-sellers" element={<ProductCatalog eyebrow="Customer Favorites" title="Best Sellers" />} />
               <Route path="/search" element={<ProductCatalog title="Search Storefront" />} />
+
+              {/* Dynamic CMS Page & Blog Routes */}
+              <Route path="/pages/:slug" element={<CmsPage />} />
+              <Route path="/blog" element={<BlogList />} />
+              <Route path="/blog/:slug" element={<BlogDetail />} />
 
               {/* Cart & Checkout */}
               <Route path="/cart" element={<CartPage />} />
@@ -191,6 +205,10 @@ function AdminRoutes() {
           <Route path="collections" element={<AdminCollections />} />
           <Route path="coupons" element={<AdminCoupons />} />
           <Route path="navigation" element={<AdminNavigation />} />
+          <Route path="pages" element={<AdminPages />} />
+          <Route path="blog" element={<AdminBlog />} />
+          <Route path="faqs" element={<AdminFaq />} />
+          <Route path="media" element={<AdminMedia />} />
           <Route path="settings" element={<AdminSettings />} />
           <Route path="orders" element={<AdminOrderList />} />
           <Route path="orders/:id" element={<AdminOrderDetail />} />
