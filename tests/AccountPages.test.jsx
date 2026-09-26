@@ -81,7 +81,7 @@ describe("bootstrap", () => {
     await user.type(screen.getByPlaceholderText("Email"), "test@example.com");
     await user.type(screen.getByPlaceholderText("Password"), "SafePassword123");
     await user.click(screen.getByRole("button", { name: "Create account" }));
-    await waitFor(() => expect(screen.getByText(/Email: test@example.com/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getAllByText("test@example.com").length).toBeGreaterThan(0));
     rejectBootstrap(new Error("stale refresh failure"));
     await waitFor(() => expect(api.setAccessToken).toHaveBeenLastCalledWith("new-token"));
   });
