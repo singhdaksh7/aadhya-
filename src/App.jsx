@@ -43,9 +43,14 @@ import AdminProductList from "./pages/admin/AdminProductList";
 import AdminProductForm from "./pages/admin/AdminProductForm";
 import AdminCategories from "./pages/admin/AdminCategories";
 import AdminCollections from "./pages/admin/AdminCollections";
+import AdminCoupons from "./pages/admin/AdminCoupons";
+import AdminNavigation from "./pages/admin/AdminNavigation";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminOrderList from "./pages/admin/AdminOrderList";
 import AdminOrderDetail from "./pages/admin/AdminOrderDetail";
+import AdminHomepageBuilder from "./pages/admin/AdminHomepageBuilder";
+import AdminBanners from "./pages/admin/AdminBanners";
+import AdminPromos from "./pages/admin/AdminPromos";
 
 // Policy Pages Component
 function PolicyPage({ title, eyebrow = "Customer Policies", children }) {
@@ -65,7 +70,7 @@ function SiteLayout() {
     <CartProvider>
       <BrochureProvider>
         <ScrollToTop />
-        <div className="flex min-h-screen flex-col bg-ivory text-charcoal font-sans">
+        <div className="flex min-h-screen flex-col bg-white text-charcoal font-sans">
           <Navbar />
           <main className="flex-1">
             <Routes>
@@ -176,11 +181,16 @@ function AdminRoutes() {
           }
         >
           <Route index element={<AdminDashboard />} />
+          <Route path="homepage-builder" element={<AdminHomepageBuilder />} />
+          <Route path="banners" element={<AdminBanners />} />
+          <Route path="promos" element={<AdminPromos />} />
           <Route path="products" element={<AdminProductList />} />
           <Route path="products/new" element={<AdminProductForm />} />
           <Route path="products/:id" element={<AdminProductForm />} />
           <Route path="categories" element={<AdminCategories />} />
           <Route path="collections" element={<AdminCollections />} />
+          <Route path="coupons" element={<AdminCoupons />} />
+          <Route path="navigation" element={<AdminNavigation />} />
           <Route path="settings" element={<AdminSettings />} />
           <Route path="orders" element={<AdminOrderList />} />
           <Route path="orders/:id" element={<AdminOrderDetail />} />

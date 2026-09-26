@@ -32,13 +32,18 @@ export default function CollectionsHub() {
 
       {/* Grid of Collections */}
       <section className="mx-auto max-w-7xl px-5 sm:px-8">
-        <div className="grid gap-8 sm:grid-cols-2">
-          {collections.map((col) => (
-            <Link
-              key={col.id}
-              to={`/collections/${col.slug}`}
-              className="group overflow-hidden rounded-3xl border border-charcoal/10 bg-white transition hover:border-terracotta/40 hover:shadow-xl"
-            >
+        {isLoading ? (
+          <div className="py-12 text-center text-xs font-semibold uppercase tracking-wider text-charcoal-soft">
+            Loading collections...
+          </div>
+        ) : (
+          <div className="grid gap-8 sm:grid-cols-2">
+            {collections.map((col) => (
+              <Link
+                key={col.id}
+                to={`/collections/${col.slug}`}
+                className="group overflow-hidden rounded-3xl border border-charcoal/10 bg-white transition hover:border-terracotta/40 hover:shadow-xl"
+              >
               <div className="aspect-[16/10] w-full overflow-hidden bg-ivory-dark/40">
                 <img
                   src={col.heroImage}
@@ -64,6 +69,7 @@ export default function CollectionsHub() {
             </Link>
           ))}
         </div>
+      )}
       </section>
     </div>
   );

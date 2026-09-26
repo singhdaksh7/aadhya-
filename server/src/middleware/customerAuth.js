@@ -13,5 +13,26 @@ export async function requireCustomer(req, res, next) {
     if (!customer || !customer.isActive) throw ApiError.unauthorized();
     req.customer = { id: customer.id, name: customer.name, email: customer.email, phone: customer.phone };
     next();
-  } catch { next(ApiError.unauthorized("Invalid or expired session")); }
+  } catch {
+    next(ApiError.unauthorized("Invalid or expired session"));
+  }
+}
+
+export async function optionalCustomer(req, res, next) {
+  try {
+    const header = req.headers.authorization || "";
+    const token = header.startsWith("Bearer ") ? header.slice(7) : null;
+    if (token) {
+      const payload = verifyAccessToken(token);
+      if (payload.type === "access" && payload.audience === "customer") {
+        const customer = await prisma.customer.findUnique({ where: { id: payload.sub } });
+        if (customer && customer.isActive) {
+          req.customer = { id: customer.id, name: customer.name, email: customer.email, phone: customer.phone };
+        }
+      }
+    }
+  } catch {
+    // Ignore error for optional auth
+  }
+  next();
 }

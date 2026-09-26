@@ -12,8 +12,10 @@ import { buildCheckoutPreview } from "./checkout.service.js";
 import * as orderService from "./order.service.js";
 
 export const checkoutPreview = asyncHandler(async (req, res) => {
-  const { items } = checkoutPreviewSchema.parse(req.body);
-  const preview = await buildCheckoutPreview(items);
+  const { items, couponCode } = checkoutPreviewSchema.parse(req.body);
+  const customerId = req.customer?.id || null;
+  const customerEmail = req.customer?.email || req.body.customerEmail || null;
+  const preview = await buildCheckoutPreview(items, { couponCode, customerId, customerEmail });
   ok(res, preview);
 });
 

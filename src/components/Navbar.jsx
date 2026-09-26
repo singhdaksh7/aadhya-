@@ -4,9 +4,12 @@ import { IconMenu, IconClose, IconCart } from "./icons";
 import { useCart } from "../context/CartContext";
 import { useCustomerAuth } from "../context/CustomerAuthContext";
 import { useSiteSettings } from "../hooks/useSiteSettings";
+import TopUtilityBar from "./TopUtilityBar";
 import SearchModal from "./SearchModal";
 
-const NAV_LINKS = [
+import { fetchNavigation } from "../lib/api";
+
+const DEFAULT_NAV_LINKS = [
   { to: "/shop", label: "Home Decor" },
   { to: "/collections", label: "Collections" },
   { to: "/books", label: "Books" },
@@ -19,6 +22,7 @@ export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [navItems, setNavItems] = useState(DEFAULT_NAV_LINKS);
   const { count, setIsOpen: setCartDrawerOpen } = useCart();
   const location = useLocation();
   const { user } = useCustomerAuth();
@@ -31,96 +35,153 @@ export default function Navbar() {
   }, []);
 
   useEffect(() => {
+    let active = true;
+    fetchNavigation("HEADER_MAIN")
+      .then((res) => {
+        if (!active) return;
+        if (res.data?.items?.length > 0) {
+          const mapped = res.data.items.map((item) => ({
+            id: item.id,
+            to: item.url || (item.type === "CATEGORY" ? `/shop/category/${item.targetId}` : item.type === "COLLECTION" ? `/collections/${item.targetId}` : "#"),
+            label: item.title,
+            children: item.children || [],
+          }));
+          setNavItems(mapped);
+        }
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
     setMobileMenuOpen(false);
   }, [location.pathname]);
 
   return (
     <>
-      {/* Top Announcement Bar */}
+      {/* 1. Slim Top Utility Bar */}
+      <TopUtilityBar />
+
+      {/* Top Announcement Bar if enabled in site settings */}
       {announcementBar?.active && announcementBar?.text && (
-        <div className="bg-charcoal px-4 py-2.5 text-center text-xs font-medium tracking-wide text-ivory leading-normal">
+        <div className="bg-charcoal px-4 py-2 text-center text-xs font-medium tracking-wide text-white leading-normal">
           <span>{announcementBar.text}</span>
         </div>
       )}
 
-      {/* Main Sticky Header */}
+      {/* 2. Main Header (Bright White) */}
       <header
-        className={`sticky top-0 z-40 transition-all duration-300 ${
-          scrolled ? "border-b border-charcoal/10 bg-ivory/95 shadow-sm backdrop-blur" : "border-b border-charcoal/5 bg-ivory/80 backdrop-blur"
+        className={`sticky top-0 z-40 bg-white transition-all duration-300 ${
+          scrolled ? "border-b border-charcoal/10 shadow-sm" : "border-b border-charcoal/10"
         }`}
       >
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3.5 sm:px-8">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3.5 sm:px-8 gap-4">
           {/* Mobile Hamburger Button */}
           <button
             onClick={() => setMobileMenuOpen(true)}
-            className="rounded-full p-2 text-charcoal hover:bg-charcoal/5 lg:hidden"
+            className="rounded-full p-2 text-charcoal hover:bg-charcoal/5 lg:hidden shrink-0"
             aria-label="Open menu"
           >
             <IconMenu className="h-6 w-6" />
           </button>
 
-          {/* Logo */}
-          <Link to="/" className="flex items-center gap-2">
-            <span className="font-serif-display text-2xl tracking-tight text-charcoal sm:text-3xl">
+          {/* Left: Logo */}
+          <Link to="/" className="flex items-center gap-2 shrink-0">
+            <span className="font-serif-display text-2xl tracking-tight text-charcoal sm:text-3xl font-bold">
               Aadya
             </span>
           </Link>
 
-          {/* Desktop Navigation Links */}
-          <nav className="hidden items-center gap-6 lg:flex">
-            {NAV_LINKS.map((link) => (
+          {/* Center: Large Search Bar */}
+          <div className="flex-1 max-w-xl hidden sm:block mx-4">
+            <button
+              onClick={() => setSearchOpen(true)}
+              className="flex w-full items-center gap-3 rounded-full border border-charcoal/20 bg-[#FAF6F0] px-4 py-2 text-xs sm:text-sm text-charcoal-soft transition hover:border-terracotta hover:bg-white hover:shadow-xs"
+            >
+              <svg className="h-4 w-4 text-charcoal/50 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <span className="truncate text-charcoal/70">Search home decor, books, gifts and more...</span>
+            </button>
+          </div>
+
+          {/* Right Action Icons: Account, Wishlist, Cart */}
+          <div className="flex items-center gap-3 sm:gap-5 shrink-0 text-charcoal">
+            {/* Mobile Search Toggle */}
+            <button
+              onClick={() => setSearchOpen(true)}
+              className="p-2 text-charcoal-soft hover:text-charcoal sm:hidden"
+              aria-label="Search"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </button>
+
+            {/* Account Link */}
+            <Link
+              to={user ? "/account" : "/login"}
+              className="hidden sm:flex items-center gap-1.5 p-1.5 text-charcoal hover:text-terracotta transition"
+              title={user ? "My Account" : "Sign In"}
+            >
+              <svg className="h-5 w-5 text-charcoal/80" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+              <span className="text-xs font-semibold uppercase tracking-wider hidden md:inline">
+                {user ? "Account" : "Login"}
+              </span>
+            </Link>
+
+            {/* Wishlist Placeholder */}
+            <button
+              className="hidden sm:flex items-center gap-1.5 p-1.5 text-charcoal hover:text-terracotta transition"
+              title="Wishlist (Coming Soon)"
+            >
+              <svg className="h-5 w-5 text-charcoal/80" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+              </svg>
+              <span className="text-xs font-semibold uppercase tracking-wider hidden md:inline">
+                Wishlist
+              </span>
+            </button>
+
+            {/* Cart Icon + Badge */}
+            <button
+              onClick={() => setCartDrawerOpen(true)}
+              className="relative flex items-center gap-1.5 p-1.5 text-charcoal hover:text-terracotta transition"
+              aria-label="Open cart"
+            >
+              <div className="relative">
+                <IconCart className="h-5 w-5" />
+                {count > 0 && (
+                  <span className="absolute -right-2 -top-2 flex h-4 w-4 items-center justify-center rounded-full bg-terracotta text-[10px] font-bold text-white shadow">
+                    {count}
+                  </span>
+                )}
+              </div>
+              <span className="text-xs font-semibold uppercase tracking-wider hidden md:inline">
+                Cart
+              </span>
+            </button>
+          </div>
+        </div>
+
+        {/* Desktop Retail Sub-Navigation Bar */}
+        <div className="hidden lg:block border-t border-charcoal/5 bg-white py-2.5">
+          <div className="mx-auto flex max-w-7xl items-center justify-center gap-8 px-8">
+            {navItems.map((link) => (
               <NavLink
-                key={link.to}
+                key={link.id || link.to}
                 to={link.to}
                 className={({ isActive }) =>
                   `text-xs font-semibold uppercase tracking-wider transition-colors ${
-                    isActive ? "text-terracotta" : "text-charcoal-soft hover:text-terracotta"
+                    isActive ? "text-terracotta border-b-2 border-terracotta pb-0.5" : "text-charcoal-soft hover:text-terracotta"
                   }`
                 }
               >
                 {link.label}
               </NavLink>
             ))}
-          </nav>
-
-          {/* Right Action Icons & Prominent Search */}
-          <div className="flex items-center gap-2 sm:gap-4">
-            {/* Prominent Search Bar / Button */}
-            <button
-              onClick={() => setSearchOpen(true)}
-              className="flex items-center gap-2 rounded-full border border-charcoal/15 bg-white/80 px-3.5 py-1.5 text-xs text-charcoal-soft transition hover:border-terracotta hover:text-charcoal w-auto sm:w-36 md:w-44 lg:w-56"
-            >
-              <svg className="h-4 w-4 text-charcoal/50 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <span className="hidden sm:inline truncate">Search home decor...</span>
-              <span className="sm:hidden">Search</span>
-            </button>
-
-            {/* Account Icon */}
-            <Link
-              to={user ? "/account" : "/login"}
-              className="hidden rounded-full p-2 text-charcoal-soft transition hover:bg-charcoal/5 hover:text-charcoal sm:flex"
-              title={user ? "My Account" : "Sign In"}
-            >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-            </Link>
-
-            {/* Cart Icon + Badge */}
-            <button
-              onClick={() => setCartDrawerOpen(true)}
-              className="relative flex items-center justify-center rounded-full p-2 text-charcoal transition hover:bg-charcoal/5"
-              aria-label="Open cart"
-            >
-              <IconCart className="h-5 w-5" />
-              {count > 0 && (
-                <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-terracotta text-[10px] font-bold text-ivory shadow">
-                  {count}
-                </span>
-              )}
-            </button>
           </div>
         </div>
 
@@ -131,9 +192,9 @@ export default function Navbar() {
               className="absolute inset-0 bg-charcoal/50 backdrop-blur-sm"
               onClick={() => setMobileMenuOpen(false)}
             />
-            <div className="absolute left-0 top-0 h-full w-full max-w-xs overflow-y-auto bg-ivory p-6 shadow-2xl">
+            <div className="absolute left-0 top-0 h-full w-full max-w-xs overflow-y-auto bg-white p-6 shadow-2xl">
               <div className="flex items-center justify-between border-b border-charcoal/10 pb-4">
-                <Link to="/" className="font-serif-display text-2xl text-charcoal">
+                <Link to="/" className="font-serif-display text-2xl text-charcoal font-bold">
                   Aadya
                 </Link>
                 <button
@@ -151,7 +212,7 @@ export default function Navbar() {
                     setMobileMenuOpen(false);
                     setSearchOpen(true);
                   }}
-                  className="flex w-full items-center gap-3 rounded-xl border border-charcoal/15 bg-white p-3 text-left text-sm text-charcoal-soft"
+                  className="flex w-full items-center gap-3 rounded-xl border border-charcoal/15 bg-[#FAF6F0] p-3 text-left text-sm text-charcoal-soft"
                 >
                   <svg className="h-4 w-4 text-charcoal/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -165,20 +226,20 @@ export default function Navbar() {
                     onClick={() => setMobileMenuOpen(false)}
                     className={({ isActive }) =>
                       `rounded-xl px-4 py-3 text-sm font-medium transition ${
-                        isActive ? "bg-sage-light text-green-deep font-semibold" : "text-charcoal hover:bg-charcoal/5"
+                        isActive ? "bg-terracotta/10 text-terracotta font-semibold" : "text-charcoal hover:bg-charcoal/5"
                       }`
                     }
                   >
                     Home
                   </NavLink>
-                  {NAV_LINKS.map((link) => (
+                  {navItems.map((link) => (
                     <NavLink
-                      key={link.to}
+                      key={link.id || link.to}
                       to={link.to}
                       onClick={() => setMobileMenuOpen(false)}
                       className={({ isActive }) =>
                         `rounded-xl px-4 py-3 text-sm font-medium transition ${
-                          isActive ? "bg-sage-light text-green-deep font-semibold" : "text-charcoal hover:bg-charcoal/5"
+                          isActive ? "bg-terracotta/10 text-terracotta font-semibold" : "text-charcoal hover:bg-charcoal/5"
                         }`
                       }
                     >

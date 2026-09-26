@@ -16,7 +16,6 @@ import {
   updateAddress,
 } from "../../lib/api";
 import { formatInr } from "../../lib/format";
-import { IconCheck } from "../../components/icons";
 
 const blank = {
   label: "Home",
@@ -288,7 +287,11 @@ export function Addresses() {
   const save = async (e) => {
     e.preventDefault();
     try {
-      editing ? await updateAddress(editing.id, form) : await createAddress(form);
+      if (editing) {
+        await updateAddress(editing.id, form);
+      } else {
+        await createAddress(form);
+      }
       setForm(blank);
       setEditing(null);
       load();

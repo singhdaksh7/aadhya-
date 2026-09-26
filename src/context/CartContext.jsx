@@ -189,6 +189,55 @@ export function CartProvider({ children }) {
   const subtotal = useMemo(() => items.reduce((sum, i) => sum + lineTotal(i), 0), [items]);
   const count = useMemo(() => items.reduce((sum, i) => sum + i.quantity, 0), [items]);
 
+  const COUPON_STORAGE_KEY = "aadya.coupon.v1";
+  const [appliedCoupon, setAppliedCoupon] = useState(() => {
+    try {
+      const raw = sessionStorage.getItem(COUPON_STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [couponError, setCouponError] = useState(null);
+
+  useEffect(() => {
+    try {
+      if (appliedCoupon) {
+        sessionStorage.setItem(COUPON_STORAGE_KEY, JSON.stringify(appliedCoupon));
+      } else {
+        sessionStorage.removeItem(COUPON_STORAGE_KEY);
+      }
+    } catch {}
+  }, [appliedCoupon]);
+
+  const applyCoupon = async (code) => {
+    setCouponError(null);
+    if (!code || !code.trim()) {
+      setCouponError("Please enter a valid coupon code");
+      return false;
+    }
+    try {
+      const { validateCouponCode } = await import("../lib/api");
+      const cartItemsPayload = items.map((i) => ({
+        slug: i.product.slug,
+        variantId: i.variant?.id || null,
+        quantity: i.quantity,
+      }));
+      const res = await validateCouponCode(code.trim(), cartItemsPayload);
+      setAppliedCoupon(res.data);
+      return true;
+    } catch (err) {
+      setAppliedCoupon(null);
+      setCouponError(err.message || "Invalid coupon code");
+      return false;
+    }
+  };
+
+  const removeCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponError(null);
+  };
+
   return (
     <CartContext.Provider
       value={{
@@ -203,6 +252,10 @@ export function CartProvider({ children }) {
         setIsOpen,
         isLoading,
         lineTotal,
+        appliedCoupon,
+        couponError,
+        applyCoupon,
+        removeCoupon,
       }}
     >
       {children}

@@ -11,4 +11,10 @@ export default defineConfig({
     headless: true,
     screenshot: "only-on-failure",
   },
+  webServer: {
+    command: "npm run dev",
+    port: 5175,
+    reuseExistingServer: true,
+    timeout: 120000,
+  },
 });

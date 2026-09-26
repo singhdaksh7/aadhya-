@@ -127,6 +127,28 @@ export async function finalizePaidPayment({ providerOrderId, providerPaymentId, 
       }
     }
 
+    if (order.couponCode) {
+      const coupon = await tx.coupon.findUnique({ where: { code: order.couponCode } });
+      if (coupon) {
+        const existingRedemption = await tx.couponRedemption.findUnique({ where: { orderId: order.id } });
+        if (!existingRedemption) {
+          await tx.couponRedemption.create({
+            data: {
+              couponId: coupon.id,
+              customerId: order.customerId || null,
+              customerEmail: order.customerEmail,
+              orderId: order.id,
+              discountAmount: order.discountAmount,
+            },
+          });
+          await tx.coupon.update({
+            where: { id: coupon.id },
+            data: { usageCount: { increment: 1 } },
+          });
+        }
+      }
+    }
+
     return { alreadyProcessed: false, order };
   });
 

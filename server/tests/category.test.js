@@ -94,4 +94,52 @@ describe("category CRUD", () => {
 
     expect(res.status).toBe(204);
   });
+
+  it("creates a subcategory under a parent and prevents circular parent relationships", async () => {
+    const token = await getToken();
+    const parent = await seedTestCategory({ name: "Home Decor", slug: "home-decor-parent" });
+
+    const childRes = await request(app)
+      .post("/api/admin/categories")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ name: "Wall Decor", parentId: parent.id });
+
+    expect(childRes.status).toBe(201);
+    expect(childRes.body.data.parentId).toBe(parent.id);
+
+    // Attempting to set parent as its own child (circular relationship) should fail
+    const circularRes = await request(app)
+      .patch(`/api/admin/categories/${parent.id}`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ parentId: childRes.body.data.id });
+
+    expect(circularRes.status).toBe(400);
+  });
+
+  it("manages dynamic header navigation items", async () => {
+    const token = await getToken();
+    
+    // Create menu
+    const menuRes = await request(app)
+      .post("/api/navigation/admin/menus")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ code: "HEADER_TEST_MENU", title: "Test Header Menu" });
+
+    expect(menuRes.status).toBe(201);
+    const menuId = menuRes.body.data.id;
+
+    // Add item
+    const itemRes = await request(app)
+      .post(`/api/navigation/admin/menus/${menuId}/items`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ title: "Custom Shop", url: "/shop", type: "CUSTOM" });
+
+    expect(itemRes.status).toBe(201);
+
+    // Fetch public navigation menu
+    const publicRes = await request(app).get("/api/navigation/HEADER_TEST_MENU");
+    expect(publicRes.status).toBe(200);
+    expect(publicRes.body.data.items[0].title).toBe("Custom Shop");
+  });
 });
+

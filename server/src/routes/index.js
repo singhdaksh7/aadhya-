@@ -19,6 +19,12 @@ import { publicSettingsRouter, adminSettingsRouter } from "../modules/settings/s
 import { newsletterRouter } from "../modules/newsletter/newsletter.routes.js";
 import adminCustomerRouter from "../modules/admin-customers/admin-customers.routes.js";
 import adminUserRouter from "../modules/admin-users/admin-users.routes.js";
+import navigationRouter from "../modules/navigation/navigation.routes.js";
+import { publicPagesRouter, adminPagesRouter } from "../modules/pages/pages.routes.js";
+import { publicBannersRouter, adminBannersRouter } from "../modules/banners/banners.routes.js";
+import { publicPromosRouter, adminPromosRouter } from "../modules/promos/promos.routes.js";
+
+import { publicCouponRouter, adminCouponRouter } from "../modules/coupons/coupon.routes.js";
 
 const router = Router();
 
@@ -28,8 +34,13 @@ router.get("/health", (req, res) => ok(res, { status: "ok" }));
 router.use("/products", publicProductRouter);
 router.use("/categories", publicCategoryRouter);
 router.use("/collections", publicCollectionRouter);
+router.use("/coupons", publicCouponRouter);
 router.use("/settings", publicSettingsRouter);
 router.use("/newsletter", newsletterRouter);
+router.use("/navigation", navigationRouter);
+router.use("/pages", publicPagesRouter);
+router.use("/banners", publicBannersRouter);
+router.use("/promos", publicPromosRouter);
 
 // Thin convenience wrapper — Books are Products with productType=BOOK,
 // this must never grow its own product/business logic (see product.service.js).
@@ -61,15 +72,19 @@ router.use("/admin/categories", adminCategoryRouter);
 router.use("/admin/products", adminProductRouter);
 router.use("/admin/orders", adminOrderRouter);
 router.use("/admin/collections", adminCollectionRouter);
+router.use("/admin/coupons", adminCouponRouter);
 router.use("/admin/settings", adminSettingsRouter);
 router.use("/admin/customers", adminCustomerRouter);
 router.use("/admin/admin-users", adminUserRouter);
+router.use("/admin/pages", adminPagesRouter);
+router.use("/admin/banners", adminBannersRouter);
+router.use("/admin/promos", adminPromosRouter);
 
 router.get(
   "/admin/dashboard",
   requireAdmin,
   asyncHandler(async (req, res) => {
-    const [totalProducts, activeProducts, books, otherProducts, categories, lowStock, orderStats] =
+    const [totalProducts, activeProducts, books, otherProducts, categories, lowStock, activeCoupons, orderStats] =
       await Promise.all([
         prisma.product.count(),
         prisma.product.count({ where: { isActive: true } }),
@@ -77,6 +92,7 @@ router.get(
         prisma.product.count({ where: { productType: "PHYSICAL" } }),
         prisma.category.count(),
         prisma.product.count({ where: { trackInventory: true, stockQuantity: { lte: 5 } } }),
+        prisma.coupon.count({ where: { isActive: true } }),
         getOrderDashboardStats(),
       ]);
 
@@ -87,6 +103,7 @@ router.get(
       otherProducts,
       categories,
       lowStockProducts: lowStock,
+      activeCoupons,
       ...orderStats,
     });
   })

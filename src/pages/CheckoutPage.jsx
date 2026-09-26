@@ -48,7 +48,7 @@ function validate(form) {
 }
 
 export default function CheckoutPage() {
-  const { items, isLoading: cartLoading, clearCart } = useCart();
+  const { items, isLoading: cartLoading, clearCart, appliedCoupon } = useCart();
   const navigate = useNavigate();
   const { user } = useCustomerAuth();
 
@@ -57,7 +57,7 @@ export default function CheckoutPage() {
   const [preview, setPreview] = useState(null);
   const [previewStatus, setPreviewStatus] = useState("loading");
   const [stage, setStage] = useState("form"); // form | placing | paying | payment_unavailable | failed
-  const [pendingOrder, setPendingOrder] = useState(null); // { orderId, orderNumber, accessToken }
+  const [pendingOrder, setPendingOrder] = useState(null);
   const [serverError, setServerError] = useState(null);
   const [savedAddresses, setSavedAddresses] = useState([]);
   const [selectedAddressId, setSelectedAddressId] = useState("");
@@ -104,13 +104,19 @@ export default function CheckoutPage() {
       .catch(() => {});
   }, [user]);
 
-  const cartKey = useMemo(() => items.map((i) => `${i.product.slug}:${i.quantity}`).join(","), [items]);
+  const cartKey = useMemo(
+    () => `${items.map((i) => `${i.product.slug}:${i.quantity}`).join(",")}:${appliedCoupon?.code || ""}`,
+    [items, appliedCoupon]
+  );
 
   useEffect(() => {
     if (cartLoading || items.length === 0) return;
     let cancelled = false;
     setPreviewStatus("loading");
-    fetchCheckoutPreview(items.map((i) => ({ slug: i.product.slug, quantity: i.quantity })))
+    fetchCheckoutPreview({
+      items: items.map((i) => ({ slug: i.product.slug, quantity: i.quantity })),
+      couponCode: appliedCoupon?.code || undefined,
+    })
       .then((res) => {
         if (cancelled) return;
         setPreview(res.data);
@@ -120,7 +126,7 @@ export default function CheckoutPage() {
     return () => {
       cancelled = true;
     };
-  }, [cartKey, cartLoading]);
+  }, [cartKey, cartLoading, appliedCoupon]);
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
@@ -171,7 +177,7 @@ export default function CheckoutPage() {
           setStage("failed");
         },
       },
-      theme: { color: "#3c4a3a" },
+      theme: { color: "#b8674a" },
     });
 
     razorpay.on("payment.failed", () => setStage("failed"));
@@ -228,6 +234,7 @@ export default function CheckoutPage() {
             country: form.country,
           },
           items: items.map((i) => ({ slug: i.product.slug, quantity: i.quantity })),
+          couponCode: appliedCoupon?.code || undefined,
           savedAddressId,
         },
         Boolean(user)
@@ -253,149 +260,152 @@ export default function CheckoutPage() {
 
   const inputCls = (field) =>
     `w-full rounded-xl border px-4 py-2.5 text-sm focus:outline-none ${
-      errors[field] ? "border-terracotta" : "border-charcoal/15 focus:border-charcoal/40"
+      errors[field] ? "border-terracotta" : "border-charcoal/15 focus:border-terracotta"
     }`;
 
   return (
-    <div className="mx-auto max-w-5xl px-5 py-16 sm:px-8">
-      <title>Checkout — Aadya Society</title>
-      <SectionHeading eyebrow="Checkout" title="Checkout" />
+    <div className="bg-white text-charcoal py-12 pb-20">
+      <div className="mx-auto max-w-5xl px-4 sm:px-8 space-y-8">
+        <title>Checkout — Aadya Storefront</title>
+        <SectionHeading eyebrow="Express Retail Checkout" title="Checkout" />
 
-      {cartLoading ? (
-        <LoadingNotice label="Loading your cart…" />
-      ) : (
-        <div className="mt-10 grid gap-10 lg:grid-cols-[1.3fr_1fr]">
-          <form onSubmit={onSubmit} className="space-y-8">
-            <fieldset className="space-y-4">
-              <legend className="mb-1 font-serif-display text-lg text-charcoal">Contact Details</legend>
-              <Field label="Name" error={errors.name}>
-                <input value={form.name} onChange={set("name")} className={inputCls("name")} />
-              </Field>
-              <div className="grid grid-cols-2 gap-4">
-                <Field label="Email" error={errors.email}>
-                  <input type="email" value={form.email} onChange={set("email")} className={inputCls("email")} />
+        {cartLoading ? (
+          <LoadingNotice label="Loading your cart…" />
+        ) : (
+          <div className="mt-8 grid gap-10 lg:grid-cols-[1.3fr_1fr]">
+            <form onSubmit={onSubmit} className="space-y-8">
+              <fieldset className="space-y-4">
+                <legend className="mb-1 font-serif-display text-lg text-charcoal font-bold">Contact Details</legend>
+                <Field label="Name" error={errors.name}>
+                  <input value={form.name} onChange={set("name")} className={inputCls("name")} />
                 </Field>
-                <Field label="Phone" error={errors.phone}>
-                  <input
-                    value={form.phone}
-                    onChange={set("phone")}
-                    className={inputCls("phone")}
-                    data-testid="contact-phone"
-                  />
-                </Field>
-              </div>
-            </fieldset>
+                <div className="grid grid-cols-2 gap-4">
+                  <Field label="Email" error={errors.email}>
+                    <input type="email" value={form.email} onChange={set("email")} className={inputCls("email")} />
+                  </Field>
+                  <Field label="Phone" error={errors.phone}>
+                    <input
+                      value={form.phone}
+                      onChange={set("phone")}
+                      className={inputCls("phone")}
+                      data-testid="contact-phone"
+                    />
+                  </Field>
+                </div>
+              </fieldset>
 
-            <fieldset className="space-y-4">
-              <legend className="mb-1 font-serif-display text-lg text-charcoal">Shipping Address</legend>
-              {user && (
-                <div className="space-y-2 rounded-xl border border-charcoal/10 p-3 text-sm">
-                  {savedAddresses.map((a) => (
-                    <label key={a.id} className="block">
+              <fieldset className="space-y-4">
+                <legend className="mb-1 font-serif-display text-lg text-charcoal font-bold">Shipping Address</legend>
+                {user && (
+                  <div className="space-y-2 rounded-xl border border-charcoal/10 bg-[#FAF6F0] p-3 text-xs sm:text-sm">
+                    {savedAddresses.map((a) => (
+                      <label key={a.id} className="block cursor-pointer">
+                        <input
+                          type="radio"
+                          name="savedAddress"
+                          checked={selectedAddressId === a.id}
+                          onChange={() => {
+                            setSelectedAddressId(a.id);
+                            setForm((f) => ({
+                              ...f,
+                              fullName: a.fullName,
+                              addressPhone: a.phone,
+                              addressLine1: a.addressLine1,
+                              addressLine2: a.addressLine2 || "",
+                              city: a.city,
+                              state: a.state,
+                              postalCode: a.postalCode,
+                              country: a.country,
+                            }));
+                          }}
+                        />{" "}
+                        {a.label} — {a.fullName}{a.isDefault ? " (Default)" : ""}
+                      </label>
+                    ))}
+                    <label className="block cursor-pointer">
                       <input
                         type="radio"
                         name="savedAddress"
-                        checked={selectedAddressId === a.id}
-                        onChange={() => {
-                          setSelectedAddressId(a.id);
-                          setForm((f) => ({
-                            ...f,
-                            fullName: a.fullName,
-                            addressPhone: a.phone,
-                            addressLine1: a.addressLine1,
-                            addressLine2: a.addressLine2 || "",
-                            city: a.city,
-                            state: a.state,
-                            postalCode: a.postalCode,
-                            country: a.country,
-                          }));
-                        }}
+                        checked={!selectedAddressId}
+                        onChange={() => setSelectedAddressId("")}
                       />{" "}
-                      {a.label} — {a.fullName}{a.isDefault ? " (Default)" : ""}
+                      Use a new address
                     </label>
-                  ))}
-                  <label className="block">
+                  </div>
+                )}
+                <div className="grid grid-cols-2 gap-4">
+                  <Field label="Full Name" error={errors.fullName}>
+                    <input value={form.fullName} onChange={set("fullName")} className={inputCls("fullName")} />
+                  </Field>
+                  <Field label="Phone" error={errors.addressPhone}>
                     <input
-                      type="radio"
-                      name="savedAddress"
-                      checked={!selectedAddressId}
-                      onChange={() => setSelectedAddressId("")}
-                    />{" "}
-                    Use a new address
+                      value={form.addressPhone}
+                      onChange={set("addressPhone")}
+                      className={inputCls("addressPhone")}
+                      data-testid="address-phone"
+                    />
+                  </Field>
+                </div>
+                <Field label="Address Line 1" error={errors.addressLine1}>
+                  <input value={form.addressLine1} onChange={set("addressLine1")} className={inputCls("addressLine1")} />
+                </Field>
+                <Field label="Address Line 2 (optional)">
+                  <input value={form.addressLine2} onChange={set("addressLine2")} className={inputCls("addressLine2")} />
+                </Field>
+                <div className="grid grid-cols-3 gap-4">
+                  <Field label="City" error={errors.city}>
+                    <input value={form.city} onChange={set("city")} className={inputCls("city")} />
+                  </Field>
+                  <Field label="State" error={errors.state}>
+                    <input value={form.state} onChange={set("state")} className={inputCls("state")} />
+                  </Field>
+                  <Field label="PIN Code" error={errors.postalCode}>
+                    <input value={form.postalCode} onChange={set("postalCode")} className={inputCls("postalCode")} />
+                  </Field>
+                </div>
+                <Field label="Country">
+                  <input value={form.country} onChange={set("country")} className={inputCls("country")} />
+                </Field>
+                {user && !selectedAddressId && (
+                  <label className="block text-xs sm:text-sm cursor-pointer">
+                    <input type="checkbox" checked={saveAddress} onChange={(e) => setSaveAddress(e.target.checked)} /> Save this address to my account
                   </label>
+                )}
+              </fieldset>
+
+              {serverError && <p className="text-sm font-semibold text-terracotta">{serverError}</p>}
+
+              {stage === "failed" && (
+                <div className="rounded-xl bg-terracotta/10 px-4 py-3 text-sm text-terracotta">
+                  Payment didn't go through. Your order is saved and your cart is untouched — you can retry.
+                  <Button type="button" className="mt-3 w-full bg-terracotta text-white" onClick={retryPayment}>
+                    Retry Payment
+                  </Button>
                 </div>
               )}
-              <div className="grid grid-cols-2 gap-4">
-                <Field label="Full Name" error={errors.fullName}>
-                  <input value={form.fullName} onChange={set("fullName")} className={inputCls("fullName")} />
-                </Field>
-                <Field label="Phone" error={errors.addressPhone}>
-                  <input
-                    value={form.addressPhone}
-                    onChange={set("addressPhone")}
-                    className={inputCls("addressPhone")}
-                    data-testid="address-phone"
-                  />
-                </Field>
-              </div>
-              <Field label="Address Line 1" error={errors.addressLine1}>
-                <input value={form.addressLine1} onChange={set("addressLine1")} className={inputCls("addressLine1")} />
-              </Field>
-              <Field label="Address Line 2 (optional)">
-                <input value={form.addressLine2} onChange={set("addressLine2")} className={inputCls("addressLine2")} />
-              </Field>
-              <div className="grid grid-cols-3 gap-4">
-                <Field label="City" error={errors.city}>
-                  <input value={form.city} onChange={set("city")} className={inputCls("city")} />
-                </Field>
-                <Field label="State" error={errors.state}>
-                  <input value={form.state} onChange={set("state")} className={inputCls("state")} />
-                </Field>
-                <Field label="PIN Code" error={errors.postalCode}>
-                  <input value={form.postalCode} onChange={set("postalCode")} className={inputCls("postalCode")} />
-                </Field>
-              </div>
-              <Field label="Country">
-                <input value={form.country} onChange={set("country")} className={inputCls("country")} />
-              </Field>
-              {user && !selectedAddressId && (
-                <label className="block text-sm">
-                  <input type="checkbox" checked={saveAddress} onChange={(e) => setSaveAddress(e.target.checked)} /> Save this address to my account
-                </label>
+
+              {stage === "payment_unavailable" && (
+                <div className="rounded-xl bg-sage-light px-4 py-3 text-sm text-green-deep">
+                  Your order #{pendingOrder?.orderNumber} has been saved as pending. Online payment isn't available in
+                  this environment right now — we'll reach out to complete it, or you can retry shortly.
+                </div>
               )}
-            </fieldset>
 
-            {serverError && <p className="text-sm text-terracotta">{serverError}</p>}
+              {stage !== "failed" && stage !== "payment_unavailable" && (
+                <button
+                  type="submit"
+                  disabled={stage === "placing" || stage === "paying" || previewStatus !== "ready" || preview?.hasBlockingIssues}
+                  className="w-full rounded-full bg-terracotta py-4 text-xs font-semibold uppercase tracking-wider text-white shadow-xs transition hover:bg-terracotta-dark disabled:opacity-50"
+                >
+                  {stage === "placing" ? "Placing Order…" : stage === "paying" ? "Opening Payment Window…" : "Pay Securely via Razorpay"}
+                </button>
+              )}
+            </form>
 
-            {stage === "failed" && (
-              <div className="rounded-xl bg-terracotta/10 px-4 py-3 text-sm text-terracotta">
-                Payment didn't go through. Your order is saved and your cart is untouched — you can retry.
-                <Button type="button" className="mt-3 w-full" onClick={retryPayment}>
-                  Retry Payment
-                </Button>
-              </div>
-            )}
-
-            {stage === "payment_unavailable" && (
-              <div className="rounded-xl bg-sage-light px-4 py-3 text-sm text-green-deep">
-                Your order #{pendingOrder?.orderNumber} has been saved as pending. Online payment isn't available in
-                this environment right now — we'll reach out to complete it, or you can retry shortly.
-              </div>
-            )}
-
-            {stage !== "failed" && stage !== "payment_unavailable" && (
-              <Button
-                className="w-full"
-                disabled={stage === "placing" || stage === "paying" || previewStatus !== "ready" || preview?.hasBlockingIssues}
-              >
-                {stage === "placing" ? "Placing Order…" : stage === "paying" ? "Opening Payment…" : "Pay Securely"}
-              </Button>
-            )}
-          </form>
-
-          <OrderSummary preview={preview} status={previewStatus} />
-        </div>
-      )}
+            <OrderSummary preview={preview} status={previewStatus} />
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -403,56 +413,62 @@ export default function CheckoutPage() {
 function Field({ label, error, children }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-charcoal-soft">{label}</span>
+      <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-charcoal-soft">{label}</span>
       {children}
-      {error && <span className="mt-1 block text-xs text-terracotta">{error}</span>}
+      {error && <span className="mt-1 block text-xs text-terracotta font-medium">{error}</span>}
     </label>
   );
 }
 
 function OrderSummary({ preview, status }) {
   return (
-    <div className="h-fit rounded-2xl border border-charcoal/10 bg-white/50 p-6">
-      <h2 className="font-serif-display text-lg text-charcoal">Order Summary</h2>
+    <div className="h-fit rounded-2xl border border-charcoal/10 bg-[#FAF6F0] p-6 space-y-4">
+      <h2 className="font-serif-display text-lg font-bold text-charcoal">Order Summary</h2>
 
-      {status === "loading" && <p className="mt-4 text-sm text-charcoal-soft">Calculating totals…</p>}
-      {status === "error" && <p className="mt-4 text-sm text-terracotta">Unable to calculate your order right now.</p>}
+      {status === "loading" && <p className="text-xs text-charcoal-soft">Calculating totals…</p>}
+      {status === "error" && <p className="text-xs text-terracotta">Unable to calculate your order right now.</p>}
 
       {status === "ready" && preview && (
         <>
-          <ul className="mt-4 space-y-3">
+          <ul className="space-y-3">
             {preview.items.map((item) => (
-              <li key={item.slug} className="text-sm">
+              <li key={item.slug} className="text-xs sm:text-sm">
                 <div className="flex justify-between gap-2">
-                  <span className="text-charcoal">
+                  <span className="text-charcoal font-medium">
                     {item.product?.name || item.slug} × {item.quantity}
                   </span>
-                  <span className="text-charcoal-soft">{item.ok ? formatInr(item.lineTotal) : "—"}</span>
+                  <span className="text-charcoal-soft font-semibold">{item.ok ? formatInr(item.lineTotal) : "—"}</span>
                 </div>
                 {item.message && <p className="mt-1 text-xs text-terracotta">{item.message}</p>}
               </li>
             ))}
           </ul>
 
-          <div className="mt-5 space-y-1.5 border-t border-charcoal/10 pt-4 text-sm">
+          <div className="space-y-2 border-t border-charcoal/10 pt-4 text-xs sm:text-sm">
             <div className="flex justify-between text-charcoal-soft">
               <span>Subtotal</span>
-              <span>{formatInr(preview.subtotal)}</span>
+              <span className="font-medium text-charcoal">{formatInr(preview.subtotal)}</span>
             </div>
+            {preview.discount > 0 && (
+              <div className="flex justify-between text-emerald-700 font-medium">
+                <span>Coupon Discount ({preview.coupon?.code || "Applied"})</span>
+                <span>-{formatInr(preview.discount)}</span>
+              </div>
+            )}
             <div className="flex justify-between text-charcoal-soft">
               <span>Shipping</span>
-              <span>{preview.shipping === 0 ? "Free" : formatInr(preview.shipping)}</span>
+              <span>{preview.shipping === 0 ? <span className="text-emerald-700 font-semibold">FREE</span> : formatInr(preview.shipping)}</span>
             </div>
-            <div className="flex justify-between pt-2 font-serif-display text-base text-charcoal">
+            <div className="flex justify-between pt-2 font-serif-display text-base font-bold text-charcoal border-t border-charcoal/10">
               <span>Total</span>
-              <span>{formatInr(preview.total)}</span>
+              <span className="text-terracotta text-lg">{formatInr(preview.total)}</span>
             </div>
           </div>
 
           {preview.hasBlockingIssues && (
-            <p className="mt-4 text-xs text-terracotta">
+            <p className="text-xs text-terracotta">
               Some items need attention before you can pay. Please{" "}
-              <a href="/cart" className="underline">
+              <a href="/cart" className="underline font-semibold">
                 return to your cart
               </a>{" "}
               to fix them.

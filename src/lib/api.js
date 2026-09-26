@@ -257,9 +257,38 @@ export function adminDeleteCollection(id) {
   return api.delete(`/admin/collections/${id}`, { auth: "admin" });
 }
 
+export function adminListCoupons() {
+  return api.get("/admin/coupons", { auth: "admin" });
+}
+
+export function adminGetCoupon(id) {
+  return api.get(`/admin/coupons/${id}`, { auth: "admin" });
+}
+
+export function adminCreateCoupon(data) {
+  return api.post("/admin/coupons", data, { auth: "admin" });
+}
+
+export function adminUpdateCoupon(id, data) {
+  return api.patch(`/admin/coupons/${id}`, data, { auth: "admin" });
+}
+
+export function adminDeleteCoupon(id) {
+  return api.delete(`/admin/coupons/${id}`, { auth: "admin" });
+}
+
+export function validateCouponCode(code, items) {
+  return api.post("/coupons/validate", { code, items });
+}
+
+export function listPublicActiveCoupons() {
+  return api.get("/coupons/active");
+}
+
 // --- Checkout / orders / payments ---
-export function checkoutPreview(items) {
-  return api.post("/checkout/preview", { items });
+export function checkoutPreview(payload) {
+  const data = Array.isArray(payload) ? { items: payload } : payload;
+  return api.post("/checkout/preview", data);
 }
 
 export function createOrder(payload, authenticated = false) {
@@ -327,5 +356,44 @@ export function fetchSiteSettings() { return api.get("/settings"); }
 export function adminFetchSiteSettings() { return api.get("/admin/settings", { auth: "admin" }); }
 export function adminUpdateSiteSettings(data) { return api.put("/admin/settings", data, { auth: "admin" }); }
 export function subscribeNewsletter(email) { return api.post("/newsletter/subscribe", { email }); }
+
+export function fetchNavigation(code = "HEADER_MAIN") { return api.get(`/navigation/${code}`); }
+export function adminListMenus() { return api.get("/navigation/admin/menus", { auth: "admin" }); }
+export function adminCreateMenu(data) { return api.post("/navigation/admin/menus", data, { auth: "admin" }); }
+export function adminUpdateMenu(id, data) { return api.put(`/navigation/admin/menus/${id}`, data, { auth: "admin" }); }
+export function adminAddMenuItem(menuId, data) { return api.post(`/navigation/admin/menus/${menuId}/items`, data, { auth: "admin" }); }
+export function adminUpdateMenuItem(itemId, data) { return api.put(`/navigation/admin/items/${itemId}`, data, { auth: "admin" }); }
+export function adminDeleteMenuItem(itemId) { return api.delete(`/navigation/admin/items/${itemId}`, { auth: "admin" }); }
+
+export function fetchHomepage() { return api.get("/pages/home"); }
+export function adminFetchHomepage() { return api.get("/admin/pages/home", { auth: "admin" }); }
+export function adminCreatePageSection(data) { return api.post("/admin/pages/home/sections", data, { auth: "admin" }); }
+export function adminUpdatePageSection(sectionId, data) { return api.put(`/admin/pages/sections/${sectionId}`, data, { auth: "admin" }); }
+export function adminDeletePageSection(sectionId) { return api.delete(`/admin/pages/sections/${sectionId}`, { auth: "admin" }); }
+export function adminDuplicatePageSection(sectionId) { return api.post(`/admin/pages/sections/${sectionId}/duplicate`, undefined, { auth: "admin" }); }
+export function adminReorderPageSections(sectionIds) { return api.put("/admin/pages/sections/reorder", { sectionIds }, { auth: "admin" }); }
+export function adminPublishHomepage() { return api.post("/admin/pages/publish", undefined, { auth: "admin" }); }
+
+export function fetchBanners(params = {}) {
+  const query = typeof params === "string" ? `placement=${params}` : new URLSearchParams(params).toString();
+  return api.get(`/banners${query ? `?${query}` : ""}`);
+}
+export function adminListBanners(params = {}) {
+  const query = new URLSearchParams(params).toString();
+  return api.get(`/admin/banners${query ? `?${query}` : ""}`, { auth: "admin" });
+}
+export function adminFetchBanners(params = {}) { return adminListBanners(params); }
+export function adminCreateBanner(data) { return api.post("/admin/banners", data, { auth: "admin" }); }
+export function adminUpdateBanner(id, data) { return api.put(`/admin/banners/${id}`, data, { auth: "admin" }); }
+export function adminDeleteBanner(id) { return api.delete(`/admin/banners/${id}`, { auth: "admin" }); }
+
+export function fetchPromos() { return api.get("/promos"); }
+export function adminListPromos() { return api.get("/admin/promos", { auth: "admin" }); }
+export function adminFetchPromos() { return adminListPromos(); }
+export function adminCreatePromo(data) { return api.post("/admin/promos", data, { auth: "admin" }); }
+export function adminUpdatePromo(id, data) { return api.put(`/admin/promos/${id}`, data, { auth: "admin" }); }
+export function adminDeletePromo(id) { return api.delete(`/admin/promos/${id}`, { auth: "admin" }); }
+
+
 
 export { API_URL };

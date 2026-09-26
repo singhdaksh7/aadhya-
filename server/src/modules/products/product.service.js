@@ -11,14 +11,38 @@ const PUBLIC_INCLUDE = {
 
 const ADMIN_INCLUDE = { ...PUBLIC_INCLUDE, variants: { orderBy: { createdAt: "asc" } } };
 
+export function effectivePrice(product, variant = null) {
+  if (variant && variant.priceOverride != null) return Number(variant.priceOverride);
+  if (variant && variant.price != null) return Number(variant.price);
+  if (product.salePrice != null) return Number(product.salePrice);
+  return Number(product.price);
+}
+
+export function effectiveMrp(product) {
+  return product.mrp != null ? Number(product.mrp) : Number(product.price);
+}
+
+export function effectiveStock(product, variant = null) {
+  if (variant) return variant.stockQuantity;
+  return product.stockQuantity;
+}
+
 export function serializePublicProduct(product) {
-  const { variants = [], ...safe } = product;
+  const { variants = [], costPrice: _costPrice, ...safe } = product;
   return {
     ...safe,
+    price: Number(product.price),
+    salePrice: product.salePrice != null ? Number(product.salePrice) : null,
+    mrp: product.mrp != null ? Number(product.mrp) : null,
+    effectivePrice: effectivePrice(product),
     variants: variants.filter((variant) => variant.isActive).map((variant) => ({
-      id: variant.id, name: variant.name, sku: variant.sku, attributes: variant.attributes,
-      price: Number(variant.priceOverride ?? product.salePrice ?? product.price),
-      stockQuantity: variant.stockQuantity, available: variant.stockQuantity > 0,
+      id: variant.id,
+      name: variant.name,
+      sku: variant.sku,
+      attributes: variant.attributes,
+      price: effectivePrice(product, variant),
+      stockQuantity: variant.stockQuantity,
+      available: variant.stockQuantity > 0,
     })),
   };
 }
@@ -59,10 +83,14 @@ function buildWhere(query, { forceActive }) {
 
   if (query.categoryId) where.categoryId = query.categoryId;
   if (query.category) where.category = { slug: query.category };
+  if (query.subcategory) where.category = { slug: query.subcategory };
+  if (query.brand) where.brand = { equals: query.brand, mode: "insensitive" };
+  if (query.tag) where.tags = { has: query.tag };
 
   if (query.featured !== undefined) where.isFeatured = query.featured;
   if (query.bestSeller !== undefined) where.isBestSeller = query.bestSeller;
   if (query.newArrival !== undefined) where.isNewArrival = query.newArrival;
+  if (query.trending !== undefined) where.isTrending = query.trending;
   if (query.collection) where.collections = { some: { collection: { slug: query.collection, isActive: true } } };
   if (query.minPrice !== undefined || query.maxPrice !== undefined) where.price = { ...(query.minPrice !== undefined ? { gte: query.minPrice } : {}), ...(query.maxPrice !== undefined ? { lte: query.maxPrice } : {}) };
   if (query.availability === "in_stock") where.stockQuantity = { gt: 0 };
@@ -71,6 +99,7 @@ function buildWhere(query, { forceActive }) {
   if (query.search) {
     where.OR = [
       { name: { contains: query.search, mode: "insensitive" } },
+      { brand: { contains: query.search, mode: "insensitive" } },
       { shortDescription: { contains: query.search, mode: "insensitive" } },
       { description: { contains: query.search, mode: "insensitive" } },
       { bookDetail: { author: { contains: query.search, mode: "insensitive" } } },
@@ -106,7 +135,11 @@ async function paginatedFind(where, { page, limit, sort }, include) {
 
 export async function listPublicProducts(query) {
   const where = buildWhere(query, { forceActive: true });
-  return paginatedFind(where, query, PUBLIC_INCLUDE);
+  const result = await paginatedFind(where, query, PUBLIC_INCLUDE);
+  return {
+    ...result,
+    items: result.items.map(serializePublicProduct),
+  };
 }
 
 export async function getPublicProductBySlug(slug) {
@@ -116,7 +149,7 @@ export async function getPublicProductBySlug(slug) {
 }
 
 export async function listRelatedProducts(product, limit = 4) {
-  return prisma.product.findMany({
+  const items = await prisma.product.findMany({
     where: {
       isActive: true,
       categoryId: product.categoryId,
@@ -126,6 +159,7 @@ export async function listRelatedProducts(product, limit = 4) {
     orderBy: { createdAt: "desc" },
     take: limit,
   });
+  return items.map(serializePublicProduct);
 }
 
 export async function listAdminProducts(query) {
@@ -179,28 +213,49 @@ export async function createProduct(input) {
     if (existingSku) throw ApiError.conflict("SKU is already in use");
   }
 
+  const data = {
+    name: input.name,
+    slug,
+    shortDescription: input.shortDescription ?? null,
+    description: input.description ?? null,
+    productType: input.productType,
+    categoryId: input.categoryId,
+    sku: input.sku ?? null,
+    brand: input.brand ?? null,
+    price: input.price,
+    salePrice: input.salePrice ?? null,
+    mrp: input.mrp ?? null,
+    costPrice: input.costPrice ?? null,
+    stockQuantity: input.stockQuantity ?? 0,
+    lowStockThreshold: input.lowStockThreshold ?? 5,
+    trackInventory: input.trackInventory ?? true,
+    isFeatured: input.isFeatured ?? false,
+    isBestSeller: input.isBestSeller ?? false,
+    isNewArrival: input.isNewArrival ?? false,
+    isTrending: input.isTrending ?? false,
+    isActive: input.isActive ?? true,
+    sortOrder: input.sortOrder ?? 0,
+    tags: input.tags ?? [],
+    materials: input.materials ?? null,
+    dimensions: input.dimensions ?? null,
+    careInstructions: input.careInstructions ?? null,
+    whatsIncluded: input.whatsIncluded ?? null,
+    shippingInformation: input.shippingInformation ?? null,
+    seoTitle: input.seoTitle ?? null,
+    seoDescription: input.seoDescription ?? null,
+    ogImage: input.ogImage ?? null,
+  };
+
+  if (input.specifications !== undefined && input.specifications !== null) {
+    data.specifications = input.specifications;
+  }
+  if (input.attributes !== undefined && input.attributes !== null) {
+    data.attributes = input.attributes;
+  }
+
   return prisma.$transaction(async (tx) => {
     const product = await tx.product.create({
-      data: {
-        name: input.name,
-        slug,
-        shortDescription: input.shortDescription ?? null,
-        description: input.description ?? null,
-        productType: input.productType,
-        categoryId: input.categoryId,
-        sku: input.sku ?? null,
-        price: input.price,
-        salePrice: input.salePrice ?? null,
-        stockQuantity: input.stockQuantity ?? 0,
-        trackInventory: input.trackInventory ?? true,
-        isFeatured: input.isFeatured ?? false,
-        isBestSeller: input.isBestSeller ?? false,
-        isNewArrival: input.isNewArrival ?? false,
-        isActive: input.isActive ?? true,
-        seoTitle: input.seoTitle ?? null,
-        seoDescription: input.seoDescription ?? null,
-        attributes: input.attributes ?? undefined,
-      },
+      data,
     });
 
     if (input.productType === "BOOK" && input.bookDetail) {
@@ -243,16 +298,30 @@ export async function updateProduct(id, input) {
         ...(input.productType !== undefined ? { productType: input.productType } : {}),
         ...(input.categoryId !== undefined ? { categoryId: input.categoryId } : {}),
         ...(input.sku !== undefined ? { sku: input.sku } : {}),
+        ...(input.brand !== undefined ? { brand: input.brand } : {}),
         ...(input.price !== undefined ? { price: input.price } : {}),
         ...(input.salePrice !== undefined ? { salePrice: input.salePrice } : {}),
+        ...(input.mrp !== undefined ? { mrp: input.mrp } : {}),
+        ...(input.costPrice !== undefined ? { costPrice: input.costPrice } : {}),
         ...(input.stockQuantity !== undefined ? { stockQuantity: input.stockQuantity } : {}),
+        ...(input.lowStockThreshold !== undefined ? { lowStockThreshold: input.lowStockThreshold } : {}),
         ...(input.trackInventory !== undefined ? { trackInventory: input.trackInventory } : {}),
         ...(input.isFeatured !== undefined ? { isFeatured: input.isFeatured } : {}),
         ...(input.isBestSeller !== undefined ? { isBestSeller: input.isBestSeller } : {}),
         ...(input.isNewArrival !== undefined ? { isNewArrival: input.isNewArrival } : {}),
+        ...(input.isTrending !== undefined ? { isTrending: input.isTrending } : {}),
         ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
+        ...(input.sortOrder !== undefined ? { sortOrder: input.sortOrder } : {}),
+        ...(input.tags !== undefined ? { tags: input.tags } : {}),
+        ...(input.materials !== undefined ? { materials: input.materials } : {}),
+        ...(input.dimensions !== undefined ? { dimensions: input.dimensions } : {}),
+        ...(input.careInstructions !== undefined ? { careInstructions: input.careInstructions } : {}),
+        ...(input.whatsIncluded !== undefined ? { whatsIncluded: input.whatsIncluded } : {}),
+        ...(input.shippingInformation !== undefined ? { shippingInformation: input.shippingInformation } : {}),
+        ...(input.specifications !== undefined ? { specifications: input.specifications } : {}),
         ...(input.seoTitle !== undefined ? { seoTitle: input.seoTitle } : {}),
         ...(input.seoDescription !== undefined ? { seoDescription: input.seoDescription } : {}),
+        ...(input.ogImage !== undefined ? { ogImage: input.ogImage } : {}),
         ...(input.attributes !== undefined ? { attributes: input.attributes } : {}),
       },
     });
@@ -266,7 +335,6 @@ export async function updateProduct(id, input) {
         });
       }
     } else if (input.productType === "PHYSICAL" && existing.bookDetail) {
-      // Switching a book to a physical product drops its book metadata.
       await tx.productBookDetails.delete({ where: { productId: id } });
     }
 

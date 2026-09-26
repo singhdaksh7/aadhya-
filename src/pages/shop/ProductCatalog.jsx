@@ -28,9 +28,7 @@ export default function ProductCatalog({
   const [collections, setCollections] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Filter States — a route slug means "category" unless this page was
-  // mounted under /collections/:slug (isCollectionRoute), or an explicit
-  // lockedCollection value was passed by the caller.
+  // Filter States
   const slugIsCollection = isCollectionRoute || Boolean(lockedCollection);
   const [selectedCategory, setSelectedCategory] = useState(lockedCategory || (slug && !slugIsCollection ? slug : "all"));
   const [selectedCollection, setSelectedCollection] = useState(lockedCollection || (slug && slugIsCollection ? slug : "all"));
@@ -86,12 +84,12 @@ export default function ProductCatalog({
   };
 
   return (
-    <div className="space-y-10 pb-20">
+    <div className="bg-white text-charcoal space-y-10 pb-20">
       {/* Header Banner */}
-      <section className="bg-ivory-dark/60 py-12 sm:py-16">
-        <div className="mx-auto max-w-7xl px-5 sm:px-8">
+      <section className="bg-white border-b border-charcoal/10 py-10 sm:py-14">
+        <div className="mx-auto max-w-7xl px-4 sm:px-8">
           {/* Breadcrumbs */}
-          <nav className="mb-4 flex items-center gap-2 text-xs text-charcoal-soft">
+          <nav className="mb-3 flex items-center gap-2 text-xs text-charcoal-soft">
             <Link to="/" className="hover:text-terracotta">Home</Link>
             <span>/</span>
             <Link to="/shop" className="hover:text-terracotta">Shop</Link>
@@ -109,30 +107,46 @@ export default function ProductCatalog({
             )}
           </nav>
 
-          <div className="max-w-2xl space-y-3">
+          <div className="max-w-2xl space-y-2">
             <span className="text-xs font-semibold uppercase tracking-widest text-terracotta">
               {activeCategoryObj?.name || activeCollectionObj?.name || eyebrow}
             </span>
-            <h1 className="font-serif-display text-3xl sm:text-4xl text-charcoal">
+            <h1 className="font-serif-display text-3xl sm:text-4xl text-charcoal font-bold">
               {activeCategoryObj?.name || activeCollectionObj?.name || title}
             </h1>
-            <p className="text-sm text-charcoal-soft leading-relaxed">
+            <p className="text-xs sm:text-sm text-charcoal-soft leading-relaxed">
               {activeCategoryObj?.description || activeCollectionObj?.description || description}
             </p>
+
+            {/* Dynamic Child Subcategories Bar */}
+            {activeCategoryObj?.children?.length > 0 && (
+              <div className="mt-4 flex flex-wrap items-center gap-2 pt-3 border-t border-charcoal/10">
+                <span className="text-xs font-semibold text-charcoal-soft uppercase tracking-wider mr-1">Subcategories:</span>
+                {activeCategoryObj.children.map((sub) => (
+                  <Link
+                    key={sub.id}
+                    to={`/shop/category/${sub.slug}`}
+                    className="rounded-full border border-charcoal/20 bg-[#FAF6F0] px-3.5 py-1 text-xs font-medium text-charcoal hover:border-terracotta hover:bg-white hover:text-terracotta transition"
+                  >
+                    {sub.name} {sub._count?.products ? `(${sub._count.products})` : ""}
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </section>
 
       {/* Main Catalog Section */}
-      <section className="mx-auto max-w-7xl px-5 sm:px-8">
+      <section className="mx-auto max-w-7xl px-4 sm:px-8">
         <div className="flex flex-col lg:grid lg:grid-cols-12 lg:gap-10">
           {/* Desktop Filter Sidebar */}
           <aside className="hidden lg:block lg:col-span-3 space-y-8 pr-6 border-r border-charcoal/10">
             <div className="flex items-center justify-between pb-3 border-b border-charcoal/10">
-              <h3 className="font-serif-display text-lg text-charcoal">Filters</h3>
+              <h3 className="font-serif-display text-lg text-charcoal font-bold">Filters</h3>
               <button
                 onClick={resetFilters}
-                className="text-xs font-medium text-terracotta hover:underline"
+                className="text-xs font-semibold text-terracotta hover:underline"
               >
                 Reset All
               </button>
@@ -141,11 +155,11 @@ export default function ProductCatalog({
             {/* Category Filter */}
             <div className="space-y-3">
               <h4 className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Category</h4>
-              <div className="space-y-1 text-sm">
+              <div className="space-y-1 text-xs sm:text-sm">
                 <button
                   onClick={() => setSelectedCategory("all")}
-                  className={`block w-full text-left py-1.5 px-3 rounded-xl transition ${
-                    selectedCategory === "all" ? "bg-terracotta text-ivory font-medium" : "text-charcoal-soft hover:bg-charcoal/5 hover:text-charcoal"
+                  className={`block w-full text-left py-2 px-3 rounded-lg transition ${
+                    selectedCategory === "all" ? "bg-terracotta text-white font-semibold" : "text-charcoal-soft hover:bg-charcoal/5 hover:text-charcoal"
                   }`}
                 >
                   All Categories
@@ -154,12 +168,12 @@ export default function ProductCatalog({
                   <button
                     key={cat.id}
                     onClick={() => setSelectedCategory(cat.slug)}
-                    className={`flex items-center justify-between w-full text-left py-1.5 px-3 rounded-xl transition ${
-                      selectedCategory === cat.slug ? "bg-terracotta text-ivory font-medium" : "text-charcoal-soft hover:bg-charcoal/5 hover:text-charcoal"
+                    className={`flex items-center justify-between w-full text-left py-2 px-3 rounded-lg transition ${
+                      selectedCategory === cat.slug ? "bg-terracotta text-white font-semibold" : "text-charcoal-soft hover:bg-charcoal/5 hover:text-charcoal"
                     }`}
                   >
                     <span>{cat.name}</span>
-                    <span className="text-xs opacity-75">{cat.itemCount}</span>
+                    <span className="text-xs opacity-75">{cat.itemCount || 0}</span>
                   </button>
                 ))}
               </div>
@@ -168,11 +182,11 @@ export default function ProductCatalog({
             {/* Collection Filter */}
             <div className="space-y-3">
               <h4 className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Collection</h4>
-              <div className="space-y-1 text-sm">
+              <div className="space-y-1 text-xs sm:text-sm">
                 <button
                   onClick={() => setSelectedCollection("all")}
-                  className={`block w-full text-left py-1.5 px-3 rounded-xl transition ${
-                    selectedCollection === "all" ? "bg-terracotta text-ivory font-medium" : "text-charcoal-soft hover:bg-charcoal/5 hover:text-charcoal"
+                  className={`block w-full text-left py-2 px-3 rounded-lg transition ${
+                    selectedCollection === "all" ? "bg-terracotta text-white font-semibold" : "text-charcoal-soft hover:bg-charcoal/5 hover:text-charcoal"
                   }`}
                 >
                   All Collections
@@ -181,8 +195,8 @@ export default function ProductCatalog({
                   <button
                     key={col.id}
                     onClick={() => setSelectedCollection(col.slug)}
-                    className={`block w-full text-left py-1.5 px-3 rounded-xl transition ${
-                      selectedCollection === col.slug ? "bg-terracotta text-ivory font-medium" : "text-charcoal-soft hover:bg-charcoal/5 hover:text-charcoal"
+                    className={`block w-full text-left py-2 px-3 rounded-lg transition ${
+                      selectedCollection === col.slug ? "bg-terracotta text-white font-semibold" : "text-charcoal-soft hover:bg-charcoal/5 hover:text-charcoal"
                     }`}
                   >
                     {col.name}
@@ -195,7 +209,7 @@ export default function ProductCatalog({
             <div className="space-y-3">
               <div className="flex justify-between items-center text-xs font-semibold uppercase tracking-wider text-charcoal-soft">
                 <span>Max Price</span>
-                <span className="text-terracotta">₹{maxPrice.toLocaleString()}</span>
+                <span className="text-terracotta font-bold">₹{maxPrice.toLocaleString()}</span>
               </div>
               <input
                 type="range"
@@ -210,7 +224,7 @@ export default function ProductCatalog({
 
             {/* Availability Filter */}
             <div className="pt-2">
-              <label className="flex items-center gap-3 text-sm text-charcoal cursor-pointer">
+              <label className="flex items-center gap-3 text-xs sm:text-sm text-charcoal cursor-pointer">
                 <input
                   type="checkbox"
                   checked={inStockOnly}
@@ -226,7 +240,7 @@ export default function ProductCatalog({
           <main className="lg:col-span-9 space-y-6">
             {/* Sorting & Filter Trigger Bar */}
             <div className="flex items-center justify-between gap-4 pb-4 border-b border-charcoal/10">
-              <p className="text-xs font-medium text-charcoal-soft uppercase tracking-wider">
+              <p className="text-xs font-semibold text-charcoal-soft uppercase tracking-wider">
                 Showing {products.length} {products.length === 1 ? "Object" : "Objects"}
               </p>
 
@@ -288,9 +302,9 @@ export default function ProductCatalog({
             className="absolute inset-0 bg-charcoal/50 backdrop-blur-sm"
             onClick={() => setMobileFilterOpen(false)}
           />
-          <div className="absolute right-0 top-0 h-full w-full max-w-xs overflow-y-auto bg-ivory p-6 shadow-2xl">
+          <div className="absolute right-0 top-0 h-full w-full max-w-xs overflow-y-auto bg-white p-6 shadow-2xl">
             <div className="flex items-center justify-between border-b border-charcoal/10 pb-4">
-              <h3 className="font-serif-display text-xl text-charcoal">Filter Catalog</h3>
+              <h3 className="font-serif-display text-xl text-charcoal font-bold">Filter Catalog</h3>
               <button
                 onClick={() => setMobileFilterOpen(false)}
                 className="rounded-full p-2 text-charcoal-soft hover:bg-charcoal/5"
@@ -342,10 +356,8 @@ export default function ProductCatalog({
               </label>
 
               <button
-                onClick={() => {
-                  setMobileFilterOpen(false);
-                }}
-                className="w-full min-h-[44px] rounded-full bg-terracotta py-3 text-xs font-semibold uppercase tracking-wider text-ivory shadow hover:bg-terracotta/90"
+                onClick={() => setMobileFilterOpen(false)}
+                className="w-full min-h-[44px] rounded-full bg-terracotta py-3 text-xs font-semibold uppercase tracking-wider text-white shadow-xs hover:bg-terracotta-dark"
               >
                 Apply Filters
               </button>

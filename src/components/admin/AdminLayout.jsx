@@ -5,9 +5,14 @@ import { IconMenu, IconClose } from "../icons";
 
 const links = [
   { to: "/admin", label: "Dashboard", end: true },
+  { to: "/admin/homepage-builder", label: "Homepage Builder" },
+  { to: "/admin/banners", label: "Banners" },
+  { to: "/admin/promos", label: "Promo Ticker" },
   { to: "/admin/products", label: "Products" },
   { to: "/admin/categories", label: "Categories" },
   { to: "/admin/collections", label: "Collections" },
+  { to: "/admin/coupons", label: "Coupons" },
+  { to: "/admin/navigation", label: "Navigation" },
   { to: "/admin/orders", label: "Orders" },
   { to: "/admin/settings", label: "Settings" },
 ];

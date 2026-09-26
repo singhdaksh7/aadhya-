@@ -28,7 +28,7 @@ function formatOrderNumber(orderSeq) {
 // + a PENDING Payment row, all inside one transaction — an order is either
 // fully created or not created at all. Stock is NOT touched here; it's only
 // ever decremented after a verified successful payment (payment.service.js).
-export async function createOrder({ customer, shippingAddress, items, notes, customerId, savedAddressId }) {
+export async function createOrder({ customer, shippingAddress, items, notes, couponCode, customerId, savedAddressId }) {
   if (savedAddressId) {
     if (!customerId) throw ApiError.forbidden("Sign in to use a saved address.");
     const address = await prisma.address.findFirst({ where: { id: savedAddressId, customerId } });
@@ -36,7 +36,22 @@ export async function createOrder({ customer, shippingAddress, items, notes, cus
     shippingAddress = address;
   }
   const pricedItems = await priceCartItemsOrThrow(items);
-  const totals = computeTotals(pricedItems);
+  let couponDiscount = 0;
+  let validatedCouponCode = null;
+
+  if (couponCode) {
+    const { validateCoupon } = await import("../coupons/coupon.service.js");
+    const couponResult = await validateCoupon({
+      code: couponCode,
+      customerId,
+      customerEmail: customer.email,
+      items,
+    });
+    couponDiscount = couponResult.discountAmount;
+    validatedCouponCode = couponResult.code;
+  }
+
+  const totals = computeTotals(pricedItems, couponDiscount);
 
   if (totals.total <= 0) {
     throw ApiError.badRequest("Order total must be greater than zero.");
@@ -59,6 +74,7 @@ export async function createOrder({ customer, shippingAddress, items, notes, cus
         taxAmount: totals.tax,
         totalAmount: totals.total,
         currency: totals.currency,
+        couponCode: validatedCouponCode,
         notes: notes || null,
         accessTokenHash,
       },

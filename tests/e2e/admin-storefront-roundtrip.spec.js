@@ -25,7 +25,7 @@ async function adminLogin(page) {
   await page.locator('input[type="email"]').fill(ADMIN_EMAIL);
   await page.locator('input[type="password"]').fill(ADMIN_PASSWORD);
   await page.locator('button:has-text("Sign In")').click();
-  await page.waitForURL(/\/admin\/?$/);
+  await expect(page.locator('a:has-text("Products")').first()).toBeVisible();
 }
 
 async function setStock(page, quantity) {
@@ -63,7 +63,7 @@ test("admin creates a product and it appears on the storefront", async ({ page }
   await page.goto(`/shop/${productSlug}`);
   await expect(page.locator("body")).toContainText(PRODUCT_NAME);
   await expect(page.locator("body")).toContainText("999");
-  await expect(page.locator('button:has-text("Add to Cart")')).toBeVisible();
+  await expect(page.locator('button:has-text("Add to Cart")').first()).toBeVisible();
 });
 
 test("admin edit propagates to the storefront", async ({ page }) => {
@@ -109,5 +109,5 @@ test("restocking makes the product purchasable again", async ({ page }) => {
   await setStock(page, 3);
 
   await page.goto(`/shop/${productSlug}`);
-  await expect(page.locator('button:has-text("Add to Cart")')).toBeVisible();
+  await expect(page.locator('button:has-text("Add to Cart")').first()).toBeVisible();
 });

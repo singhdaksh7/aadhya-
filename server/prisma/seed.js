@@ -209,15 +209,154 @@ const extraPhysical = [
   "Wooden Book Stand|Handcrafted Accessories", "Sage Tea Tray|Home Decor", "Natural Storage Bin|Handcrafted Accessories",
 ];
 const extraBooks = ["The Quiet Room", "Small Rituals", "Notes for Care", "The Listening Practice", "A Gentle Atlas", "Rooms for Reflection", "The Everyday Notebook"];
+async function seedDevCoupons() {
+  const coupons = [
+    {
+      code: "PHASED10",
+      name: "Phase D 10% Off",
+      description: "10% off on all items above ₹1,000 (Demo Coupon)",
+      discountType: "PERCENTAGE",
+      value: 10,
+      minimumOrderAmount: 1000,
+      maximumDiscountAmount: 1000,
+      targetType: "ALL",
+      isActive: true,
+    },
+    {
+      code: "OFFER500",
+      name: "Flat ₹500 Off",
+      description: "Flat ₹500 off on orders above ₹2,000 (Demo Coupon)",
+      discountType: "FIXED",
+      value: 500,
+      minimumOrderAmount: 2000,
+      targetType: "ALL",
+      isActive: true,
+    },
+  ];
+
+  for (const couponData of coupons) {
+    const existing = await prisma.coupon.findUnique({ where: { code: couponData.code } });
+    if (!existing) {
+      await prisma.coupon.create({ data: couponData });
+    }
+  }
+  console.log("Seeded Phase D development coupons (PHASED10, OFFER500).");
+}
+
 async function seedExpandedDemo() {
   const categories = new Map();
-  for (const [name, sortOrder] of [["Textiles", 4], ["Lighting", 5], ["Books", 0], ["Home Decor", 1], ["Wellness Decor", 2], ["Handcrafted Accessories", 3]]) categories.set(name, await upsertCategory({ name, sortOrder }));
+  for (const [name, sortOrder] of [["Textiles", 4], ["Lighting", 5], ["Books", 0], ["Home Decor", 1], ["Wellness Decor", 2], ["Handcrafted Accessories", 3]]) {
+    categories.set(name, await upsertCategory({ name, sortOrder }));
+  }
+
   const physical = [...legacyProducts.map((p) => `${p.name}|${p.category}`), ...extraPhysical];
-  const variants = { "Decor Cushion": [["Small", "CUSHION-S", 12, 899], ["Large", "CUSHION-L", 8, 1299]], "Ceramic Vase": [["Ivory", "VASE-IVORY", 10, 1890], ["Sage", "VASE-SAGE", 7, 1950]], "Woven Throw": [["Natural", "THROW-NAT", 9, 1490], ["Terracotta", "THROW-TERR", 6, 1590]], "Terracotta Lamp": [["Short", "LAMP-SHORT", 5, 2100], ["Tall", "LAMP-TALL", 4, 2700]] };
-  for (let i = 0; i < physical.length; i++) { const [name, categoryName] = physical[i].split("|"); const slug = slugify(name); let product = await prisma.product.findUnique({ where: { slug } }); if (!product) product = await prisma.product.create({ data: { name, slug, shortDescription: `Demo ${name} for Aadya merchandising.`, description: `Demo-only ${name}; safe placeholder catalog content.`, productType: "PHYSICAL", categoryId: categories.get(categoryName).id, sku: `DEMO-P-${String(i + 1).padStart(2, "0")}`, price: 900 + i * 75, stockQuantity: 20, isFeatured: i < 4, isBestSeller: i % 5 === 0, isNewArrival: i % 4 === 0, attributes: { material: "Demo material", collection: "Aadya demo" } } }); if (variants[name]) for (const [variantName, sku, stockQuantity, priceOverride] of variants[name]) await prisma.productVariant.upsert({ where: { sku }, update: {}, create: { productId: product.id, name: variantName, sku, stockQuantity, priceOverride, attributes: { option: variantName } } }); }
-  for (let i = 0; i < extraBooks.length; i++) { const name = `${extraBooks[i]} (Demo Title)`; const slug = slugify(name.replace("(Demo Title)", "")); if (!await prisma.product.findUnique({ where: { slug } })) await prisma.product.create({ data: { name, slug, shortDescription: "Demo book catalogue entry.", description: "Demo-only original placeholder book data without cover artwork.", productType: "BOOK", categoryId: categories.get("Books").id, sku: `DEMO-B-${i + 4}`, price: 399 + i * 20, stockQuantity: 25, isFeatured: i < 2, isBestSeller: i % 3 === 0, isNewArrival: i % 2 === 0, bookDetail: { create: { author: "Aadya Demo Author", language: "English", pageCount: 160 + i * 8 } } } }); }
-  const products = await prisma.product.findMany({ orderBy: { createdAt: "asc" } });
-  for (const [index, title] of ["New Arrivals", "Best Sellers", "Home Sanctuary", "Reading Room"].entries()) { const collection = await prisma.collection.upsert({ where: { slug: slugify(title) }, update: { isActive: true, sortOrder: index }, create: { title, slug: slugify(title), description: `Demo ${title} collection`, isActive: true, sortOrder: index } }); for (const [position, product] of products.filter((p) => index === 3 ? p.productType === "BOOK" : index === 1 ? p.isBestSeller : index === 0 ? p.isNewArrival : p.productType === "PHYSICAL").slice(0, 12).entries()) await prisma.collectionProduct.upsert({ where: { collectionId_productId: { collectionId: collection.id, productId: product.id } }, update: { sortOrder: position }, create: { collectionId: collection.id, productId: product.id, sortOrder: position } }); }
+  const variants = {
+    "Decor Cushion": [["Small", "CUSHION-S", 12, 899], ["Large", "CUSHION-L", 8, 1299]],
+    "Ceramic Vase": [["Ivory", "VASE-IVORY", 10, 1890], ["Sage", "VASE-SAGE", 7, 1950]],
+    "Woven Throw": [["Natural", "THROW-NAT", 9, 1490], ["Terracotta", "THROW-TERR", 6, 1590]],
+    "Terracotta Lamp": [["Short", "LAMP-SHORT", 5, 2100], ["Tall", "LAMP-TALL", 4, 2700]],
+  };
+
+  for (let i = 0; i < physical.length; i++) {
+    const [name, categoryName] = physical[i].split("|");
+    const slug = slugify(name);
+    let product = await prisma.product.findUnique({ where: { slug } });
+    if (!product) {
+      product = await prisma.product.create({
+        data: {
+          name,
+          slug,
+          brand: "Aadya Craft",
+          shortDescription: `Demo ${name} for Aadya merchandising.`,
+          description: `Demo-only ${name}; safe placeholder catalog content.`,
+          productType: "PHYSICAL",
+          categoryId: categories.get(categoryName).id,
+          sku: `DEMO-P-${String(i + 1).padStart(2, "0")}`,
+          price: 900 + i * 75,
+          mrp: 1200 + i * 75,
+          costPrice: 450 + i * 35,
+          stockQuantity: 20,
+          lowStockThreshold: 5,
+          isFeatured: i < 4,
+          isBestSeller: i % 5 === 0,
+          isNewArrival: i % 4 === 0,
+          isTrending: i % 3 === 0,
+          tags: ["handcrafted", "decor", categoryName.toLowerCase()],
+          materials: "Solid Brass & Terracotta",
+          dimensions: "10 x 6 x 4 inches",
+          careInstructions: "Wipe with damp cloth",
+          whatsIncluded: "1x Decor Piece",
+          shippingInformation: "Dispatched in 24 hours",
+          attributes: { material: "Demo material", collection: "Aadya demo" },
+        },
+      });
+    }
+
+    if (variants[name]) {
+      for (const [variantName, sku, stockQuantity, priceOverride] of variants[name]) {
+        await prisma.productVariant.upsert({
+          where: { sku },
+          update: {},
+          create: { productId: product.id, name: variantName, sku, stockQuantity, priceOverride, attributes: { option: variantName } },
+        });
+      }
+    }
+  }
+
+  for (let i = 0; i < extraBooks.length; i++) {
+    const name = `${extraBooks[i]} (Demo Title)`;
+    const slug = slugify(name.replace("(Demo Title)", ""));
+    if (!(await prisma.product.findUnique({ where: { slug } }))) {
+      await prisma.product.create({
+        data: {
+          name,
+          slug,
+          shortDescription: "Demo book catalogue entry.",
+          description: "Demo-only original placeholder book data without cover artwork.",
+          productType: "BOOK",
+          categoryId: categories.get("Books").id,
+          sku: `DEMO-B-${i + 4}`,
+          price: 399 + i * 20,
+          mrp: 499 + i * 20,
+          costPrice: 180 + i * 10,
+          stockQuantity: 25,
+          isFeatured: i < 2,
+          isBestSeller: i % 3 === 0,
+          isNewArrival: i % 2 === 0,
+          isTrending: i % 2 === 1,
+          bookDetail: { create: { author: "Aadya Demo Author", language: "English", pageCount: 160 + i * 8 } },
+        },
+      });
+    }
+  }
+
+  const collectionsToSeed = [
+    { name: "New Arrivals", type: "NEW_ARRIVAL", sortOrder: 0 },
+    { name: "Best Sellers", type: "BEST_SELLER", sortOrder: 1 },
+    { name: "Trending Objects", type: "TRENDING", sortOrder: 2 },
+    { name: "Under ₹1500", type: "PRICE_RANGE", ruleConfig: { maxPrice: 1500 }, sortOrder: 3 },
+    { name: "Textile Gallery", type: "CATEGORY", ruleConfig: { categoryId: categories.get("Textiles").id }, sortOrder: 4 },
+  ];
+
+  for (const colData of collectionsToSeed) {
+    const slug = slugify(colData.name);
+    const existingCol = await prisma.collection.findUnique({ where: { slug } });
+    if (!existingCol) {
+      await prisma.collection.create({
+        data: {
+          title: colData.name,
+          slug,
+          description: `Curated ${colData.name} series`,
+          type: colData.type,
+          ruleConfig: colData.ruleConfig ?? undefined,
+          isActive: true,
+          sortOrder: colData.sortOrder,
+        },
+      });
+    }
+  }
+
+  await seedDevCoupons();
 }
 
 // `npm run seed` always creates the first admin user — that's required for

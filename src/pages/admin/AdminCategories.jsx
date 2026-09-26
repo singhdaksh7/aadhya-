@@ -3,7 +3,22 @@ import { adminListCategories, adminCreateCategory, adminUpdateCategory, adminDel
 import { Button } from "../../components/ui";
 import { LoadingNotice, ErrorNotice } from "../../components/StateNotice";
 
-const emptyForm = { id: null, name: "", slug: "", description: "", parentId: "", sortOrder: "0", isActive: true };
+const emptyForm = {
+  id: null,
+  name: "",
+  slug: "",
+  description: "",
+  parentId: "",
+  image: "",
+  icon: "",
+  desktopBanner: "",
+  mobileBanner: "",
+  isFeatured: false,
+  sortOrder: "0",
+  isActive: true,
+  seoTitle: "",
+  seoDescription: "",
+};
 
 export default function AdminCategories() {
   const [categories, setCategories] = useState([]);
@@ -29,8 +44,15 @@ export default function AdminCategories() {
       slug: c.slug,
       description: c.description || "",
       parentId: c.parentId || "",
+      image: c.image || "",
+      icon: c.icon || "",
+      desktopBanner: c.desktopBanner || "",
+      mobileBanner: c.mobileBanner || "",
+      isFeatured: c.isFeatured || false,
       sortOrder: String(c.sortOrder),
       isActive: c.isActive,
+      seoTitle: c.seoTitle || "",
+      seoDescription: c.seoDescription || "",
     });
 
   const onSubmit = async (e) => {
@@ -41,8 +63,15 @@ export default function AdminCategories() {
       slug: form.slug || undefined,
       description: form.description || null,
       parentId: form.parentId || null,
+      image: form.image || null,
+      icon: form.icon || null,
+      desktopBanner: form.desktopBanner || null,
+      mobileBanner: form.mobileBanner || null,
+      isFeatured: form.isFeatured,
       sortOrder: Number(form.sortOrder) || 0,
       isActive: form.isActive,
+      seoTitle: form.seoTitle || null,
+      seoDescription: form.seoDescription || null,
     };
     try {
       if (form.id) await adminUpdateCategory(form.id, payload);
@@ -71,62 +100,119 @@ export default function AdminCategories() {
 
   return (
     <div>
-      <h1 className="font-serif-display text-2xl text-charcoal">Categories</h1>
+      <h1 className="font-serif-display text-2xl text-charcoal">Category Hierarchy & Subcategories</h1>
 
-      <form onSubmit={onSubmit} className="mt-6 max-w-lg space-y-4 rounded-2xl border border-charcoal/10 p-5">
-        <p className="text-sm font-medium text-charcoal">{form.id ? "Edit Category" : "New Category"}</p>
-        <input
-          required
-          placeholder="Name"
-          value={form.name}
-          onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-          className={inputCls}
-        />
-        <input
-          placeholder="Slug (optional)"
-          value={form.slug}
-          onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))}
-          className={inputCls}
-        />
-        <textarea
-          placeholder="Description"
-          value={form.description}
-          onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-          className={inputCls}
-        />
-        <select
-          value={form.parentId}
-          onChange={(e) => setForm((f) => ({ ...f, parentId: e.target.value }))}
-          className={inputCls}
-        >
-          <option value="">No parent (top-level)</option>
-          {categories
-            .filter((c) => c.id !== form.id)
-            .map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-        </select>
-        <input
-          type="number"
-          placeholder="Sort order"
-          value={form.sortOrder}
-          onChange={(e) => setForm((f) => ({ ...f, sortOrder: e.target.value }))}
-          className={inputCls}
-        />
-        <label className="flex items-center gap-2 text-sm text-charcoal">
-          <input
-            type="checkbox"
-            checked={form.isActive}
-            onChange={(e) => setForm((f) => ({ ...f, isActive: e.target.checked }))}
+      <form onSubmit={onSubmit} className="mt-6 max-w-2xl space-y-4 rounded-2xl border border-charcoal/10 p-6 bg-white">
+        <p className="text-base font-semibold text-charcoal">{form.id ? "Edit Category" : "New Category"}</p>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="text-xs font-semibold text-charcoal-soft">Category Name *</label>
+            <input
+              required
+              placeholder="e.g. Wall Decor"
+              value={form.name}
+              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-charcoal-soft">Slug (Optional)</label>
+            <input
+              placeholder="wall-decor"
+              value={form.slug}
+              onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))}
+              className={inputCls}
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="text-xs font-semibold text-charcoal-soft">Parent Category (For Subcategories)</label>
+          <select
+            value={form.parentId}
+            onChange={(e) => setForm((f) => ({ ...f, parentId: e.target.value }))}
+            className={inputCls}
+          >
+            <option value="">No parent (Top-Level Category)</option>
+            {categories
+              .filter((c) => c.id !== form.id)
+              .map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.parentId ? "  └ " : ""}{c.name}
+                </option>
+              ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="text-xs font-semibold text-charcoal-soft">Description</label>
+          <textarea
+            rows={2}
+            placeholder="Brief category summary"
+            value={form.description}
+            onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+            className={inputCls}
           />
-          Active
-        </label>
+        </div>
 
-        {error && <p className="text-sm text-terracotta">{error}</p>}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="text-xs font-semibold text-charcoal-soft">Image URL</label>
+            <input
+              placeholder="https://..."
+              value={form.image}
+              onChange={(e) => setForm((f) => ({ ...f, image: e.target.value }))}
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-charcoal-soft">Desktop Banner URL</label>
+            <input
+              placeholder="https://..."
+              value={form.desktopBanner}
+              onChange={(e) => setForm((f) => ({ ...f, desktopBanner: e.target.value }))}
+              className={inputCls}
+            />
+          </div>
+        </div>
 
-        <div className="flex gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="text-xs font-semibold text-charcoal-soft">Sort Order</label>
+            <input
+              type="number"
+              placeholder="0"
+              value={form.sortOrder}
+              onChange={(e) => setForm((f) => ({ ...f, sortOrder: e.target.value }))}
+              className={inputCls}
+            />
+          </div>
+          <div className="flex items-center gap-6 pt-5">
+            <label className="flex items-center gap-2 text-sm text-charcoal font-medium cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.isFeatured}
+                onChange={(e) => setForm((f) => ({ ...f, isFeatured: e.target.checked }))}
+                className="accent-terracotta"
+              />
+              Featured
+            </label>
+            <label className="flex items-center gap-2 text-sm text-charcoal font-medium cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.isActive}
+                onChange={(e) => setForm((f) => ({ ...f, isActive: e.target.checked }))}
+                className="accent-terracotta"
+              />
+              Active
+            </label>
+          </div>
+        </div>
+
+        {error && <p className="text-sm text-terracotta font-medium">{error}</p>}
+
+        <div className="flex gap-3 pt-2">
           <Button>{form.id ? "Save Changes" : "Create Category"}</Button>
           {form.id && (
             <Button type="button" variant="secondary" onClick={() => setForm(emptyForm)}>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { useSiteSettings } from "../hooks/useSiteSettings";
+import { fetchBanners } from "../lib/api";
 
 const DEFAULT_BANNERS = [
   {
@@ -39,8 +40,22 @@ const DEFAULT_BANNERS = [
 
 export default function HeroBannerCarousel({ bannersOverride }) {
   const { heroBanners: settingsBanners } = useSiteSettings();
-  const rawBanners = bannersOverride || settingsBanners || DEFAULT_BANNERS;
-  const banners = Array.isArray(rawBanners) && rawBanners.length > 0 ? rawBanners.filter(b => b.active !== false) : DEFAULT_BANNERS;
+  const [fetchedBanners, setFetchedBanners] = useState([]);
+  
+  useEffect(() => {
+    let active = true;
+    fetchBanners("HOME_HERO")
+      .then((res) => {
+        if (active && res.data?.length > 0) {
+          setFetchedBanners(res.data);
+        }
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
+
+  const rawBanners = bannersOverride || (fetchedBanners.length > 0 ? fetchedBanners : settingsBanners) || DEFAULT_BANNERS;
+  const banners = Array.isArray(rawBanners) && rawBanners.length > 0 ? rawBanners.filter(b => b.isActive !== false && b.active !== false) : DEFAULT_BANNERS;
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);

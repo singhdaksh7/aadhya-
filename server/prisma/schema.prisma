@@ -62,6 +62,7 @@ model Customer {
   refreshSessions CustomerRefreshSession[]
   passwordResets  PasswordResetToken[]
   cart            Cart?
+  couponRedemptions CouponRedemption[]
 
   @@index([email])
 }
@@ -136,16 +137,23 @@ model CartItem {
 }
 
 model Category {
-  id          String   @id @default(uuid())
-  name        String
-  slug        String   @unique
-  description String?
-  parentId    String?
-  image       String?
-  isActive    Boolean  @default(true)
-  sortOrder   Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id             String   @id @default(uuid())
+  name           String
+  slug           String   @unique
+  description    String?
+  parentId       String?
+  image          String?
+  icon           String?
+  logo           String?
+  desktopBanner  String?
+  mobileBanner   String?
+  isFeatured     Boolean  @default(false)
+  isActive       Boolean  @default(true)
+  sortOrder      Int      @default(0)
+  seoTitle       String?
+  seoDescription String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   parent   Category?  @relation("CategoryToSubcategory", fields: [parentId], references: [id], onDelete: SetNull)
   children Category[] @relation("CategoryToSubcategory")
@@ -153,30 +161,111 @@ model Category {
 
   @@index([parentId])
   @@index([isActive])
+  @@index([isFeatured])
+}
+
+model NavigationMenu {
+  id        String           @id @default(uuid())
+  code      String           @unique
+  title     String
+  isActive  Boolean          @default(true)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  items     NavigationItem[]
+
+  @@index([code])
+}
+
+enum NavigationItemType {
+  CATEGORY
+  COLLECTION
+  PAGE
+  CUSTOM
+}
+
+model NavigationItem {
+  id         String             @id @default(uuid())
+  menuId     String
+  parentId   String?
+  title      String
+  url        String?
+  type       NavigationItemType @default(CUSTOM)
+  targetId   String?
+  sortOrder  Int                @default(0)
+  isActive   Boolean            @default(true)
+  icon       String?
+  badgeText  String?
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+
+  menu     NavigationMenu   @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  parent   NavigationItem?  @relation("NavItemToSubItem", fields: [parentId], references: [id], onDelete: Cascade)
+  children NavigationItem[] @relation("NavItemToSubItem")
+
+  @@index([menuId])
+  @@index([parentId])
+  @@index([sortOrder])
+}
+
+enum CollectionType {
+  MANUAL
+  CATEGORY
+  TAG
+  FEATURED
+  BEST_SELLER
+  NEW_ARRIVAL
+  TRENDING
+  PRICE_RANGE
+}
+
+enum CouponDiscountType {
+  PERCENTAGE
+  FIXED
+}
+
+enum CouponTargetType {
+  ALL
+  PRODUCT
+  CATEGORY
+  COLLECTION
 }
 
 model Product {
-  id               String      @id @default(uuid())
-  name             String
-  slug             String      @unique
-  shortDescription String?
-  description      String?
-  productType      ProductType
-  categoryId       String
-  sku              String?     @unique
-  price            Decimal     @db.Decimal(10, 2)
-  salePrice        Decimal?    @db.Decimal(10, 2)
-  stockQuantity    Int         @default(0)
-  trackInventory   Boolean     @default(true)
-  isFeatured       Boolean     @default(false)
-  isBestSeller     Boolean     @default(false)
-  isNewArrival     Boolean     @default(false)
-  isActive         Boolean     @default(true)
-  seoTitle         String?
-  seoDescription   String?
-  attributes       Json?
-  createdAt        DateTime    @default(now())
-  updatedAt        DateTime    @updatedAt
+  id                  String      @id @default(uuid())
+  name                String
+  slug                String      @unique
+  brand               String?
+  shortDescription    String?
+  description         String?
+  productType         ProductType
+  categoryId          String
+  sku                 String?     @unique
+  price               Decimal     @db.Decimal(10, 2)
+  salePrice           Decimal?    @db.Decimal(10, 2)
+  mrp                 Decimal?    @db.Decimal(10, 2)
+  costPrice           Decimal?    @db.Decimal(10, 2)
+  stockQuantity       Int         @default(0)
+  lowStockThreshold   Int         @default(5)
+  trackInventory      Boolean     @default(true)
+  isFeatured          Boolean     @default(false)
+  isBestSeller        Boolean     @default(false)
+  isNewArrival        Boolean     @default(false)
+  isTrending          Boolean     @default(false)
+  isActive            Boolean     @default(true)
+  sortOrder           Int         @default(0)
+  tags                String[]    @default([])
+  materials           String?
+  dimensions          String?
+  careInstructions    String?
+  whatsIncluded       String?
+  shippingInformation String?
+  specifications      Json?
+  seoTitle            String?
+  seoDescription      String?
+  ogImage             String?
+  attributes          Json?
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
 
   category   Category            @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   images     ProductImage[]
@@ -192,6 +281,8 @@ model Product {
   @@index([isFeatured])
   @@index([isBestSeller])
   @@index([isNewArrival])
+  @@index([isTrending])
+  @@index([sortOrder])
 }
 
 // Variant stock is authoritative whenever a product has active variants.
@@ -217,18 +308,28 @@ model ProductVariant {
 }
 
 model Collection {
-  id          String              @id @default(uuid())
-  title       String
-  slug        String              @unique
-  description String?
-  heroImage   String?
-  isActive    Boolean             @default(true)
-  sortOrder   Int                 @default(0)
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
-  products    CollectionProduct[]
+  id             String              @id @default(uuid())
+  title          String
+  slug           String              @unique
+  description    String?
+  heroImage      String?
+  desktopBanner  String?
+  mobileBanner   String?
+  type           CollectionType      @default(MANUAL)
+  ruleConfig     Json?
+  isActive       Boolean             @default(true)
+  isFeatured     Boolean             @default(false)
+  sortOrder      Int                 @default(0)
+  seoTitle       String?
+  seoDescription String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  products       CollectionProduct[]
 
   @@index([isActive])
+  @@index([type])
+  @@index([isFeatured])
+  @@index([sortOrder])
 }
 
 model CollectionProduct {
@@ -272,9 +373,6 @@ model ProductImage {
 
 model Order {
   id             String        @id @default(uuid())
-  // Postgres-backed autoincrement (a real sequence) — never count()+1. The
-  // human-readable orderNumber is derived from this after the row exists
-  // (see orders.service.js) so it can never collide under concurrency.
   orderSeq       Int           @default(autoincrement())
   orderNumber    String        @unique
   customerName   String
@@ -289,19 +387,20 @@ model Order {
   taxAmount      Decimal       @db.Decimal(10, 2) @default(0)
   totalAmount    Decimal       @db.Decimal(10, 2)
   currency       String        @default("INR")
+  couponCode     String?
+  couponId       String?
   notes          String?
-  // SHA-256 hash of the high-entropy confirmation token — the raw token is
-  // returned to the browser once at order-creation time and never stored.
   accessTokenHash String
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
   paidAt         DateTime?
   cancelledAt    DateTime?
 
-  items   OrderItem[]
-  address OrderAddress?
-  payments Payment[]
-  customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  items            OrderItem[]
+  address          OrderAddress?
+  payments         Payment[]
+  customer         Customer?         @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  couponRedemption CouponRedemption?
 
   @@index([orderNumber])
   @@index([customerEmail])
@@ -309,6 +408,7 @@ model Order {
   @@index([status])
   @@index([paymentStatus])
   @@index([createdAt])
+  @@index([couponCode])
 }
 
 model OrderItem {
@@ -400,3 +500,168 @@ model NewsletterSubscriber {
   consentedAt DateTime @default(now())
   createdAt   DateTime @default(now())
 }
+
+enum PageType {
+  HOME
+  STANDARD
+  LANDING
+}
+
+enum PageStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum BannerPlacement {
+  HOME_HERO
+  HOME_PROMO
+  SHOP_TOP
+  CATEGORY_TOP
+  GLOBAL_PROMO
+}
+
+model Page {
+  id             String        @id @default(uuid())
+  name           String
+  slug           String        @unique
+  pageType       PageType      @default(STANDARD)
+  status         PageStatus    @default(DRAFT)
+  seoTitle       String?
+  seoDescription String?
+  publishedAt    DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  sections       PageSection[]
+
+  @@index([slug])
+  @@index([status])
+}
+
+model PageSection {
+  id        String   @id @default(uuid())
+  pageId    String
+  type      String
+  name      String
+  settings  Json?
+  content   Json?
+  isEnabled Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([pageId])
+  @@index([sortOrder])
+}
+
+model Banner {
+  id                String          @id @default(uuid())
+  name              String
+  placement         BannerPlacement @default(HOME_HERO)
+  desktopImage      String
+  mobileImage       String?
+  eyebrow           String?
+  title             String
+  highlightText     String?
+  subtitle          String?
+  primaryCtaLabel   String?
+  primaryCtaUrl     String?
+  secondaryCtaLabel String?
+  secondaryCtaUrl   String?
+  textPosition      String          @default("LEFT")
+  textTheme         String          @default("DARK")
+  startDate         DateTime?
+  endDate           DateTime?
+  isActive          Boolean         @default(true)
+  sortOrder         Int             @default(0)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@index([placement])
+  @@index([isActive])
+  @@index([sortOrder])
+}
+
+model PromoMessage {
+  id              String    @id @default(uuid())
+  title           String
+  message         String
+  couponCode      String?
+  couponId        String?
+  ctaLabel        String?
+  ctaUrl          String?
+  icon            String?
+  startDate       DateTime?
+  endDate         DateTime?
+  isActive        Boolean   @default(true)
+  sortOrder       Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  coupon Coupon? @relation(fields: [couponId], references: [id], onDelete: SetNull)
+
+  @@index([isActive])
+  @@index([sortOrder])
+  @@index([couponId])
+}
+
+model Coupon {
+  id                    String             @id @default(uuid())
+  code                  String             @unique
+  name                  String?
+  description           String?
+  discountType          CouponDiscountType @default(PERCENTAGE)
+  value                 Decimal            @db.Decimal(10, 2)
+  minimumOrderAmount    Decimal?           @db.Decimal(10, 2)
+  maximumDiscountAmount Decimal?           @db.Decimal(10, 2)
+  validFrom             DateTime?
+  validUntil            DateTime?
+  usageLimit            Int?
+  usageCount            Int                @default(0)
+  perCustomerLimit      Int?
+  isActive              Boolean            @default(true)
+  targetType            CouponTargetType   @default(ALL)
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+
+  targets       CouponTarget[]
+  redemptions   CouponRedemption[]
+  promoMessages PromoMessage[]
+
+  @@index([code])
+  @@index([isActive])
+  @@index([validFrom, validUntil])
+}
+
+model CouponTarget {
+  id        String   @id @default(uuid())
+  couponId  String
+  targetId  String
+  createdAt DateTime @default(now())
+
+  coupon Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
+
+  @@unique([couponId, targetId])
+  @@index([couponId])
+  @@index([targetId])
+}
+
+model CouponRedemption {
+  id             String   @id @default(uuid())
+  couponId       String
+  customerId     String?
+  customerEmail  String
+  orderId        String   @unique
+  discountAmount Decimal  @db.Decimal(10, 2)
+  createdAt      DateTime @default(now())
+
+  coupon   Coupon    @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  order    Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  @@index([couponId])
+  @@index([customerId])
+  @@index([customerEmail])
+}
+

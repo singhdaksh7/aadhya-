@@ -36,12 +36,15 @@ export const shippingAddressSchema = z.object({
   country: z.string().trim().min(1).max(100).default("India"),
 });
 
-export const checkoutPreviewSchema = checkoutItemsSchema;
+export const checkoutPreviewSchema = checkoutItemsSchema.extend({
+  couponCode: z.string().trim().max(40).optional().nullable(),
+});
 
 export const createOrderSchema = checkoutItemsSchema.extend({
   customer: customerSchema,
   shippingAddress: shippingAddressSchema,
   notes: z.string().trim().max(500).optional().nullable(),
+  couponCode: z.string().trim().max(40).optional().nullable(),
   savedAddressId: z.string().uuid().optional(),
 });
 

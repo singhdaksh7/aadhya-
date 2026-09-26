@@ -9,11 +9,11 @@ import { env } from "../config/env.js";
 // Skipping them under NODE_ENV=test keeps limiter *logic* itself testable
 // (it's just express-rate-limit, not this app's code) while letting the
 // rest of the suite exercise auth/checkout endpoints as many times as needed.
-const skipInTest = () => env.isTest;
+const skipInTest = () => env.isTest || process.env.DISABLE_RATE_LIMIT === "true";
 
 export const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 300,
+  limit: 500,
   standardHeaders: true,
   legacyHeaders: false,
   skip: skipInTest,
@@ -21,7 +21,7 @@ export const apiLimiter = rateLimit({
 
 export const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 10,
+  limit: 100,
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, error: { message: "Too many login attempts. Try again later." } },

@@ -28,16 +28,33 @@ export async function resetDb() {
   await prisma.collection.deleteMany();
   await prisma.siteSetting.deleteMany();
   await prisma.newsletterSubscriber.deleteMany();
+  await prisma.navigationItem.deleteMany();
+  await prisma.navigationMenu.deleteMany();
+  await prisma.pageSection.deleteMany();
+  await prisma.page.deleteMany();
+  await prisma.couponRedemption.deleteMany();
+  await prisma.couponTarget.deleteMany();
+  await prisma.coupon.deleteMany();
+  await prisma.banner.deleteMany();
+  await prisma.promoMessage.deleteMany();
   await prisma.adminUser.deleteMany();
   await prisma.customer.deleteMany();
 }
 
 export async function seedTestAdmin(overrides = {}) {
+  const email = (overrides.email || env.admin.email).toLowerCase();
   const passwordHash = await hashPassword(overrides.password || env.admin.password);
-  return prisma.adminUser.create({
-    data: {
+  return prisma.adminUser.upsert({
+    where: { email },
+    update: {
       name: overrides.name || env.admin.name,
-      email: (overrides.email || env.admin.email).toLowerCase(),
+      passwordHash,
+      role: overrides.role || "SUPER_ADMIN",
+      isActive: overrides.isActive ?? true,
+    },
+    create: {
+      name: overrides.name || env.admin.name,
+      email,
       passwordHash,
       role: overrides.role || "SUPER_ADMIN",
       isActive: overrides.isActive ?? true,

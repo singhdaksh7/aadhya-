@@ -16,21 +16,35 @@ const bookDetailSchema = z
 export const createProductSchema = z.object({
   name: z.string().trim().min(1).max(200),
   slug: z.string().trim().min(1).max(220).optional(),
-  shortDescription: z.string().trim().max(300).optional().nullable(),
-  description: z.string().trim().max(5000).optional().nullable(),
+  shortDescription: z.string().trim().max(500).optional().nullable(),
+  description: z.string().trim().max(10000).optional().nullable(),
   productType: z.enum(["BOOK", "PHYSICAL"]),
   categoryId: z.string().uuid(),
   sku: z.string().trim().max(64).optional().nullable(),
+  brand: z.string().trim().max(120).optional().nullable(),
   price: z.number().nonnegative(),
   salePrice: z.number().nonnegative().optional().nullable(),
+  mrp: z.number().nonnegative().optional().nullable(),
+  costPrice: z.number().nonnegative().optional().nullable(),
   stockQuantity: z.number().int().min(0).optional(),
+  lowStockThreshold: z.number().int().min(0).optional().nullable(),
   trackInventory: z.boolean().optional(),
   isFeatured: z.boolean().optional(),
   isBestSeller: z.boolean().optional(),
   isNewArrival: z.boolean().optional(),
+  isTrending: z.boolean().optional(),
   isActive: z.boolean().optional(),
+  sortOrder: z.number().int().optional(),
+  tags: z.array(z.string().trim()).optional().nullable(),
+  materials: z.string().trim().max(1000).optional().nullable(),
+  dimensions: z.string().trim().max(500).optional().nullable(),
+  careInstructions: z.string().trim().max(1000).optional().nullable(),
+  whatsIncluded: z.string().trim().max(1000).optional().nullable(),
+  shippingInformation: z.string().trim().max(1000).optional().nullable(),
+  specifications: z.any().optional().nullable(),
   seoTitle: z.string().trim().max(200).optional().nullable(),
   seoDescription: z.string().trim().max(500).optional().nullable(),
+  ogImage: z.string().trim().max(500).optional().nullable(),
   attributes: z.record(z.string().trim().max(80), z.string().trim().max(500)).optional().nullable(),
   bookDetail: bookDetailSchema,
 });
@@ -43,14 +57,27 @@ export const listProductsQuerySchema = z.object({
   search: z.string().trim().max(200).optional(),
   category: z.string().trim().max(140).optional(),
   categoryId: z.string().uuid().optional(),
+  subcategory: z.string().trim().max(140).optional(),
+  brand: z.string().trim().max(120).optional(),
+  tag: z.string().trim().max(100).optional(),
   type: z.enum(["BOOK", "PHYSICAL"]).optional(),
   productType: z.enum(["BOOK", "PHYSICAL"]).optional(),
   featured: z
     .union([z.literal("true"), z.literal("false")])
     .optional()
     .transform((v) => (v === undefined ? undefined : v === "true")),
-  bestSeller: z.union([z.literal("true"), z.literal("false")]).optional().transform((v) => v === undefined ? undefined : v === "true"),
-  newArrival: z.union([z.literal("true"), z.literal("false")]).optional().transform((v) => v === undefined ? undefined : v === "true"),
+  bestSeller: z
+    .union([z.literal("true"), z.literal("false")])
+    .optional()
+    .transform((v) => (v === undefined ? undefined : v === "true")),
+  newArrival: z
+    .union([z.literal("true"), z.literal("false")])
+    .optional()
+    .transform((v) => (v === undefined ? undefined : v === "true")),
+  trending: z
+    .union([z.literal("true"), z.literal("false")])
+    .optional()
+    .transform((v) => (v === undefined ? undefined : v === "true")),
   availability: z.enum(["in_stock", "out_of_stock"]).optional(),
   minPrice: z.coerce.number().nonnegative().optional(),
   maxPrice: z.coerce.number().nonnegative().optional(),

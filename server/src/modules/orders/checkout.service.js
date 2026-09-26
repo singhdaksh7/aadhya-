@@ -86,21 +86,39 @@ export function computeShipping(subtotal) {
   return subtotal >= env.shipping.freeThreshold ? 0 : env.shipping.standardAmount;
 }
 
-export function computeTotals(pricedItems) {
+export function computeTotals(pricedItems, couponDiscount = 0) {
   const validItems = pricedItems.filter((i) => i.ok);
   const subtotal = round2(validItems.reduce((sum, i) => sum + i.lineTotal, 0));
   const shipping = round2(computeShipping(subtotal));
-  const tax = 0; // no tax engine in this phase — kept explicit, not omitted
-  const discount = 0; // no coupon system in this phase
-  const total = round2(subtotal + shipping + tax - discount);
+  const tax = 0;
+  const discount = round2(couponDiscount);
+  const total = round2(Math.max(0, subtotal + shipping + tax - discount));
   return { subtotal, shipping, tax, discount, total, currency: "INR" };
 }
 
-export async function buildCheckoutPreview(requestedItems) {
+export async function buildCheckoutPreview(requestedItems, { couponCode, customerId, customerEmail } = {}) {
   const pricedItems = await priceCartItems(requestedItems);
-  const totals = computeTotals(pricedItems);
+  let couponResult = null;
+  let couponDiscount = 0;
+
+  if (couponCode) {
+    try {
+      const { validateCoupon } = await import("../coupons/coupon.service.js");
+      couponResult = await validateCoupon({
+        code: couponCode,
+        customerId,
+        customerEmail,
+        items: requestedItems,
+      });
+      couponDiscount = couponResult.discountAmount;
+    } catch (err) {
+      couponResult = { error: err.message };
+    }
+  }
+
+  const totals = computeTotals(pricedItems, couponDiscount);
   const hasBlockingIssues = pricedItems.some((i) => !i.ok);
-  return { items: pricedItems, hasBlockingIssues, ...totals };
+  return { items: pricedItems, hasBlockingIssues, coupon: couponResult, ...totals };
 }
 
 // Used by order creation — same pricing, but throws on any invalid item
