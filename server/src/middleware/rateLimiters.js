@@ -28,6 +28,15 @@ export const loginLimiter = rateLimit({
   skip: skipInTest,
 });
 
+export const registerLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: { code: "RATE_LIMITED", message: "Too many account creation attempts. Please try again shortly." } },
+  skip: skipInTest,
+});
+
 export const newsletterLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 10,

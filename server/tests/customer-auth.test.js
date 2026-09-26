@@ -57,6 +57,23 @@ describe("register", () => {
     expect(dup.status).toBe(409);
     const dupCase = await request(app).post("/api/auth/register").send({ ...credentials, email: "CUSTOMER@TEST.LOCAL" });
     expect(dupCase.status).toBe(409);
+    expect(dup.body.error.message).toBe("An account with this email already exists.");
+  });
+
+  it("allows only one concurrent registration for the same normalized email", async () => {
+    const [first, second] = await Promise.all([
+      request(app).post("/api/auth/register").send({ ...credentials, email: "Race@Test.LOCAL" }),
+      request(app).post("/api/auth/register").send({ ...credentials, email: "race@test.local" }),
+    ]);
+    expect([first.status, second.status].sort()).toEqual([201, 409]);
+    expect(await prisma.customer.count({ where: { email: "race@test.local" } })).toBe(1);
+    expect(await prisma.customerRefreshSession.count()).toBe(1);
+  });
+
+  it("normalizes common Indian phone formats before storage", async () => {
+    const res = await request(app).post("/api/auth/register").send({ ...credentials, phone: "+91 98765-43210" });
+    expect(res.status).toBe(201);
+    expect(res.body.data.customer.phone).toBe("9876543210");
   });
 
   it("rejects an invalid email", async () => {

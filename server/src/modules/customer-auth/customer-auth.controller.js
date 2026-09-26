@@ -1,6 +1,16 @@
-import { asyncHandler } from "../../utils/asyncHandler.js"; import { ok, created } from "../../utils/apiResponse.js"; import { CUSTOMER_REFRESH_COOKIE_NAME, customerRefreshCookieOptions } from "../../utils/tokens.js"; import * as service from "./customer-auth.service.js"; import * as v from "./customer-auth.validators.js"; import { sendPasswordResetEmail } from "../email/email.service.js";
+import { asyncHandler } from "../../utils/asyncHandler.js"; import { ok, created } from "../../utils/apiResponse.js"; import { CUSTOMER_REFRESH_COOKIE_NAME, customerRefreshCookieOptions } from "../../utils/tokens.js"; import * as service from "./customer-auth.service.js"; import * as v from "./customer-auth.validators.js"; import { sendPasswordResetEmail } from "../email/email.service.js"; import { ZodError } from "zod";
 const issue = (res, data, status = ok) => { res.cookie(CUSTOMER_REFRESH_COOKIE_NAME, data.refreshToken, customerRefreshCookieOptions()); const { refreshToken: _refreshToken, ...safe } = data; status(res, safe); };
-export const register = asyncHandler(async (req,res) => issue(res, await service.register(v.registerSchema.parse(req.body), req.get("user-agent")), created));
+export const register = asyncHandler(async (req,res) => {
+  try {
+    const data = await service.register(v.registerSchema.parse(req.body), req.get("user-agent"));
+    issue(res, data, created);
+  } catch (error) {
+    const category = error instanceof ZodError ? "REGISTER_VALIDATION_FAILED" : error?.isApiError && error.statusCode === 409 ? "REGISTER_DUPLICATE" : error?.registrationStage === "session" ? "REGISTER_SESSION_FAILED" : "REGISTER_DB_FAILED";
+    // Deliberately excludes password, raw tokens, email, and request body.
+    console.warn(JSON.stringify({ event: category }));
+    throw error;
+  }
+});
 export const login = asyncHandler(async (req,res) => issue(res, await service.login(v.loginSchema.parse(req.body), req.get("user-agent"))));
 export const refresh = asyncHandler(async (req,res) => issue(res, await service.refresh(req.cookies?.[CUSTOMER_REFRESH_COOKIE_NAME], req.get("user-agent"))));
 export const logout = asyncHandler(async (req,res) => { await service.logout(req.cookies?.[CUSTOMER_REFRESH_COOKIE_NAME]); res.clearCookie(CUSTOMER_REFRESH_COOKIE_NAME, { path: "/api/auth" }); ok(res,{loggedOut:true}); });

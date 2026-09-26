@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Button, SectionHeading } from "../../components/ui";
 import { useCustomerAuth } from "../../context/CustomerAuthContext";
+import { ApiRequestError } from "../../lib/api";
 import {
   accountAddresses,
   accountOrder,
@@ -84,16 +85,28 @@ export function Login({ register = false }) {
   const [q] = useSearchParams();
   const [form, set] = useState({ name: "", email: "", password: "", phone: "" });
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const submit = async (e) => {
     e.preventDefault();
+    if (submitting) return;
+    if (register && (!/[A-Za-z]/.test(form.password) || !/\d/.test(form.password) || form.password.length < 10)) {
+      setError("Password must be at least 10 characters and include a letter and a number.");
+      return;
+    }
+    setSubmitting(true);
+    setError("");
     try {
       const payload = register ? { ...form, phone: form.phone.trim() || undefined } : form;
       await (register ? join : login)(payload);
       const p = q.get("returnTo");
       nav(p?.startsWith("/") && !p.startsWith("//") ? p : "/account");
     } catch (e) {
-      setError(e.message);
+      if (register && e instanceof ApiRequestError) {
+        setError(e.status === 400 ? "Please check the highlighted fields." : e.status === 409 ? "An account with this email already exists. Try signing in." : e.status === 429 ? "Too many attempts. Please try again in a few minutes." : "We couldn't create your account right now. Please try again.");
+      } else setError(e.message || "We couldn't complete that request right now. Please try again.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -133,6 +146,7 @@ export function Login({ register = false }) {
               value={form.phone}
               onChange={(e) => set({ ...form, phone: e.target.value })}
             />
+            <p className="mt-1 text-xs text-charcoal-soft">10-digit Indian mobile number</p>
           </div>
         )}
         <div>
@@ -146,11 +160,12 @@ export function Login({ register = false }) {
             value={form.password}
             onChange={(e) => set({ ...form, password: e.target.value })}
           />
+          {register && <p className="mt-1 text-xs text-charcoal-soft">At least 10 characters, including a letter and a number.</p>}
         </div>
 
         {error && <p className="text-xs font-medium text-terracotta bg-terracotta/10 p-3 rounded-xl">{error}</p>}
 
-        <Button className="w-full py-3">{register ? "Create account" : "Log in"}</Button>
+        <Button disabled={submitting} className="w-full py-3">{submitting ? (register ? "Creating account..." : "Signing in...") : (register ? "Create account" : "Log in")}</Button>
       </form>
 
       <div className="mt-6 text-center text-xs text-charcoal-soft space-x-3">

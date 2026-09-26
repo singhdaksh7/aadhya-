@@ -8,6 +8,7 @@ import { Login, Account, Addresses, Orders, OrderDetail, Forgot, Reset } from ".
 
 const api = vi.hoisted(() => ({
   customerRegister: vi.fn(),
+  ApiRequestError: class ApiRequestError extends Error { constructor(message, status) { super(message); this.status = status; } },
   customerLogin: vi.fn(),
   customerRefresh: vi.fn(),
   customerLogout: vi.fn(),
@@ -49,7 +50,7 @@ function AuthedRoutes({ initialEntries }) {
 const CUSTOMER = { id: "c1", name: "Test Customer", email: "test@example.com", phone: "9876543210" };
 
 beforeEach(() => {
-  Object.values(api).forEach((fn) => fn.mockReset());
+  Object.values(api).filter((value) => typeof value.mockReset === "function").forEach((fn) => fn.mockReset());
   api.customerRefresh.mockRejectedValue(new Error("no session")); // logged-out bootstrap by default
 });
 
@@ -67,6 +68,22 @@ describe("bootstrap", () => {
     render(<AuthedRoutes initialEntries={["/account"]} />);
     await waitFor(() => expect(screen.getByText(/Email: test@example.com/)).toBeInTheDocument());
     expect(api.setAccessToken).toHaveBeenCalledWith("tok");
+  });
+
+  it("does not let a late failed bootstrap overwrite a completed registration", async () => {
+    let rejectBootstrap;
+    api.customerRefresh.mockReturnValue(new Promise((_, reject) => { rejectBootstrap = reject; }));
+    api.customerRegister.mockResolvedValue({ data: { accessToken: "new-token", customer: CUSTOMER } });
+    api.accountAddresses.mockResolvedValue({ data: [] });
+    const user = userEvent.setup();
+    render(<AuthedRoutes initialEntries={["/register"]} />);
+    await user.type(screen.getByPlaceholderText("Name"), "Test Customer");
+    await user.type(screen.getByPlaceholderText("Email"), "test@example.com");
+    await user.type(screen.getByPlaceholderText("Password"), "SafePassword123");
+    await user.click(screen.getByRole("button", { name: "Create account" }));
+    await waitFor(() => expect(screen.getByText(/Email: test@example.com/)).toBeInTheDocument());
+    rejectBootstrap(new Error("stale refresh failure"));
+    await waitFor(() => expect(api.setAccessToken).toHaveBeenLastCalledWith("new-token"));
   });
 });
 
@@ -112,6 +129,35 @@ describe("login / register", () => {
     await user.type(screen.getByPlaceholderText("Password"), "SafePassword123");
     await user.click(screen.getByRole("button", { name: "Create account" }));
     await waitFor(() => expect(screen.getByText(/Email: test@example.com/)).toBeInTheDocument());
+  });
+
+  it("shows password and phone guidance and blocks a weak registration password", async () => {
+    const user = userEvent.setup();
+    render(<AuthedRoutes initialEntries={["/register"]} />);
+    await user.type(screen.getByPlaceholderText("Name"), "Test Customer");
+    await user.type(screen.getByPlaceholderText("Email"), "test@example.com");
+    await user.type(screen.getByPlaceholderText("Password"), "OnlyLetters");
+    expect(screen.getByText(/10-digit Indian mobile number/i)).toBeInTheDocument();
+    expect(screen.getByText(/including a letter and a number/i)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Create account" }));
+    expect(await screen.findByText(/Password must be at least 10 characters/i)).toBeInTheDocument();
+    expect(api.customerRegister).not.toHaveBeenCalled();
+  });
+
+  it("disables repeated register submissions and gives a duplicate-account message", async () => {
+    let rejectRegistration;
+    api.customerRegister.mockReturnValue(new Promise((_, reject) => { rejectRegistration = reject; }));
+    const user = userEvent.setup();
+    render(<AuthedRoutes initialEntries={["/register"]} />);
+    await user.type(screen.getByPlaceholderText("Name"), "Test Customer");
+    await user.type(screen.getByPlaceholderText("Email"), "test@example.com");
+    await user.type(screen.getByPlaceholderText("Password"), "SafePassword123");
+    await user.click(screen.getByRole("button", { name: "Create account" }));
+    expect(screen.getByRole("button", { name: "Creating account..." })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Creating account..." }));
+    expect(api.customerRegister).toHaveBeenCalledTimes(1);
+    rejectRegistration(new api.ApiRequestError("conflict", 409));
+    expect(await screen.findByText(/already exists. Try signing in/i)).toBeInTheDocument();
   });
 });
 

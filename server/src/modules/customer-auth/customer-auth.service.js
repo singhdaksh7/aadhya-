@@ -4,13 +4,73 @@ import { ApiError } from "../../utils/ApiError.js";
 import { hashPassword, verifyPassword } from "../../utils/password.js";
 import { hashToken } from "../../utils/secureToken.js";
 import { signCustomerAccessToken } from "../../utils/tokens.js";
+
 const expiry = () => new Date(Date.now() + 7 * 86400000);
 const raw = () => crypto.randomBytes(24).toString("hex");
-const safe = c => ({ id: c.id, name: c.name, email: c.email, phone: c.phone, emailVerifiedAt: c.emailVerifiedAt });
-async function session(customer, userAgent) { const token = raw(); await prisma.customerRefreshSession.create({ data: { customerId: customer.id, tokenHash: hashToken(token), expiresAt: expiry(), userAgent: userAgent?.slice(0, 500) } }); return { accessToken: signCustomerAccessToken(customer), refreshToken: token, customer: safe(customer) }; }
-export async function register(input, ua) { const exists = await prisma.customer.findUnique({ where: { email: input.email } }); if (exists) throw ApiError.conflict("Unable to create account with these details."); const customer = await prisma.customer.create({ data: { name: input.name, email: input.email, phone: input.phone || null, passwordHash: await hashPassword(input.password) } }); return session(customer, ua); }
-export async function login(input, ua) { const c = await prisma.customer.findUnique({ where: { email: input.email } }); if (!c || !(await verifyPassword(input.password, c.passwordHash)) || !c.isActive) throw ApiError.unauthorized("Invalid email or password."); return session(c, ua); }
-export async function refresh(token, ua) { if (!token) throw ApiError.unauthorized(); const s = await prisma.customerRefreshSession.findUnique({ where: { tokenHash: hashToken(token) }, include: { customer: true } }); if (!s || s.revokedAt || s.expiresAt <= new Date() || !s.customer.isActive) throw ApiError.unauthorized("Invalid or expired session"); await prisma.customerRefreshSession.update({ where: { id: s.id }, data: { revokedAt: new Date() } }); return session(s.customer, ua); }
+const rawRefresh = () => crypto.randomBytes(32).toString("hex");
+const safe = (c) => ({ id: c.id, name: c.name, email: c.email, phone: c.phone, emailVerifiedAt: c.emailVerifiedAt });
+const isUniqueViolation = (error, field) => error?.code === "P2002" && (!field || error.meta?.target?.includes(field));
+
+function refreshSessionData(customerId, userAgent) {
+  const refreshToken = rawRefresh();
+  return {
+    refreshToken,
+    data: { customerId, tokenHash: hashToken(refreshToken), expiresAt: expiry(), userAgent: userAgent?.slice(0, 500) },
+  };
+}
+
+async function createSession(customer, userAgent) {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const session = refreshSessionData(customer.id, userAgent);
+    try {
+      await prisma.customerRefreshSession.create({ data: session.data });
+      return { accessToken: signCustomerAccessToken(customer), refreshToken: session.refreshToken, customer: safe(customer) };
+    } catch (error) {
+      if (!isUniqueViolation(error, "tokenHash") || attempt === 2) throw error;
+    }
+  }
+}
+
+export async function register(input, userAgent) {
+  const passwordHash = await hashPassword(input.password);
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const refresh = refreshSessionData(undefined, userAgent);
+    try {
+      const customer = await prisma.$transaction(async (tx) => {
+        const created = await tx.customer.create({
+          data: { name: input.name, email: input.email, phone: input.phone || null, passwordHash },
+        });
+        try {
+          await tx.customerRefreshSession.create({ data: { ...refresh.data, customerId: created.id } });
+        } catch (error) {
+          error.registrationStage = "session";
+          throw error;
+        }
+        return created;
+      });
+      return { accessToken: signCustomerAccessToken(customer), refreshToken: refresh.refreshToken, customer: safe(customer) };
+    } catch (error) {
+      if (isUniqueViolation(error, "email")) throw ApiError.conflict("An account with this email already exists.");
+      if (isUniqueViolation(error, "tokenHash") && attempt < 2) continue;
+      throw error;
+    }
+  }
+}
+
+export async function login(input, userAgent) {
+  const customer = await prisma.customer.findUnique({ where: { email: input.email } });
+  if (!customer || !(await verifyPassword(input.password, customer.passwordHash)) || !customer.isActive) throw ApiError.unauthorized("Invalid email or password.");
+  return createSession(customer, userAgent);
+}
+
+export async function refresh(token, userAgent) {
+  if (!token) throw ApiError.unauthorized();
+  const session = await prisma.customerRefreshSession.findUnique({ where: { tokenHash: hashToken(token) }, include: { customer: true } });
+  if (!session || session.revokedAt || session.expiresAt <= new Date() || !session.customer.isActive) throw ApiError.unauthorized("Invalid or expired session");
+  await prisma.customerRefreshSession.update({ where: { id: session.id }, data: { revokedAt: new Date() } });
+  return createSession(session.customer, userAgent);
+}
+
 export async function logout(token) { if (token) await prisma.customerRefreshSession.updateMany({ where: { tokenHash: hashToken(token), revokedAt: null }, data: { revokedAt: new Date() } }); }
 export async function updateProfile(id, input) { return safe(await prisma.customer.update({ where: { id }, data: { name: input.name, phone: input.phone || null } })); }
 export async function changePassword(id, input) { const c = await prisma.customer.findUnique({ where: { id } }); if (!c || !(await verifyPassword(input.currentPassword, c.passwordHash))) throw ApiError.unauthorized("Current password is incorrect."); await prisma.$transaction([prisma.customer.update({ where: { id }, data: { passwordHash: await hashPassword(input.newPassword) } }), prisma.customerRefreshSession.updateMany({ where: { customerId: id, revokedAt: null }, data: { revokedAt: new Date() } })]); }
