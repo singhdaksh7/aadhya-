@@ -13,6 +13,7 @@
     "prisma:studio": "prisma studio",
     "seed": "node prisma/seed.js",
     "seed:demo": "set SEED_DEMO_CATALOG=true&& node prisma/seed.js",
+    "backfill:homepage-content": "node scripts/backfill-homepage-section-content.js",
     "test:setup": "node scripts/prepare-test-db.js",
     "test": "set NODE_ENV=test&& npm run test:setup && vitest run"
   },

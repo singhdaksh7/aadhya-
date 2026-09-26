@@ -7,9 +7,13 @@ import {
   adminDuplicatePageSection,
   adminReorderPageSections,
   adminPublishHomepage,
+  adminListCollections,
+  adminListCategories,
+  adminListPages,
 } from "../../lib/api";
 import { Button } from "../../components/ui";
 import { LoadingNotice, ErrorNotice } from "../../components/StateNotice";
+import HomepageSectionFields from "../../components/admin/HomepageSectionFields";
 
 const SECTION_TYPE_LABELS = {
   HERO: "Hero Banner Carousel",
@@ -45,8 +49,8 @@ export default function AdminHomepageBuilder() {
   // Edit settings form state
   const [editName, setEditName] = useState("");
   const [editIsEnabled, setEditIsEnabled] = useState(true);
-  const [editSettingsJson, setEditSettingsJson] = useState("{}");
-  const [editContentJson, setEditContentJson] = useState("{}");
+  const [editSettings, setEditSettings] = useState({});
+  const [targets, setTargets] = useState({ collections: [], categories: [], pages: [] });
   const [jsonError, setJsonError] = useState("");
 
   const loadHomepage = async () => {
@@ -67,6 +71,9 @@ export default function AdminHomepageBuilder() {
 
   useEffect(() => {
     loadHomepage();
+    Promise.all([adminListCollections(), adminListCategories(true), adminListPages({ limit: 100 })]).then(([collections, categories, pages]) => {
+      setTargets({ collections: collections.items || collections.data || collections || [], categories: categories.items || categories.data || categories || [], pages: pages.items || pages.data || pages || [] });
+    }).catch(() => {});
   }, []);
 
   const handlePublish = async () => {
@@ -151,35 +158,19 @@ export default function AdminHomepageBuilder() {
     setEditingSection(sec);
     setEditName(sec.name || "");
     setEditIsEnabled(sec.isEnabled);
-    setEditSettingsJson(JSON.stringify(sec.settings || {}, null, 2));
-    setEditContentJson(JSON.stringify(sec.content || {}, null, 2));
+    setEditSettings(sec.settings || {});
     setJsonError("");
   };
 
   const handleSaveEdit = async (e) => {
     e.preventDefault();
     setJsonError("");
-    let parsedSettings = {};
-    let parsedContent = {};
-    try {
-      parsedSettings = editSettingsJson ? JSON.parse(editSettingsJson) : {};
-    } catch {
-      setJsonError("Invalid JSON format in Section Settings.");
-      return;
-    }
-    try {
-      parsedContent = editContentJson ? JSON.parse(editContentJson) : {};
-    } catch {
-      setJsonError("Invalid JSON format in Section Content.");
-      return;
-    }
-
     try {
       await adminUpdatePageSection(editingSection.id, {
         name: editName,
         isEnabled: editIsEnabled,
-        settings: parsedSettings,
-        content: parsedContent,
+        settings: editSettings,
+        content: editingSection.content || {},
       });
       setEditingSection(null);
       loadHomepage();
@@ -434,29 +425,14 @@ export default function AdminHomepageBuilder() {
               </div>
             </div>
 
-            <div>
-              <label className="text-xs font-semibold text-charcoal-soft">
-                Settings JSON (Presentation &amp; Layout Controls)
-              </label>
-              <textarea
-                rows={6}
-                value={editSettingsJson}
-                onChange={(e) => setEditSettingsJson(e.target.value)}
-                className="w-full font-mono text-xs rounded-xl border border-charcoal/20 p-3 focus:border-terracotta focus:outline-none mt-1 bg-[#FAF6F0]"
-              />
-            </div>
-
-            <div>
-              <label className="text-xs font-semibold text-charcoal-soft">
-                Content JSON (Headings, Subtitles, CTA Labels &amp; Links)
-              </label>
-              <textarea
-                rows={6}
-                value={editContentJson}
-                onChange={(e) => setEditContentJson(e.target.value)}
-                className="w-full font-mono text-xs rounded-xl border border-charcoal/20 p-3 focus:border-terracotta focus:outline-none mt-1 bg-[#FAF6F0]"
-              />
-            </div>
+            <HomepageSectionFields
+              type={editingSection.type}
+              value={editSettings}
+              onChange={setEditSettings}
+              collections={targets.collections}
+              categories={targets.categories}
+              pages={targets.pages}
+            />
 
             {jsonError && <p className="text-xs text-terracotta font-semibold">{jsonError}</p>}
 

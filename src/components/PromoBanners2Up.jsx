@@ -18,11 +18,12 @@ const DEFAULT_PROMO_CARDS = [
   }
 ];
 
-export default function PromoBanners2Up({ promoCards = DEFAULT_PROMO_CARDS }) {
+export default function PromoBanners2Up({ promoCards }) {
+  const cards = (Array.isArray(promoCards) && promoCards.length ? promoCards : DEFAULT_PROMO_CARDS).filter((card) => card.enabled !== false);
   return (
     <section className="mx-auto max-w-7xl px-4 sm:px-8 py-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {promoCards.map((card, idx) => (
+        {cards.map((card, idx) => (
           <Link
             key={idx}
             to={card.ctaUrl || "/shop"}
@@ -37,7 +38,7 @@ export default function PromoBanners2Up({ promoCards = DEFAULT_PROMO_CARDS }) {
             {/* Subtle Gradient Overlay */}
             <div className="absolute inset-0 bg-gradient-to-t from-charcoal/80 via-charcoal/30 to-transparent p-6 sm:p-8 flex flex-col justify-end text-white">
               <span className="text-xs font-semibold uppercase tracking-widest text-terracotta-light">
-                Curated Edit
+                {card.eyebrow || "Curated Edit"}
               </span>
               <h3 className="font-serif-display text-2xl sm:text-3xl text-white mt-1">
                 {card.title}

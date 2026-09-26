@@ -10,346 +10,37 @@ import { ProductGridSkeleton } from "./ui/Skeleton";
 import { formatInr } from "../lib/format";
 import { IconArrowRight } from "./icons";
 
-export default function HomepageRenderer({
-  sections = [],
-  categories = [],
-  newArrivals = [],
-  bestSellers = [],
-  featuredCollection = null,
-  booksList = [],
-  isLoading = false,
-  subscribed = false,
-  newsletterEmail = "",
-  setNewsletterEmail = () => {},
-  handleNewsletterSubmit = () => {},
-  newsletterStatus = "idle",
-  newsletterError = "",
-}) {
-  if (!sections || sections.length === 0) return null;
+const route = (value, fallback = "/shop") => typeof value === "string" && (value.startsWith("/") || /^https?:\/\//i.test(value)) ? value : fallback;
+function SafeLink({ to, children, ...props }) { const url = route(to); return url.startsWith("/") ? <Link to={url} {...props}>{children}</Link> : <a href={url} {...props}>{children}</a>; }
+const enabled = (items = []) => items.filter((item) => item.enabled !== false).sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
 
-  // Split section flow between top header stack and spaced body content
-  const topTypes = new Set(["CIRCULAR_CATEGORY_NAV", "CATEGORY_CIRCLES", "PROMO_STRIP", "PROMO_TICKER", "HERO_CAROUSEL", "HERO", "TRUST_STRIP", "TRUST_BADGES"]);
-  const topSections = sections.filter((s) => topTypes.has(s.type));
-  const bodySections = sections.filter((s) => !topTypes.has(s.type));
-
-  const renderSectionItem = (section) => {
+export default function HomepageRenderer({ sections = [], categories = [], newArrivals = [], bestSellers = [], featuredCollection = null, booksList = [], isLoading = false, subscribed = false, newsletterEmail = "", setNewsletterEmail = () => {}, handleNewsletterSubmit = () => {}, newsletterStatus = "idle", newsletterError = "" }) {
+  if (!sections?.length) return null;
+  const renderProducts = (products, limit) => isLoading ? <ProductGridSkeleton count={limit || 4} /> : <div className="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-4">{products.slice(0, limit || 4).map((product) => <ProductCard key={product.id} product={product} />)}</div>;
+  const renderSection = (section) => {
+    const s = section.settings || {};
     switch (section.type) {
-      case "CIRCULAR_CATEGORY_NAV":
-      case "CATEGORY_CIRCLES":
-        return <CircularCategoryNav key={section.id || section.type} categories={categories} />;
-
-      case "PROMO_STRIP":
-      case "PROMO_TICKER":
-        return <PromoStrip key={section.id || section.type} />;
-
-      case "HERO_CAROUSEL":
-      case "HERO":
-        return <HeroBannerCarousel key={section.id || section.type} />;
-
-      case "TRUST_STRIP":
-      case "TRUST_BADGES":
-        return <TrustServiceStrip key={section.id || section.type} />;
-
-      case "NEW_ARRIVALS":
-        return (
-          <section key={section.id || section.type} className="mx-auto max-w-7xl px-4 sm:px-8">
-            <div className="flex flex-wrap items-end justify-between gap-4 mb-8 border-b border-charcoal/10 pb-4">
-              <div>
-                <span className="text-xs font-semibold uppercase tracking-widest text-terracotta">
-                  {section.settings?.eyebrow || "Fresh Drops"}
-                </span>
-                <h2 className="mt-1 font-serif-display text-3xl sm:text-4xl text-charcoal font-bold">
-                  {section.settings?.title || section.name || "New Arrivals"}
-                </h2>
-              </div>
-              <Link to="/new-arrivals" className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-terracotta hover:underline">
-                View All New Arrivals <IconArrowRight className="h-4 w-4" />
-              </Link>
-            </div>
-
-            {isLoading ? (
-              <ProductGridSkeleton count={4} />
-            ) : (
-              <div className="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-4">
-                {newArrivals.map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
-              </div>
-            )}
-          </section>
-        );
-
-      case "PROMO_BANNERS_2UP":
-      case "MULTI_BANNER":
-        return <PromoBanners2Up key={section.id || section.type} />;
-
-      case "BEST_SELLERS":
-        return (
-          <section key={section.id || section.type} className="mx-auto max-w-7xl px-4 sm:px-8">
-            <div className="flex flex-wrap items-end justify-between gap-4 mb-8 border-b border-charcoal/10 pb-4">
-              <div>
-                <span className="text-xs font-semibold uppercase tracking-widest text-terracotta">
-                  {section.settings?.eyebrow || "Most Cherished"}
-                </span>
-                <h2 className="mt-1 font-serif-display text-3xl sm:text-4xl text-charcoal font-bold">
-                  {section.settings?.title || section.name || "Best Sellers"}
-                </h2>
-              </div>
-              <Link to="/best-sellers" className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-terracotta hover:underline">
-                View All Best Sellers <IconArrowRight className="h-4 w-4" />
-              </Link>
-            </div>
-
-            {isLoading ? (
-              <ProductGridSkeleton count={4} />
-            ) : (
-              <div className="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-4">
-                {bestSellers.map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
-              </div>
-            )}
-          </section>
-        );
-
-      case "FEATURED_COLLECTION":
-      case "COLLECTION":
-        return featuredCollection ? (
-          <section key={section.id || section.type} className="mx-auto max-w-7xl px-4 sm:px-8">
-            <div className="overflow-hidden rounded-2xl border border-charcoal/10 bg-[#FAF6F0] grid lg:grid-cols-12 items-center">
-              <div className="p-8 sm:p-14 lg:col-span-6 space-y-5">
-                <span className="text-xs font-semibold uppercase tracking-widest text-sage font-bold">
-                  Featured Editorial Collection
-                </span>
-                <h2 className="font-serif-display text-3xl sm:text-4xl lg:text-5xl text-charcoal font-bold">
-                  {featuredCollection.name}
-                </h2>
-                <p className="text-sm sm:text-base text-charcoal-soft leading-relaxed">
-                  {featuredCollection.description}
-                </p>
-                <div className="pt-2">
-                  <Link
-                    to={`/collections/${featuredCollection.slug}`}
-                    className="inline-flex items-center gap-2 rounded-full bg-terracotta px-7 py-3 text-xs font-semibold uppercase tracking-wider text-white transition hover:bg-terracotta-dark shadow-xs"
-                  >
-                    Explore Collection <IconArrowRight className="h-4 w-4" />
-                  </Link>
-                </div>
-              </div>
-              <div className="lg:col-span-6 aspect-square sm:aspect-video lg:aspect-auto h-full min-h-[340px] overflow-hidden group">
-                <img
-                  src={featuredCollection.heroImage}
-                  alt={featuredCollection.name}
-                  className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-                />
-              </div>
-            </div>
-          </section>
-        ) : null;
-
-      case "SHOP_THE_LOOK":
-        return (
-          <section key={section.id || section.type} className="mx-auto max-w-7xl px-4 sm:px-8">
-            <div className="flex flex-col items-center text-center mb-10">
-              <span className="text-xs font-semibold uppercase tracking-widest text-terracotta">
-                Lifestyle Inspiration
-              </span>
-              <h2 className="mt-1.5 font-serif-display text-3xl sm:text-4xl text-charcoal font-bold">
-                Shop the Look
-              </h2>
-            </div>
-
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-              {[
-                {
-                  title: "Living Room Edit",
-                  tagline: "Brass Sconces & Woven Throws",
-                  image: "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?q=80&w=800&auto=format&fit=crop",
-                  slug: "home-decor"
-                },
-                {
-                  title: "Mindful Corner",
-                  tagline: "Soapstone Urns & Sandalwood",
-                  image: "https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?q=80&w=800&auto=format&fit=crop",
-                  slug: "wellness-decor"
-                },
-                {
-                  title: "Warm Neutrals",
-                  tagline: "Terracotta Clay & Linen Runners",
-                  image: "https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?q=80&w=800&auto=format&fit=crop",
-                  slug: "earth-collection"
-                },
-                {
-                  title: "Books & Objects",
-                  tagline: "Heritage Monographs & Wood Pedestals",
-                  image: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?q=80&w=800&auto=format&fit=crop",
-                  slug: "books"
-                }
-              ].map((look) => (
-                <Link
-                  key={look.title}
-                  to={`/collections/${look.slug}`}
-                  className="group relative overflow-hidden rounded-2xl border border-charcoal/10 bg-white transition hover:shadow-xl"
-                >
-                  <div className="aspect-[3/4] w-full overflow-hidden">
-                    <img
-                      src={look.image}
-                      alt={look.title}
-                      className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
-                    />
-                  </div>
-                  <div className="absolute inset-0 bg-gradient-to-t from-charcoal/85 via-charcoal/30 to-transparent p-6 flex flex-col justify-end text-white">
-                    <h3 className="font-serif-display text-xl font-bold">{look.title}</h3>
-                    <p className="mt-1 text-xs text-white/80">{look.tagline}</p>
-                    <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-terracotta-light group-hover:underline">
-                      View Edit <IconArrowRight className="h-3.5 w-3.5" />
-                    </span>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </section>
-        );
-
-      case "BOOKS_SHELF":
-      case "BOOKS":
-        return (
-          <section key={section.id || section.type} className="bg-[#FAF6F0] py-16 border-y border-charcoal/10">
-            <div className="mx-auto max-w-7xl px-4 sm:px-8">
-              <div className="flex flex-wrap items-end justify-between gap-4 mb-10">
-                <div>
-                  <span className="text-xs font-semibold uppercase tracking-widest text-terracotta">Editorial Monographs</span>
-                  <h2 className="mt-1 font-serif-display text-3xl sm:text-4xl text-charcoal font-bold">From Our Bookshelf</h2>
-                </div>
-                <Link to="/books" className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-terracotta hover:underline">
-                  Explore Books <IconArrowRight className="h-4 w-4" />
-                </Link>
-              </div>
-
-              <div className="grid gap-6 sm:grid-cols-3">
-                {booksList.map((book) => (
-                  <div key={book.id} className="flex flex-col rounded-xl border border-charcoal/10 bg-white p-5 shadow-xs hover:shadow-md transition">
-                    <div className="aspect-[3/4] w-full overflow-hidden rounded-lg bg-[#FAF6F0] mb-4">
-                      <img src={book.images[0]} alt={book.name} className="h-full w-full object-cover" />
-                    </div>
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-terracotta">Hardcover Edition</span>
-                    <h3 className="font-serif-display text-base font-bold text-charcoal mt-1 line-clamp-1">{book.name}</h3>
-                    <p className="text-xs text-charcoal-soft italic mt-0.5">By {book.author}</p>
-                    <p className="mt-2 text-xs text-charcoal-soft line-clamp-2 leading-relaxed">{book.shortDescription}</p>
-                    <div className="mt-auto pt-4 flex items-center justify-between border-t border-charcoal/10">
-                      <span className="text-sm font-semibold text-terracotta">{formatInr(book.price)}</span>
-                      <Link
-                        to={`/products/${book.slug}`}
-                        className="rounded-full bg-[#FAF6F0] px-3.5 py-1.5 text-xs font-medium text-charcoal hover:bg-terracotta hover:text-white transition"
-                      >
-                        View Details
-                      </Link>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-        );
-
-      case "EDITORIAL_BRAND":
-      case "IMAGE_TEXT":
-        return (
-          <section key={section.id || section.type} className="mx-auto max-w-7xl px-4 sm:px-8 py-8">
-            <div className="grid items-center gap-12 lg:grid-cols-12 rounded-2xl border border-charcoal/10 p-8 sm:p-12 bg-white">
-              <div className="lg:col-span-6 space-y-6">
-                <span className="text-xs font-semibold uppercase tracking-widest text-terracotta">
-                  Craftsmanship &amp; Mindful Living
-                </span>
-                <h2 className="font-serif-display text-3xl sm:text-4xl lg:text-5xl text-charcoal font-bold">
-                  Honoring Earth, Metal &amp; Human Hands
-                </h2>
-                <p className="text-sm sm:text-base leading-relaxed text-charcoal-soft">
-                  Every piece in the Aadya collection originates in quiet Indian artisan workshops. From lost-wax Dhokra bronze figurines in Odisha to Jaipur blue pottery and hand-chased brassware, our objects carry stories of patience, sustainable raw materials, and sacred proportions.
-                </p>
-                <div className="grid grid-cols-2 gap-4 pt-2">
-                  <div className="border-l-2 border-terracotta pl-4">
-                    <p className="font-serif-display text-2xl text-charcoal font-bold">100% Organic</p>
-                    <p className="text-xs text-charcoal-soft mt-1">Natural clays, unbleached flax, solid brass and mineral oxides.</p>
-                  </div>
-                  <div className="border-l-2 border-sage pl-4">
-                    <p className="font-serif-display text-2xl text-charcoal font-bold">Artisan Direct</p>
-                    <p className="text-xs text-charcoal-soft mt-1">Supporting rural weaver and metalsmith craft clusters.</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="lg:col-span-6 relative">
-                <div className="overflow-hidden rounded-2xl shadow-lg aspect-[4/3]">
-                  <img
-                    src="https://images.unsplash.com/photo-1544816155-12df9643f363?q=80&w=1200&auto=format&fit=crop"
-                    alt="Aadya Editorial Interior"
-                    className="h-full w-full object-cover"
-                  />
-                </div>
-              </div>
-            </div>
-          </section>
-        );
-
-      case "NEWSLETTER":
-        return (
-          <section key={section.id || section.type} className="mx-auto max-w-4xl px-4 sm:px-8 text-center pt-4">
-            <div className="rounded-2xl border border-charcoal/10 bg-[#FAF6F0] p-8 sm:p-12 space-y-4">
-              <span className="text-xs font-semibold uppercase tracking-widest text-terracotta">Join Our Circle</span>
-              <h2 className="font-serif-display text-3xl sm:text-4xl text-charcoal font-bold">Stories of Craft &amp; New Arrivals</h2>
-              <p className="max-w-md mx-auto text-xs sm:text-sm text-charcoal-soft leading-relaxed">
-                Subscribe to receive quiet reflections, artisan spotlights, and early access to limited edition seasonal drops.
-              </p>
-
-              {subscribed ? (
-                <div className="rounded-xl bg-sage-light p-4 text-xs sm:text-sm font-medium text-green-deep">
-                  Thank you for subscribing to Aadya! We look forward to sharing our journey with you.
-                </div>
-              ) : (
-                <form onSubmit={handleNewsletterSubmit} className="mt-6 flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
-                  <input
-                    type="email"
-                    value={newsletterEmail}
-                    onChange={(e) => setNewsletterEmail(e.target.value)}
-                    placeholder="Enter your email address"
-                    required
-                    className="flex-1 rounded-full border border-charcoal/20 bg-white px-5 py-3 text-xs sm:text-sm text-charcoal focus:outline-none focus:border-terracotta"
-                  />
-                  <button
-                    type="submit"
-                    disabled={newsletterStatus === "loading"}
-                    className="rounded-full bg-terracotta px-7 py-3 text-xs font-semibold uppercase tracking-wider text-white transition hover:bg-terracotta-dark shrink-0 disabled:opacity-60 shadow-xs"
-                  >
-                    {newsletterStatus === "loading" ? "Subscribing…" : "Subscribe"}
-                  </button>
-                </form>
-              )}
-              {newsletterStatus === "error" && (
-                <p className="text-xs font-medium text-terracotta">{newsletterError}</p>
-              )}
-            </div>
-          </section>
-        );
-
-      default:
-        return null;
+      case "CIRCULAR_CATEGORY_NAV": case "CATEGORY_CIRCLES": return <CircularCategoryNav key={section.id} categories={categories} />;
+      case "PROMO_STRIP": case "PROMO_TICKER": return <PromoStrip key={section.id} />;
+      case "HERO_CAROUSEL": case "HERO": return <HeroBannerCarousel key={section.id} />;
+      case "TRUST_STRIP": case "TRUST_BADGES": return <TrustServiceStrip key={section.id} items={s.items} />;
+      case "PROMO_BANNERS_2UP": case "MULTI_BANNER": return <PromoBanners2Up key={section.id} promoCards={s.items} />;
+      case "NEW_ARRIVALS": case "BEST_SELLERS": {
+        const isNew = section.type === "NEW_ARRIVALS"; const defaults = isNew ? ["Fresh Drops", "New Arrivals", "View All New Arrivals", "/new-arrivals"] : ["Most Cherished", "Best Sellers", "View All Best Sellers", "/best-sellers"];
+        return <section key={section.id} className="mx-auto max-w-7xl px-4 sm:px-8"><div className="mb-8 flex flex-wrap items-end justify-between gap-4 border-b border-charcoal/10 pb-4"><div><span className="text-xs font-semibold uppercase tracking-widest text-terracotta">{s.eyebrow || defaults[0]}</span><h2 className="mt-1 font-serif-display text-3xl font-bold text-charcoal sm:text-4xl">{s.title || defaults[1]}</h2></div><SafeLink to={s.ctaUrl || defaults[3]} className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-terracotta hover:underline">{s.ctaLabel || defaults[2]} <IconArrowRight className="h-4 w-4" /></SafeLink></div>{renderProducts(isNew ? newArrivals : bestSellers, s.limit)}</section>;
+      }
+      case "FEATURED_COLLECTION": case "COLLECTION": {
+        if (!featuredCollection) return null; const target = s.ctaUrl || (s.collectionSlug ? `/collections/${s.collectionSlug}` : `/collections/${featuredCollection.slug}`);
+        return <section key={section.id} className="mx-auto max-w-7xl px-4 sm:px-8"><div className={`grid items-center overflow-hidden rounded-2xl border border-charcoal/10 lg:grid-cols-12 ${s.backgroundStyle === "WHITE" ? "bg-white" : "bg-[#FAF6F0]"}`}><div className="space-y-5 p-8 sm:p-14 lg:col-span-6"><span className="text-xs font-bold uppercase tracking-widest text-sage">{s.eyebrow || "Featured Editorial Collection"}</span><h2 className="font-serif-display text-3xl font-bold text-charcoal sm:text-4xl lg:text-5xl">{s.title || featuredCollection.name}</h2>{s.description !== "" && <p className="text-sm leading-relaxed text-charcoal-soft sm:text-base">{s.description || featuredCollection.description}</p>}<SafeLink to={target} className="inline-flex items-center gap-2 rounded-full bg-terracotta px-7 py-3 text-xs font-semibold uppercase tracking-wider text-white shadow-xs transition hover:bg-terracotta-dark">{s.ctaLabel || "Explore Collection"} <IconArrowRight className="h-4 w-4" /></SafeLink></div><div className="group min-h-[340px] overflow-hidden aspect-square sm:aspect-video lg:col-span-6 lg:aspect-auto"><img src={s.image || featuredCollection.heroImage} alt={s.imageAlt || s.title || featuredCollection.name} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" /></div></div></section>;
+      }
+      case "SHOP_THE_LOOK": return <section key={section.id} className="mx-auto max-w-7xl px-4 sm:px-8"><div className="mb-10 flex flex-col items-center text-center"><span className="text-xs font-semibold uppercase tracking-widest text-terracotta">{s.eyebrow || "Lifestyle Inspiration"}</span><h2 className="mt-1.5 font-serif-display text-3xl font-bold text-charcoal sm:text-4xl">{s.title || "Shop the Look"}</h2></div><div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">{enabled(s.items || []).map((look) => <SafeLink key={look.id || look.title} to={look.url} className="group relative overflow-hidden rounded-2xl border border-charcoal/10 bg-white transition hover:shadow-xl"><div className="aspect-[3/4] overflow-hidden"><img src={look.image} alt={look.imageAlt || look.title} className="h-full w-full object-cover transition duration-700 group-hover:scale-105" /></div><div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-charcoal/85 via-charcoal/30 to-transparent p-6 text-white"><h3 className="font-serif-display text-xl font-bold">{look.title}</h3><p className="mt-1 text-xs text-white/80">{look.tagline}</p><span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-terracotta-light">{s.ctaLabel || "View Edit"} <IconArrowRight className="h-3.5 w-3.5" /></span></div></SafeLink>)}</div></section>;
+      case "BOOKS_SHELF": case "BOOKS": return <section key={section.id} className="border-y border-charcoal/10 bg-[#FAF6F0] py-16"><div className="mx-auto max-w-7xl px-4 sm:px-8"><div className="mb-10 flex flex-wrap items-end justify-between gap-4"><div><span className="text-xs font-semibold uppercase tracking-widest text-terracotta">{s.eyebrow || "Editorial Monographs"}</span><h2 className="mt-1 font-serif-display text-3xl font-bold text-charcoal sm:text-4xl">{s.title || "From Our Bookshelf"}</h2></div><SafeLink to={s.ctaUrl || "/books"} className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-terracotta hover:underline">{s.ctaLabel || "Explore Books"} <IconArrowRight className="h-4 w-4" /></SafeLink></div><div className="grid gap-6 sm:grid-cols-3">{booksList.slice(0, s.limit || 3).map((book) => <div key={book.id} className="flex flex-col rounded-xl border border-charcoal/10 bg-white p-5 shadow-xs"><div className="mb-4 aspect-[3/4] overflow-hidden rounded-lg bg-[#FAF6F0]"><img src={book.images[0]} alt={book.name} className="h-full w-full object-cover" /></div><h3 className="font-serif-display text-base font-bold text-charcoal">{book.name}</h3>{s.showAuthor !== false && <p className="mt-0.5 text-xs italic text-charcoal-soft">By {book.author}</p>}{s.showDescription !== false && <p className="mt-2 text-xs leading-relaxed text-charcoal-soft">{book.shortDescription}</p>}{s.showPrice !== false && <span className="mt-3 text-sm font-semibold text-terracotta">{formatInr(book.price)}</span>}</div>)}</div></div></section>;
+      case "EDITORIAL_BRAND": case "IMAGE_TEXT": return <section key={section.id} className="mx-auto max-w-7xl px-4 py-8 sm:px-8"><div className="grid items-center gap-12 rounded-2xl border border-charcoal/10 bg-white p-8 sm:p-12 lg:grid-cols-12"><div className="space-y-6 lg:col-span-6"><span className="text-xs font-semibold uppercase tracking-widest text-terracotta">{s.eyebrow || "Craftsmanship & Mindful Living"}</span><h2 className="font-serif-display text-3xl font-bold text-charcoal sm:text-4xl lg:text-5xl">{s.title || "Honoring Earth, Metal & Human Hands"}</h2><p className="text-sm leading-relaxed text-charcoal-soft sm:text-base">{s.body}</p><div className="grid grid-cols-2 gap-4">{enabled(s.features || []).map((feature) => <div key={feature.id || feature.title} className={`border-l-2 pl-4 ${feature.accent === "SAGE" ? "border-sage" : "border-terracotta"}`}><p className="font-serif-display text-2xl font-bold text-charcoal">{feature.title}</p><p className="mt-1 text-xs text-charcoal-soft">{feature.description}</p></div>)}</div></div><div className="overflow-hidden rounded-2xl shadow-lg lg:col-span-6"><img src={s.image} alt={s.imageAlt || s.title} className="aspect-[4/3] h-full w-full object-cover" /></div></div></section>;
+      case "NEWSLETTER": return <section key={section.id} className="mx-auto max-w-4xl px-4 pt-4 text-center sm:px-8"><div className="space-y-4 rounded-2xl border border-charcoal/10 bg-[#FAF6F0] p-8 sm:p-12"><span className="text-xs font-semibold uppercase tracking-widest text-terracotta">{s.eyebrow || "Join Our Circle"}</span><h2 className="font-serif-display text-3xl font-bold text-charcoal sm:text-4xl">{s.title || "Stories of Craft & New Arrivals"}</h2><p className="mx-auto max-w-md text-xs leading-relaxed text-charcoal-soft sm:text-sm">{s.description}</p>{subscribed ? <div className="rounded-xl bg-sage-light p-4 text-xs font-medium text-green-deep sm:text-sm">{s.successMessage || "Thank you for subscribing to Aadya!"}</div> : <form onSubmit={handleNewsletterSubmit} className="mx-auto mt-6 flex max-w-md flex-col gap-3 sm:flex-row"><input type="email" value={newsletterEmail} onChange={(e) => setNewsletterEmail(e.target.value)} placeholder={s.placeholder || "Enter your email address"} required className="flex-1 rounded-full border border-charcoal/20 bg-white px-5 py-3 text-xs text-charcoal" /><button type="submit" disabled={newsletterStatus === "loading"} className="rounded-full bg-terracotta px-7 py-3 text-xs font-semibold uppercase tracking-wider text-white disabled:opacity-60">{newsletterStatus === "loading" ? (s.loadingLabel || "Subscribing…") : (s.buttonLabel || "Subscribe")}</button></form>}{newsletterStatus === "error" && <p className="text-xs font-medium text-terracotta">{s.errorPrefix ? `${s.errorPrefix} ${newsletterError}` : newsletterError}</p>}</div></section>;
+      default: return null;
     }
   };
-
-  return (
-    <div className="w-full">
-      {topSections.length > 0 && (
-        <div className="w-full">
-          {topSections.map((sec) => renderSectionItem(sec))}
-        </div>
-      )}
-
-      {bodySections.length > 0 && (
-        <div className="mt-12 sm:mt-16 space-y-12 sm:space-y-16">
-          {bodySections.map((sec) => renderSectionItem(sec))}
-        </div>
-      )}
-    </div>
-  );
+  const topTypes = new Set(["CIRCULAR_CATEGORY_NAV", "CATEGORY_CIRCLES", "PROMO_STRIP", "PROMO_TICKER", "HERO_CAROUSEL", "HERO", "TRUST_STRIP", "TRUST_BADGES"]);
+  const top = sections.filter((s) => topTypes.has(s.type)); const body = sections.filter((s) => !topTypes.has(s.type));
+  return <div className="w-full">{top.map(renderSection)}<div className="mt-12 space-y-12 sm:mt-16 sm:space-y-16">{body.map(renderSection)}</div></div>;
 }

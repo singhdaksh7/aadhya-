@@ -1,20 +1,21 @@
 import { prisma } from "../../lib/prisma.js";
 import { ApiError } from "../../utils/ApiError.js";
+import { DEFAULT_HOMEPAGE_CONTENT, mergeMissingSettings, validateHomepageSettings } from "./homepage-content.js";
 
 // Default seed sections for Aadya Storefront in approved visual order
 const DEFAULT_HOMEPAGE_SECTIONS = [
   { type: "CIRCULAR_CATEGORY_NAV", name: "Circular Category Navigation", sortOrder: 1, settings: { featuredOnly: false, limit: 10 } },
   { type: "PROMO_STRIP", name: "Animated Promo / Coupon Ticker", sortOrder: 2, settings: { speed: 25, pauseOnHover: true } },
   { type: "HERO_CAROUSEL", name: "Full-Width Hero Banner Carousel", sortOrder: 3, settings: { autoplay: true, interval: 6000 } },
-  { type: "TRUST_STRIP", name: "Trust & Service Strip", sortOrder: 4, settings: {} },
-  { type: "NEW_ARRIVALS", name: "New Arrivals Grid", sortOrder: 5, settings: { limit: 4, eyebrow: "Fresh Drops", title: "New Arrivals" } },
-  { type: "PROMO_BANNERS_2UP", name: "Promotional Banners 2-Up", sortOrder: 6, settings: {} },
-  { type: "BEST_SELLERS", name: "Best Sellers Grid", sortOrder: 7, settings: { limit: 4, eyebrow: "Most Cherished", title: "Best Sellers" } },
-  { type: "FEATURED_COLLECTION", name: "Featured Editorial Collection", sortOrder: 8, settings: {} },
-  { type: "SHOP_THE_LOOK", name: "Shop the Look / Lifestyle Edit", sortOrder: 9, settings: {} },
-  { type: "BOOKS_SHELF", name: "From Our Bookshelf", sortOrder: 10, settings: { limit: 3 } },
-  { type: "EDITORIAL_BRAND", name: "Artisan Craftsmanship Brand Section", sortOrder: 11, settings: {} },
-  { type: "NEWSLETTER", name: "Newsletter Subscription Section", sortOrder: 12, settings: {} },
+  { type: "TRUST_STRIP", name: "Trust & Service Strip", sortOrder: 4, settings: DEFAULT_HOMEPAGE_CONTENT.TRUST_STRIP },
+  { type: "NEW_ARRIVALS", name: "New Arrivals Grid", sortOrder: 5, settings: DEFAULT_HOMEPAGE_CONTENT.NEW_ARRIVALS },
+  { type: "PROMO_BANNERS_2UP", name: "Promotional Banners 2-Up", sortOrder: 6, settings: DEFAULT_HOMEPAGE_CONTENT.PROMO_BANNERS_2UP },
+  { type: "BEST_SELLERS", name: "Best Sellers Grid", sortOrder: 7, settings: DEFAULT_HOMEPAGE_CONTENT.BEST_SELLERS },
+  { type: "FEATURED_COLLECTION", name: "Featured Editorial Collection", sortOrder: 8, settings: DEFAULT_HOMEPAGE_CONTENT.FEATURED_COLLECTION },
+  { type: "SHOP_THE_LOOK", name: "Shop the Look / Lifestyle Edit", sortOrder: 9, settings: DEFAULT_HOMEPAGE_CONTENT.SHOP_THE_LOOK },
+  { type: "BOOKS_SHELF", name: "From Our Bookshelf", sortOrder: 10, settings: DEFAULT_HOMEPAGE_CONTENT.BOOKS_SHELF },
+  { type: "EDITORIAL_BRAND", name: "Artisan Craftsmanship Brand Section", sortOrder: 11, settings: DEFAULT_HOMEPAGE_CONTENT.EDITORIAL_BRAND },
+  { type: "NEWSLETTER", name: "Newsletter Subscription Section", sortOrder: 12, settings: DEFAULT_HOMEPAGE_CONTENT.NEWSLETTER },
 ];
 
 export async function ensureDefaultHomepage() {
@@ -44,6 +45,22 @@ export async function ensureDefaultHomepage() {
         },
       },
       include: { sections: { orderBy: { sortOrder: "asc" } } },
+    });
+  }
+
+  // Existing production pages are only supplemented with missing keys. Nothing
+  // configured by an admin is replaced and no section is recreated.
+  const changed = homePage.sections.filter((section) => {
+    const merged = mergeMissingSettings(section.type, section.settings);
+    return JSON.stringify(merged) !== JSON.stringify(section.settings || {});
+  });
+  if (changed.length) {
+    await prisma.$transaction(changed.map((section) => prisma.pageSection.update({
+      where: { id: section.id },
+      data: { settings: mergeMissingSettings(section.type, section.settings) },
+    })));
+    homePage = await prisma.page.findUnique({
+      where: { slug: "home" }, include: { sections: { orderBy: { sortOrder: "asc" } } },
     });
   }
 
@@ -86,7 +103,7 @@ export async function createPageSection(pageIdOrSlug, input) {
       pageId: page.id,
       type: input.type,
       name: input.name || input.type,
-      settings: input.settings ?? {},
+      settings: validateHomepageSettings(input.type, input.settings ?? {}),
       content: input.content ?? {},
       isEnabled: input.isEnabled ?? true,
       sortOrder: input.sortOrder ?? count + 1,
@@ -103,7 +120,7 @@ export async function updatePageSection(sectionId, input) {
     data: {
       ...(input.name !== undefined ? { name: input.name } : {}),
       ...(input.type !== undefined ? { type: input.type } : {}),
-      ...(input.settings !== undefined ? { settings: input.settings } : {}),
+      ...(input.settings !== undefined ? { settings: validateHomepageSettings(input.type ?? section.type, input.settings) } : {}),
       ...(input.content !== undefined ? { content: input.content } : {}),
       ...(input.isEnabled !== undefined ? { isEnabled: input.isEnabled } : {}),
       ...(input.sortOrder !== undefined ? { sortOrder: input.sortOrder } : {}),
