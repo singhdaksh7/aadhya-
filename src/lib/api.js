@@ -328,4 +328,69 @@ export function adminFetchSiteSettings() { return api.get("/admin/settings", { a
 export function adminUpdateSiteSettings(data) { return api.put("/admin/settings", data, { auth: "admin" }); }
 export function subscribeNewsletter(email) { return api.post("/newsletter/subscribe", { email }); }
 
+// --- Phase E CMS Pages ---
+export function fetchPageBySlug(slug) { return api.get(`/pages/${slug}`); }
+export function adminListPages(params = {}) {
+  const query = new URLSearchParams(Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== "" && v !== null))).toString();
+  return api.get(`/admin/pages${query ? `?${query}` : ""}`, { auth: "admin" });
+}
+export function adminGetPage(id) { return api.get(`/admin/pages/${id}`, { auth: "admin" }); }
+export function adminCreatePage(data) { return api.post("/admin/pages", data, { auth: "admin" }); }
+export function adminUpdatePage(id, data) { return api.put(`/admin/pages/${id}`, data, { auth: "admin" }); }
+export function adminDeletePage(id) { return api.delete(`/admin/pages/${id}`, { auth: "admin" }); }
+export function adminPublishPage(id, status) { return api.post(`/admin/pages/${id}/publish`, { status }, { auth: "admin" }); }
+
+// --- Phase E Blog ---
+export function fetchBlogPosts(params = {}) {
+  const query = new URLSearchParams(Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== "" && v !== null))).toString();
+  return api.get(`/blog${query ? `?${query}` : ""}`);
+}
+export function fetchBlogPostBySlug(slug) { return api.get(`/blog/${slug}`); }
+export function adminListBlogPosts(params = {}) {
+  const query = new URLSearchParams(Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== "" && v !== null))).toString();
+  return api.get(`/admin/blog${query ? `?${query}` : ""}`, { auth: "admin" });
+}
+export function adminGetBlogPost(id) { return api.get(`/admin/blog/${id}`, { auth: "admin" }); }
+export function adminCreateBlogPost(data) { return api.post("/admin/blog", data, { auth: "admin" }); }
+export function adminUpdateBlogPost(id, data) { return api.put(`/admin/blog/${id}`, data, { auth: "admin" }); }
+export function adminDeleteBlogPost(id) { return api.delete(`/admin/blog/${id}`, { auth: "admin" }); }
+export function adminPublishBlogPost(id, status) { return api.post(`/admin/blog/${id}/publish`, { status }, { auth: "admin" }); }
+
+// --- Phase E FAQ ---
+export function fetchFaqs(params = {}) {
+  const query = new URLSearchParams(Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== "" && v !== null))).toString();
+  return api.get(`/faqs${query ? `?${query}` : ""}`);
+}
+export function adminListFaqCategories() { return api.get("/admin/faqs/categories", { auth: "admin" }); }
+export function adminCreateFaqCategory(data) { return api.post("/admin/faqs/categories", data, { auth: "admin" }); }
+export function adminUpdateFaqCategory(id, data) { return api.put(`/admin/faqs/categories/${id}`, data, { auth: "admin" }); }
+export function adminDeleteFaqCategory(id) { return api.delete(`/admin/faqs/categories/${id}`, { auth: "admin" }); }
+export function adminListFaqItems(params = {}) {
+  const query = new URLSearchParams(Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== "" && v !== null))).toString();
+  return api.get(`/admin/faqs/items${query ? `?${query}` : ""}`, { auth: "admin" });
+}
+export function adminCreateFaqItem(data) { return api.post("/admin/faqs/items", data, { auth: "admin" }); }
+export function adminUpdateFaqItem(id, data) { return api.put(`/admin/faqs/items/${id}`, data, { auth: "admin" }); }
+export function adminDeleteFaqItem(id) { return api.delete(`/admin/faqs/items/${id}`, { auth: "admin" }); }
+
+// --- Phase E Media Library ---
+export function adminListMedia(params = {}) {
+  const query = new URLSearchParams(Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== "" && v !== null))).toString();
+  return api.get(`/admin/media${query ? `?${query}` : ""}`, { auth: "admin" });
+}
+export function adminUploadMedia(file, { altText, title } = {}) {
+  const form = new FormData();
+  form.append("file", file);
+  if (altText) form.append("altText", altText);
+  if (title) form.append("title", title);
+  return request("/admin/media/upload", {
+    method: "POST",
+    body: form,
+    isForm: true,
+    auth: "admin",
+  });
+}
+export function adminUpdateMedia(id, data) { return api.patch(`/admin/media/${id}`, data, { auth: "admin" }); }
+export function adminDeleteMedia(id, force = false) { return api.delete(`/admin/media/${id}${force ? "?force=true" : ""}`, { auth: "admin" }); }
+
 export { API_URL };

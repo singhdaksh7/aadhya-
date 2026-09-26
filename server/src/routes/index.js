@@ -19,6 +19,10 @@ import { publicSettingsRouter, adminSettingsRouter } from "../modules/settings/s
 import { newsletterRouter } from "../modules/newsletter/newsletter.routes.js";
 import adminCustomerRouter from "../modules/admin-customers/admin-customers.routes.js";
 import adminUserRouter from "../modules/admin-users/admin-users.routes.js";
+import { publicPageRouter, adminPageRouter } from "../modules/pages/page.routes.js";
+import { publicBlogRouter, adminBlogRouter } from "../modules/blog/blog.routes.js";
+import { publicFaqRouter, adminFaqRouter } from "../modules/faq/faq.routes.js";
+import { adminMediaRouter } from "../modules/media/media.routes.js";
 
 const router = Router();
 
@@ -30,6 +34,11 @@ router.use("/categories", publicCategoryRouter);
 router.use("/collections", publicCollectionRouter);
 router.use("/settings", publicSettingsRouter);
 router.use("/newsletter", newsletterRouter);
+
+// Phase E CMS Public APIs
+router.use("/pages", publicPageRouter);
+router.use("/blog", publicBlogRouter);
+router.use("/faqs", publicFaqRouter);
 
 // Thin convenience wrapper — Books are Products with productType=BOOK,
 // this must never grow its own product/business logic (see product.service.js).
@@ -64,6 +73,12 @@ router.use("/admin/collections", adminCollectionRouter);
 router.use("/admin/settings", adminSettingsRouter);
 router.use("/admin/customers", adminCustomerRouter);
 router.use("/admin/admin-users", adminUserRouter);
+
+// Phase E CMS Admin APIs
+router.use("/admin/pages", adminPageRouter);
+router.use("/admin/blog", adminBlogRouter);
+router.use("/admin/faqs", adminFaqRouter);
+router.use("/admin/media", adminMediaRouter);
 
 router.get(
   "/admin/dashboard",

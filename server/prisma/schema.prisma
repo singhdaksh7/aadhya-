@@ -400,3 +400,131 @@ model NewsletterSubscriber {
   consentedAt DateTime @default(now())
   createdAt   DateTime @default(now())
 }
+
+enum PageType {
+  HOME
+  STANDARD
+  LANDING
+}
+
+enum PageStatus {
+  DRAFT
+  PUBLISHED
+}
+
+model Page {
+  id             String        @id @default(uuid())
+  name           String
+  slug           String        @unique
+  pageType       PageType      @default(STANDARD)
+  status         PageStatus    @default(DRAFT)
+  content        String?       @db.Text
+  featuredImage  String?
+  excerpt        String?       @db.Text
+  seoTitle       String?
+  seoDescription String?       @db.Text
+  publishedAt    DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  sections PageSection[]
+
+  @@index([slug])
+  @@index([status])
+  @@index([pageType])
+}
+
+model PageSection {
+  id        String   @id @default(uuid())
+  pageId    String
+  type      String
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  settings  Json?
+  content   Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  page Page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([pageId])
+  @@index([sortOrder])
+}
+
+model BlogPost {
+  id             String     @id @default(uuid())
+  title          String
+  slug           String     @unique
+  excerpt        String?    @db.Text
+  featuredImage  String?
+  content        String     @db.Text
+  author         String?    @default("Aadya Editorial")
+  category       String?
+  tags           Json?
+  isFeatured     Boolean    @default(false)
+  status         PageStatus @default(DRAFT)
+  publishDate    DateTime   @default(now())
+  seoTitle       String?
+  seoDescription String?    @db.Text
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@index([slug])
+  @@index([status])
+  @@index([publishDate])
+  @@index([category])
+  @@index([isFeatured])
+}
+
+model FAQCategory {
+  id        String    @id @default(uuid())
+  name      String
+  slug      String    @unique
+  sortOrder Int       @default(0)
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  items FAQItem[]
+
+  @@index([isActive])
+  @@index([sortOrder])
+}
+
+model FAQItem {
+  id         String      @id @default(uuid())
+  categoryId String
+  question   String
+  answer     String      @db.Text
+  sortOrder  Int         @default(0)
+  isActive   Boolean     @default(true)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  category FAQCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@index([categoryId])
+  @@index([isActive])
+  @@index([sortOrder])
+}
+
+model MediaAsset {
+  id               String   @id @default(uuid())
+  fileName         String
+  originalName     String
+  url              String
+  storageKey       String
+  storageDriver    String   @default("local")
+  mimeType         String
+  size             Int
+  width            Int?
+  height           Int?
+  altText          String?
+  title            String?
+  createdByAdminId String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([createdAt])
+  @@index([storageKey])
+}
