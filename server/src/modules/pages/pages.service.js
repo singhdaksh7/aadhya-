@@ -153,11 +153,32 @@ export async function duplicatePageSection(sectionId) {
 }
 
 export async function reorderPageSections(pageIdOrSlug, sectionIds) {
+  if (!Array.isArray(sectionIds) || sectionIds.length === 0) {
+    throw ApiError.badRequest("sectionIds must be a non-empty array");
+  }
+  if (sectionIds.some((id) => typeof id !== "string" || id.length === 0)) {
+    throw ApiError.badRequest("sectionIds must contain valid section IDs");
+  }
+  if (new Set(sectionIds).size !== sectionIds.length) {
+    throw ApiError.badRequest("sectionIds must not contain duplicates");
+  }
+
   let page = await prisma.page.findFirst({
     where: { OR: [{ id: pageIdOrSlug }, { slug: pageIdOrSlug }] },
   });
   if (!page) {
     page = await ensureDefaultHomepage();
+  }
+
+  const sections = await prisma.pageSection.findMany({
+    where: { id: { in: sectionIds } },
+    select: { id: true, pageId: true },
+  });
+  if (sections.length !== sectionIds.length) {
+    throw ApiError.notFound("One or more page sections were not found");
+  }
+  if (sections.some((section) => section.pageId !== page.id)) {
+    throw ApiError.badRequest("All sections must belong to the homepage");
   }
 
   const updates = sectionIds.map((id, index) =>

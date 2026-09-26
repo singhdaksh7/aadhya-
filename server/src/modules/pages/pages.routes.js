@@ -19,6 +19,13 @@ adminPagesRouter.get("/home", requireAdmin, handleGetAdminHomepage);
 adminPagesRouter.post("/home/sections", requireAdmin, handleCreateSection);
 adminPagesRouter.post("/:pageId/sections", requireAdmin, handleCreateSection);
 
+// Static paths must precede :sectionId so "reorder" is not treated as an ID.
+adminPagesRouter.put("/sections/reorder", requireAdmin, handleReorderSections);
+adminPagesRouter.put("/home/sections/reorder", requireAdmin, handleReorderSections);
+
+adminPagesRouter.post("/publish", requireAdmin, handlePublishHomepage);
+adminPagesRouter.post("/home/publish", requireAdmin, handlePublishHomepage);
+
 adminPagesRouter.put("/sections/:sectionId", requireAdmin, handleUpdateSection);
 adminPagesRouter.put("/home/sections/:sectionId", requireAdmin, handleUpdateSection);
 
@@ -27,11 +34,5 @@ adminPagesRouter.delete("/home/sections/:sectionId", requireAdmin, handleDeleteS
 
 adminPagesRouter.post("/sections/:sectionId/duplicate", requireAdmin, handleDuplicateSection);
 adminPagesRouter.post("/home/sections/:sectionId/duplicate", requireAdmin, handleDuplicateSection);
-
-adminPagesRouter.put("/sections/reorder", requireAdmin, handleReorderSections);
-adminPagesRouter.put("/home/sections/reorder", requireAdmin, handleReorderSections);
-
-adminPagesRouter.post("/publish", requireAdmin, handlePublishHomepage);
-adminPagesRouter.post("/home/publish", requireAdmin, handlePublishHomepage);
 
 export default publicPagesRouter;

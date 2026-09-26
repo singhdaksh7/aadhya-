@@ -122,6 +122,73 @@ describe("Phase C: Homepage Builder & Banners & Promos", () => {
       expect(res.status).toBe(200);
       expect(res.body.data.status).toBe("PUBLISHED");
     });
+
+    it("PUT /api/admin/pages/sections/reorder uses the reorder handler and persists the requested order", async () => {
+      const homepage = await request(app)
+        .get("/api/admin/pages/home")
+        .set("Authorization", `Bearer ${adminToken}`);
+      const originalIds = homepage.body.data.sections.map((section) => section.id);
+      expect(originalIds.length).toBeGreaterThanOrEqual(3);
+
+      const requestedIds = [...originalIds];
+      [requestedIds[1], requestedIds[2]] = [requestedIds[2], requestedIds[1]];
+
+      const reorder = await request(app)
+        .put("/api/admin/pages/sections/reorder")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({ sectionIds: requestedIds });
+
+      expect(reorder.status).toBe(200);
+      expect(reorder.body.success).toBe(true);
+      expect(reorder.body.data.map((section) => section.id)).toEqual(requestedIds);
+
+      const refreshedAdmin = await request(app)
+        .get("/api/admin/pages/home")
+        .set("Authorization", `Bearer ${adminToken}`);
+      expect(refreshedAdmin.body.data.sections.map((section) => section.id)).toEqual(requestedIds);
+
+      const publicHome = await request(app).get("/api/pages/home");
+      expect(publicHome.status).toBe(200);
+      expect(publicHome.body.data.sections.map((section) => section.id)).toEqual(
+        requestedIds.filter((id) => refreshedAdmin.body.data.sections.find((section) => section.id === id).isEnabled)
+      );
+    });
+
+    it("PUT /api/admin/pages/sections/reorder rejects invalid and duplicate IDs", async () => {
+      const invalid = await request(app)
+        .put("/api/admin/pages/sections/reorder")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({ sectionIds: ["not-a-page-section"] });
+      expect(invalid.status).toBe(404);
+      expect(invalid.body.error.message).toMatch(/not found/i);
+
+      const homepage = await request(app)
+        .get("/api/admin/pages/home")
+        .set("Authorization", `Bearer ${adminToken}`);
+      const sectionId = homepage.body.data.sections[0].id;
+      const duplicate = await request(app)
+        .put("/api/admin/pages/sections/reorder")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({ sectionIds: [sectionId, sectionId] });
+      expect(duplicate.status).toBe(400);
+      expect(duplicate.body.error.message).toMatch(/duplicates/i);
+    });
+
+    it("PUT /api/admin/pages/sections/reorder rejects sections from another page", async () => {
+      const otherPage = await prisma.page.create({
+        data: { name: "Other page", slug: `other-${Date.now()}` },
+      });
+      const otherSection = await prisma.pageSection.create({
+        data: { pageId: otherPage.id, type: "CTA", name: "Other section" },
+      });
+
+      const res = await request(app)
+        .put("/api/admin/pages/sections/reorder")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({ sectionIds: [otherSection.id] });
+      expect(res.status).toBe(400);
+      expect(res.body.error.message).toMatch(/belong to the homepage/i);
+    });
   });
 
   describe("Admin Banner CRUD & Scheduling", () => {
