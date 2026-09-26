@@ -63,6 +63,9 @@ model Customer {
   passwordResets    PasswordResetToken[]
   cart              Cart?
   couponRedemptions CouponRedemption[]
+  reviews           ProductReview[]
+  wishlistItems     WishlistItem[]
+  notifications     CustomerNotification[]
 
   @@index([email])
 }
@@ -274,6 +277,8 @@ model Product {
   cartItems  CartItem[]
   collections CollectionProduct[]
   variants   ProductVariant[]
+  reviews    ProductReview[]
+  wishlistItems WishlistItem[]
 
   @@index([categoryId])
   @@index([productType])
@@ -300,6 +305,7 @@ model ProductVariant {
   product   Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
   cartItems CartItem[]
   orderItems OrderItem[]
+  wishlistItems WishlistItem[]
 
   @@index([productId])
   @@index([productId, isActive])
@@ -743,3 +749,68 @@ model MediaAsset {
   @@index([createdAt])
   @@index([storageKey])
 }
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model ProductReview {
+  id                 String       @id @default(uuid())
+  productId          String
+  customerId         String
+  rating             Int
+  title              String?
+  comment            String       @db.Text
+  status             ReviewStatus @default(PENDING)
+  isVerifiedPurchase Boolean      @default(false)
+  moderatedAt        DateTime?
+  moderatedByAdminId String?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@unique([customerId, productId])
+  @@index([productId])
+  @@index([customerId])
+  @@index([status])
+  @@index([rating])
+  @@index([createdAt])
+}
+
+model WishlistItem {
+  id         String   @id @default(uuid())
+  customerId String
+  productId  String
+  variantId  String?
+  createdAt  DateTime @default(now())
+
+  customer Customer        @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  product  Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variant  ProductVariant? @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@unique([customerId, productId, variantId])
+  @@index([customerId])
+  @@index([productId])
+}
+
+model CustomerNotification {
+  id         String   @id @default(uuid())
+  customerId String
+  type       String
+  title      String
+  message    String
+  link       String?
+  isRead     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@index([customerId, isRead])
+  @@index([createdAt])
+}
+

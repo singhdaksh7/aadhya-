@@ -7,6 +7,7 @@ const PUBLIC_INCLUDE = {
   category: true,
   images: { orderBy: { sortOrder: "asc" } },
   bookDetail: true,
+  reviews: { where: { status: "APPROVED" }, select: { rating: true, status: true } },
 };
 
 const ADMIN_INCLUDE = { ...PUBLIC_INCLUDE, variants: { orderBy: { createdAt: "asc" } } };
@@ -28,9 +29,16 @@ export function effectiveStock(product, variant = null) {
 }
 
 export function serializePublicProduct(product) {
-  const { variants = [], costPrice: _costPrice, ...safe } = product;
+  const { variants = [], reviews = [], costPrice: _costPrice, ...safe } = product;
+  const approvedReviews = Array.isArray(reviews) ? reviews.filter((r) => r.status === "APPROVED") : [];
+  const reviewCount = approvedReviews.length;
+  const sumRating = approvedReviews.reduce((sum, r) => sum + (r.rating || 0), 0);
+  const averageRating = reviewCount > 0 ? Math.round((sumRating / reviewCount) * 10) / 10 : 0;
+
   return {
     ...safe,
+    averageRating,
+    reviewCount,
     price: Number(product.price),
     salePrice: product.salePrice != null ? Number(product.salePrice) : null,
     mrp: product.mrp != null ? Number(product.mrp) : null,
@@ -143,7 +151,12 @@ export async function listPublicProducts(query) {
 }
 
 export async function getPublicProductBySlug(slug) {
-  const product = await prisma.product.findUnique({ where: { slug }, include: ADMIN_INCLUDE });
+  const product = await prisma.product.findFirst({
+    where: {
+      OR: [{ slug }, { id: slug }],
+    },
+    include: ADMIN_INCLUDE,
+  });
   if (!product || !product.isActive) throw ApiError.notFound("Product not found");
   return serializePublicProduct(product);
 }

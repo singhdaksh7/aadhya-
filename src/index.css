@@ -64,11 +64,11 @@ body {
 .animate-marquee-ticker {
   display: flex;
   width: max-content;
-  animation: marquee-ticker 25s linear infinite;
+  animation: marquee-ticker var(--ticker-duration, 60s) linear infinite;
 }
 
-.animate-marquee-ticker:hover,
-.animate-marquee-ticker:focus-within {
+.marquee-ticker-pauseable:hover,
+.marquee-ticker-pauseable:focus-within {
   animation-play-state: paused;
 }
 
@@ -78,4 +78,3 @@ body {
     transform: none !important;
   }
 }
-

@@ -9,7 +9,7 @@ vi.mock("../src/components/CircularCategoryNav", () => ({
 }));
 
 vi.mock("../src/components/PromoStrip", () => ({
-  default: () => <div data-testid="mock-promo-strip">PromoStrip</div>,
+  default: ({ promoConfig }) => <div data-testid="mock-promo-strip" data-speed={promoConfig?.speed}>PromoStrip</div>,
 }));
 
 vi.mock("../src/components/HeroBannerCarousel", () => ({
@@ -57,5 +57,15 @@ describe("HomepageRenderer Component", () => {
     );
 
     expect(screen.getByTestId("mock-hero-carousel")).toBeInTheDocument();
+  });
+
+  it("passes promo ticker settings through to the storefront component", () => {
+    render(
+      <BrowserRouter>
+        <HomepageRenderer sections={[{ id: "ticker", type: "PROMO_STRIP", isEnabled: true, settings: { speed: 60, pauseOnHover: true } }]} />
+      </BrowserRouter>
+    );
+
+    expect(screen.getByTestId("mock-promo-strip")).toHaveAttribute("data-speed", "60");
   });
 });

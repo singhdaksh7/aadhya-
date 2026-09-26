@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { useSiteSettings } from "../hooks/useSiteSettings";
 import { fetchPromos } from "../lib/api";
 
+const DEFAULT_TICKER_DURATION_SECONDS = 60;
+
 export default function PromoStrip({ promoConfig }) {
   const { promoStrip: settingsPromo } = useSiteSettings();
   const [promos, setPromos] = useState([]);
@@ -27,6 +29,13 @@ export default function PromoStrip({ promoConfig }) {
     ctaLabel: "Shop Now",
     ctaUrl: "/shop",
   };
+  // `speed` is intentionally a duration in seconds: a larger value is slower.
+  // Preserve existing numeric settings while falling back to the new calm default.
+  const configuredSpeed = Number(promoConfig?.speed);
+  const tickerDuration = Number.isFinite(configuredSpeed) && configuredSpeed > 0
+    ? configuredSpeed
+    : DEFAULT_TICKER_DURATION_SECONDS;
+  const pauseOnHover = promoConfig?.pauseOnHover ?? true;
 
   const handleCopyCode = (e, code) => {
     e.preventDefault();
@@ -105,7 +114,10 @@ export default function PromoStrip({ promoConfig }) {
 
   return (
     <div className="relative w-full overflow-hidden bg-[#FAF6F0] border-y border-charcoal/10 py-2.5 text-xs text-charcoal">
-      <div className="animate-marquee-ticker">
+      <div
+        className={`animate-marquee-ticker${pauseOnHover ? " marquee-ticker-pauseable" : ""}`}
+        style={{ "--ticker-duration": `${tickerDuration}s` }}
+      >
         {renderTickerContent()}
         {renderTickerContent()}
         {renderTickerContent()}

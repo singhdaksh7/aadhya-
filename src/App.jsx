@@ -1,11 +1,12 @@
 import React from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { CartProvider } from "./context/CartContext";
+import { WishlistProvider } from "./context/WishlistContext";
 import { BrochureProvider } from "./context/BrochureContext";
 import { AdminAuthProvider } from "./context/AdminAuthContext";
 import { CustomerAuthProvider } from "./context/CustomerAuthContext";
 import RequireCustomer from "./components/RequireCustomer";
-import { Login, Account, Addresses, Orders, OrderDetail, Forgot, Reset } from "./pages/account/AccountPages";
+import { Login, Account, Addresses, Orders, OrderDetail, Forgot, Reset, AccountWishlist, AccountReviews } from "./pages/account/AccountPages";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import CartDrawer from "./components/CartDrawer";
@@ -51,6 +52,7 @@ import AdminOrderDetail from "./pages/admin/AdminOrderDetail";
 import AdminHomepageBuilder from "./pages/admin/AdminHomepageBuilder";
 import AdminBanners from "./pages/admin/AdminBanners";
 import AdminPromos from "./pages/admin/AdminPromos";
+import AdminReviews from "./pages/admin/AdminReviews";
 
 import CmsPage from "./pages/CmsPage";
 import BlogList from "./pages/BlogList";
@@ -77,107 +79,111 @@ function PolicyPage({ title, eyebrow = "Customer Policies", children }) {
 function SiteLayout() {
   return (
     <CartProvider>
-      <BrochureProvider>
-        <ScrollToTop />
-        <div className="flex min-h-screen flex-col bg-white text-charcoal font-sans">
-          <Navbar />
-          <main className="flex-1">
-            <Routes>
-              {/* Primary E-Commerce Storefront Routes */}
-              <Route path="/" element={<Home />} />
-              <Route path="/shop" element={<Shop />} />
-              <Route path="/collections" element={<CollectionsHub />} />
-              <Route path="/collections/:slug" element={<ProductCatalog title="Collection" isCollectionRoute />} />
-              <Route path="/products/:slug" element={<ProductDetail />} />
-              <Route path="/shop/:slug" element={<ProductDetail />} />
-              <Route path="/shop/category/:slug" element={<ProductCatalog title="Category Catalog" />} />
-              <Route path="/books" element={<BooksStorefront />} />
-              <Route path="/shop/books" element={<BooksStorefront />} />
-              <Route path="/new-arrivals" element={<ProductCatalog eyebrow="Fresh Drops" title="New Arrivals" />} />
-              <Route path="/best-sellers" element={<ProductCatalog eyebrow="Customer Favorites" title="Best Sellers" />} />
-              <Route path="/search" element={<ProductCatalog title="Search Storefront" />} />
+      <WishlistProvider>
+        <BrochureProvider>
+          <ScrollToTop />
+          <div className="flex min-h-screen flex-col bg-white text-charcoal font-sans">
+            <Navbar />
+            <main className="flex-1">
+              <Routes>
+                {/* Primary E-Commerce Storefront Routes */}
+                <Route path="/" element={<Home />} />
+                <Route path="/shop" element={<Shop />} />
+                <Route path="/collections" element={<CollectionsHub />} />
+                <Route path="/collections/:slug" element={<ProductCatalog title="Collection" isCollectionRoute />} />
+                <Route path="/products/:slug" element={<ProductDetail />} />
+                <Route path="/shop/:slug" element={<ProductDetail />} />
+                <Route path="/shop/category/:slug" element={<ProductCatalog title="Category Catalog" />} />
+                <Route path="/books" element={<BooksStorefront />} />
+                <Route path="/shop/books" element={<BooksStorefront />} />
+                <Route path="/new-arrivals" element={<ProductCatalog eyebrow="Fresh Drops" title="New Arrivals" />} />
+                <Route path="/best-sellers" element={<ProductCatalog eyebrow="Customer Favorites" title="Best Sellers" />} />
+                <Route path="/search" element={<ProductCatalog title="Search Storefront" />} />
 
-              {/* Dynamic CMS Page & Blog Routes */}
-              <Route path="/pages/:slug" element={<CmsPage />} />
-              <Route path="/blog" element={<BlogList />} />
-              <Route path="/blog/:slug" element={<BlogDetail />} />
+                {/* Dynamic CMS Page & Blog Routes */}
+                <Route path="/pages/:slug" element={<CmsPage />} />
+                <Route path="/blog" element={<BlogList />} />
+                <Route path="/blog/:slug" element={<BlogDetail />} />
 
-              {/* Cart & Checkout */}
-              <Route path="/cart" element={<CartPage />} />
-              <Route path="/checkout" element={<CheckoutPage />} />
-              <Route path="/order/:orderNumber/confirmation" element={<OrderConfirmation />} />
-              <Route path="/track-order" element={<TrackOrder />} />
+                {/* Cart & Checkout */}
+                <Route path="/cart" element={<CartPage />} />
+                <Route path="/checkout" element={<CheckoutPage />} />
+                <Route path="/order/:orderNumber/confirmation" element={<OrderConfirmation />} />
+                <Route path="/track-order" element={<TrackOrder />} />
 
-              {/* Customer Account Routes */}
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Login register />} />
-              <Route path="/forgot-password" element={<Forgot />} />
-              <Route path="/reset-password" element={<Reset />} />
-              <Route path="/account" element={<RequireCustomer><Account /></RequireCustomer>} />
-              <Route path="/account/profile" element={<RequireCustomer><Account /></RequireCustomer>} />
-              <Route path="/account/orders" element={<RequireCustomer><Orders /></RequireCustomer>} />
-              <Route path="/account/orders/:orderNumber" element={<RequireCustomer><OrderDetail /></RequireCustomer>} />
-              <Route path="/account/addresses" element={<RequireCustomer><Addresses /></RequireCustomer>} />
+                {/* Customer Account Routes */}
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Login register />} />
+                <Route path="/forgot-password" element={<Forgot />} />
+                <Route path="/reset-password" element={<Reset />} />
+                <Route path="/account" element={<RequireCustomer><Account /></RequireCustomer>} />
+                <Route path="/account/profile" element={<RequireCustomer><Account /></RequireCustomer>} />
+                <Route path="/account/orders" element={<RequireCustomer><Orders /></RequireCustomer>} />
+                <Route path="/account/orders/:orderNumber" element={<RequireCustomer><OrderDetail /></RequireCustomer>} />
+                <Route path="/account/addresses" element={<RequireCustomer><Addresses /></RequireCustomer>} />
+                <Route path="/account/wishlist" element={<RequireCustomer><AccountWishlist /></RequireCustomer>} />
+                <Route path="/account/reviews" element={<RequireCustomer><AccountReviews /></RequireCustomer>} />
 
-              {/* Informational & Policy Routes */}
-              <Route path="/about" element={<About />} />
-              <Route path="/contact" element={<Contact />} />
-              <Route path="/faq" element={<FAQ />} />
-              <Route
-                path="/shipping"
-                element={
-                  <PolicyPage title="Shipping & Delivery Policy">
-                    <p>We offer Pan-India express courier dispatch for all Aadya home decor objects and books.</p>
-                    <p>Orders are dispatched within 24-48 hours. Express transit usually takes 3-5 business days depending on pincode location.</p>
-                    <p>Free standard delivery is offered on all domestic orders exceeding ₹2,499.</p>
-                  </PolicyPage>
-                }
-              />
-              <Route
-                path="/returns"
-                element={
-                  <PolicyPage title="Returns & Exchange Policy">
-                    <p>We stand behind the slow craftsmanship of every object we create. If your piece arrives damaged or defective, we offer hassle-free 7-day replacements.</p>
-                    <p>Because items are handcrafted from natural minerals, wood, and clay, subtle variations in shade and texture are intrinsic to authentic artisan products.</p>
-                  </PolicyPage>
-                }
-              />
-              <Route
-                path="/privacy"
-                element={
-                  <PolicyPage title="Privacy Policy">
-                    <p>At Aadya, we respect your personal privacy. We do not sell or share customer data with third parties.</p>
-                    <p>All transactions processed through our store are encrypted using industry-standard SSL security.</p>
-                  </PolicyPage>
-                }
-              />
-              <Route
-                path="/terms"
-                element={
-                  <PolicyPage title="Terms of Service">
-                    <p>Welcome to Aadya Storefront. By browsing or purchasing from our platform, you agree to our standard terms and conditions.</p>
-                    <p>All editorial content, book excerpts, and visual designs are protected under intellectual property laws.</p>
-                  </PolicyPage>
-                }
-              />
+                {/* Informational & Policy Routes */}
+                <Route path="/about" element={<About />} />
+                <Route path="/contact" element={<Contact />} />
+                <Route path="/faq" element={<FAQ />} />
+                <Route
+                  path="/shipping"
+                  element={
+                    <PolicyPage title="Shipping & Delivery Policy">
+                      <p>We offer Pan-India express courier dispatch for all Aadya home decor objects and books.</p>
+                      <p>Orders are dispatched within 24-48 hours. Express transit usually takes 3-5 business days depending on pincode location.</p>
+                      <p>Free standard delivery is offered on all domestic orders exceeding ₹2,499.</p>
+                    </PolicyPage>
+                  }
+                />
+                <Route
+                  path="/returns"
+                  element={
+                    <PolicyPage title="Returns & Exchange Policy">
+                      <p>We stand behind the slow craftsmanship of every object we create. If your piece arrives damaged or defective, we offer hassle-free 7-day replacements.</p>
+                      <p>Because items are handcrafted from natural minerals, wood, and clay, subtle variations in shade and texture are intrinsic to authentic artisan products.</p>
+                    </PolicyPage>
+                  }
+                />
+                <Route
+                  path="/privacy"
+                  element={
+                    <PolicyPage title="Privacy Policy">
+                      <p>At Aadya, we respect your personal privacy. We do not sell or share customer data with third parties.</p>
+                      <p>All transactions processed through our store are encrypted using industry-standard SSL security.</p>
+                    </PolicyPage>
+                  }
+                />
+                <Route
+                  path="/terms"
+                  element={
+                    <PolicyPage title="Terms of Service">
+                      <p>Welcome to Aadya Storefront. By browsing or purchasing from our platform, you agree to our standard terms and conditions.</p>
+                      <p>All editorial content, book excerpts, and visual designs are protected under intellectual property laws.</p>
+                    </PolicyPage>
+                  }
+                />
 
-              {/* Informational Pages */}
-              <Route path="/training" element={<Training />} />
-              <Route path="/training/:slug" element={<ProgramDetail />} />
-              <Route path="/consultation" element={<Consultation />} />
-              <Route path="/research" element={<Research />} />
-              <Route path="/content" element={<ContentHub />} />
-              <Route path="/events" element={<Events />} />
-              <Route path="/thinkpod" element={<Thinkpod />} />
-              <Route path="/testimonials" element={<Testimonials />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </main>
-          <Footer />
-        </div>
-        <CartDrawer />
-        <BrochureModal />
-      </BrochureProvider>
+                {/* Informational Pages */}
+                <Route path="/training" element={<Training />} />
+                <Route path="/training/:slug" element={<ProgramDetail />} />
+                <Route path="/consultation" element={<Consultation />} />
+                <Route path="/research" element={<Research />} />
+                <Route path="/content" element={<ContentHub />} />
+                <Route path="/events" element={<Events />} />
+                <Route path="/thinkpod" element={<Thinkpod />} />
+                <Route path="/testimonials" element={<Testimonials />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </main>
+            <Footer />
+          </div>
+          <CartDrawer />
+          <BrochureModal />
+        </BrochureProvider>
+      </WishlistProvider>
     </CartProvider>
   );
 }
@@ -204,6 +210,7 @@ function AdminRoutes() {
           <Route path="categories" element={<AdminCategories />} />
           <Route path="collections" element={<AdminCollections />} />
           <Route path="coupons" element={<AdminCoupons />} />
+          <Route path="reviews" element={<AdminReviews />} />
           <Route path="navigation" element={<AdminNavigation />} />
           <Route path="pages" element={<AdminPages />} />
           <Route path="blog" element={<AdminBlog />} />

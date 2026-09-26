@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams, useLocation } from "react-router-dom";
 import { Button, SectionHeading } from "../../components/ui";
 import { useCustomerAuth } from "../../context/CustomerAuthContext";
 import { ApiRequestError } from "../../lib/api";
+import { useCart } from "../../context/CartContext";
+import { useWishlist } from "../../context/WishlistContext";
 import {
   accountAddresses,
   accountOrder,
@@ -15,6 +17,10 @@ import {
   setDefaultAddress,
   updateAccountProfile,
   updateAddress,
+  fetchWishlist,
+  fetchCustomerReviews,
+  updateCustomerReview,
+  deleteCustomerReview,
 } from "../../lib/api";
 import { formatInr } from "../../lib/format";
 
@@ -34,17 +40,31 @@ const blank = {
 const fields = Object.keys(blank).filter((k) => k !== "isDefault");
 
 function AccountNav() {
+  const { pathname } = useLocation();
+  const navItems = [
+    { path: "/account", label: "Dashboard / Profile" },
+    { path: "/account/orders", label: "Orders" },
+    { path: "/account/addresses", label: "Addresses" },
+    { path: "/account/wishlist", label: "Wishlist" },
+    { path: "/account/reviews", label: "Reviews" },
+  ];
+
   return (
-    <div className="flex border-b border-charcoal/10 gap-6 text-xs font-semibold uppercase tracking-wider mb-8">
-      <Link to="/account" className="pb-3 border-b-2 border-terracotta text-terracotta">
-        Profile &amp; Security
-      </Link>
-      <Link to="/account/orders" className="pb-3 text-charcoal-soft hover:text-terracotta">
-        Order History
-      </Link>
-      <Link to="/account/addresses" className="pb-3 text-charcoal-soft hover:text-terracotta">
-        Saved Addresses
-      </Link>
+    <div className="flex border-b border-charcoal/10 gap-6 text-xs font-semibold uppercase tracking-wider mb-8 overflow-x-auto no-scrollbar">
+      {navItems.map((item) => {
+        const isActive = pathname === item.path || (item.path === "/account" && pathname === "/account/profile");
+        return (
+          <Link
+            key={item.path}
+            to={item.path}
+            className={`pb-3 whitespace-nowrap border-b-2 transition ${
+              isActive ? "border-terracotta text-terracotta font-bold" : "border-transparent text-charcoal-soft hover:text-terracotta"
+            }`}
+          >
+            {item.label}
+          </Link>
+        );
+      })}
     </div>
   );
 }
@@ -189,12 +209,49 @@ export function Account() {
   const [pw, setPw] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [stats, setStats] = useState({ orders: 0, wishlist: 0, addresses: 0, reviews: 0 });
+
+  useEffect(() => {
+    Promise.all([
+      Promise.resolve().then(() => accountOrders?.() || { data: [] }).catch(() => ({ data: [] })),
+      Promise.resolve().then(() => fetchWishlist?.() || { data: [] }).catch(() => ({ data: [] })),
+      Promise.resolve().then(() => accountAddresses?.() || { data: [] }).catch(() => ({ data: [] })),
+      Promise.resolve().then(() => fetchCustomerReviews?.() || { data: [] }).catch(() => ({ data: [] })),
+    ]).then(([ordersRes, wishlistRes, addressesRes, reviewsRes]) => {
+      setStats({
+        orders: ordersRes?.data?.length || 0,
+        wishlist: wishlistRes?.data?.length || 0,
+        addresses: addressesRes?.data?.length || 0,
+        reviews: reviewsRes?.data?.length || 0,
+      });
+    });
+  }, []);
 
   return (
     <div className="mx-auto max-w-4xl px-5 py-12 sm:px-8 space-y-8">
       <SectionHeading eyebrow="Customer Account" title="Welcome, Sanctuary Member" />
 
       <AccountNav />
+
+      {/* Dashboard Stat Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <Link to="/account/orders" className="rounded-2xl border border-charcoal/10 bg-ivory-dark/40 p-5 transition hover:border-terracotta/40 hover:shadow-sm text-center">
+          <p className="text-2xl font-bold text-terracotta">{stats.orders}</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft mt-1">Orders</p>
+        </Link>
+        <Link to="/account/wishlist" className="rounded-2xl border border-charcoal/10 bg-ivory-dark/40 p-5 transition hover:border-terracotta/40 hover:shadow-sm text-center">
+          <p className="text-2xl font-bold text-terracotta">{stats.wishlist}</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft mt-1">Wishlist</p>
+        </Link>
+        <Link to="/account/addresses" className="rounded-2xl border border-charcoal/10 bg-ivory-dark/40 p-5 transition hover:border-terracotta/40 hover:shadow-sm text-center">
+          <p className="text-2xl font-bold text-terracotta">{stats.addresses}</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft mt-1">Addresses</p>
+        </Link>
+        <Link to="/account/reviews" className="rounded-2xl border border-charcoal/10 bg-ivory-dark/40 p-5 transition hover:border-terracotta/40 hover:shadow-sm text-center">
+          <p className="text-2xl font-bold text-terracotta">{stats.reviews}</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft mt-1">Reviews</p>
+        </Link>
+      </div>
 
       <div className="grid gap-8 md:grid-cols-2">
         {/* Profile Details Form */}
@@ -563,5 +620,292 @@ export function Reset() {
       {error && <p className="text-xs font-medium text-terracotta bg-terracotta/10 p-3 rounded-xl">{error}</p>}
       {done && <p className="text-xs font-medium text-sage bg-sage-light p-3 rounded-xl">Password reset. You can now log in.</p>}
     </form>
+  );
+}
+
+export function AccountWishlist() {
+  const { wishlist, loading, removeFromWishlist } = useWishlist();
+  const { addItem } = useCart();
+  const navigate = useNavigate();
+
+  const handleMoveToCart = (item) => {
+    const p = item.product;
+    if (!p) return;
+    const hasVariants = p.variants && p.variants.length > 0;
+    if (hasVariants && !item.variant) {
+      navigate(`/shop/${p.slug}`);
+      return;
+    }
+    addItem(p, 1, item.variant);
+  };
+
+  return (
+    <div className="mx-auto max-w-4xl px-5 py-12 sm:px-8 space-y-8">
+      <SectionHeading eyebrow="Customer Account" title="My Wishlist" />
+      <AccountNav />
+
+      {loading ? (
+        <p className="text-xs text-charcoal-soft">Loading wishlist...</p>
+      ) : wishlist.length === 0 ? (
+        <div className="rounded-3xl border border-dashed border-charcoal/20 bg-ivory-dark/30 p-12 text-center">
+          <p className="text-sm text-charcoal-soft">Your wishlist is currently empty.</p>
+          <Link to="/shop" className="mt-4 inline-block rounded-full bg-terracotta px-6 py-2.5 text-xs font-semibold uppercase tracking-wider text-white">
+            Discover Objects
+          </Link>
+        </div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {wishlist.map((item) => {
+            const p = item.product || (item.productName ? {
+              id: item.productId,
+              name: item.productName,
+              slug: item.productSlug,
+              price: item.price,
+              salePrice: item.salePrice,
+              stockQuantity: item.stockQuantity,
+              images: item.image ? [{ url: item.image }] : [],
+            } : null);
+            if (!p) return null;
+            const price = Number(p.price);
+            const salePrice = p.salePrice ? Number(p.salePrice) : null;
+            const stockQty = p.stockQuantity ?? (p.inStock !== false ? 10 : 0);
+            const outOfStock = p.inStock === false || stockQty <= 0;
+
+            return (
+              <div key={item.id} className="group relative flex flex-col overflow-hidden rounded-2xl border border-charcoal/10 bg-white p-4 transition hover:shadow-md">
+                <Link to={`/shop/${p.slug}`} className="relative aspect-square w-full overflow-hidden rounded-xl bg-ivory-dark/40 mb-3">
+                  <img
+                    src={p.images?.[0] || p.image || "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?q=80&w=800&auto=format&fit=crop"}
+                    alt={p.name}
+                    className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                  />
+                </Link>
+
+                <div className="flex-1 flex flex-col">
+                  <Link to={`/shop/${p.slug}`} className="font-serif-display text-base text-charcoal hover:text-terracotta line-clamp-1 font-bold">
+                    {p.name}
+                  </Link>
+
+                  {item.variant && (
+                    <p className="text-xs text-charcoal-soft mt-0.5">Option: {item.variant.name}</p>
+                  )}
+
+                  <div className="mt-2 flex items-baseline gap-2">
+                    <span className="text-sm font-bold text-terracotta">{formatInr(salePrice ?? price)}</span>
+                    {salePrice && <span className="text-xs text-charcoal-soft line-through">{formatInr(price)}</span>}
+                  </div>
+
+                  <p className="text-[11px] font-medium mt-1">
+                    {outOfStock ? (
+                      <span className="text-terracotta">Out of Stock</span>
+                    ) : (
+                      <span className="text-sage">In Stock</span>
+                    )}
+                  </p>
+
+                  <div className="mt-4 pt-3 border-t border-charcoal/10 flex items-center justify-between gap-2">
+                    <button
+                      onClick={() => handleMoveToCart(item)}
+                      disabled={outOfStock}
+                      className={`flex-1 rounded-xl py-2 px-3 text-xs font-semibold uppercase tracking-wider text-white transition ${
+                        outOfStock ? "bg-charcoal/30 cursor-not-allowed" : "bg-terracotta hover:bg-terracotta-dark"
+                      }`}
+                    >
+                      {p.variants?.length > 0 && !item.variant ? "Select Option" : "Move to Cart"}
+                    </button>
+                    <button
+                      onClick={() => removeFromWishlist(item.id)}
+                      className="rounded-xl border border-charcoal/20 px-3 py-2 text-xs font-semibold text-charcoal hover:border-terracotta hover:text-terracotta transition"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function AccountReviews() {
+  const [reviews, setReviews] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [editingReview, setEditingReview] = useState(null);
+  const [editForm, setEditForm] = useState({ rating: 5, title: "", comment: "" });
+  const [notice, setNotice] = useState("");
+  const [error, setError] = useState("");
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const res = await fetchCustomerReviews();
+      setReviews(res.data || []);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  const handleUpdate = async (e) => {
+    e.preventDefault();
+    if (!editingReview) return;
+    try {
+      await updateCustomerReview(editingReview.id, editForm);
+      setEditingReview(null);
+      setNotice("Review updated and submitted for re-moderation.");
+      setTimeout(() => setNotice(""), 3000);
+      load();
+    } catch (e) {
+      setError(e.message);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this review?")) return;
+    try {
+      await deleteCustomerReview(id);
+      load();
+    } catch (e) {
+      setError(e.message);
+    }
+  };
+
+  return (
+    <div className="mx-auto max-w-4xl px-5 py-12 sm:px-8 space-y-8">
+      <SectionHeading eyebrow="Customer Account" title="My Reviews" />
+      <AccountNav />
+
+      {notice && <div className="rounded-xl bg-sage-light p-4 text-xs font-semibold text-green-deep">{notice}</div>}
+      {error && <div className="rounded-xl bg-terracotta/10 p-4 text-xs font-semibold text-terracotta">{error}</div>}
+
+      {/* Edit Review Modal / Form */}
+      {editingReview && (
+        <form onSubmit={handleUpdate} className="rounded-3xl border border-terracotta/30 bg-ivory-dark/40 p-6 space-y-4 shadow-sm">
+          <h3 className="font-serif-display text-lg font-bold text-charcoal">Edit Review</h3>
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-charcoal-soft mb-1">Rating</label>
+            <div className="flex gap-2 text-xl cursor-pointer">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  type="button"
+                  onClick={() => setEditForm({ ...editForm, rating: star })}
+                  className={star <= editForm.rating ? "text-amber-500" : "text-charcoal/20"}
+                >
+                  ★
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-charcoal-soft mb-1">Title</label>
+            <input
+              required
+              className="w-full rounded-xl border border-charcoal/15 bg-white px-4 py-2.5 text-sm text-charcoal focus:border-terracotta focus:outline-none"
+              value={editForm.title}
+              onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-charcoal-soft mb-1">Review Comment</label>
+            <textarea
+              required
+              rows={3}
+              className="w-full rounded-xl border border-charcoal/15 bg-white px-4 py-2.5 text-sm text-charcoal focus:border-terracotta focus:outline-none"
+              value={editForm.comment}
+              onChange={(e) => setEditForm({ ...editForm, comment: e.target.value })}
+            />
+          </div>
+          <div className="flex gap-3">
+            <Button type="submit">Save &amp; Submit for Moderation</Button>
+            <button
+              type="button"
+              onClick={() => setEditingReview(null)}
+              className="rounded-full border border-charcoal/20 px-5 py-2.5 text-xs font-semibold text-charcoal hover:bg-charcoal/5"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
+
+      {loading ? (
+        <p className="text-xs text-charcoal-soft">Loading reviews...</p>
+      ) : reviews.length === 0 ? (
+        <div className="rounded-3xl border border-dashed border-charcoal/20 bg-ivory-dark/30 p-12 text-center">
+          <p className="text-sm text-charcoal-soft">You haven't written any reviews yet.</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {reviews.map((r) => (
+            <div key={r.id} className="rounded-2xl border border-charcoal/10 bg-white p-5 space-y-3 shadow-xs">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-charcoal/5 pb-3">
+                <Link to={`/shop/${r.product?.slug}`} className="font-serif-display text-base font-bold text-charcoal hover:text-terracotta">
+                  {r.product?.name || "Product"}
+                </Link>
+                <div className="flex items-center gap-2">
+                  {r.status === "PENDING" && (
+                    <span className="rounded-full bg-amber-100 px-3 py-0.5 text-[10px] font-semibold text-amber-800 uppercase tracking-wider">
+                      Pending Moderation
+                    </span>
+                  )}
+                  {r.status === "APPROVED" && (
+                    <span className="rounded-full bg-sage-light px-3 py-0.5 text-[10px] font-semibold text-green-deep uppercase tracking-wider">
+                      Published
+                    </span>
+                  )}
+                  {r.status === "REJECTED" && (
+                    <span className="rounded-full bg-terracotta/10 px-3 py-0.5 text-[10px] font-semibold text-terracotta uppercase tracking-wider">
+                      Rejected
+                    </span>
+                  )}
+                  {r.isVerifiedPurchase && (
+                    <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-[10px] font-semibold text-blue-700">
+                      Verified Buyer
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center text-amber-500 text-sm">
+                {"★".repeat(r.rating)}{"☆".repeat(5 - r.rating)}
+              </div>
+
+              <h4 className="font-semibold text-sm text-charcoal">{r.title}</h4>
+              <p className="text-xs text-charcoal-soft leading-relaxed">{r.comment}</p>
+
+              <div className="pt-2 flex items-center justify-between text-xs border-t border-charcoal/5 text-charcoal-soft">
+                <span>Submitted on {new Date(r.createdAt).toLocaleDateString()}</span>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setEditingReview(r);
+                      setEditForm({ rating: r.rating, title: r.title, comment: r.comment });
+                    }}
+                    className="text-charcoal hover:text-terracotta underline font-medium"
+                  >
+                    Edit Review
+                  </button>
+                  <button
+                    onClick={() => handleDelete(r.id)}
+                    className="text-terracotta hover:underline font-medium"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }

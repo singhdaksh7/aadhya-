@@ -9,40 +9,44 @@ export async function resetDb() {
   if (process.env.NODE_ENV !== "test" || !/(_test|test)/i.test(process.env.DATABASE_URL || "")) {
     throw new Error("Refusing to reset a database outside the dedicated test environment.");
   }
+  await prisma.couponRedemption.deleteMany();
+  await prisma.payment.deleteMany();
+  await prisma.orderAddress.deleteMany();
+  await prisma.orderItem.deleteMany();
+  await prisma.order.deleteMany();
+  await prisma.productReview.deleteMany();
+  await prisma.wishlistItem.deleteMany();
   await prisma.cartItem.deleteMany();
   await prisma.cart.deleteMany();
-  await prisma.productVariant.deleteMany();
-  await prisma.passwordResetToken.deleteMany();
-  await prisma.customerRefreshSession.deleteMany();
-  await prisma.address.deleteMany();
-  await prisma.webhookEvent.deleteMany();
-  await prisma.payment.deleteMany();
-  await prisma.orderItem.deleteMany();
-  await prisma.orderAddress.deleteMany();
-  await prisma.order.deleteMany();
   await prisma.collectionProduct.deleteMany();
   await prisma.productImage.deleteMany();
   await prisma.productBookDetails.deleteMany();
+  await prisma.productVariant.deleteMany();
   await prisma.product.deleteMany();
+  await prisma.category.updateMany({ data: { parentId: null } });
   await prisma.category.deleteMany();
   await prisma.collection.deleteMany();
+  await prisma.customerNotification.deleteMany();
+  await prisma.customerRefreshSession.deleteMany();
+  await prisma.passwordResetToken.deleteMany();
+  await prisma.address.deleteMany();
+  await prisma.customer.deleteMany();
+  await prisma.adminUser.deleteMany();
+  await prisma.promoMessage.deleteMany();
+  await prisma.couponTarget.deleteMany();
+  await prisma.coupon.deleteMany();
   await prisma.siteSetting.deleteMany();
   await prisma.newsletterSubscriber.deleteMany();
   await prisma.navigationItem.deleteMany();
   await prisma.navigationMenu.deleteMany();
   await prisma.pageSection.deleteMany();
   await prisma.page.deleteMany();
-  await prisma.couponRedemption.deleteMany();
-  await prisma.couponTarget.deleteMany();
-  await prisma.coupon.deleteMany();
   await prisma.banner.deleteMany();
-  await prisma.promoMessage.deleteMany();
   await prisma.mediaAsset.deleteMany();
   await prisma.fAQItem.deleteMany();
   await prisma.fAQCategory.deleteMany();
   await prisma.blogPost.deleteMany();
-  await prisma.adminUser.deleteMany();
-  await prisma.customer.deleteMany();
+  await prisma.webhookEvent.deleteMany();
 }
 
 export async function seedTestAdmin(overrides = {}) {
@@ -67,10 +71,11 @@ export async function seedTestAdmin(overrides = {}) {
 }
 
 export async function seedTestCategory(overrides = {}) {
+  const uniqueId = Math.random().toString(36).substring(2, 7);
   return prisma.category.create({
     data: {
       name: overrides.name || "Test Category",
-      slug: overrides.slug || "test-category",
+      slug: overrides.slug || `test-category-${uniqueId}`,
       isActive: overrides.isActive ?? true,
       sortOrder: overrides.sortOrder ?? 0,
     },
@@ -82,7 +87,7 @@ export async function seedTestProduct(overrides = {}) {
   return prisma.product.create({
     data: {
       name: overrides.name || "Test Product",
-      slug: overrides.slug || "test-product",
+      slug: overrides.slug || `test-product-${Math.random().toString(36).substring(2, 7)}`,
       productType: overrides.productType || "PHYSICAL",
       categoryId: category.id,
       price: overrides.price ?? 500,
@@ -107,8 +112,6 @@ export const VALID_ADDRESS = {
 };
 export const VALID_ACCOUNT_ADDRESS = { ...VALID_ADDRESS, label: "Home" };
 
-// Seeds a customer directly via Prisma (bypasses the register endpoint) for
-// tests that need a customer row without exercising the auth flow itself.
 export async function seedTestCustomer(overrides = {}) {
   const passwordHash = await hashPassword(overrides.password || "SafePassword123!");
   return prisma.customer.create({
@@ -122,13 +125,10 @@ export async function seedTestCustomer(overrides = {}) {
   });
 }
 
-// Registers a customer through the real HTTP endpoint (so cookies/tokens are
-// produced exactly as a browser would receive them) and returns a supertest
-// agent that carries the refresh cookie for subsequent requests.
 export async function registerCustomer(app, overrides = {}) {
   const credentials = {
     name: overrides.name || "Test Customer",
-    email: overrides.email || "customer@example.com",
+    email: overrides.email || `customer_${Math.random().toString(36).substring(2, 7)}@example.com`,
     password: overrides.password || "SafePassword123!",
     phone: overrides.phone === undefined ? "9876543210" : overrides.phone,
   };
@@ -137,9 +137,6 @@ export async function registerCustomer(app, overrides = {}) {
   return { agent, accessToken: res.body?.data?.accessToken, customer: res.body?.data?.customer, credentials, res };
 }
 
-// Inserts a password reset token row directly, returning the raw (unhashed)
-// token, so tests can exercise expired/used/invalid paths without waiting on
-// real clocks or the forgot-password email flow.
 export async function createRawResetToken(customerId, { expired = false, used = false } = {}) {
   const token = crypto.randomBytes(24).toString("hex");
   await prisma.passwordResetToken.create({
@@ -152,4 +149,3 @@ export async function createRawResetToken(customerId, { expired = false, used = 
   });
   return token;
 }
-

@@ -28,12 +28,16 @@ import { publicPageRouter, adminPageRouter } from "../modules/pages/page.routes.
 import { publicBlogRouter, adminBlogRouter } from "../modules/blog/blog.routes.js";
 import { publicFaqRouter, adminFaqRouter } from "../modules/faq/faq.routes.js";
 import { adminMediaRouter } from "../modules/media/media.routes.js";
+import { publicReviewRouter, customerReviewRouter, adminReviewRouter } from "../modules/reviews/review.routes.js";
+import wishlistRouter from "../modules/wishlist/wishlist.routes.js";
+import notificationRouter from "../modules/notifications/notification.routes.js";
 
 const router = Router();
 
 router.get("/health", (req, res) => ok(res, { status: "ok" }));
 
 // Public storefront APIs.
+router.use("/products/:productId/reviews", publicReviewRouter);
 router.use("/products", publicProductRouter);
 router.use("/categories", publicCategoryRouter);
 router.use("/collections", publicCollectionRouter);
@@ -69,6 +73,9 @@ router.use("/checkout", checkoutRouter);
 router.use("/orders", publicOrderRouter);
 router.use("/orders", orderPaymentRouter);
 router.use("/auth", authRouter);
+router.use("/account/reviews", customerReviewRouter);
+router.use("/account/wishlist", wishlistRouter);
+router.use("/account/notifications", notificationRouter);
 router.use("/account", profileRouter);
 router.use("/account", accountRouter);
 router.use("/cart", cartRouter);
@@ -88,6 +95,7 @@ router.use("/admin/customers", adminCustomerRouter);
 router.use("/admin/admin-users", adminUserRouter);
 router.use("/admin/banners", adminBannersRouter);
 router.use("/admin/promos", adminPromosRouter);
+router.use("/admin/reviews", adminReviewRouter);
 
 // Admin Pages APIs: Specific /home route BEFORE parameterized /:id route!
 router.use("/admin/pages", adminPagesRouter);

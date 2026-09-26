@@ -5,7 +5,8 @@ import { DEFAULT_HOMEPAGE_CONTENT, mergeMissingSettings, settingsEqual, validate
 // Default seed sections for Aadya Storefront in approved visual order
 const DEFAULT_HOMEPAGE_SECTIONS = [
   { type: "CIRCULAR_CATEGORY_NAV", name: "Circular Category Navigation", sortOrder: 1, settings: { featuredOnly: false, limit: 10 } },
-  { type: "PROMO_STRIP", name: "Animated Promo / Coupon Ticker", sortOrder: 2, settings: { speed: 25, pauseOnHover: true } },
+  // `speed` is animation duration in seconds; larger values move more slowly.
+  { type: "PROMO_STRIP", name: "Animated Promo / Coupon Ticker", sortOrder: 2, settings: { speed: 60, pauseOnHover: true } },
   { type: "HERO_CAROUSEL", name: "Full-Width Hero Banner Carousel", sortOrder: 3, settings: { autoplay: true, interval: 6000 } },
   { type: "TRUST_STRIP", name: "Trust & Service Strip", sortOrder: 4, settings: DEFAULT_HOMEPAGE_CONTENT.TRUST_STRIP },
   { type: "NEW_ARRIVALS", name: "New Arrivals Grid", sortOrder: 5, settings: DEFAULT_HOMEPAGE_CONTENT.NEW_ARRIVALS },

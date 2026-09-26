@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import ProductCard from "../../components/ProductCard";
+import ProductReviews from "../../components/ProductReviews";
 import { PDPSkeleton } from "../../components/ui/Skeleton";
 import { formatInr } from "../../lib/format";
 import { useCart } from "../../context/CartContext";
+import { useWishlist } from "../../context/WishlistContext";
 import { useSiteSettings } from "../../hooks/useSiteSettings";
 import { getProductBySlug, getProducts } from "../../services/api";
 import { IconCheck, IconCart } from "../../components/icons";
@@ -12,6 +14,7 @@ export default function ProductDetail() {
   const { slug } = useParams();
   const navigate = useNavigate();
   const { addItem, items, setIsOpen: setCartDrawerOpen } = useCart();
+  const { isInWishlist, toggleWishlist } = useWishlist();
   const { promoStrip } = useSiteSettings();
 
   const [product, setProduct] = useState(null);
@@ -24,6 +27,8 @@ export default function ProductDetail() {
   const [addedNotice, setAddedNotice] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
   const [activeCoupons, setActiveCoupons] = useState([]);
+
+  const wishlisted = product ? isInWishlist(product.id) : false;
 
   useEffect(() => {
     import("../../lib/api").then((m) => {
@@ -196,9 +201,23 @@ export default function ProductDetail() {
           {/* Product Purchase Column (5 cols) */}
           <div className="lg:col-span-5 space-y-6">
             <div className="space-y-2 border-b border-charcoal/10 pb-6">
-              <span className="text-xs font-semibold uppercase tracking-widest text-terracotta">
-                {product.category} {product.collection ? `• ${product.collection}` : ""}
-              </span>
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-xs font-semibold uppercase tracking-widest text-terracotta">
+                  {product.category} {product.collection ? `• ${product.collection}` : ""}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => toggleWishlist(product.id)}
+                  aria-label={wishlisted ? "Remove from Wishlist" : "Add to Wishlist"}
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-charcoal/15 bg-white transition hover:scale-105 shadow-xs ${
+                    wishlisted ? "border-terracotta text-terracotta bg-terracotta/5" : "text-charcoal-soft hover:text-terracotta"
+                  }`}
+                >
+                  <svg className="h-4 w-4" fill={wishlisted ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.684a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                  </svg>
+                </button>
+              </div>
               <h1 className="font-serif-display text-3xl sm:text-4xl text-charcoal font-bold leading-tight">
                 {product.name}
               </h1>
@@ -377,6 +396,11 @@ export default function ProductDetail() {
               <p>{product.shippingInfo || "Dispatched within 24-48 hours via premium courier. Free shipping over ₹2,499."}</p>
             )}
           </div>
+        </section>
+
+        {/* Product Reviews Section */}
+        <section className="border-t border-charcoal/10 pt-12">
+          <ProductReviews productId={product.id} />
         </section>
 
         {/* Related Products Section */}

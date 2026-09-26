@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4100/api";
+const API_URL = import.meta.env.VITE_API_URL || "/api";
 const API_ORIGIN = API_URL.replace(/\/api\/?$/, "");
 
 // Product images come back as absolute URLs (seed data) or as server-relative
@@ -460,5 +460,55 @@ export function adminUploadMedia(file, { altText, title } = {}) {
 }
 export function adminUpdateMedia(id, data) { return api.patch(`/admin/media/${id}`, data, { auth: "admin" }); }
 export function adminDeleteMedia(id, force = false) { return api.delete(`/admin/media/${id}${force ? "?force=true" : ""}`, { auth: "admin" }); }
+
+// --- Phase G Product Reviews & Moderation ---
+export function fetchProductReviews(productId, params = {}) {
+  const query = new URLSearchParams(Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== "" && v !== null))).toString();
+  return api.get(`/products/${productId}/reviews${query ? `?${query}` : ""}`);
+}
+export function submitProductReview(data) {
+  return api.post("/account/reviews", data, { auth: "customer" });
+}
+export function fetchCustomerReviews() {
+  return api.get("/account/reviews", { auth: "customer" });
+}
+export function updateCustomerReview(reviewId, data) {
+  return api.put(`/account/reviews/${reviewId}`, data, { auth: "customer" });
+}
+export function deleteCustomerReview(reviewId) {
+  return api.delete(`/account/reviews/${reviewId}`, { auth: "customer" });
+}
+export function adminListReviews(params = {}) {
+  const query = new URLSearchParams(Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== "" && v !== null))).toString();
+  return api.get(`/admin/reviews${query ? `?${query}` : ""}`, { auth: "admin" });
+}
+export function adminUpdateReviewStatus(reviewId, status) {
+  return api.patch(`/admin/reviews/${reviewId}/status`, { status }, { auth: "admin" });
+}
+export function adminDeleteReview(reviewId) {
+  return api.delete(`/admin/reviews/${reviewId}`, { auth: "admin" });
+}
+
+// --- Phase G Wishlist ---
+export function fetchWishlist() {
+  return api.get("/account/wishlist", { auth: "customer" });
+}
+export function addToWishlist(productId, variantId = null) {
+  return api.post("/account/wishlist", { productId, variantId }, { auth: "customer" });
+}
+export function removeFromWishlist(idOrProductId) {
+  return api.delete(`/account/wishlist/${idOrProductId}`, { auth: "customer" });
+}
+
+// --- Phase G Customer Notifications ---
+export function fetchCustomerNotifications() {
+  return api.get("/account/notifications", { auth: "customer" });
+}
+export function markNotificationRead(id) {
+  return api.patch(`/account/notifications/${id}/read`, {}, { auth: "customer" });
+}
+export function markAllNotificationsRead() {
+  return api.patch("/account/notifications/read-all", {}, { auth: "customer" });
+}
 
 export { API_URL };

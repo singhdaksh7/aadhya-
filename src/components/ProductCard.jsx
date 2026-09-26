@@ -2,13 +2,19 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { formatInr } from "../lib/format";
 import { useCart } from "../context/CartContext";
+import { useWishlist } from "../context/WishlistContext";
+import { useSiteSettings } from "../hooks/useSiteSettings";
 import { IconCart, IconCheck } from "./icons";
 
 export default function ProductCard({ product }) {
   const { addItem, items } = useCart();
+  const { isInWishlist, toggleWishlist } = useWishlist();
+  const { showRatings } = useSiteSettings();
+
   const [isHovered, setIsHovered] = useState(false);
   const [addedNotice, setAddedNotice] = useState(false);
 
+  const wishlisted = isInWishlist(product.id);
   const inCart = items.find((i) => i.product.slug === product.slug);
   const stockQty = product.stockQuantity ?? (product.inStock !== false ? 10 : 0);
   const outOfStock = product.inStock === false || stockQty <= 0;
@@ -60,6 +66,24 @@ export default function ProductCard({ product }) {
           </span>
         )}
       </div>
+
+      {/* Wishlist Heart Button */}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          toggleWishlist(product.id);
+        }}
+        aria-label={wishlisted ? "Remove from Wishlist" : "Add to Wishlist"}
+        className={`absolute right-3 top-3 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-white/80 backdrop-blur-sm transition-all hover:scale-110 shadow-xs ${
+          wishlisted ? "text-terracotta" : "text-charcoal-soft hover:text-terracotta"
+        }`}
+      >
+        <svg className="h-4 w-4" fill={wishlisted ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.684a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+        </svg>
+      </button>
 
       {/* Image Container with Hover Zoom & Dual Image */}
       <Link to={`/shop/${product.slug}`} className="relative aspect-square w-full overflow-hidden bg-ivory-dark/40">
@@ -129,6 +153,21 @@ export default function ProductCard({ product }) {
             {product.name}
           </h3>
         </Link>
+
+        {/* Ratings Display */}
+        {showRatings !== false && (product.reviewCount > 0 || product.averageRating > 0) && (
+          <div className="mt-1 flex items-center gap-1.5 text-xs">
+            <div className="flex items-center text-amber-500">
+              <span className="text-sm">★</span>
+              <span className="ml-0.5 font-semibold text-charcoal">
+                {Number(product.averageRating || 0).toFixed(1)}
+              </span>
+            </div>
+            {product.reviewCount > 0 && (
+              <span className="text-[11px] text-charcoal-soft">({product.reviewCount})</span>
+            )}
+          </div>
+        )}
 
         {product.author && (
           <p className="mt-0.5 text-xs text-charcoal-soft italic">By {product.author}</p>

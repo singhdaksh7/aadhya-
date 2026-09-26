@@ -9,6 +9,12 @@ export default defineConfig({
     // Must match server/.env FRONTEND_URL exactly (CORS + cookie origin).
     port: 5175,
     strictPort: true,
+    proxy: {
+      "/api": {
+        target: "http://localhost:4100",
+        changeOrigin: true,
+      },
+    },
   },
   test: {
     environment: "jsdom",

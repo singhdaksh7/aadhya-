@@ -8,8 +8,8 @@ import { ok } from "../../utils/apiResponse.js";
 
 const querySchema = z.object({ page: z.coerce.number().int().min(1).default(1), limit: z.coerce.number().int().min(1).max(100).default(20), search: z.string().trim().max(200).optional() });
 const statusSchema = z.object({ isActive: z.boolean() });
-const customerSelect = { id: true, name: true, email: true, phone: true, isActive: true, createdAt: true, _count: { select: { orders: true } } };
-const safeCustomer = (c) => ({ id: c.id, name: c.name, email: c.email, phone: c.phone, isActive: c.isActive, createdAt: c.createdAt, ordersCount: c._count?.orders ?? c.orders?.length ?? 0, totalSpent: Number(c.orders?.reduce((sum, o) => sum + Number(o.totalAmount), 0) ?? 0) });
+const customerSelect = { id: true, name: true, email: true, phone: true, isActive: true, createdAt: true, _count: { select: { orders: true, reviews: true, wishlistItems: true } } };
+const safeCustomer = (c) => ({ id: c.id, name: c.name, email: c.email, phone: c.phone, isActive: c.isActive, createdAt: c.createdAt, ordersCount: c._count?.orders ?? c.orders?.length ?? 0, reviewsCount: c._count?.reviews ?? 0, wishlistCount: c._count?.wishlistItems ?? 0, totalSpent: Number(c.orders?.reduce((sum, o) => sum + Number(o.totalAmount), 0) ?? 0) });
 
 const router = Router();
 router.use(requireAdmin);
@@ -23,7 +23,7 @@ router.get("/:id", asyncHandler(async (req, res) => {
   const customer = await prisma.customer.findUnique({ where: { id: req.params.id }, select: { ...customerSelect, addresses: { select: { id: true, label: true, city: true, state: true, isDefault: true } }, orders: { select: { id: true, orderNumber: true, totalAmount: true, status: true, paymentStatus: true, createdAt: true }, orderBy: { createdAt: "desc" }, take: 10 } } });
   if (!customer) throw ApiError.notFound("Customer not found");
   const totals = await prisma.order.aggregate({ where: { customerId: customer.id }, _sum: { totalAmount: true } });
-  ok(res, { profile: safeCustomer(customer), addresses: customer.addresses, orderCount: customer._count.orders, recentOrders: customer.orders, totalSpend: Number(totals._sum.totalAmount ?? 0), status: customer.isActive ? "active" : "inactive" });
+  ok(res, { profile: safeCustomer(customer), addresses: customer.addresses, orderCount: customer._count.orders, reviewCount: customer._count.reviews, wishlistCount: customer._count.wishlistItems, recentOrders: customer.orders, totalSpend: Number(totals._sum.totalAmount ?? 0), status: customer.isActive ? "active" : "inactive" });
 }));
 router.patch("/:id/status", asyncHandler(async (req, res) => {
   const { isActive } = statusSchema.parse(req.body);

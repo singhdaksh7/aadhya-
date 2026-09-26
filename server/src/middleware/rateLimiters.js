@@ -64,3 +64,13 @@ export const trackOrderLimiter = rateLimit({
   message: { success: false, error: { message: "Too many lookup attempts. Try again later." } },
   skip: skipInTest,
 });
+
+export const reviewLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: { message: "Too many review submissions. Try again later." } },
+  skip: skipInTest,
+});
+
