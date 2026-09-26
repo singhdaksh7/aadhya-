@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Button, SectionHeading } from "../../components/ui";
 import { useCustomerAuth } from "../../context/CustomerAuthContext";
 import { ApiRequestError } from "../../lib/api";
@@ -34,17 +34,18 @@ const blank = {
 const fields = Object.keys(blank).filter((k) => k !== "isDefault");
 
 function AccountNav() {
+  const { pathname } = useLocation();
+  const items = [
+    { path: "/account", label: "Profile" },
+    { path: "/account/orders", label: "Orders" },
+    { path: "/account/addresses", label: "Addresses" },
+  ];
   return (
-    <div className="flex border-b border-charcoal/10 gap-6 text-xs font-semibold uppercase tracking-wider mb-8">
-      <Link to="/account" className="pb-3 border-b-2 border-terracotta text-terracotta">
-        Profile &amp; Security
-      </Link>
-      <Link to="/account/orders" className="pb-3 text-charcoal-soft hover:text-terracotta">
-        Order History
-      </Link>
-      <Link to="/account/addresses" className="pb-3 text-charcoal-soft hover:text-terracotta">
-        Saved Addresses
-      </Link>
+    <div className="flex gap-5 overflow-x-auto border-b border-charcoal/10 text-xs font-semibold uppercase tracking-wider no-scrollbar">
+      {items.map((item) => {
+        const active = pathname === item.path;
+        return <Link key={item.path} to={item.path} className={`shrink-0 border-b-2 px-1 pb-3 transition ${active ? "border-terracotta text-terracotta" : "border-transparent text-charcoal-soft hover:text-terracotta"}`}>{item.label}</Link>;
+      })}
     </div>
   );
 }
@@ -181,104 +182,78 @@ export function Login({ register = false }) {
   );
 }
 
+const inputClass = "w-full rounded-xl border border-charcoal/15 bg-white px-4 py-2.5 text-sm text-charcoal focus:border-terracotta focus:outline-none focus:ring-2 focus:ring-terracotta/15";
+
+function SummaryCard({ title, detail, action, to }) {
+  return <Link to={to} className="group rounded-2xl border border-charcoal/10 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-terracotta/35 hover:shadow-md">
+    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-terracotta">{title}</p>
+    <p className="mt-2 text-sm leading-relaxed text-charcoal-soft">{detail}</p>
+    <span className="mt-4 inline-block text-xs font-semibold text-charcoal group-hover:text-terracotta">{action} <span aria-hidden="true">→</span></span>
+  </Link>;
+}
+
+function OrderSummary({ orders, loading, error }) {
+  return <section className="rounded-3xl border border-charcoal/10 bg-white p-6 shadow-sm sm:p-7" aria-labelledby="recent-orders-heading">
+    <div className="flex items-baseline justify-between gap-4"><div><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-terracotta">Purchases</p><h2 id="recent-orders-heading" className="mt-1 font-serif-display text-2xl text-charcoal">Recent Orders</h2></div><Link to="/account/orders" className="shrink-0 text-xs font-semibold text-terracotta hover:underline">View all orders →</Link></div>
+    {loading ? <div className="mt-6 space-y-3"><div className="h-16 animate-pulse rounded-2xl bg-ivory-dark/60" /><div className="h-16 animate-pulse rounded-2xl bg-ivory-dark/60" /></div> : error ? <p className="mt-6 rounded-xl bg-terracotta/10 p-4 text-sm text-terracotta">We couldn’t load your orders. Please try again later.</p> : orders.length ? <div className="mt-6 divide-y divide-charcoal/10">{orders.slice(0, 3).map((order) => <div key={order.id || order.orderNumber} className="flex flex-col gap-3 py-4 first:pt-0 sm:flex-row sm:items-center sm:justify-between"><div><Link to={`/account/orders/${order.orderNumber}`} className="font-medium text-charcoal hover:text-terracotta">{order.orderNumber}</Link><p className="mt-1 text-xs text-charcoal-soft">{order.createdAt ? new Date(order.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "Order date unavailable"} · {order.status} · {order.paymentStatus}</p></div><div className="flex items-center justify-between gap-4"><span className="font-semibold text-charcoal">{formatInr(Number(order.totalAmount))}</span><Link to={`/account/orders/${order.orderNumber}`} className="text-xs font-semibold text-terracotta hover:underline">View order</Link></div></div>)}</div> : <div className="mt-6 rounded-2xl bg-ivory-dark/55 p-6"><p className="font-medium text-charcoal">No orders yet.</p><p className="mt-1 text-sm text-charcoal-soft">Your purchases and order status will appear here.</p><Link to="/shop" className="mt-4 inline-block text-xs font-semibold text-terracotta hover:underline">Explore the Store →</Link></div>}
+  </section>;
+}
+
+function AddressSummary({ addresses, loading, error }) {
+  const address = addresses.find((item) => item.isDefault) || addresses[0];
+  return <section className="rounded-3xl border border-charcoal/10 bg-white p-6 shadow-sm sm:p-7" aria-labelledby="delivery-address-heading">
+    <div className="flex items-baseline justify-between gap-4"><div><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-terracotta">Delivery</p><h2 id="delivery-address-heading" className="mt-1 font-serif-display text-2xl text-charcoal">Default Delivery Address</h2></div><Link to="/account/addresses" className="shrink-0 text-xs font-semibold text-terracotta hover:underline">Manage addresses →</Link></div>
+    {loading ? <div className="mt-6 h-28 animate-pulse rounded-2xl bg-ivory-dark/60" /> : error ? <p className="mt-6 rounded-xl bg-terracotta/10 p-4 text-sm text-terracotta">We couldn’t load your addresses. Please try again later.</p> : address ? <div className="mt-6 text-sm leading-relaxed text-charcoal-soft"><span className="inline-flex rounded-full bg-sage-light px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-green-deep">{address.label}</span><p className="mt-3 font-medium text-charcoal">{address.fullName}</p><p>{address.addressLine1}{address.addressLine2 ? `, ${address.addressLine2}` : ""}</p><p>{address.city}, {address.state} – {address.postalCode}</p></div> : <div className="mt-6 rounded-2xl bg-ivory-dark/55 p-6"><p className="font-medium text-charcoal">No delivery address saved yet.</p><Link to="/account/addresses" className="mt-4 inline-block text-xs font-semibold text-terracotta hover:underline">Add address →</Link></div>}
+  </section>;
+}
+
 export function Account() {
-  const { user, logout } = useCustomerAuth();
+  const { user, logout, updateUser } = useCustomerAuth();
   const nav = useNavigate();
   const [name, setName] = useState(user.name);
   const [phone, setPhone] = useState(user.phone || "");
   const [pw, setPw] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [securityOpen, setSecurityOpen] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [showPasswords, setShowPasswords] = useState(false);
+  const [orders, setOrders] = useState([]);
+  const [addresses, setAddresses] = useState([]);
+  const [ordersState, setOrdersState] = useState({ loading: true, error: false });
+  const [addressesState, setAddressesState] = useState({ loading: true, error: false });
+
+  useEffect(() => {
+    Promise.resolve().then(accountOrders).then((res) => setOrders(res?.data || [])).catch(() => setOrdersState({ loading: false, error: true })).finally(() => setOrdersState((state) => ({ ...state, loading: false })));
+    Promise.resolve().then(accountAddresses).then((res) => setAddresses(res?.data || [])).catch(() => setAddressesState({ loading: false, error: true })).finally(() => setAddressesState((state) => ({ ...state, loading: false })));
+  }, []);
+
+  const saveProfile = async (event) => {
+    event.preventDefault(); setError(""); setMessage(""); setSaving(true);
+    try { const result = await updateAccountProfile({ name, phone: phone || null }); const customer = result?.data?.customer || result?.data || { name, phone: phone || null }; setName(customer.name || name); setPhone(customer.phone || ""); updateUser(customer); setMessage("Profile updated successfully."); setEditing(false); }
+    catch (err) { setError(err.message); } finally { setSaving(false); }
+  };
+
+  const changePassword = async (event) => {
+    event.preventDefault(); setError(""); setMessage("");
+    if (pw.newPassword !== pw.confirmPassword) return setError("New passwords do not match.");
+    if (!/(?=.*[A-Za-z])(?=.*\d).{10,}/.test(pw.newPassword)) return setError("Use at least 10 characters, including a letter and a number.");
+    setChangingPassword(true);
+    try { await changeAccountPassword(pw); await logout(); nav("/login", { replace: true }); }
+    catch (err) { setError(err.message); } finally { setChangingPassword(false); }
+  };
 
   return (
-    <div className="mx-auto max-w-4xl px-5 py-12 sm:px-8 space-y-8">
-      <SectionHeading eyebrow="Customer Account" title="Welcome, Sanctuary Member" />
-
+    <div className="mx-auto max-w-6xl px-5 py-10 sm:px-8 sm:py-12 space-y-8">
+      <section className="rounded-3xl border border-charcoal/10 bg-ivory-dark/45 p-6 shadow-sm sm:flex sm:items-center sm:justify-between sm:p-8"><div><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-terracotta">Customer Account</p><h1 className="mt-2 font-serif-display text-3xl text-charcoal sm:text-4xl">Welcome back, {user.name}</h1><p className="mt-3 max-w-xl text-sm leading-relaxed text-charcoal-soft">Manage your profile, orders, addresses and account security.</p></div><div className="mt-6 flex items-center gap-3 sm:mt-0 sm:pl-8"><div aria-hidden="true" className="grid h-12 w-12 place-items-center rounded-full bg-sage-light font-serif-display text-lg text-green-deep">{user.name?.trim()?.charAt(0)?.toUpperCase() || "A"}</div><div className="min-w-0"><p className="truncate text-sm font-semibold text-charcoal">{user.name}</p><p className="truncate text-xs text-charcoal-soft">{user.email}</p></div></div></section>
       <AccountNav />
-
-      <div className="grid gap-8 md:grid-cols-2">
-        {/* Profile Details Form */}
-        <form
-          className="rounded-3xl border border-charcoal/10 bg-ivory-dark/40 p-6 sm:p-8 space-y-4"
-          onSubmit={async (e) => {
-            e.preventDefault();
-            try {
-              await updateAccountProfile({ name, phone: phone || null });
-              setMessage("Profile saved.");
-            } catch (e) {
-              setError(e.message);
-            }
-          }}
-        >
-          <h2 className="font-serif-display text-xl text-charcoal">Profile Information</h2>
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-charcoal-soft mb-1">Full Name</label>
-            <input
-              required
-              className="w-full rounded-xl border border-charcoal/15 bg-white px-4 py-2.5 text-sm text-charcoal focus:border-terracotta focus:outline-none"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-charcoal-soft mb-1">Phone Number</label>
-            <input
-              className="w-full rounded-xl border border-charcoal/15 bg-white px-4 py-2.5 text-sm text-charcoal focus:border-terracotta focus:outline-none"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="Mobile Phone"
-            />
-          </div>
-          <p className="text-xs text-charcoal-soft pt-1">{`Email: ${user.email}`}</p>
-          <Button className="w-full">Save profile</Button>
-        </form>
-
-        {/* Change Password Form */}
-        <form
-          className="rounded-3xl border border-charcoal/10 bg-ivory-dark/40 p-6 sm:p-8 space-y-4"
-          onSubmit={async (e) => {
-            e.preventDefault();
-            if (pw.newPassword !== pw.confirmPassword) return setError("New passwords do not match.");
-            try {
-              await changeAccountPassword(pw);
-              await logout();
-              nav("/login", { replace: true });
-            } catch (e) {
-              setError(e.message);
-            }
-          }}
-        >
-          <h2 className="font-serif-display text-xl text-charcoal">Security &amp; Password</h2>
-          {[
-            ["currentPassword", "Current Password"],
-            ["newPassword", "New Password"],
-            ["confirmPassword", "Confirm New Password"],
-          ].map(([k, l]) => (
-            <div key={k}>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-charcoal-soft mb-1">{l}</label>
-              <input
-                required
-                minLength="10"
-                type="password"
-                className="w-full rounded-xl border border-charcoal/15 bg-white px-4 py-2.5 text-sm text-charcoal focus:border-terracotta focus:outline-none"
-                placeholder={l}
-                value={pw[k]}
-                onChange={(e) => setPw({ ...pw, [k]: e.target.value })}
-              />
-            </div>
-          ))}
-          <Button className="w-full">Change password</Button>
-        </form>
-      </div>
-
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"><SummaryCard title="Orders" detail="View your purchases and order status." action="View orders" to="/account/orders" /><SummaryCard title="Addresses" detail="Manage your delivery addresses." action="Manage addresses" to="/account/addresses" /><SummaryCard title="Profile" detail="Update your personal information." action="Edit profile" to="#personal-information" /><SummaryCard title="Security" detail="Password and account security." action="Manage security" to="#security" /></div>
+      <div className="grid gap-6 lg:grid-cols-3"><div className="space-y-6 lg:col-span-2"><OrderSummary orders={orders} {...ordersState} /><AddressSummary addresses={addresses} {...addressesState} /></div><div className="space-y-6"><section id="personal-information" className="rounded-3xl border border-charcoal/10 bg-white p-6 shadow-sm"><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-terracotta">Profile</p><div className="mt-1 flex items-center justify-between gap-3"><h2 className="font-serif-display text-2xl text-charcoal">Personal Information</h2>{!editing && <button type="button" onClick={() => { setError(""); setMessage(""); setEditing(true); }} className="text-xs font-semibold text-terracotta hover:underline">Edit profile</button>}</div>{editing ? <form className="mt-6 space-y-4" onSubmit={saveProfile}><div><label htmlFor="account-name" className="mb-1 block text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Full Name</label><input id="account-name" required className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div><div><label htmlFor="account-email" className="mb-1 block text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Email Address</label><input id="account-email" readOnly className={`${inputClass} cursor-not-allowed bg-ivory-dark/40`} value={user.email} /></div><div><label htmlFor="account-phone" className="mb-1 block text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Phone Number</label><input id="account-phone" className={inputClass} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Mobile phone" /></div><div className="flex gap-3"><Button type="submit" disabled={saving} className="flex-1">{saving ? "Saving..." : "Save changes"}</Button><button type="button" onClick={() => { setName(user.name); setPhone(user.phone || ""); setEditing(false); }} className="rounded-full px-4 text-xs font-semibold text-charcoal-soft hover:text-charcoal">Cancel</button></div></form> : <dl className="mt-6 space-y-4 text-sm"><div><dt className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Full Name</dt><dd className="mt-1 text-charcoal">{user.name}</dd></div><div><dt className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Email Address</dt><dd className="mt-1 break-all text-charcoal">{user.email}</dd></div><div><dt className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Phone Number</dt><dd className="mt-1 text-charcoal">{user.phone || "Not added"}</dd></div></dl>}</section><section id="security" className="rounded-3xl border border-charcoal/10 bg-white p-6 shadow-sm"><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-terracotta">Security</p><div className="mt-1 flex items-center justify-between gap-3"><div><h2 className="font-serif-display text-2xl text-charcoal">Password &amp; Security</h2><p className="mt-2 text-sm text-charcoal-soft">Keep your Aadya account secure.</p></div><span aria-label="Password protected" className="text-lg tracking-widest text-charcoal-soft">••••••••</span></div>{!securityOpen ? <button type="button" onClick={() => { setError(""); setMessage(""); setSecurityOpen(true); }} className="mt-5 text-xs font-semibold text-terracotta hover:underline">Change password</button> : <form className="mt-6 space-y-4 border-t border-charcoal/10 pt-5" onSubmit={changePassword}>{[["currentPassword", "Current Password"], ["newPassword", "New Password"], ["confirmPassword", "Confirm New Password"]].map(([key, label]) => <div key={key}><label htmlFor={key} className="mb-1 block text-xs font-semibold uppercase tracking-wider text-charcoal-soft">{label}</label><input id={key} required minLength="10" type={showPasswords ? "text" : "password"} className={inputClass} placeholder={label} value={pw[key]} onChange={(e) => setPw({ ...pw, [key]: e.target.value })} /></div>)}<label className="flex cursor-pointer items-center gap-2 text-xs text-charcoal-soft"><input type="checkbox" checked={showPasswords} onChange={(e) => setShowPasswords(e.target.checked)} /> Show passwords</label><p className="text-xs leading-relaxed text-charcoal-soft">At least 10 characters, including a letter and a number. You’ll be asked to sign in again after changing it.</p><div className="flex gap-3"><Button type="submit" disabled={changingPassword} className="flex-1">{changingPassword ? "Changing..." : "Change password"}</Button><button type="button" onClick={() => setSecurityOpen(false)} className="rounded-full px-4 text-xs font-semibold text-charcoal-soft hover:text-charcoal">Cancel</button></div></form>}</section></div></div>
       {error && <p className="text-xs font-medium text-terracotta bg-terracotta/10 p-3 rounded-xl">{error}</p>}
-      {message && <p className="text-xs font-medium text-sage bg-sage-light p-3 rounded-xl">{message}</p>}
-
-      <div className="pt-4 flex justify-between items-center border-t border-charcoal/10">
-        <button onClick={logout} className="text-xs font-semibold uppercase tracking-wider text-terracotta hover:underline">
-          Logout
-        </button>
-      </div>
+      {message && <p role="status" className="text-xs font-medium text-green-deep bg-sage-light p-3 rounded-xl">{message}</p>}
+      <section className="border-t border-charcoal/10 pt-6"><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-charcoal-soft">Account Actions</p><button type="button" onClick={logout} className="mt-3 text-xs font-semibold text-terracotta hover:underline">Sign out</button></section>
     </div>
   );
 }

@@ -66,7 +66,7 @@ describe("bootstrap", () => {
     api.customerRefresh.mockResolvedValue({ data: { accessToken: "tok", customer: CUSTOMER } });
     api.accountAddresses.mockResolvedValue({ data: [] });
     render(<AuthedRoutes initialEntries={["/account"]} />);
-    await waitFor(() => expect(screen.getByText(/Email: test@example.com/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("heading", { name: /welcome back, test customer/i })).toBeInTheDocument());
     expect(api.setAccessToken).toHaveBeenCalledWith("tok");
   });
 
@@ -104,7 +104,7 @@ describe("login / register", () => {
     await user.type(screen.getByPlaceholderText("Email"), "test@example.com");
     await user.type(screen.getByPlaceholderText("Password"), "SafePassword123");
     await user.click(screen.getByRole("button", { name: "Log in" }));
-    await waitFor(() => expect(screen.getByText(/Email: test@example.com/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("heading", { name: /welcome back, test customer/i })).toBeInTheDocument());
   });
 
   it("shows the server error message on a failed login instead of navigating", async () => {
@@ -128,7 +128,7 @@ describe("login / register", () => {
     await user.type(screen.getByPlaceholderText("Email"), "test@example.com");
     await user.type(screen.getByPlaceholderText("Password"), "SafePassword123");
     await user.click(screen.getByRole("button", { name: "Create account" }));
-    await waitFor(() => expect(screen.getByText(/Email: test@example.com/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("heading", { name: /welcome back, test customer/i })).toBeInTheDocument());
   });
 
   it("shows password and phone guidance and blocks a weak registration password", async () => {
@@ -168,8 +168,8 @@ describe("logout", () => {
     api.customerLogout.mockResolvedValue({});
     const user = userEvent.setup();
     render(<AuthedRoutes initialEntries={["/account"]} />);
-    await waitFor(() => expect(screen.getByText(/Email: test@example.com/)).toBeInTheDocument());
-    await user.click(screen.getByRole("button", { name: "Logout" }));
+    await waitFor(() => expect(screen.getByRole("heading", { name: /welcome back, test customer/i })).toBeInTheDocument());
+    await user.click(screen.getByRole("button", { name: "Sign out" }));
     await waitFor(() => expect(api.customerLogout).toHaveBeenCalled());
     expect(api.setAccessToken).toHaveBeenLastCalledWith(null);
   });
@@ -181,10 +181,45 @@ describe("profile", () => {
     api.updateAccountProfile.mockResolvedValue({ data: { customer: CUSTOMER } });
     const user = userEvent.setup();
     render(<AuthedRoutes initialEntries={["/account"]} />);
-    await waitFor(() => expect(screen.getByText(/Email: test@example.com/)).toBeInTheDocument());
-    await user.click(screen.getByRole("button", { name: "Save profile" }));
+    await waitFor(() => expect(screen.getByRole("heading", { name: /welcome back, test customer/i })).toBeInTheDocument());
+    await user.click(screen.getByRole("button", { name: "Edit profile" }));
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
     await waitFor(() => expect(api.updateAccountProfile).toHaveBeenCalled());
-    expect(await screen.findByText("Profile saved.")).toBeInTheDocument();
+    expect(await screen.findByText("Profile updated successfully.")).toBeInTheDocument();
+  });
+
+  it("updates the customer context displayed in the welcome area after saving", async () => {
+    const updated = { ...CUSTOMER, name: "Updated Customer", phone: "9999999999" };
+    api.customerRefresh.mockResolvedValue({ data: { accessToken: "tok", customer: CUSTOMER } });
+    api.updateAccountProfile.mockResolvedValue({ data: { customer: updated } });
+    const user = userEvent.setup();
+    render(<AuthedRoutes initialEntries={["/account"]} />);
+    await screen.findByRole("heading", { name: /welcome back, test customer/i });
+    await user.click(screen.getByRole("button", { name: "Edit profile" }));
+    await user.clear(screen.getByLabelText("Full Name"));
+    await user.type(screen.getByLabelText("Full Name"), "Updated Customer");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    expect(await screen.findByRole("heading", { name: /welcome back, updated customer/i })).toBeInTheDocument();
+  });
+});
+
+describe("account dashboard", () => {
+  it("renders recent orders and the default address from live account APIs", async () => {
+    api.customerRefresh.mockResolvedValue({ data: { accessToken: "tok", customer: CUSTOMER } });
+    api.accountOrders.mockResolvedValue({ data: [{ id: "o1", orderNumber: "AAD-2026-000001", totalAmount: 500, status: "CONFIRMED", paymentStatus: "PAID" }] });
+    api.accountAddresses.mockResolvedValue({ data: [{ id: "a1", label: "Home", fullName: "Test Customer", addressLine1: "123 MG Road", city: "Bengaluru", state: "Karnataka", postalCode: "560001", isDefault: true }] });
+    render(<AuthedRoutes initialEntries={["/account"]} />);
+    expect(await screen.findByText("AAD-2026-000001")).toBeInTheDocument();
+    expect(screen.getByText("123 MG Road")).toBeInTheDocument();
+  });
+
+  it("keeps address content available when the orders API fails", async () => {
+    api.customerRefresh.mockResolvedValue({ data: { accessToken: "tok", customer: CUSTOMER } });
+    api.accountOrders.mockRejectedValue(new Error("offline"));
+    api.accountAddresses.mockResolvedValue({ data: [] });
+    render(<AuthedRoutes initialEntries={["/account"]} />);
+    expect(await screen.findByText(/couldn’t load your orders/i)).toBeInTheDocument();
+    expect(screen.getByText("No delivery address saved yet.")).toBeInTheDocument();
   });
 });
 
@@ -193,12 +228,13 @@ describe("password change", () => {
     api.customerRefresh.mockResolvedValue({ data: { accessToken: "tok", customer: CUSTOMER } });
     const user = userEvent.setup();
     render(<AuthedRoutes initialEntries={["/account"]} />);
-    await waitFor(() => expect(screen.getByText(/Email: test@example.com/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("heading", { name: /welcome back, test customer/i })).toBeInTheDocument());
     return user;
   }
 
   it("rejects a mismatched confirmation client-side without calling the API", async () => {
     const user = await renderAccount();
+    await user.click(screen.getByRole("button", { name: "Change password" }));
     await user.type(screen.getByPlaceholderText("Current Password"), "OldPassword123");
     await user.type(screen.getByPlaceholderText("New Password"), "NewPassword123");
     await user.type(screen.getByPlaceholderText("Confirm New Password"), "DifferentPassword1");
@@ -207,10 +243,19 @@ describe("password change", () => {
     expect(api.changeAccountPassword).not.toHaveBeenCalled();
   });
 
+  it("opens the security form and can reveal password inputs", async () => {
+    const user = await renderAccount();
+    await user.click(screen.getByRole("button", { name: "Change password" }));
+    expect(screen.getByPlaceholderText("Current Password")).toHaveAttribute("type", "password");
+    await user.click(screen.getByLabelText("Show passwords"));
+    expect(screen.getByPlaceholderText("Current Password")).toHaveAttribute("type", "text");
+  });
+
   it("submits a valid form and logs the user out on success", async () => {
     api.changeAccountPassword.mockResolvedValue({});
     api.customerLogout.mockResolvedValue({});
     const user = await renderAccount();
+    await user.click(screen.getByRole("button", { name: "Change password" }));
     await user.type(screen.getByPlaceholderText("Current Password"), "OldPassword123");
     await user.type(screen.getByPlaceholderText("New Password"), "NewPassword123");
     await user.type(screen.getByPlaceholderText("Confirm New Password"), "NewPassword123");
@@ -226,6 +271,7 @@ describe("password change", () => {
   it("displays the server error when the current password is wrong", async () => {
     api.changeAccountPassword.mockRejectedValue(new Error("Current password is incorrect."));
     const user = await renderAccount();
+    await user.click(screen.getByRole("button", { name: "Change password" }));
     await user.type(screen.getByPlaceholderText("Current Password"), "WrongPassword1");
     await user.type(screen.getByPlaceholderText("New Password"), "NewPassword123");
     await user.type(screen.getByPlaceholderText("Confirm New Password"), "NewPassword123");
