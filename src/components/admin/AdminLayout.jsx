@@ -3,22 +3,37 @@ import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useAdminAuth } from "../../context/AdminAuthContext";
 import { IconMenu, IconClose } from "../icons";
 
-const links = [
-  { to: "/admin", label: "Dashboard", end: true },
-  { to: "/admin/homepage-builder", label: "Homepage Builder" },
-  { to: "/admin/banners", label: "Banners" },
-  { to: "/admin/promos", label: "Promo Ticker" },
-  { to: "/admin/products", label: "Products" },
-  { to: "/admin/categories", label: "Categories" },
-  { to: "/admin/collections", label: "Collections" },
-  { to: "/admin/coupons", label: "Coupons" },
-  { to: "/admin/navigation", label: "Navigation" },
-  { to: "/admin/orders", label: "Orders" },
-  { to: "/admin/pages", label: "Pages (CMS)" },
-  { to: "/admin/blog", label: "Blog Journal" },
-  { to: "/admin/faqs", label: "FAQ CMS" },
-  { to: "/admin/media", label: "Media Library" },
-  { to: "/admin/settings", label: "Settings" },
+const linkGroups = [
+  {
+    title: "CONTENT",
+    items: [
+      { to: "/admin", label: "Dashboard", end: true },
+      { to: "/admin/homepage-builder", label: "Homepage Builder" },
+      { to: "/admin/banners", label: "Banners" },
+      { to: "/admin/promos", label: "Promo Ticker" },
+      { to: "/admin/pages", label: "Pages (CMS)" },
+      { to: "/admin/blog", label: "Blog Journal" },
+      { to: "/admin/faqs", label: "FAQ CMS" },
+      { to: "/admin/media", label: "Media Library" },
+    ],
+  },
+  {
+    title: "COMMERCE",
+    items: [
+      { to: "/admin/products", label: "Products" },
+      { to: "/admin/categories", label: "Categories" },
+      { to: "/admin/collections", label: "Collections" },
+      { to: "/admin/coupons", label: "Coupons" },
+      { to: "/admin/orders", label: "Orders" },
+    ],
+  },
+  {
+    title: "WEBSITE & SETTINGS",
+    items: [
+      { to: "/admin/navigation", label: "Navigation" },
+      { to: "/admin/settings", label: "Store Settings" },
+    ],
+  },
 ];
 
 export default function AdminLayout() {
@@ -91,28 +106,33 @@ export default function AdminLayout() {
               </button>
             </div>
 
-            <nav className="mt-6 flex flex-col gap-1.5">
-              {links.map((l) => (
-                <NavLink
-                  key={l.to}
-                  to={l.to}
-                  end={l.end}
-                  onClick={() => setMobileOpen(false)}
-                  className={({ isActive }) =>
-                    `rounded-xl px-4 py-3 text-sm font-medium transition ${
-                      isActive ? "bg-sage-light text-green-deep font-semibold" : "text-charcoal-soft hover:bg-charcoal/5"
-                    }`
-                  }
-                >
-                  {l.label}
-                </NavLink>
+            <nav className="mt-6 flex flex-col gap-4">
+              {linkGroups.map((group) => (
+                <div key={group.title} className="space-y-1">
+                  <p className="px-2 text-[10px] font-bold uppercase tracking-widest text-terracotta">{group.title}</p>
+                  {group.items.map((l) => (
+                    <NavLink
+                      key={l.to}
+                      to={l.to}
+                      end={l.end}
+                      onClick={() => setMobileOpen(false)}
+                      className={({ isActive }) =>
+                        `block rounded-xl px-3 py-2 text-xs font-medium transition ${
+                          isActive ? "bg-sage-light text-green-deep font-semibold" : "text-charcoal-soft hover:bg-charcoal/5"
+                        }`
+                      }
+                    >
+                      {l.label}
+                    </NavLink>
+                  ))}
+                </div>
               ))}
               <button
                 onClick={() => {
                   setMobileOpen(false);
                   logout();
                 }}
-                className="mt-4 rounded-xl px-4 py-3 text-left text-sm font-medium text-terracotta hover:bg-terracotta/10"
+                className="mt-2 rounded-xl px-3 py-2 text-left text-xs font-medium text-terracotta hover:bg-terracotta/10"
               >
                 Logout
               </button>
@@ -128,24 +148,29 @@ export default function AdminLayout() {
             <p className="font-serif-display text-lg text-charcoal">Aadya Admin</p>
             <p className="mt-1 text-xs text-charcoal-soft">{admin?.name}</p>
           </div>
-          <nav className="flex flex-col gap-1">
-            {links.map((l) => (
-              <NavLink
-                key={l.to}
-                to={l.to}
-                end={l.end}
-                className={({ isActive }) =>
-                  `rounded-xl px-3 py-2.5 text-sm font-medium transition ${
-                    isActive ? "bg-sage-light text-green-deep" : "text-charcoal-soft hover:bg-charcoal/5"
-                  }`
-                }
-              >
-                {l.label}
-              </NavLink>
+          <nav className="flex flex-col gap-5">
+            {linkGroups.map((group) => (
+              <div key={group.title} className="space-y-1">
+                <p className="px-2 text-[10px] font-bold uppercase tracking-widest text-terracotta/90 mb-1.5">{group.title}</p>
+                {group.items.map((l) => (
+                  <NavLink
+                    key={l.to}
+                    to={l.to}
+                    end={l.end}
+                    className={({ isActive }) =>
+                      `block rounded-xl px-3 py-2 text-xs font-medium transition ${
+                        isActive ? "bg-sage-light text-green-deep font-semibold" : "text-charcoal-soft hover:bg-charcoal/5"
+                      }`
+                    }
+                  >
+                    {l.label}
+                  </NavLink>
+                ))}
+              </div>
             ))}
             <button
               onClick={logout}
-              className="mt-4 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-charcoal-soft hover:bg-charcoal/5"
+              className="mt-2 rounded-xl px-3 py-2 text-left text-xs font-medium text-charcoal-soft hover:bg-charcoal/5"
             >
               Logout
             </button>

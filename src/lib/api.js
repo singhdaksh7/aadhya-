@@ -355,6 +355,7 @@ export function clearServerCart() { return api.delete("/cart",{auth:true}); }
 export function fetchSiteSettings() { return api.get("/settings"); }
 export function adminFetchSiteSettings() { return api.get("/admin/settings", { auth: "admin" }); }
 export function adminUpdateSiteSettings(data) { return api.put("/admin/settings", data, { auth: "admin" }); }
+export function adminResetAppearanceSettings() { return api.post("/admin/settings/reset-appearance", undefined, { auth: "admin" }); }
 export function subscribeNewsletter(email) { return api.post("/newsletter/subscribe", { email }); }
 
 // --- Phase A-C Navigation, Banners, Promos, Homepage Builder ---

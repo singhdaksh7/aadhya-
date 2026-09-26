@@ -1,7 +1,11 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { useSiteSettings } from "../hooks/useSiteSettings";
 
 export default function CircularCategoryNav({ categories = [] }) {
+  const { header } = useSiteSettings();
+
+  if (header?.showCategoryCircles === false) return null;
   if (!categories || categories.length === 0) return null;
 
   return (

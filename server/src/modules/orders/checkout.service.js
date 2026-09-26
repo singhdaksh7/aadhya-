@@ -81,15 +81,52 @@ function summarizeProduct(product) {
   };
 }
 
-export function computeShipping(subtotal) {
-  if (subtotal <= 0) return 0;
-  return subtotal >= env.shipping.freeThreshold ? 0 : env.shipping.standardAmount;
+export async function getShippingConfig() {
+  try {
+    const rows = await prisma.siteSetting.findMany({
+      where: { key: { in: ["shipping", "freeShippingThreshold", "standardShippingAmount"] } },
+    });
+    const map = Object.fromEntries(rows.map((r) => [r.key, r.value]));
+    const shippingGroup = map.shipping || {};
+
+    const freeThreshold =
+      typeof shippingGroup.freeShippingThreshold === "number"
+        ? shippingGroup.freeShippingThreshold
+        : typeof map.freeShippingThreshold === "number"
+        ? map.freeShippingThreshold
+        : env.shipping.freeThreshold;
+
+    const standardAmount =
+      typeof shippingGroup.standardShippingAmount === "number"
+        ? shippingGroup.standardShippingAmount
+        : typeof map.standardShippingAmount === "number"
+        ? map.standardShippingAmount
+        : env.shipping.standardAmount;
+
+    const shippingEnabled = shippingGroup.shippingEnabled ?? true;
+
+    return { freeThreshold, standardAmount, shippingEnabled };
+  } catch {
+    return {
+      freeThreshold: env.shipping.freeThreshold,
+      standardAmount: env.shipping.standardAmount,
+      shippingEnabled: true,
+    };
+  }
 }
 
-export function computeTotals(pricedItems, couponDiscount = 0) {
+export function computeShipping(subtotal, shippingConfig = null) {
+  if (subtotal <= 0) return 0;
+  const freeThreshold = shippingConfig?.freeThreshold ?? env.shipping.freeThreshold;
+  const standardAmount = shippingConfig?.standardAmount ?? env.shipping.standardAmount;
+  return subtotal >= freeThreshold ? 0 : standardAmount;
+}
+
+export async function computeTotals(pricedItems, couponDiscount = 0) {
   const validItems = pricedItems.filter((i) => i.ok);
   const subtotal = round2(validItems.reduce((sum, i) => sum + i.lineTotal, 0));
-  const shipping = round2(computeShipping(subtotal));
+  const shippingConfig = await getShippingConfig();
+  const shipping = round2(computeShipping(subtotal, shippingConfig));
   const tax = 0;
   const discount = round2(couponDiscount);
   const total = round2(Math.max(0, subtotal + shipping + tax - discount));
@@ -116,7 +153,7 @@ export async function buildCheckoutPreview(requestedItems, { couponCode, custome
     }
   }
 
-  const totals = computeTotals(pricedItems, couponDiscount);
+  const totals = await computeTotals(pricedItems, couponDiscount);
   const hasBlockingIssues = pricedItems.some((i) => !i.ok);
   return { items: pricedItems, hasBlockingIssues, coupon: couponResult, ...totals };
 }

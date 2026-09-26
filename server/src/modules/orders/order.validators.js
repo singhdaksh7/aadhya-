@@ -46,6 +46,7 @@ export const createOrderSchema = checkoutItemsSchema.extend({
   notes: z.string().trim().max(500).optional().nullable(),
   couponCode: z.string().trim().max(40).optional().nullable(),
   savedAddressId: z.string().uuid().optional(),
+  paymentMethod: z.enum(["razorpay", "cod"]).optional().default("razorpay"),
 });
 
 export const trackOrderSchema = z.object({

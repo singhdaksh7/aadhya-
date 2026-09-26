@@ -10,6 +10,11 @@ import { sendOrderConfirmationEmail } from "../email/email.service.js";
 // for an internal order. Idempotent: calling it twice for the same pending
 // order returns the same provider order id instead of creating a second one.
 export async function createRazorpayOrderForOrder(orderId) {
+  const paymentSettingRow = await prisma.siteSetting.findUnique({ where: { key: "payments" } });
+  if (paymentSettingRow?.value?.razorpayEnabled === false) {
+    throw ApiError.badRequest("Online payment via Razorpay is currently disabled.");
+  }
+
   const order = await prisma.order.findUnique({
     where: { id: orderId },
     include: { payments: { orderBy: { createdAt: "desc" }, take: 1 } },

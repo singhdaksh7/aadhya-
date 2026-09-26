@@ -26,7 +26,7 @@ export default function Navbar() {
   const { count, setIsOpen: setCartDrawerOpen } = useCart();
   const location = useLocation();
   const { user } = useCustomerAuth();
-  const { announcementBar } = useSiteSettings();
+  const { announcementBar, branding, header, general } = useSiteSettings();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -87,23 +87,36 @@ export default function Navbar() {
 
           {/* Left: Logo */}
           <Link to="/" className="flex items-center gap-2 shrink-0">
-            <span className="font-serif-display text-2xl tracking-tight text-charcoal sm:text-3xl font-bold">
-              Aadya
-            </span>
+            {branding?.desktopLogo ? (
+              <img
+                src={branding.desktopLogo}
+                alt={branding.logoAltText || "Aadya Logo"}
+                style={{ width: branding.logoWidthDesktop ? `${branding.logoWidthDesktop}px` : "auto" }}
+                className="h-8 object-contain"
+              />
+            ) : (
+              <span className="font-serif-display text-2xl tracking-tight text-charcoal sm:text-3xl font-bold">
+                {general?.storeName || "Aadya"}
+              </span>
+            )}
           </Link>
 
           {/* Center: Large Search Bar */}
-          <div className="flex-1 max-w-xl hidden sm:block mx-4">
-            <button
-              onClick={() => setSearchOpen(true)}
-              className="flex w-full items-center gap-3 rounded-full border border-charcoal/20 bg-[#FAF6F0] px-4 py-2 text-xs sm:text-sm text-charcoal-soft transition hover:border-terracotta hover:bg-white hover:shadow-xs"
-            >
-              <svg className="h-4 w-4 text-charcoal/50 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <span className="truncate text-charcoal/70">Search home decor, books, gifts and more...</span>
-            </button>
-          </div>
+          {header?.showSearch !== false && (
+            <div className="flex-1 max-w-xl hidden sm:block mx-4">
+              <button
+                onClick={() => setSearchOpen(true)}
+                className="flex w-full items-center gap-3 rounded-full border border-charcoal/20 bg-[#FAF6F0] px-4 py-2 text-xs sm:text-sm text-charcoal-soft transition hover:border-terracotta hover:bg-white hover:shadow-xs"
+              >
+                <svg className="h-4 w-4 text-charcoal/50 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <span className="truncate text-charcoal/70">
+                  {header?.searchPlaceholder || "Search home decor, books, gifts and more..."}
+                </span>
+              </button>
+            </div>
+          )}
 
           {/* Right Action Icons: Account, Wishlist, Cart */}
           <div className="flex items-center gap-3 sm:gap-5 shrink-0 text-charcoal">

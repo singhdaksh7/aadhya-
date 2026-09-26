@@ -88,12 +88,14 @@ test("E2E Blog Roundtrip: Create Draft, Hide Publicly, Publish & Display Detail"
 
 test("E2E FAQ Roundtrip: Category & Question CRUD, Public Accordion & Deactivation", async ({ page }) => {
   await adminLogin(page);
+  const catName = `General Shipping ${RUN_ID}`;
 
   // 1. Navigate to FAQ Admin & Create Category
   await page.goto("/admin/faqs");
   await page.locator('button:has-text("+ New Category")').click();
-  await page.locator('input[placeholder*="Shipping & Delivery"]').fill("General Shipping");
+  await page.locator('input[placeholder*="Shipping & Delivery"]').fill(catName);
   await page.locator('button:has-text("Save Category")').click();
+  await page.waitForTimeout(300);
 
   // 2. Add FAQ Question
   await page.locator('button:has-text("+ Add FAQ Question")').click();

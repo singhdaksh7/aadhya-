@@ -4,6 +4,7 @@ import { Button, SectionHeading } from "../components/ui";
 import { LoadingNotice } from "../components/StateNotice";
 import { useCart } from "../context/CartContext";
 import { useCustomerAuth } from "../context/CustomerAuthContext";
+import { useSiteSettings } from "../hooks/useSiteSettings";
 import { formatInr } from "../lib/format";
 import { loadRazorpayScript } from "../lib/razorpay";
 import {
@@ -51,6 +52,11 @@ export default function CheckoutPage() {
   const { items, isLoading: cartLoading, clearCart, appliedCoupon } = useCart();
   const navigate = useNavigate();
   const { user } = useCustomerAuth();
+  const { payments } = useSiteSettings();
+
+  const razorpayEnabled = payments?.razorpayEnabled ?? true;
+  const codEnabled = payments?.codEnabled ?? true;
+  const [paymentMethod, setPaymentMethod] = useState("razorpay");
 
   const [form, setForm] = useState(emptyForm);
   const [errors, setErrors] = useState({});
@@ -62,6 +68,14 @@ export default function CheckoutPage() {
   const [savedAddresses, setSavedAddresses] = useState([]);
   const [selectedAddressId, setSelectedAddressId] = useState("");
   const [saveAddress, setSaveAddress] = useState(false);
+
+  useEffect(() => {
+    if (!razorpayEnabled && codEnabled) {
+      setPaymentMethod("cod");
+    } else if (razorpayEnabled) {
+      setPaymentMethod("razorpay");
+    }
+  }, [razorpayEnabled, codEnabled]);
 
   useEffect(() => {
     if (user) {
@@ -236,12 +250,18 @@ export default function CheckoutPage() {
           items: items.map((i) => ({ slug: i.product.slug, quantity: i.quantity })),
           couponCode: appliedCoupon?.code || undefined,
           savedAddressId,
+          paymentMethod,
         },
         Boolean(user)
       );
       const { orderId, orderNumber, accessToken } = res.data;
       setPendingOrder({ orderId, orderNumber, accessToken });
-      await startPayment(orderId, orderNumber, accessToken);
+      if (paymentMethod === "cod") {
+        clearCart();
+        navigate(`/order/${orderNumber}/confirmation?token=${accessToken}`, { replace: true });
+      } else {
+        await startPayment(orderId, orderNumber, accessToken);
+      }
     } catch (err) {
       setServerError(err instanceof ApiRequestError ? err.message : "Could not place your order. Please try again.");
       setStage("form");
@@ -373,6 +393,46 @@ export default function CheckoutPage() {
                 )}
               </fieldset>
 
+              <fieldset className="space-y-4">
+                <legend className="mb-1 font-serif-display text-lg text-charcoal font-bold">Payment Method</legend>
+                {!razorpayEnabled && !codEnabled ? (
+                  <p className="text-xs font-semibold text-terracotta">No payment methods are currently available.</p>
+                ) : (
+                  <div className="space-y-2 rounded-xl border border-charcoal/10 bg-[#FAF6F0] p-4 text-xs sm:text-sm">
+                    {razorpayEnabled && (
+                      <label className="flex items-center gap-3 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="paymentMethod"
+                          value="razorpay"
+                          checked={paymentMethod === "razorpay"}
+                          onChange={() => setPaymentMethod("razorpay")}
+                          className="accent-terracotta"
+                        />
+                        <span className="font-medium text-charcoal">
+                          {payments?.razorpayDisplayLabel || "Pay Online via Razorpay (UPI, Cards, NetBanking)"}
+                        </span>
+                      </label>
+                    )}
+                    {codEnabled && (
+                      <label className="flex items-center gap-3 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="paymentMethod"
+                          value="cod"
+                          checked={paymentMethod === "cod"}
+                          onChange={() => setPaymentMethod("cod")}
+                          className="accent-terracotta"
+                        />
+                        <span className="font-medium text-charcoal">
+                          {payments?.codDisplayLabel || "Cash on Delivery (COD)"}
+                        </span>
+                      </label>
+                    )}
+                  </div>
+                )}
+              </fieldset>
+
               {serverError && <p className="text-sm font-semibold text-terracotta">{serverError}</p>}
 
               {stage === "failed" && (
@@ -394,10 +454,22 @@ export default function CheckoutPage() {
               {stage !== "failed" && stage !== "payment_unavailable" && (
                 <button
                   type="submit"
-                  disabled={stage === "placing" || stage === "paying" || previewStatus !== "ready" || preview?.hasBlockingIssues}
+                  disabled={
+                    stage === "placing" ||
+                    stage === "paying" ||
+                    previewStatus !== "ready" ||
+                    preview?.hasBlockingIssues ||
+                    (!razorpayEnabled && !codEnabled)
+                  }
                   className="w-full rounded-full bg-terracotta py-4 text-xs font-semibold uppercase tracking-wider text-white shadow-xs transition hover:bg-terracotta-dark disabled:opacity-50"
                 >
-                  {stage === "placing" ? "Placing Order…" : stage === "paying" ? "Opening Payment Window…" : "Pay Securely via Razorpay"}
+                  {stage === "placing"
+                    ? "Placing Order…"
+                    : stage === "paying"
+                    ? "Opening Payment Window…"
+                    : paymentMethod === "cod"
+                    ? "Place Order (Cash on Delivery)"
+                    : "Pay Securely via Razorpay"}
                 </button>
               )}
             </form>
