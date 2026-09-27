@@ -21,7 +21,7 @@ export default function TopUtilityBar() {
     <div className="bg-[#FAF6F0] border-b border-charcoal/10 text-charcoal text-[11px] sm:text-xs py-2 px-4 sm:px-8">
       <div className="mx-auto flex max-w-7xl items-center justify-between">
         {/* Left / Center items */}
-        <div className="flex items-center gap-4 sm:gap-8 overflow-x-auto no-scrollbar">
+        <div className="flex min-w-0 items-center gap-4 overflow-x-auto no-scrollbar sm:gap-8">
           {items.map((item) => (
             <div key={item.id || item.title} className="flex items-center gap-1.5 shrink-0">
               <svg className="h-3.5 w-3.5 text-terracotta" fill="none" viewBox="0 0 24 24" stroke="currentColor">

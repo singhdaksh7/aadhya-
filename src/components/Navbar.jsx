@@ -103,7 +103,7 @@ export default function Navbar() {
 
           {/* Center: Large Search Bar */}
           {header?.showSearch !== false && (
-            <div className="flex-1 max-w-xl hidden sm:block mx-4">
+            <div className="min-w-0 flex-1 max-w-xl hidden sm:block mx-4">
               <button
                 onClick={() => setSearchOpen(true)}
                 className="flex w-full items-center gap-3 rounded-full border border-charcoal/20 bg-[#FAF6F0] px-4 py-2 text-xs sm:text-sm text-charcoal-soft transition hover:border-terracotta hover:bg-white hover:shadow-xs"
