@@ -5,6 +5,7 @@ import { ApiError } from "../../utils/ApiError.js";
 import { rupeesToPaise } from "../../utils/money.js";
 import { getRazorpayClient, isRazorpayConfigured } from "./razorpay.client.js";
 import { sendOrderConfirmationEmail } from "../email/email.service.js";
+import { recordPurchaseEvent } from "../analytics/analytics.service.js";
 
 // POST /api/orders/:orderId/payment — creates (or reuses) the Razorpay order
 // for an internal order. Idempotent: calling it twice for the same pending
@@ -158,8 +159,11 @@ export async function finalizePaidPayment({ providerOrderId, providerPaymentId, 
   });
 
   if (!result.alreadyProcessed) {
-    // Email is best-effort and must never affect payment/order state.
+    // Email and analytics are best-effort and must never affect payment/order
+    // state. This is the single, server-authoritative place a `purchase`
+    // analytics event is ever recorded — it is never accepted from a client.
     sendOrderConfirmationEmail(result.order.id).catch(() => {});
+    recordPurchaseEvent(result.order).catch(() => {});
   }
 
   return result;

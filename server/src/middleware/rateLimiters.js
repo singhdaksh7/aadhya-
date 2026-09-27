@@ -65,6 +65,17 @@ export const trackOrderLimiter = rateLimit({
   skip: skipInTest,
 });
 
+// Public event-tracking sink — generous enough for real browsing sessions,
+// tight enough that it can't be used as a free-form write firehose.
+export const analyticsLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: { code: "RATE_LIMITED", message: "Too many analytics events. Try again later." } },
+  skip: skipInTest,
+});
+
 export const reviewLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 20,

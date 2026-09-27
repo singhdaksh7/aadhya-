@@ -161,18 +161,66 @@ export async function getPublicProductBySlug(slug) {
   return serializePublicProduct(product);
 }
 
+// Deterministic recommendations only — never AI-generated. Priority order:
+// same category -> shares a tag -> shares a collection -> best sellers as a
+// generic fallback so the section is never empty. No ranking model, no
+// randomness: same inputs always produce the same ordered list.
 export async function listRelatedProducts(product, limit = 4) {
-  const items = await prisma.product.findMany({
-    where: {
-      isActive: true,
-      categoryId: product.categoryId,
-      NOT: { id: product.id },
-    },
-    include: PUBLIC_INCLUDE,
-    orderBy: { createdAt: "desc" },
-    take: limit,
+  const collectionLinks = await prisma.collectionProduct.findMany({
+    where: { productId: product.id },
+    select: { collectionId: true },
   });
-  return items.map(serializePublicProduct);
+  const collectionIds = collectionLinks.map((c) => c.collectionId);
+
+  const [sameCategory, sameTag, sameCollection] = await Promise.all([
+    prisma.product.findMany({
+      where: { isActive: true, categoryId: product.categoryId, NOT: { id: product.id } },
+      include: PUBLIC_INCLUDE,
+      orderBy: { createdAt: "desc" },
+      take: limit,
+    }),
+    product.tags?.length
+      ? prisma.product.findMany({
+          where: { isActive: true, tags: { hasSome: product.tags }, NOT: { id: product.id } },
+          include: PUBLIC_INCLUDE,
+          orderBy: { createdAt: "desc" },
+          take: limit,
+        })
+      : Promise.resolve([]),
+    collectionIds.length
+      ? prisma.product.findMany({
+          where: { isActive: true, collections: { some: { collectionId: { in: collectionIds } } }, NOT: { id: product.id } },
+          include: PUBLIC_INCLUDE,
+          orderBy: { createdAt: "desc" },
+          take: limit,
+        })
+      : Promise.resolve([]),
+  ]);
+
+  const merged = new Map();
+  for (const list of [sameCategory, sameTag, sameCollection]) {
+    for (const p of list) {
+      if (!merged.has(p.id)) merged.set(p.id, p);
+    }
+  }
+
+  if (merged.size < limit) {
+    const bestSellers = await prisma.product.findMany({
+      where: {
+        isActive: true,
+        isBestSeller: true,
+        NOT: [{ id: product.id }, ...(merged.size ? [{ id: { in: [...merged.keys()] } }] : [])],
+      },
+      include: PUBLIC_INCLUDE,
+      orderBy: { createdAt: "desc" },
+      take: limit,
+    });
+    for (const p of bestSellers) {
+      if (!merged.has(p.id)) merged.set(p.id, p);
+    }
+  }
+
+  return [...merged.values()].slice(0, limit).map(serializePublicProduct);
 }
 
 export async function listAdminProducts(query) {

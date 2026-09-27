@@ -9,6 +9,8 @@ import { useWishlist } from "../../context/WishlistContext";
 import { useSiteSettings } from "../../hooks/useSiteSettings";
 import { getProductBySlug, getProducts } from "../../services/api";
 import { IconCheck, IconCart } from "../../components/icons";
+import { trackProductView, recordRecentlyViewed } from "../../lib/analytics";
+import RecentlyViewed from "../../components/shop/RecentlyViewed";
 
 export default function ProductDetail() {
   const { slug } = useParams();
@@ -60,6 +62,8 @@ export default function ProductDetail() {
       if (prod.variants?.length) {
         setSelectedVariant(prod.variants[0]);
       }
+      trackProductView(prod.id, { slug: prod.slug });
+      recordRecentlyViewed(prod);
 
       // Load related products from same category or collection
       const relatedRes = await getProducts({ categorySlug: prod.categorySlug });
@@ -417,6 +421,8 @@ export default function ProductDetail() {
             </div>
           </section>
         )}
+
+        <RecentlyViewed excludeSlug={product.slug} />
       </div>
 
       {/* Mobile Sticky Purchase Bar (<768px) */}

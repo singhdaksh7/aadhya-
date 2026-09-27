@@ -26,6 +26,7 @@ const linkGroups = [
       { to: "/admin/coupons", label: "Coupons" },
       { to: "/admin/orders", label: "Orders" },
       { to: "/admin/reviews", label: "Reviews" },
+      { to: "/admin/analytics", label: "Analytics" },
     ],
   },
   {

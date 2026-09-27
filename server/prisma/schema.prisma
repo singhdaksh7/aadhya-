@@ -118,11 +118,16 @@ model PasswordResetToken {
 }
 
 model Cart {
-  id         String     @id @default(uuid())
-  customerId String     @unique
-  updatedAt  DateTime   @updatedAt
-  customer   Customer   @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  items      CartItem[]
+  id                  String     @id @default(uuid())
+  customerId          String     @unique
+  updatedAt           DateTime   @updatedAt
+  // Abandoned-cart recovery bookkeeping — set once a recovery email has been
+  // sent so the trigger can never fire twice for the same idle cart, and
+  // cleared (recoveredAt set) once the customer converts.
+  recoveryEmailSentAt DateTime?
+  recoveredAt         DateTime?
+  customer            Customer   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  items               CartItem[]
 }
 
 model CartItem {
@@ -395,6 +400,11 @@ model Order {
   couponId        String?
   notes           String?
   accessTokenHash String
+  utmSource       String?
+  utmMedium       String?
+  utmCampaign     String?
+  utmContent      String?
+  utmTerm         String?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   paidAt          DateTime?
@@ -812,5 +822,36 @@ model CustomerNotification {
   @@index([customerId])
   @@index([customerId, isRead])
   @@index([createdAt])
+}
+
+// First-party analytics events. Everything except `purchase` may be written
+// by the public POST /api/analytics/events endpoint (allowlisted `type`,
+// no arbitrary write access). `purchase` is server-authoritative only —
+// it is recorded from the payment-confirmation flow (finalizePaidPayment)
+// and is never accepted from a client-submitted event.
+model AnalyticsEvent {
+  id           String   @id @default(cuid())
+  type         String
+  customerId   String?
+  sessionId    String?
+  productId    String?
+  categoryId   String?
+  collectionId String?
+  orderId      String?
+  metadata     Json?
+  utmSource    String?
+  utmMedium    String?
+  utmCampaign  String?
+  utmContent   String?
+  utmTerm      String?
+  createdAt    DateTime @default(now())
+
+  @@index([type])
+  @@index([createdAt])
+  @@index([customerId])
+  @@index([sessionId])
+  @@index([productId])
+  @@index([orderId])
+  @@index([type, createdAt])
 }
 

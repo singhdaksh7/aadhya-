@@ -31,6 +31,8 @@ import { adminMediaRouter } from "../modules/media/media.routes.js";
 import { publicReviewRouter, customerReviewRouter, adminReviewRouter } from "../modules/reviews/review.routes.js";
 import wishlistRouter from "../modules/wishlist/wishlist.routes.js";
 import notificationRouter from "../modules/notifications/notification.routes.js";
+import { publicAnalyticsRouter, adminAnalyticsRouter } from "../modules/analytics/analytics.routes.js";
+import { publicSearchRouter } from "../modules/search/search.routes.js";
 
 const router = Router();
 
@@ -47,6 +49,8 @@ router.use("/newsletter", newsletterRouter);
 router.use("/navigation", navigationRouter);
 router.use("/banners", publicBannersRouter);
 router.use("/promos", publicPromosRouter);
+router.use("/search", publicSearchRouter);
+router.use("/analytics", publicAnalyticsRouter);
 
 // Pages APIs: Specific /home route BEFORE parameterized /:slug route!
 router.use("/pages", publicPagesRouter);
@@ -96,6 +100,7 @@ router.use("/admin/admin-users", adminUserRouter);
 router.use("/admin/banners", adminBannersRouter);
 router.use("/admin/promos", adminPromosRouter);
 router.use("/admin/reviews", adminReviewRouter);
+router.use("/admin/analytics", adminAnalyticsRouter);
 
 // Admin Pages APIs: Specific /home route BEFORE parameterized /:id route!
 router.use("/admin/pages", adminPagesRouter);

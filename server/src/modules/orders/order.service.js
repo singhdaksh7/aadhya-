@@ -28,7 +28,21 @@ function formatOrderNumber(orderSeq) {
 // + a PENDING Payment row, all inside one transaction — an order is either
 // fully created or not created at all. Stock is NOT touched here; it's only
 // ever decremented after a verified successful payment (payment.service.js).
-export async function createOrder({ customer, shippingAddress, items, notes, couponCode, customerId, savedAddressId, paymentMethod = "razorpay" }) {
+export async function createOrder({
+  customer,
+  shippingAddress,
+  items,
+  notes,
+  couponCode,
+  customerId,
+  savedAddressId,
+  paymentMethod = "razorpay",
+  utmSource,
+  utmMedium,
+  utmCampaign,
+  utmContent,
+  utmTerm,
+}) {
   const paymentSettingRow = await prisma.siteSetting.findUnique({ where: { key: "payments" } });
   const paymentSettings = paymentSettingRow?.value || {};
   const razorpayEnabled = paymentSettings.razorpayEnabled ?? true;
@@ -92,6 +106,11 @@ export async function createOrder({ customer, shippingAddress, items, notes, cou
         couponCode: validatedCouponCode,
         notes: notes || null,
         accessTokenHash,
+        utmSource: utmSource || null,
+        utmMedium: utmMedium || null,
+        utmCampaign: utmCampaign || null,
+        utmContent: utmContent || null,
+        utmTerm: utmTerm || null,
       },
     });
 
