@@ -124,6 +124,7 @@ export default function MediaPicker({ isOpen, onClose, onSelect, title = "Select
         <div className="flex items-center justify-between px-6 py-4 border-b border-charcoal/10 bg-white">
           <h3 id="media-picker-title" className="font-serif-display text-xl text-charcoal">{title}</h3>
           <button
+            type="button"
             ref={closeButtonRef}
             onClick={onClose}
             className="p-1.5 rounded-full text-charcoal-soft hover:bg-charcoal/5 transition"
@@ -136,6 +137,7 @@ export default function MediaPicker({ isOpen, onClose, onSelect, title = "Select
         {/* Navigation Tabs */}
         <div className="flex border-b border-charcoal/10 bg-white/50 px-6 gap-6 text-sm font-medium">
           <button
+            type="button"
             onClick={() => setTab("browse")}
             className={`py-3 border-b-2 transition ${
               tab === "browse" ? "border-terracotta text-terracotta font-semibold" : "border-transparent text-charcoal-soft hover:text-charcoal"
@@ -144,6 +146,7 @@ export default function MediaPicker({ isOpen, onClose, onSelect, title = "Select
             Browse Library
           </button>
           <button
+            type="button"
             onClick={() => setTab("upload")}
             className={`py-3 border-b-2 transition ${
               tab === "upload" ? "border-terracotta text-terracotta font-semibold" : "border-transparent text-charcoal-soft hover:text-charcoal"
@@ -223,8 +226,13 @@ export default function MediaPicker({ isOpen, onClose, onSelect, title = "Select
               )}
             </div>
           ) : (
-            /* Upload Tab */
-            <form onSubmit={handleUpload} className="space-y-4 max-w-lg mx-auto py-4">
+            /* Upload Tab — a plain div, not a <form>: MediaPicker is
+               routinely rendered inside other admin forms (Category,
+               Banner, Product, ...) via ImagePickerInput, and a nested
+               <form> is invalid HTML — browsers silently drop the inner
+               form tag, which would submit the *outer* host form instead
+               of running handleUpload. */
+            <div className="space-y-4 max-w-lg mx-auto py-4">
               <div>
                 <label htmlFor="media-picker-file" className="block text-xs font-semibold uppercase tracking-wider text-charcoal-soft mb-2">
                   Select Image File (JPEG, PNG, WebP)
@@ -268,13 +276,14 @@ export default function MediaPicker({ isOpen, onClose, onSelect, title = "Select
               </div>
 
               <button
-                type="submit"
+                type="button"
+                onClick={handleUpload}
                 disabled={uploading || !uploadFile}
                 className="w-full py-2.5 px-4 rounded-xl bg-terracotta text-white font-semibold text-sm hover:bg-terracotta/90 transition disabled:opacity-50 shadow-sm"
               >
                 {uploading ? "Uploading Image..." : "Upload to Library"}
               </button>
-            </form>
+            </div>
           )}
         </div>
 
