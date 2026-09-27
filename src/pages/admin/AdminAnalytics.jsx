@@ -106,17 +106,19 @@ export default function AdminAnalytics() {
               {overview.products.length === 0 ? (
                 <p className="text-sm text-charcoal-soft">No sales in this period.</p>
               ) : (
-                <table className="w-full text-sm">
-                  <tbody>
-                    {overview.products.map((p) => (
-                      <tr key={p.productId} className="border-b border-charcoal/5">
-                        <td className="py-2">{p.product?.name || "Deleted product"}</td>
-                        <td className="py-2 text-right">{p.unitsSold} units</td>
-                        <td className="py-2 text-right font-medium">{formatInr(p.revenue)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <tbody>
+                      {overview.products.map((p) => (
+                        <tr key={p.productId} className="border-b border-charcoal/5">
+                          <td className="py-2">{p.product?.name || "Deleted product"}</td>
+                          <td className="py-2 text-right">{p.unitsSold} units</td>
+                          <td className="py-2 text-right font-medium">{formatInr(p.revenue)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </section>
 
@@ -125,17 +127,19 @@ export default function AdminAnalytics() {
               {overview.categories.length === 0 ? (
                 <p className="text-sm text-charcoal-soft">No sales in this period.</p>
               ) : (
-                <table className="w-full text-sm">
-                  <tbody>
-                    {overview.categories.map((c) => (
-                      <tr key={c.category.id} className="border-b border-charcoal/5">
-                        <td className="py-2">{c.category.name}</td>
-                        <td className="py-2 text-right">{c.unitsSold} units</td>
-                        <td className="py-2 text-right font-medium">{formatInr(c.revenue)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <tbody>
+                      {overview.categories.map((c) => (
+                        <tr key={c.category.id} className="border-b border-charcoal/5">
+                          <td className="py-2">{c.category.name}</td>
+                          <td className="py-2 text-right">{c.unitsSold} units</td>
+                          <td className="py-2 text-right font-medium">{formatInr(c.revenue)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </section>
 
@@ -144,17 +148,19 @@ export default function AdminAnalytics() {
               {overview.collections.length === 0 ? (
                 <p className="text-sm text-charcoal-soft">No sales in this period.</p>
               ) : (
-                <table className="w-full text-sm">
-                  <tbody>
-                    {overview.collections.map((c) => (
-                      <tr key={c.collection.id} className="border-b border-charcoal/5">
-                        <td className="py-2">{c.collection.title}</td>
-                        <td className="py-2 text-right">{c.unitsSold} units</td>
-                        <td className="py-2 text-right font-medium">{formatInr(c.revenue)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <tbody>
+                      {overview.collections.map((c) => (
+                        <tr key={c.collection.id} className="border-b border-charcoal/5">
+                          <td className="py-2">{c.collection.title}</td>
+                          <td className="py-2 text-right">{c.unitsSold} units</td>
+                          <td className="py-2 text-right font-medium">{formatInr(c.revenue)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </section>
 
@@ -163,17 +169,19 @@ export default function AdminAnalytics() {
               {overview.coupons.length === 0 ? (
                 <p className="text-sm text-charcoal-soft">No coupon redemptions in this period.</p>
               ) : (
-                <table className="w-full text-sm">
-                  <tbody>
-                    {overview.coupons.map((c, i) => (
-                      <tr key={c.coupon?.id || i} className="border-b border-charcoal/5">
-                        <td className="py-2">{c.coupon?.code || "Deleted coupon"}</td>
-                        <td className="py-2 text-right">{c.redemptions} uses</td>
-                        <td className="py-2 text-right font-medium">-{formatInr(c.totalDiscount)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <tbody>
+                      {overview.coupons.map((c, i) => (
+                        <tr key={c.coupon?.id || i} className="border-b border-charcoal/5">
+                          <td className="py-2">{c.coupon?.code || "Deleted coupon"}</td>
+                          <td className="py-2 text-right">{c.redemptions} uses</td>
+                          <td className="py-2 text-right font-medium">-{formatInr(c.totalDiscount)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </section>
           </div>
@@ -208,6 +216,7 @@ export default function AdminAnalytics() {
         {cartStatus === "error" && <ErrorNotice message="Could not load abandoned carts." />}
         {cartStatus === "ready" && abandonedCarts.length === 0 && <p className="text-sm text-charcoal-soft">No abandoned carts right now.</p>}
         {cartStatus === "ready" && abandonedCarts.length > 0 && (
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-xs uppercase tracking-wider text-charcoal-soft">
@@ -241,6 +250,7 @@ export default function AdminAnalytics() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </section>
     </div>
