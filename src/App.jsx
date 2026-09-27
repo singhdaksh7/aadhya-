@@ -62,6 +62,9 @@ import AdminPages from "./pages/admin/AdminPages";
 import AdminBlog from "./pages/admin/AdminBlog";
 import AdminFaq from "./pages/admin/AdminFaq";
 import AdminMedia from "./pages/admin/AdminMedia";
+import AdminAnalytics from "./pages/admin/AdminAnalytics";
+import SearchResults from "./pages/shop/SearchResults";
+import { captureUtmFromUrl } from "./lib/attribution";
 
 // Policy Pages Component
 function PolicyPage({ title, eyebrow = "Customer Policies", children }) {
@@ -98,7 +101,7 @@ function SiteLayout() {
                 <Route path="/shop/books" element={<BooksStorefront />} />
                 <Route path="/new-arrivals" element={<ProductCatalog eyebrow="Fresh Drops" title="New Arrivals" />} />
                 <Route path="/best-sellers" element={<ProductCatalog eyebrow="Customer Favorites" title="Best Sellers" />} />
-                <Route path="/search" element={<ProductCatalog title="Search Storefront" />} />
+                <Route path="/search" element={<SearchResults />} />
 
                 {/* Dynamic CMS Page & Blog Routes */}
                 <Route path="/pages/:slug" element={<CmsPage />} />
@@ -219,6 +222,7 @@ function AdminRoutes() {
           <Route path="settings" element={<AdminSettings />} />
           <Route path="orders" element={<AdminOrderList />} />
           <Route path="orders/:id" element={<AdminOrderDetail />} />
+          <Route path="analytics" element={<AdminAnalytics />} />
         </Route>
       </Routes>
     </AdminAuthProvider>
@@ -226,6 +230,10 @@ function AdminRoutes() {
 }
 
 export default function App() {
+  React.useEffect(() => {
+    captureUtmFromUrl();
+  }, []);
+
   return (
     <BrowserRouter>
       <CustomerAuthProvider>

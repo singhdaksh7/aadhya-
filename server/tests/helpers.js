@@ -9,6 +9,7 @@ export async function resetDb() {
   if (process.env.NODE_ENV !== "test" || !/(_test|test)/i.test(process.env.DATABASE_URL || "")) {
     throw new Error("Refusing to reset a database outside the dedicated test environment.");
   }
+  await prisma.analyticsEvent.deleteMany();
   await prisma.couponRedemption.deleteMany();
   await prisma.payment.deleteMany();
   await prisma.orderAddress.deleteMany();

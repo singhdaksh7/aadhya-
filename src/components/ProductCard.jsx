@@ -5,6 +5,7 @@ import { useCart } from "../context/CartContext";
 import { useWishlist } from "../context/WishlistContext";
 import { useSiteSettings } from "../hooks/useSiteSettings";
 import { IconCart, IconCheck } from "./icons";
+import { trackAddToCart, trackWishlistAdd } from "../lib/analytics";
 
 export default function ProductCard({ product }) {
   const { addItem, items } = useCart();
@@ -38,6 +39,7 @@ export default function ProductCard({ product }) {
     e.stopPropagation();
     if (outOfStock || atStockLimit) return;
     addItem(product);
+    trackAddToCart(product.id, { slug: product.slug });
     setAddedNotice(true);
     setTimeout(() => setAddedNotice(false), 1800);
   };
@@ -73,6 +75,7 @@ export default function ProductCard({ product }) {
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
+          if (!wishlisted) trackWishlistAdd(product.id, { slug: product.slug });
           toggleWishlist(product.id);
         }}
         aria-label={wishlisted ? "Remove from Wishlist" : "Add to Wishlist"}

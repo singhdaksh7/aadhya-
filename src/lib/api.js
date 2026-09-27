@@ -1,3 +1,5 @@
+import { getStoredUtmAttribution } from "./attribution";
+
 const API_URL = import.meta.env.VITE_API_URL || "/api";
 const API_ORIGIN = API_URL.replace(/\/api\/?$/, "");
 
@@ -292,7 +294,11 @@ export function checkoutPreview(payload) {
 }
 
 export function createOrder(payload, authenticated = false) {
-  return api.post("/orders", payload, { auth: authenticated ? "customer" : false });
+  // Snapshot whatever UTM attribution was captured at landing time onto the
+  // order — this is the one place a completed order gets that attribution,
+  // regardless of which checkout UI called createOrder.
+  const utm = getStoredUtmAttribution();
+  return api.post("/orders", { ...utm, ...payload }, { auth: authenticated ? "customer" : false });
 }
 
 export function createRazorpayOrder(orderId) {
@@ -509,6 +515,35 @@ export function markNotificationRead(id) {
 }
 export function markAllNotificationsRead() {
   return api.patch("/account/notifications/read-all", {}, { auth: "customer" });
+}
+
+// --- Phase I: Search ---
+export async function fetchSearch(query, sessionId) {
+  const params = new URLSearchParams({ q: query || "" });
+  if (sessionId) params.set("sessionId", sessionId);
+  const res = await api.get(`/search?${params.toString()}`);
+  return { ...res, data: { ...res.data, products: (res.data?.products || []).map(normalizeProduct) } };
+}
+
+// --- Phase I: Admin Analytics ---
+function rangeQuery(range) {
+  const params = new URLSearchParams();
+  if (range?.range) params.set("range", range.range);
+  if (range?.from) params.set("from", range.from);
+  if (range?.to) params.set("to", range.to);
+  return params.toString();
+}
+export function fetchAdminAnalyticsOverview(range) {
+  return api.get(`/admin/analytics/overview?${rangeQuery(range)}`, { auth: "admin" });
+}
+export function fetchAdminAnalyticsSearches(range) {
+  return api.get(`/admin/analytics/searches?${rangeQuery(range)}`, { auth: "admin" });
+}
+export function fetchAdminAbandonedCarts() {
+  return api.get("/admin/analytics/abandoned-carts", { auth: "admin" });
+}
+export function sendAbandonedCartRecoveryEmail(cartId) {
+  return api.post(`/admin/analytics/abandoned-carts/${cartId}/recovery-email`, {}, { auth: "admin" });
 }
 
 export { API_URL };

@@ -40,6 +40,18 @@ export const checkoutPreviewSchema = checkoutItemsSchema.extend({
   couponCode: z.string().trim().max(40).optional().nullable(),
 });
 
+// UTM attribution captured client-side from the landing URL (see
+// src/lib/attribution.js) and snapshotted onto the order at checkout —
+// this is the only place UTM values get attached to an order, so an order
+// always reflects whatever brought that customer to the site, permanently.
+const utmSchema = {
+  utmSource: z.string().trim().max(200).optional().nullable(),
+  utmMedium: z.string().trim().max(200).optional().nullable(),
+  utmCampaign: z.string().trim().max(200).optional().nullable(),
+  utmContent: z.string().trim().max(200).optional().nullable(),
+  utmTerm: z.string().trim().max(200).optional().nullable(),
+};
+
 export const createOrderSchema = checkoutItemsSchema.extend({
   customer: customerSchema,
   shippingAddress: shippingAddressSchema,
@@ -47,6 +59,7 @@ export const createOrderSchema = checkoutItemsSchema.extend({
   couponCode: z.string().trim().max(40).optional().nullable(),
   savedAddressId: z.string().uuid().optional(),
   paymentMethod: z.enum(["razorpay", "cod"]).optional().default("razorpay"),
+  ...utmSchema,
 });
 
 export const trackOrderSchema = z.object({
