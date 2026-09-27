@@ -34,11 +34,14 @@ const emptyForm = {
   country: "India",
 };
 
-function validate(form) {
+// A PDF-only cart has nothing to ship, so the address block is skipped
+// entirely — both in the UI and in this validation.
+function validate(form, { requireAddress = true } = {}) {
   const errors = {};
   if (!form.name.trim()) errors.name = "Required";
   if (!/^\S+@\S+\.\S+$/.test(form.email)) errors.email = "Enter a valid email";
   if (!PHONE_RE.test(form.phone)) errors.phone = "Enter a valid 10-digit mobile number";
+  if (!requireAddress) return errors;
   if (!form.fullName.trim()) errors.fullName = "Required";
   if (!PHONE_RE.test(form.addressPhone)) errors.addressPhone = "Enter a valid 10-digit mobile number";
   if (!form.addressLine1.trim()) errors.addressLine1 = "Required";
@@ -119,16 +122,20 @@ export default function CheckoutPage() {
   }, [user]);
 
   const cartKey = useMemo(
-    () => `${items.map((i) => `${i.product.slug}:${i.quantity}`).join(",")}:${appliedCoupon?.code || ""}`,
+    () => `${items.map((i) => `${i.product.slug}:${i.quantity}:${i.bookFormat || ""}`).join(",")}:${appliedCoupon?.code || ""}`,
     [items, appliedCoupon]
   );
+
+  // Digital (PDF) items ship nothing — a cart made entirely of them needs
+  // no shipping address at all. A mixed or physical-only cart still does.
+  const isDigitalOnly = items.length > 0 && items.every((i) => i.bookFormat === "PDF");
 
   useEffect(() => {
     if (cartLoading || items.length === 0) return;
     let cancelled = false;
     setPreviewStatus("loading");
     fetchCheckoutPreview({
-      items: items.map((i) => ({ slug: i.product.slug, quantity: i.quantity })),
+      items: items.map((i) => ({ slug: i.product.slug, quantity: i.quantity, bookFormat: i.bookFormat || undefined })),
       couponCode: appliedCoupon?.code || undefined,
     })
       .then((res) => {
@@ -200,7 +207,7 @@ export default function CheckoutPage() {
 
   const onSubmit = async (e) => {
     e.preventDefault();
-    const validationErrors = validate(form);
+    const validationErrors = validate(form, { requireAddress: !isDigitalOnly });
     setErrors(validationErrors);
     if (Object.keys(validationErrors).length > 0) return;
 
@@ -208,7 +215,7 @@ export default function CheckoutPage() {
     setStage("placing");
     try {
       let savedAddressId = selectedAddressId || undefined;
-      if (user && !savedAddressId && saveAddress) {
+      if (!isDigitalOnly && user && !savedAddressId && saveAddress) {
         const duplicate = savedAddresses.find(
           (a) =>
             a.fullName === form.fullName &&
@@ -237,17 +244,21 @@ export default function CheckoutPage() {
       const res = await createOrder(
         {
           customer: { name: form.name, email: form.email, phone: form.phone },
-          shippingAddress: {
-            fullName: form.fullName,
-            phone: form.addressPhone,
-            addressLine1: form.addressLine1,
-            addressLine2: form.addressLine2 || undefined,
-            city: form.city,
-            state: form.state,
-            postalCode: form.postalCode,
-            country: form.country,
-          },
-          items: items.map((i) => ({ slug: i.product.slug, quantity: i.quantity })),
+          ...(isDigitalOnly
+            ? {}
+            : {
+                shippingAddress: {
+                  fullName: form.fullName,
+                  phone: form.addressPhone,
+                  addressLine1: form.addressLine1,
+                  addressLine2: form.addressLine2 || undefined,
+                  city: form.city,
+                  state: form.state,
+                  postalCode: form.postalCode,
+                  country: form.country,
+                },
+              }),
+          items: items.map((i) => ({ slug: i.product.slug, quantity: i.quantity, bookFormat: i.bookFormat || undefined })),
           couponCode: appliedCoupon?.code || undefined,
           savedAddressId,
           paymentMethod,
@@ -314,6 +325,11 @@ export default function CheckoutPage() {
                 </div>
               </fieldset>
 
+              {isDigitalOnly ? (
+                <p className="rounded-xl border border-charcoal/10 bg-[#FAF6F0] p-4 text-xs sm:text-sm text-charcoal-soft">
+                  This order is entirely digital (PDF) — no shipping address is needed. Your download(s) will be available in your account after payment.
+                </p>
+              ) : (
               <fieldset className="space-y-4">
                 <legend className="mb-1 font-serif-display text-lg text-charcoal font-bold">Shipping Address</legend>
                 {user && (
@@ -392,6 +408,7 @@ export default function CheckoutPage() {
                   </label>
                 )}
               </fieldset>
+              )}
 
               <fieldset className="space-y-4">
                 <legend className="mb-1 font-serif-display text-lg text-charcoal font-bold">Payment Method</legend>

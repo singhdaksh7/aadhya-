@@ -126,10 +126,15 @@ export function CartProvider({ children }) {
     if (!user) writeStoredCart(items.map((i) => ({ slug: i.product.slug, quantity: i.quantity })));
   }, [items, isLoading, user]);
 
-  const addItem = async (product, quantity = 1) => {
+  // bookFormat ("PHYSICAL" | "PDF" | null) is part of a cart line's identity
+  // — a book added as Physical and the same book added as PDF are always
+  // two separate lines, matching the server's (productId, variantId,
+  // bookFormat) uniqueness. PDF quantity is always exactly 1.
+  const addItem = async (product, quantity = 1, _variant = null, bookFormat = null) => {
+    const effectiveQuantity = bookFormat === "PDF" ? 1 : quantity;
     if (user && typeof addServerCartItem === "function") {
       try {
-        const result = await addServerCartItem({ slug: product.slug, quantity });
+        const result = await addServerCartItem({ slug: product.slug, quantity: effectiveQuantity, bookFormat });
         if (result && Array.isArray(result.data)) {
           setItems(result.data);
           setIsOpen(true);
@@ -138,22 +143,22 @@ export function CartProvider({ children }) {
       } catch {}
     }
     setItems((prev) => {
-      const existing = prev.find((i) => i.product.slug === product.slug);
-      const max = availableStock(product);
+      const existing = prev.find((i) => i.product.slug === product.slug && (i.bookFormat || null) === (bookFormat || null));
+      const max = bookFormat === "PDF" ? 1 : availableStock(product);
       if (existing) {
-        const nextQuantity = Math.min(existing.quantity + quantity, max);
-        return prev.map((i) => (i.product.slug === product.slug ? { ...i, quantity: nextQuantity } : i));
+        const nextQuantity = bookFormat === "PDF" ? 1 : Math.min(existing.quantity + effectiveQuantity, max);
+        return prev.map((i) => (i === existing ? { ...i, quantity: nextQuantity } : i));
       }
-      return [...prev, { product, quantity: Math.min(quantity, max) }];
+      return [...prev, { product, quantity: Math.min(effectiveQuantity, max), bookFormat }];
     });
     setIsOpen(true);
   };
 
-  const removeItem = async (slug) => {
+  const removeItem = async (slug, bookFormat = null) => {
     if (user && typeof removeServerCartItem === "function") {
-      try { await removeServerCartItem(slug); } catch {}
+      try { await removeServerCartItem(slug, { bookFormat }); } catch {}
     }
-    setItems((prev) => prev.filter((i) => i.product.slug !== slug));
+    setItems((prev) => prev.filter((i) => !(i.product.slug === slug && (i.bookFormat || null) === (bookFormat || null))));
   };
 
   const clearCart = async () => {
@@ -163,11 +168,12 @@ export function CartProvider({ children }) {
     setItems([]);
   };
 
-  const setQuantity = async (slug, quantity) => {
-    if (quantity < 1) return removeItem(slug);
+  const setQuantity = async (slug, quantity, bookFormat = null) => {
+    if (bookFormat === "PDF") return; // PDF lines are always quantity 1, never editable
+    if (quantity < 1) return removeItem(slug, bookFormat);
     if (user && typeof updateServerCartItem === "function") {
       try {
-        const result = await updateServerCartItem(slug, { quantity });
+        const result = await updateServerCartItem(slug, { quantity, bookFormat });
         if (result && Array.isArray(result.data)) {
           setItems(result.data);
           return;
@@ -176,15 +182,24 @@ export function CartProvider({ children }) {
     }
     setItems((prev) =>
       prev.map((i) =>
-        i.product.slug === slug ? { ...i, quantity: Math.min(quantity, availableStock(i.product)) } : i
+        i.product.slug === slug && (i.bookFormat || null) === (bookFormat || null)
+          ? { ...i, quantity: Math.min(quantity, availableStock(i.product)) }
+          : i
       )
     );
   };
 
-  const lineTotal = (item) => {
-    const unit = item.product.salePrice ?? item.product.price;
-    return Number(unit) * item.quantity;
+  // For a book with format options, price comes from the selected
+  // BookFormatOption, not the base Product row.
+  const unitPrice = (item) => {
+    if (item.bookFormat && Array.isArray(item.product.bookFormats)) {
+      const option = item.product.bookFormats.find((o) => o.format === item.bookFormat);
+      if (option) return Number(option.salePrice ?? option.price);
+    }
+    return Number(item.product.salePrice ?? item.product.price);
   };
+
+  const lineTotal = (item) => unitPrice(item) * item.quantity;
 
   const subtotal = useMemo(() => items.reduce((sum, i) => sum + lineTotal(i), 0), [items]);
   const count = useMemo(() => items.reduce((sum, i) => sum + i.quantity, 0), [items]);
@@ -252,6 +267,7 @@ export function CartProvider({ children }) {
         setIsOpen,
         isLoading,
         lineTotal,
+        unitPrice,
         appliedCoupon,
         couponError,
         applyCoupon,

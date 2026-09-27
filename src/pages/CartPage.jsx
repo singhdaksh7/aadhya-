@@ -13,6 +13,7 @@ export default function CartPage() {
     setQuantity,
     subtotal,
     lineTotal,
+    unitPrice,
     appliedCoupon,
     couponError,
     applyCoupon,
@@ -29,8 +30,10 @@ export default function CartPage() {
     setValidating(false);
   };
 
+  // A cart made entirely of digital (PDF) lines needs no shipping.
+  const isDigitalOnly = items.length > 0 && items.every((i) => i.bookFormat === "PDF");
   const discount = appliedCoupon ? appliedCoupon.discountAmount : 0;
-  const shippingFee = subtotal >= freeShippingThreshold || subtotal === 0 ? 0 : standardShippingAmount;
+  const shippingFee = isDigitalOnly ? 0 : (subtotal >= freeShippingThreshold || subtotal === 0 ? 0 : standardShippingAmount);
   const finalTotal = Math.max(0, subtotal - discount) + shippingFee;
 
   return (
@@ -56,10 +59,12 @@ export default function CartPage() {
             {/* Items Table (7 cols) */}
             <div className="lg:col-span-7 space-y-6">
               <div className="divide-y divide-charcoal/10">
-                {items.map(({ product, quantity, variant }) => {
+                {items.map((item) => {
+                  const { product, quantity, variant, bookFormat } = item;
+                  const isPdf = bookFormat === "PDF";
                   const img = product.images?.[0] || product.image || "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?q=80&w=300&auto=format&fit=crop";
                   return (
-                    <div key={`${product.slug}-${variant?.id || "default"}`} className="py-6 flex flex-col sm:flex-row sm:items-center gap-5">
+                    <div key={`${product.slug}-${variant?.id || bookFormat || "default"}`} className="py-6 flex flex-col sm:flex-row sm:items-center gap-5">
                       <img
                         src={img}
                         alt={product.name}
@@ -79,10 +84,13 @@ export default function CartPage() {
                         {variant && (
                           <p className="text-xs text-charcoal-soft">Option: <span className="font-medium">{variant.name}</span></p>
                         )}
-                        <p className="text-xs text-charcoal-soft">{formatInr(product.salePrice ?? product.price)} each</p>
+                        {bookFormat && (
+                          <p className="text-xs text-charcoal-soft">Format: <span className="font-medium">{bookFormat === "PDF" ? "PDF / Digital" : "Physical Book"}</span></p>
+                        )}
+                        <p className="text-xs text-charcoal-soft">{formatInr(unitPrice(item))} each</p>
 
                         <button
-                          onClick={() => removeItem(product.slug)}
+                          onClick={() => removeItem(product.slug, bookFormat)}
                           className="text-xs text-charcoal-soft hover:text-terracotta underline pt-1 block"
                         >
                           Remove item
@@ -90,27 +98,31 @@ export default function CartPage() {
                       </div>
 
                       <div className="flex items-center justify-between sm:justify-end gap-6 pt-2 sm:pt-0">
-                        {/* Quantity Controls */}
-                        <div className="flex items-center rounded-full border border-charcoal/20 bg-white px-3 py-1">
-                          <button
-                            onClick={() => setQuantity(product.slug, quantity - 1)}
-                            className="px-2 text-sm font-bold text-charcoal hover:text-terracotta"
-                          >
-                            −
-                          </button>
-                          <span className="w-6 text-center text-sm font-semibold text-charcoal">{quantity}</span>
-                          <button
-                            onClick={() => setQuantity(product.slug, quantity + 1)}
-                            disabled={product.stockQuantity != null && quantity >= product.stockQuantity}
-                            className="px-2 text-sm font-bold text-charcoal hover:text-terracotta disabled:opacity-30"
-                          >
-                            +
-                          </button>
-                        </div>
+                        {/* Quantity Controls — PDF lines are always exactly 1 */}
+                        {isPdf ? (
+                          <span className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Qty: 1</span>
+                        ) : (
+                          <div className="flex items-center rounded-full border border-charcoal/20 bg-white px-3 py-1">
+                            <button
+                              onClick={() => setQuantity(product.slug, quantity - 1, bookFormat)}
+                              className="px-2 text-sm font-bold text-charcoal hover:text-terracotta"
+                            >
+                              −
+                            </button>
+                            <span className="w-6 text-center text-sm font-semibold text-charcoal">{quantity}</span>
+                            <button
+                              onClick={() => setQuantity(product.slug, quantity + 1, bookFormat)}
+                              disabled={product.stockQuantity != null && quantity >= product.stockQuantity}
+                              className="px-2 text-sm font-bold text-charcoal hover:text-terracotta disabled:opacity-30"
+                            >
+                              +
+                            </button>
+                          </div>
+                        )}
 
                         {/* Line Total */}
                         <span className="text-base font-semibold text-terracotta min-w-[80px] text-right">
-                          {formatInr(lineTotal({ product, quantity }))}
+                          {formatInr(lineTotal(item))}
                         </span>
                       </div>
                     </div>

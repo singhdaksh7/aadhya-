@@ -18,3 +18,19 @@ export const productImageUpload = multer({
   limits: { fileSize: env.uploads.maxFileSizeMb * 1024 * 1024, files: 1 },
   fileFilter,
 });
+
+const PDF_MAX_SIZE_MB = Number(process.env.BOOK_PDF_MAX_FILE_SIZE_MB || 50);
+
+function pdfFileFilter(req, file, cb) {
+  const ext = file.originalname.slice(file.originalname.lastIndexOf(".")).toLowerCase();
+  if (file.mimetype !== "application/pdf" || ext !== ".pdf") {
+    return cb(ApiError.badRequest("Only PDF files are allowed"));
+  }
+  cb(null, true);
+}
+
+export const bookPdfUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: PDF_MAX_SIZE_MB * 1024 * 1024, files: 1 },
+  fileFilter: pdfFileFilter,
+});

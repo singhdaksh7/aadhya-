@@ -12,6 +12,7 @@ const postalCodeSchema = z.string().trim().regex(/^\d{6}$/, "Enter a valid 6-dig
 export const cartItemSchema = z.object({
   slug: z.string().trim().min(1),
   variantId: z.string().uuid().nullable().optional(),
+  bookFormat: z.enum(["PHYSICAL", "PDF"]).nullable().optional(),
   quantity: z.number().int().min(1).max(999),
 });
 
@@ -42,7 +43,10 @@ export const checkoutPreviewSchema = checkoutItemsSchema.extend({
 
 export const createOrderSchema = checkoutItemsSchema.extend({
   customer: customerSchema,
-  shippingAddress: shippingAddressSchema,
+  // Optional at the schema level — a PDF-only cart needs no address. The
+  // real check lives in order.service.js, which throws if an address turns
+  // out to be required (any non-digital line) and none was supplied.
+  shippingAddress: shippingAddressSchema.optional(),
   notes: z.string().trim().max(500).optional().nullable(),
   couponCode: z.string().trim().max(40).optional().nullable(),
   savedAddressId: z.string().uuid().optional(),

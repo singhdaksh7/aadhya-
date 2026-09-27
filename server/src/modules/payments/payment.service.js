@@ -5,6 +5,7 @@ import { ApiError } from "../../utils/ApiError.js";
 import { rupeesToPaise } from "../../utils/money.js";
 import { getRazorpayClient, isRazorpayConfigured } from "./razorpay.client.js";
 import { sendOrderConfirmationEmail } from "../email/email.service.js";
+import { ensureDigitalDownloadForOrderItem } from "../downloads/download.service.js";
 
 // POST /api/orders/:orderId/payment — creates (or reuses) the Razorpay order
 // for an internal order. Idempotent: calling it twice for the same pending
@@ -130,6 +131,14 @@ export async function finalizePaidPayment({ providerOrderId, providerPaymentId, 
         const changed = await tx.product.updateMany({ where: { id: item.productId, trackInventory: true, stockQuantity: { gte: item.quantity } }, data: { stockQuantity: { decrement: item.quantity } } });
         if (!changed.count) throw ApiError.conflict("Product stock changed before payment could be finalized.");
       }
+    }
+
+    // Digital entitlements are created only here — inside the same
+    // compare-and-swap transaction that only ever runs once per order
+    // (the `cas.count === 0` branch above short-circuits before reaching
+    // this point on a webhook/verify retry) — so this is idempotent too.
+    for (const item of order.items) {
+      await ensureDigitalDownloadForOrderItem(tx, item, order);
     }
 
     if (order.couponCode) {

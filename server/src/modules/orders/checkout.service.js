@@ -11,11 +11,11 @@ export async function priceCartItems(requestedItems) {
   const slugs = requestedItems.map((i) => i.slug);
   const products = await prisma.product.findMany({
     where: { slug: { in: slugs } },
-    include: { images: { orderBy: { sortOrder: "asc" }, take: 1 }, variants: { where: { isActive: true } } },
+    include: { images: { orderBy: { sortOrder: "asc" }, take: 1 }, variants: { where: { isActive: true } }, bookFormats: true },
   });
   const bySlug = new Map(products.map((p) => [p.slug, p]));
 
-  const priced = requestedItems.map((requested) => {
+  const priced = await Promise.all(requestedItems.map(async (requested) => {
     const product = bySlug.get(requested.slug);
 
     if (!product || !product.isActive) {
@@ -25,6 +25,74 @@ export async function priceCartItems(requestedItems) {
         issue: "unavailable",
         message: `"${requested.slug}" is no longer available.`,
         requestedQuantity: requested.quantity,
+      };
+    }
+
+    // Book with format options: price/stock/quantity rules come from the
+    // BookFormatOption, not the base Product row. PDF quantity is always 1.
+    if (product.productType === "BOOK" && product.bookFormats?.length) {
+      const requestedFormat = requested.bookFormat;
+      if (!requestedFormat) {
+        return { slug: requested.slug, ok: false, issue: "format_required", message: "Select a format (Physical or PDF) for this book.", requestedQuantity: requested.quantity };
+      }
+      const option = product.bookFormats.find((o) => o.format === requestedFormat && o.isActive);
+      if (!option) {
+        return { slug: requested.slug, bookFormat: requestedFormat, ok: false, issue: "invalid_format", message: "Selected format is unavailable for this book.", requestedQuantity: requested.quantity };
+      }
+
+      if (requestedFormat === "PDF") {
+        const quantity = 1;
+        const unitPrice = round2(option.salePrice ?? option.price);
+        return {
+          slug: product.slug,
+          ok: true,
+          issue: requested.quantity > 1 ? "digital_quantity_capped" : null,
+          message: requested.quantity > 1 ? "Digital books are limited to one copy per order." : null,
+          product: summarizeProduct(product),
+          productId: product.id,
+          variantId: null,
+          variant: null,
+          productType: product.productType,
+          bookFormat: "PDF",
+          bookFormatSku: option.sku,
+          bookFormatPdfName: option.pdfOriginalName,
+          unitPrice,
+          requestedQuantity: requested.quantity,
+          quantity,
+          lineTotal: round2(unitPrice * quantity),
+          stockQuantity: null,
+          trackInventory: false,
+          isDigital: true,
+        };
+      }
+
+      // PHYSICAL format
+      const available = option.trackInventory === false ? Infinity : (option.stockQuantity ?? 0);
+      if (available <= 0) {
+        return { slug: requested.slug, bookFormat: "PHYSICAL", ok: false, issue: "out_of_stock", message: `"${product.name}" (Physical) is out of stock.`, requestedQuantity: requested.quantity, product: summarizeProduct(product) };
+      }
+      const quantity = Math.min(requested.quantity, available);
+      const quantityAdjusted = quantity !== requested.quantity;
+      const unitPrice = round2(option.salePrice ?? option.price);
+      return {
+        slug: product.slug,
+        ok: true,
+        issue: quantityAdjusted ? "stock_limited" : null,
+        message: quantityAdjusted ? `Only ${available} unit${available === 1 ? "" : "s"} available — quantity was adjusted.` : null,
+        product: summarizeProduct(product),
+        productId: product.id,
+        variantId: null,
+        variant: null,
+        productType: product.productType,
+        bookFormat: "PHYSICAL",
+        bookFormatSku: option.sku,
+        unitPrice,
+        requestedQuantity: requested.quantity,
+        quantity,
+        lineTotal: round2(unitPrice * quantity),
+        stockQuantity: Number.isFinite(available) ? available : null,
+        trackInventory: option.trackInventory !== false,
+        isDigital: false,
       };
     }
 
@@ -59,14 +127,16 @@ export async function priceCartItems(requestedItems) {
       variantId: variant?.id ?? null,
       variant: variant ? { id: variant.id, name: variant.name, sku: variant.sku, attributes: variant.attributes } : null,
       productType: product.productType,
+      bookFormat: null,
       unitPrice,
       requestedQuantity: requested.quantity,
       quantity,
       lineTotal: round2(unitPrice * quantity),
       stockQuantity: Number.isFinite(available) ? available : null,
       trackInventory: variant ? true : product.trackInventory,
+      isDigital: false,
     };
-  });
+  }));
 
   return priced;
 }
@@ -122,11 +192,19 @@ export function computeShipping(subtotal, shippingConfig = null) {
   return subtotal >= freeThreshold ? 0 : standardAmount;
 }
 
+// A cart made entirely of digital (PDF) lines needs no shipping and no
+// physical address — checkout.controller/order.service use this same flag
+// to decide whether an address is required.
+export function isDigitalOnly(pricedItems) {
+  const validItems = pricedItems.filter((i) => i.ok);
+  return validItems.length > 0 && validItems.every((i) => i.isDigital);
+}
+
 export async function computeTotals(pricedItems, couponDiscount = 0) {
   const validItems = pricedItems.filter((i) => i.ok);
   const subtotal = round2(validItems.reduce((sum, i) => sum + i.lineTotal, 0));
   const shippingConfig = await getShippingConfig();
-  const shipping = round2(computeShipping(subtotal, shippingConfig));
+  const shipping = isDigitalOnly(pricedItems) ? 0 : round2(computeShipping(subtotal, shippingConfig));
   const tax = 0;
   const discount = round2(couponDiscount);
   const total = round2(Math.max(0, subtotal + shipping + tax - discount));

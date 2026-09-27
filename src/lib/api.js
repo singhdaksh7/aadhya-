@@ -221,6 +221,36 @@ export function adminReorderImages(productId, order) {
   return api.post(`/admin/products/${productId}/images/reorder`, { order }, { auth: "admin" });
 }
 
+// --- Book formats (PHYSICAL / PDF fulfilment for BOOK products) ---
+export function fetchBookFormats(productId) {
+  return api.get(`/products/${productId}/book-formats`);
+}
+export function adminListBookFormats(productId) {
+  return api.get(`/admin/products/${productId}/book-formats`, { auth: "admin" });
+}
+export function adminUpsertBookFormat(productId, format, data) {
+  return api.put(`/admin/products/${productId}/book-formats/${format}`, data, { auth: "admin" });
+}
+export function adminDeleteBookFormat(productId, format) {
+  return api.delete(`/admin/products/${productId}/book-formats/${format}`, { auth: "admin" });
+}
+export function adminUploadBookFormatPdf(productId, file) {
+  const form = new FormData();
+  form.append("pdf", file);
+  return request(`/admin/products/${productId}/book-formats/pdf`, { method: "POST", body: form, isForm: true, auth: "admin" });
+}
+export function adminRemoveBookFormatPdf(productId) {
+  return api.delete(`/admin/products/${productId}/book-formats/pdf`, { auth: "admin" });
+}
+
+// --- Digital downloads ---
+export function accountDownloads() { return api.get("/account/downloads", { auth: true }); }
+export function reissueAccountDownloadLink(orderItemId) { return api.post(`/account/downloads/${orderItemId}/link`, undefined, { auth: true }); }
+export function guestOrderDownloads(orderNumber, accessToken) { return api.post("/orders/downloads", { orderNumber, accessToken }); }
+export function reissueGuestDownloadLink(orderItemId, orderNumber, accessToken) {
+  return api.post(`/orders/downloads/${orderItemId}/link`, { orderNumber, accessToken });
+}
+
 export function adminListCategories(includeInactive = true) {
   return api.get(`/admin/categories?includeInactive=${includeInactive}`, { auth: "admin" });
 }
@@ -349,7 +379,7 @@ export function serverCart() { return normalizedCart(api.get("/cart",{auth:true}
 export function mergeCart(items) { return normalizedCart(api.post("/cart/merge",{items},{auth:true})); }
 export function addServerCartItem(data) { return normalizedCart(api.post("/cart/items",data,{auth:true})); }
 export function updateServerCartItem(slug,data) { return normalizedCart(api.patch(`/cart/items/${encodeURIComponent(slug)}`,data,{auth:true})); }
-export function removeServerCartItem(slug) { return api.delete(`/cart/items/${encodeURIComponent(slug)}`,{auth:true}); }
+export function removeServerCartItem(slug, data) { return request(`/cart/items/${encodeURIComponent(slug)}`, { method: "DELETE", body: data, auth: true }); }
 export function clearServerCart() { return api.delete("/cart",{auth:true}); }
 
 export function fetchSiteSettings() { return api.get("/settings"); }

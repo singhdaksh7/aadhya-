@@ -27,6 +27,8 @@ export default function ProductDetail() {
   const [addedNotice, setAddedNotice] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
   const [activeCoupons, setActiveCoupons] = useState([]);
+  const [bookFormats, setBookFormats] = useState([]);
+  const [selectedFormat, setSelectedFormat] = useState(null);
 
   const wishlisted = product ? isInWishlist(product.id) : false;
 
@@ -59,6 +61,25 @@ export default function ProductDetail() {
       setProduct(prod);
       if (prod.variants?.length) {
         setSelectedVariant(prod.variants[0]);
+      }
+
+      if (prod.productType === "BOOK") {
+        try {
+          const { fetchBookFormats } = await import("../../lib/api");
+          const formatsRes = await fetchBookFormats(prod.id);
+          const formats = formatsRes.data || [];
+          if (active) {
+            setBookFormats(formats);
+            // Preselect when only one format exists; otherwise the customer
+            // must actively choose between Physical and PDF.
+            setSelectedFormat(formats.length === 1 ? formats[0].format : null);
+          }
+        } catch {
+          if (active) { setBookFormats([]); setSelectedFormat(null); }
+        }
+      } else {
+        setBookFormats([]);
+        setSelectedFormat(null);
       }
 
       // Load related products from same category or collection
@@ -106,28 +127,35 @@ export default function ProductDetail() {
     ? product.images
     : [product.image || "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?q=80&w=1000&auto=format&fit=crop"];
 
-  const inCart = items.find((i) => i.product.slug === product.slug);
-  const stockQty = product.stockQuantity ?? 10;
-  const outOfStock = product.inStock === false || stockQty <= 0;
-  const maxQty = Math.max(0, stockQty - (inCart?.quantity || 0));
+  const hasFormats = bookFormats.length > 0;
+  const activeFormatOption = hasFormats ? bookFormats.find((f) => f.format === selectedFormat) : null;
+  const inCart = items.find((i) => i.product.slug === product.slug && (i.bookFormat || null) === (selectedFormat || null));
+  const stockQty = hasFormats
+    ? (activeFormatOption?.format === "PHYSICAL" ? (activeFormatOption.inStock ? 999 : 0) : 999)
+    : (product.stockQuantity ?? 10);
+  const formatSelectionMissing = hasFormats && !selectedFormat;
+  const outOfStock = !hasFormats && (product.inStock === false || stockQty <= 0);
+  const maxQty = selectedFormat === "PDF" ? 1 : Math.max(0, stockQty - (inCart?.quantity || 0));
 
-  const price = Number(product.price);
-  const salePrice = product.salePrice ? Number(product.salePrice) : null;
+  const price = activeFormatOption ? activeFormatOption.price : Number(product.price);
+  const salePrice = activeFormatOption
+    ? (activeFormatOption.salePrice ?? null)
+    : (product.salePrice ? Number(product.salePrice) : null);
   const onSale = salePrice != null && salePrice < price;
   const discountPercent = onSale ? Math.round(((price - salePrice) / price) * 100) : 0;
 
-  const isBook = product.categorySlug === "books" || product.isbn;
+  const isBook = product.categorySlug === "books" || product.isbn || product.productType === "BOOK";
 
   const handleAddToCart = () => {
-    if (outOfStock || maxQty <= 0) return;
-    addItem(product, quantity, selectedVariant);
+    if (outOfStock || maxQty <= 0 || formatSelectionMissing) return;
+    addItem(product, selectedFormat === "PDF" ? 1 : quantity, selectedVariant, hasFormats ? selectedFormat : null);
     setAddedNotice(true);
     setTimeout(() => setAddedNotice(false), 2000);
   };
 
   const handleBuyNow = () => {
-    if (outOfStock || maxQty <= 0) return;
-    addItem(product, quantity, selectedVariant);
+    if (outOfStock || maxQty <= 0 || formatSelectionMissing) return;
+    addItem(product, selectedFormat === "PDF" ? 1 : quantity, selectedVariant, hasFormats ? selectedFormat : null);
     setCartDrawerOpen(false);
     navigate("/checkout");
   };
@@ -273,8 +301,34 @@ export default function ProductDetail() {
               </div>
             )}
 
+            {/* Book Format Selector — Physical vs PDF/Digital */}
+            {hasFormats && (
+              <div className="space-y-2">
+                <label className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Choose Format</label>
+                <div className="flex flex-wrap gap-2">
+                  {bookFormats.map((f) => (
+                    <button
+                      key={f.format}
+                      type="button"
+                      onClick={() => setSelectedFormat(f.format)}
+                      className={`rounded-full px-4 py-2 text-xs font-medium border transition ${
+                        selectedFormat === f.format
+                          ? "border-terracotta bg-terracotta text-white"
+                          : "border-charcoal/20 bg-white text-charcoal hover:border-charcoal"
+                      }`}
+                    >
+                      {f.format === "PHYSICAL" ? "Physical Book" : "PDF / Digital"} — {formatInr(f.effectivePrice)}
+                    </button>
+                  ))}
+                </div>
+                {formatSelectionMissing && (
+                  <p className="text-xs text-terracotta">Select a format to continue.</p>
+                )}
+              </div>
+            )}
+
             {/* Variant Selector */}
-            {product.variants?.length > 0 && (
+            {!hasFormats && product.variants?.length > 0 && (
               <div className="space-y-2">
                 <label className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Select Finish / Option</label>
                 <div className="flex flex-wrap gap-2">
@@ -298,29 +352,34 @@ export default function ProductDetail() {
             {/* Quantity & CTAs */}
             {!outOfStock && (
               <div className="space-y-4 pt-2">
-                <div className="flex items-center gap-4">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Quantity</span>
-                  <div className="flex items-center rounded-full border border-charcoal/20 bg-white px-3 py-1">
-                    <button
-                      onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                      className="px-2 text-base font-bold text-charcoal hover:text-terracotta"
-                    >
-                      −
-                    </button>
-                    <span className="w-8 text-center text-sm font-semibold text-charcoal">{quantity}</span>
-                    <button
-                      onClick={() => setQuantity((q) => Math.min(stockQty, q + 1))}
-                      className="px-2 text-base font-bold text-charcoal hover:text-terracotta"
-                    >
-                      +
-                    </button>
+                {selectedFormat !== "PDF" && (
+                  <div className="flex items-center gap-4">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Quantity</span>
+                    <div className="flex items-center rounded-full border border-charcoal/20 bg-white px-3 py-1">
+                      <button
+                        onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                        className="px-2 text-base font-bold text-charcoal hover:text-terracotta"
+                      >
+                        −
+                      </button>
+                      <span className="w-8 text-center text-sm font-semibold text-charcoal">{quantity}</span>
+                      <button
+                        onClick={() => setQuantity((q) => Math.min(stockQty, q + 1))}
+                        className="px-2 text-base font-bold text-charcoal hover:text-terracotta"
+                      >
+                        +
+                      </button>
+                    </div>
                   </div>
-                </div>
+                )}
+                {selectedFormat === "PDF" && (
+                  <p className="text-xs text-charcoal-soft">Digital books are limited to one copy per order.</p>
+                )}
 
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     onClick={handleAddToCart}
-                    disabled={maxQty <= 0}
+                    disabled={maxQty <= 0 || formatSelectionMissing}
                     className={`flex items-center justify-center gap-2 rounded-full py-3.5 text-xs font-semibold uppercase tracking-wider transition shadow-xs ${
                       addedNotice
                         ? "bg-sage text-white"

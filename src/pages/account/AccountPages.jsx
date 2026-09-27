@@ -21,6 +21,8 @@ import {
   fetchCustomerReviews,
   updateCustomerReview,
   deleteCustomerReview,
+  accountDownloads,
+  reissueAccountDownloadLink,
 } from "../../lib/api";
 import { formatInr } from "../../lib/format";
 
@@ -47,6 +49,7 @@ function AccountNav() {
     { path: "/account/addresses", label: "Addresses" },
     { path: "/account/wishlist", label: "Wishlist" },
     { path: "/account/reviews", label: "Reviews" },
+    { path: "/account/downloads", label: "Downloads" },
   ];
   return (
     <div className="flex gap-5 overflow-x-auto border-b border-charcoal/10 text-xs font-semibold uppercase tracking-wider no-scrollbar">
@@ -868,6 +871,78 @@ export function AccountReviews() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function AccountDownloads() {
+  const [downloads, setDownloads] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [busyId, setBusyId] = useState(null);
+
+  useEffect(() => {
+    accountDownloads()
+      .then((res) => setDownloads(res.data || []))
+      .catch(() => setError("Could not load your downloads."))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleDownload = async (item) => {
+    setBusyId(item.orderItemId || item.orderNumber + item.pdfFilename);
+    try {
+      const res = await reissueAccountDownloadLink(item.orderItemId);
+      const url = `${(import.meta.env.VITE_API_URL || "/api").replace(/\/$/, "")}/downloads/${res.data.token}`;
+      window.location.href = url;
+    } catch (err) {
+      setError(err.message || "Could not start the download.");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  return (
+    <div className="mx-auto max-w-4xl px-5 py-12 sm:px-8 space-y-8">
+      <SectionHeading eyebrow="Customer Account" title="My Downloads" />
+      <AccountNav />
+
+      {loading ? (
+        <p className="text-xs text-charcoal-soft">Loading downloads...</p>
+      ) : error ? (
+        <p className="rounded-xl bg-terracotta/10 p-4 text-sm text-terracotta">{error}</p>
+      ) : downloads.length === 0 ? (
+        <div className="rounded-3xl border border-dashed border-charcoal/20 bg-ivory-dark/30 p-12 text-center">
+          <p className="text-sm text-charcoal-soft">You don't have any digital books yet.</p>
+          <Link to="/books" className="mt-4 inline-block rounded-full bg-terracotta px-6 py-2.5 text-xs font-semibold uppercase tracking-wider text-white">
+            Browse Books
+          </Link>
+        </div>
+      ) : (
+        <div className="divide-y divide-charcoal/10 rounded-2xl border border-charcoal/10">
+          {downloads.map((d) => {
+            const disabled = d.paymentStatus !== "PAID" || d.expired || d.exhausted;
+            const reason = d.paymentStatus !== "PAID" ? "Payment pending" : d.expired ? "Link expired" : d.exhausted ? "Download limit reached" : null;
+            return (
+              <div key={d.orderItemId || `${d.orderNumber}-${d.pdfFilename}`} className="flex flex-col gap-2 p-5 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="font-medium text-charcoal">{d.productTitle}</p>
+                  <p className="text-xs text-charcoal-soft">{d.pdfFilename}</p>
+                  <p className="mt-1 text-xs text-charcoal-soft">
+                    Downloads used: {d.downloadCount}{d.maxDownloads != null ? ` / ${d.maxDownloads}` : ""}
+                    {d.expiresAt ? ` · Expires ${new Date(d.expiresAt).toLocaleDateString("en-IN")}` : ""}
+                  </p>
+                </div>
+                <div className="shrink-0">
+                  <Button type="button" disabled={disabled || busyId} onClick={() => handleDownload(d)}>
+                    {busyId ? "Preparing…" : "Download"}
+                  </Button>
+                  {disabled && reason && <p className="mt-1 text-xs text-terracotta text-right">{reason}</p>}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

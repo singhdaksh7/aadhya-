@@ -1,6 +1,6 @@
 import { prisma } from "../../lib/prisma.js";
 import { ApiError } from "../../utils/ApiError.js";
-import { priceCartItemsOrThrow, computeTotals } from "./checkout.service.js";
+import { priceCartItemsOrThrow, computeTotals, isDigitalOnly } from "./checkout.service.js";
 import { generateToken, hashToken, safeCompareHex } from "../../utils/secureToken.js";
 import crypto from "node:crypto";
 
@@ -44,13 +44,21 @@ export async function createOrder({ customer, shippingAddress, items, notes, cou
     throw ApiError.badRequest("Online payment via Razorpay is currently disabled.");
   }
 
-  if (savedAddressId) {
-    if (!customerId) throw ApiError.forbidden("Sign in to use a saved address.");
-    const address = await prisma.address.findFirst({ where: { id: savedAddressId, customerId } });
-    if (!address) throw ApiError.notFound("Address not found");
-    shippingAddress = address;
-  }
   const pricedItems = await priceCartItemsOrThrow(items);
+  const digitalOnly = isDigitalOnly(pricedItems);
+
+  // Mixed/physical carts still require a real address; a PDF-only cart has
+  // nothing to ship, so no address is collected or persisted for it.
+  if (!digitalOnly) {
+    if (savedAddressId) {
+      if (!customerId) throw ApiError.forbidden("Sign in to use a saved address.");
+      const address = await prisma.address.findFirst({ where: { id: savedAddressId, customerId } });
+      if (!address) throw ApiError.notFound("Address not found");
+      shippingAddress = address;
+    }
+    if (!shippingAddress) throw ApiError.badRequest("A shipping address is required for this order.");
+  }
+
   let couponDiscount = 0;
   let validatedCouponCode = null;
 
@@ -116,21 +124,29 @@ export async function createOrder({ customer, shippingAddress, items, notes, cou
           variantSkuSnapshot: item.variant?.sku ?? null,
           variantAttributesSnapshot: item.variant?.attributes ?? undefined,
           variantPriceSnapshot: item.variant ? item.unitPrice : null,
+          bookFormatSnapshot: item.bookFormat ?? null,
+          bookFormatSkuSnapshot: item.bookFormatSku ?? null,
+          bookFormatPriceSnapshot: item.bookFormat ? item.unitPrice : null,
+          bookFormatPdfNameSnapshot: item.bookFormatPdfName ?? null,
         })),
       }),
-      tx.orderAddress.create({
-        data: {
-          orderId: created.id,
-          fullName: shippingAddress.fullName,
-          phone: shippingAddress.phone,
-          addressLine1: shippingAddress.addressLine1,
-          addressLine2: shippingAddress.addressLine2 || null,
-          city: shippingAddress.city,
-          state: shippingAddress.state,
-          postalCode: shippingAddress.postalCode,
-          country: shippingAddress.country || "India",
-        },
-      }),
+      ...(digitalOnly
+        ? []
+        : [
+            tx.orderAddress.create({
+              data: {
+                orderId: created.id,
+                fullName: shippingAddress.fullName,
+                phone: shippingAddress.phone,
+                addressLine1: shippingAddress.addressLine1,
+                addressLine2: shippingAddress.addressLine2 || null,
+                city: shippingAddress.city,
+                state: shippingAddress.state,
+                postalCode: shippingAddress.postalCode,
+                country: shippingAddress.country || "India",
+              },
+            }),
+          ]),
       tx.payment.create({
         data: {
           orderId: created.id,
