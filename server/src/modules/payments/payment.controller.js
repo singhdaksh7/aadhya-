@@ -11,12 +11,12 @@ import {
 } from "./payment.service.js";
 
 export const createPaymentOrder = asyncHandler(async (req, res) => {
-  const options = await createRazorpayOrderForOrder(req.params.orderId);
+  const options = await createRazorpayOrderForOrder(req.params.orderId, req.customer?.id);
   ok(res, options);
 });
 
 export const retryPayment = asyncHandler(async (req, res) => {
-  const options = await retryFailedPayment(req.params.orderId);
+  const options = await retryFailedPayment(req.params.orderId, req.customer?.id);
   ok(res, options);
 });
 

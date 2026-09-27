@@ -3,6 +3,7 @@ import { z } from "zod";
 import { asyncHandler } from "../../utils/asyncHandler.js";
 import { ok } from "../../utils/apiResponse.js";
 import { requireCustomer } from "../../middleware/customerAuth.js";
+import { downloadLimiter } from "../../middleware/rateLimiters.js";
 import {
   resolveDownload,
   listCustomerDownloads,
@@ -16,6 +17,7 @@ import {
 export const publicDownloadRouter = Router();
 publicDownloadRouter.get(
   "/:token",
+  downloadLimiter,
   asyncHandler(async (req, res) => {
     const { stream, size, filename } = await resolveDownload(req.params.token);
     res.setHeader("Content-Type", "application/pdf");
@@ -44,6 +46,7 @@ export const guestDownloadRouter = Router();
 const guestSchema = z.object({ orderNumber: z.string().trim().min(1), accessToken: z.string().trim().min(1) });
 guestDownloadRouter.post(
   "/",
+  downloadLimiter,
   asyncHandler(async (req, res) => {
     const { orderNumber, accessToken } = guestSchema.parse(req.body);
     ok(res, await listGuestOrderDownloads(orderNumber, accessToken));
@@ -51,6 +54,7 @@ guestDownloadRouter.post(
 );
 guestDownloadRouter.post(
   "/:orderItemId/link",
+  downloadLimiter,
   asyncHandler(async (req, res) => {
     const { orderNumber, accessToken } = guestSchema.parse(req.body);
     const token = await reissueGuestDownloadLink(orderNumber, accessToken, req.params.orderItemId);

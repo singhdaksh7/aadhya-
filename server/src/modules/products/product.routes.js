@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { requireAdmin } from "../../middleware/adminAuth.js";
-import { productImageUpload, bookPdfUpload } from "../uploads/upload.middleware.js";
+import { productImageUpload, bookPdfUpload, verifyImageContent, verifyPdfContent } from "../uploads/upload.middleware.js";
 import {
   listPublicProducts,
   getPublicProductBySlug,
@@ -41,7 +41,7 @@ adminProductRouter.post("/:id/variants", createAdminVariant);
 adminProductRouter.patch("/:id/variants/:variantId", updateAdminVariant);
 adminProductRouter.delete("/:id/variants/:variantId", deleteAdminVariant);
 
-adminProductRouter.post("/:id/images", productImageUpload.single("image"), uploadProductImage);
+adminProductRouter.post("/:id/images", productImageUpload.single("image"), verifyImageContent, uploadProductImage);
 adminProductRouter.delete("/:id/images/:imageId", deleteProductImage);
 adminProductRouter.post("/:id/images/:imageId/primary", setPrimaryProductImage);
 adminProductRouter.post("/:id/images/reorder", reorderProductImages);
@@ -49,5 +49,5 @@ adminProductRouter.post("/:id/images/reorder", reorderProductImages);
 adminProductRouter.get("/:id/book-formats", listBookFormats);
 adminProductRouter.put("/:id/book-formats/:format", upsertBookFormat);
 adminProductRouter.delete("/:id/book-formats/:format", deleteBookFormat);
-adminProductRouter.post("/:id/book-formats/pdf", bookPdfUpload.single("pdf"), uploadBookFormatPdf);
+adminProductRouter.post("/:id/book-formats/pdf", bookPdfUpload.single("pdf"), verifyPdfContent, uploadBookFormatPdf);
 adminProductRouter.delete("/:id/book-formats/pdf", removeBookFormatPdf);

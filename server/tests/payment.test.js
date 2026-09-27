@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterAll } from "vitest";
 import crypto from "node:crypto";
 import request from "supertest";
-import { resetDb, seedTestProduct, VALID_CUSTOMER, VALID_ADDRESS } from "./helpers.js";
+import { resetDb, seedTestProduct, registerCustomer, VALID_CUSTOMER, VALID_ADDRESS } from "./helpers.js";
 import { prisma } from "../src/lib/prisma.js";
 import { env } from "../src/config/env.js";
 
@@ -66,6 +66,44 @@ describe("Razorpay order creation", () => {
 
     const payment = await prisma.payment.findFirst({ where: { orderId } });
     expect(payment.providerOrderId).toBe(res.body.data.razorpayOrderId);
+  });
+
+  it("refuses to create/retry a payment order for an account-linked order on behalf of a different customer (IDOR guard)", async () => {
+    const owner = await registerCustomer(app, { email: "owner@test.local" });
+    const attacker = await registerCustomer(app, { email: "attacker@test.local" });
+    const product = await seedTestProduct({ slug: "idor-payment-product", price: 500, stockQuantity: 10 });
+
+    const orderRes = await request(app)
+      .post("/api/orders")
+      .set("Authorization", `Bearer ${owner.accessToken}`)
+      .send({
+        items: [{ slug: product.slug, quantity: 1 }],
+        customer: { name: owner.customer.name, email: owner.customer.email, phone: "9876543210" },
+        shippingAddress: VALID_ADDRESS,
+      });
+    expect(orderRes.status).toBe(201);
+    const orderId = orderRes.body.data.orderId;
+
+    // No auth at all — must not be able to touch someone else's account-linked order.
+    const anon = await request(app).post(`/api/orders/${orderId}/payment`);
+    expect(anon.status).toBe(404);
+
+    // Authenticated as a *different* customer — same result.
+    const otherCustomer = await request(app)
+      .post(`/api/orders/${orderId}/payment`)
+      .set("Authorization", `Bearer ${attacker.accessToken}`);
+    expect(otherCustomer.status).toBe(404);
+
+    const retryAsOther = await request(app)
+      .post(`/api/orders/${orderId}/payment/retry`)
+      .set("Authorization", `Bearer ${attacker.accessToken}`);
+    expect(retryAsOther.status).toBe(404);
+
+    // The rightful owner can still pay.
+    const asOwner = await request(app)
+      .post(`/api/orders/${orderId}/payment`)
+      .set("Authorization", `Bearer ${owner.accessToken}`);
+    expect(asOwner.status).toBe(200);
   });
 
   it("reuses the existing provider order instead of creating a second one", async () => {

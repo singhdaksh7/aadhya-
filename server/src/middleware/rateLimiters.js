@@ -76,6 +76,29 @@ export const analyticsLimiter = rateLimit({
   skip: skipInTest,
 });
 
+// Token-refresh endpoint doesn't take a password but is still a credential
+// exchange worth throttling against brute-force/enumeration attempts.
+export const refreshLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: { message: "Too many session refresh attempts. Try again later." } },
+  skip: skipInTest,
+});
+
+// Download token endpoint: the token itself is the credential (192-bit,
+// hashed at rest), but still worth throttling to slow down brute-force
+// guessing / automated scraping of entitlement counters.
+export const downloadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: { message: "Too many download attempts. Try again later." } },
+  skip: skipInTest,
+});
+
 export const reviewLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 20,

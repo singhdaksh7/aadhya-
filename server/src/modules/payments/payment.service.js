@@ -12,7 +12,7 @@ import { ensureDigitalDownloadForOrderItem } from "../downloads/download.service
 // POST /api/orders/:orderId/payment — creates (or reuses) the Razorpay order
 // for an internal order. Idempotent: calling it twice for the same pending
 // order returns the same provider order id instead of creating a second one.
-export async function createRazorpayOrderForOrder(orderId) {
+export async function createRazorpayOrderForOrder(orderId, requestingCustomerId) {
   const paymentSettingRow = await prisma.siteSetting.findUnique({ where: { key: "payments" } });
   if (paymentSettingRow?.value?.razorpayEnabled === false) {
     throw ApiError.badRequest("Online payment via Razorpay is currently disabled.");
@@ -23,6 +23,14 @@ export async function createRazorpayOrderForOrder(orderId) {
     include: { payments: { orderBy: { createdAt: "desc" }, take: 1 } },
   });
   if (!order) throw ApiError.notFound("Order not found");
+  // If this order is tied to an account, only that account may initiate/
+  // retry payment on it — otherwise a guessed/leaked order id would let
+  // anyone mint Razorpay checkout options (and see order amount) for
+  // someone else's order. Guest (no customerId) orders are unauthenticated
+  // by design at this step since checkout itself is guest-accessible.
+  if (order.customerId && order.customerId !== requestingCustomerId) {
+    throw ApiError.notFound("Order not found");
+  }
 
   const payment = order.payments[0];
   if (!payment) throw ApiError.badRequest("This order has no payment record.");
@@ -210,12 +218,15 @@ export async function markPaymentFailed({ providerOrderId }) {
 // provider order id so createRazorpayOrderForOrder mints a fresh Razorpay
 // order, and resets both payment and order back to PENDING. Refuses to
 // touch anything that is already PAID.
-export async function retryFailedPayment(orderId) {
+export async function retryFailedPayment(orderId, requestingCustomerId) {
   const order = await prisma.order.findUnique({
     where: { id: orderId },
     include: { payments: { orderBy: { createdAt: "desc" }, take: 1 } },
   });
   if (!order) throw ApiError.notFound("Order not found");
+  if (order.customerId && order.customerId !== requestingCustomerId) {
+    throw ApiError.notFound("Order not found");
+  }
   if (order.paymentStatus === "PAID") throw ApiError.conflict("This order has already been paid.");
 
   const payment = order.payments[0];
@@ -232,5 +243,5 @@ export async function retryFailedPayment(orderId) {
     }),
   ]);
 
-  return createRazorpayOrderForOrder(orderId);
+  return createRazorpayOrderForOrder(orderId, requestingCustomerId);
 }
