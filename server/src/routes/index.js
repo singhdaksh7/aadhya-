@@ -34,6 +34,7 @@ import notificationRouter from "../modules/notifications/notification.routes.js"
 import { publicAnalyticsRouter, adminAnalyticsRouter } from "../modules/analytics/analytics.routes.js";
 import { publicSearchRouter } from "../modules/search/search.routes.js";
 import { adminShippingRouter } from "../modules/shipping/shipping.routes.js";
+import { publicDownloadRouter, customerDownloadRouter, guestDownloadRouter } from "../modules/downloads/download.routes.js";
 
 const router = Router();
 
@@ -85,6 +86,9 @@ router.use("/account", profileRouter);
 router.use("/account", accountRouter);
 router.use("/cart", cartRouter);
 router.use("/payments/razorpay", razorpayVerifyRouter);
+router.use("/downloads", publicDownloadRouter);
+router.use("/account/downloads", customerDownloadRouter);
+router.use("/orders/downloads", guestDownloadRouter);
 // POST /api/webhooks/razorpay is mounted directly on the app in app.js,
 // ahead of express.json(), because signature verification needs the raw body.
 

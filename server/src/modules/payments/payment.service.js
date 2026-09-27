@@ -7,6 +7,7 @@ import { getRazorpayClient, isRazorpayConfigured } from "./razorpay.client.js";
 import { sendOrderConfirmationEmail } from "../email/email.service.js";
 import { recordPurchaseEvent } from "../analytics/analytics.service.js";
 import { decrementStockForOrder } from "../orders/stock.js";
+import { ensureDigitalDownloadForOrderItem } from "../downloads/download.service.js";
 
 // POST /api/orders/:orderId/payment — creates (or reuses) the Razorpay order
 // for an internal order. Idempotent: calling it twice for the same pending
@@ -140,6 +141,14 @@ export async function finalizePaidPayment({ providerOrderId, providerPaymentId, 
     // second independent guard) never decrements twice.
     if (!order.stockDecrementedAt) {
       await decrementStockForOrder(tx, order);
+    }
+
+    // Digital entitlements are created only here — inside the same
+    // compare-and-swap transaction that only ever runs once per order
+    // (the `cas.count === 0` branch above short-circuits before reaching
+    // this point on a webhook/verify retry) — so this is idempotent too.
+    for (const item of order.items) {
+      await ensureDigitalDownloadForOrderItem(tx, item, order);
     }
 
     if (order.couponCode) {

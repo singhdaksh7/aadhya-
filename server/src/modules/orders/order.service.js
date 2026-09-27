@@ -1,6 +1,6 @@
 import { prisma } from "../../lib/prisma.js";
 import { ApiError } from "../../utils/ApiError.js";
-import { priceCartItemsOrThrow, computeTotals } from "./checkout.service.js";
+import { priceCartItemsOrThrow, computeTotals, isDigitalOnly } from "./checkout.service.js";
 import { generateToken, hashToken, safeCompareHex } from "../../utils/secureToken.js";
 import { assertTransition } from "./orderStatus.js";
 import { assertCodEligible } from "../shipping/shipping.service.js";
@@ -68,28 +68,36 @@ export async function createOrder({
     throw ApiError.badRequest("Online payment via Razorpay is currently disabled.");
   }
 
-  if (savedAddressId) {
-    if (!customerId) throw ApiError.forbidden("Sign in to use a saved address.");
-    const address = await prisma.address.findFirst({ where: { id: savedAddressId, customerId } });
-    if (!address) throw ApiError.notFound("Address not found");
-    shippingAddress = address;
-  }
+  const pricedItems = await priceCartItemsOrThrow(items);
+  const digitalOnly = isDigitalOnly(pricedItems);
 
+  // Mixed/physical carts still require a real address; a PDF-only cart has
+  // nothing to ship, so no address (shipping or billing) is collected or
+  // persisted for it.
   let resolvedBillingAddress = null;
-  if (!billingSameAsShipping) {
-    if (billingSavedAddressId) {
+  if (!digitalOnly) {
+    if (savedAddressId) {
       if (!customerId) throw ApiError.forbidden("Sign in to use a saved address.");
-      const address = await prisma.address.findFirst({ where: { id: billingSavedAddressId, customerId } });
-      if (!address) throw ApiError.notFound("Billing address not found");
-      resolvedBillingAddress = address;
-    } else if (billingAddress) {
-      resolvedBillingAddress = billingAddress;
-    } else {
-      throw ApiError.badRequest("Provide a billing address or set billing same as shipping.");
+      const address = await prisma.address.findFirst({ where: { id: savedAddressId, customerId } });
+      if (!address) throw ApiError.notFound("Address not found");
+      shippingAddress = address;
+    }
+    if (!shippingAddress) throw ApiError.badRequest("A shipping address is required for this order.");
+
+    if (!billingSameAsShipping) {
+      if (billingSavedAddressId) {
+        if (!customerId) throw ApiError.forbidden("Sign in to use a saved address.");
+        const address = await prisma.address.findFirst({ where: { id: billingSavedAddressId, customerId } });
+        if (!address) throw ApiError.notFound("Billing address not found");
+        resolvedBillingAddress = address;
+      } else if (billingAddress) {
+        resolvedBillingAddress = billingAddress;
+      } else {
+        throw ApiError.badRequest("Provide a billing address or set billing same as shipping.");
+      }
     }
   }
 
-  const pricedItems = await priceCartItemsOrThrow(items);
   let couponDiscount = 0;
   let validatedCouponCode = null;
 
@@ -105,13 +113,22 @@ export async function createOrder({
     validatedCouponCode = couponResult.code;
   }
 
-  const totals = await computeTotals(pricedItems, couponDiscount, {
-    state: shippingAddress.state,
-    postalCode: shippingAddress.postalCode,
-  });
+  const totals = await computeTotals(
+    pricedItems,
+    couponDiscount,
+    digitalOnly ? null : { state: shippingAddress.state, postalCode: shippingAddress.postalCode }
+  );
 
   let codFee = 0;
   if (paymentMethod === "cod") {
+    // A PDF-only cart has nothing to ship and no address to resolve a
+    // shipping zone from, so it's never COD-eligible — reject it outright
+    // rather than falling through to assertCodEligible, which needs a
+    // real address. (Also covered defense-in-depth by shipping.service's
+    // own per-item isDigital check for mixed carts.)
+    if (digitalOnly) {
+      throw ApiError.badRequest("Cash on Delivery is not available for digital (PDF) orders.");
+    }
     // Every COD rejection reason lives in shipping.service — the client
     // can never smuggle a COD order past digital items, min/max value, a
     // disabled COD flag, or an unsupported shipping zone.
@@ -186,36 +203,44 @@ export async function createOrder({
           variantSkuSnapshot: item.variant?.sku ?? null,
           variantAttributesSnapshot: item.variant?.attributes ?? undefined,
           variantPriceSnapshot: item.variant ? item.unitPrice : null,
+          bookFormatSnapshot: item.bookFormat ?? null,
+          bookFormatSkuSnapshot: item.bookFormatSku ?? null,
+          bookFormatPriceSnapshot: item.bookFormat ? item.unitPrice : null,
+          bookFormatPdfNameSnapshot: item.bookFormatPdfName ?? null,
         })),
       }),
-      tx.orderAddress.create({
-        data: {
-          orderId: created.id,
-          fullName: shippingAddress.fullName,
-          phone: shippingAddress.phone,
-          addressLine1: shippingAddress.addressLine1,
-          addressLine2: shippingAddress.addressLine2 || null,
-          city: shippingAddress.city,
-          state: shippingAddress.state,
-          postalCode: shippingAddress.postalCode,
-          country: shippingAddress.country || "India",
-        },
-      }),
-      resolvedBillingAddress
-        ? tx.orderBillingAddress.create({
-            data: {
-              orderId: created.id,
-              fullName: resolvedBillingAddress.fullName,
-              phone: resolvedBillingAddress.phone,
-              addressLine1: resolvedBillingAddress.addressLine1,
-              addressLine2: resolvedBillingAddress.addressLine2 || null,
-              city: resolvedBillingAddress.city,
-              state: resolvedBillingAddress.state,
-              postalCode: resolvedBillingAddress.postalCode,
-              country: resolvedBillingAddress.country || "India",
-            },
-          })
-        : Promise.resolve(null),
+      ...(digitalOnly
+        ? []
+        : [
+            tx.orderAddress.create({
+              data: {
+                orderId: created.id,
+                fullName: shippingAddress.fullName,
+                phone: shippingAddress.phone,
+                addressLine1: shippingAddress.addressLine1,
+                addressLine2: shippingAddress.addressLine2 || null,
+                city: shippingAddress.city,
+                state: shippingAddress.state,
+                postalCode: shippingAddress.postalCode,
+                country: shippingAddress.country || "India",
+              },
+            }),
+            resolvedBillingAddress
+              ? tx.orderBillingAddress.create({
+                  data: {
+                    orderId: created.id,
+                    fullName: resolvedBillingAddress.fullName,
+                    phone: resolvedBillingAddress.phone,
+                    addressLine1: resolvedBillingAddress.addressLine1,
+                    addressLine2: resolvedBillingAddress.addressLine2 || null,
+                    city: resolvedBillingAddress.city,
+                    state: resolvedBillingAddress.state,
+                    postalCode: resolvedBillingAddress.postalCode,
+                    country: resolvedBillingAddress.country || "India",
+                  },
+                })
+              : Promise.resolve(null),
+          ]),
       tx.payment.create({
         data: {
           orderId: created.id,

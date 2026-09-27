@@ -6,7 +6,7 @@ import { BrochureProvider } from "./context/BrochureContext";
 import { AdminAuthProvider } from "./context/AdminAuthContext";
 import { CustomerAuthProvider } from "./context/CustomerAuthContext";
 import RequireCustomer from "./components/RequireCustomer";
-import { Login, Account, Addresses, Orders, OrderDetail, Forgot, Reset, AccountWishlist, AccountReviews } from "./pages/account/AccountPages";
+import { Login, Account, Addresses, Orders, OrderDetail, Forgot, Reset, AccountWishlist, AccountReviews, AccountDownloads } from "./pages/account/AccountPages";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import CartDrawer from "./components/CartDrawer";
@@ -126,6 +126,7 @@ function SiteLayout() {
                 <Route path="/account/addresses" element={<RequireCustomer><Addresses /></RequireCustomer>} />
                 <Route path="/account/wishlist" element={<RequireCustomer><AccountWishlist /></RequireCustomer>} />
                 <Route path="/account/reviews" element={<RequireCustomer><AccountReviews /></RequireCustomer>} />
+                <Route path="/account/downloads" element={<RequireCustomer><AccountDownloads /></RequireCustomer>} />
 
                 {/* Informational & Policy Routes */}
                 <Route path="/about" element={<About />} />

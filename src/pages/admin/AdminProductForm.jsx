@@ -11,6 +11,7 @@ import {
   adminReorderImages,
   resolveProductImageUrl,
 } from "../../lib/api";
+import BookFormatsTab from "./BookFormatsTab";
 import { Button } from "../../components/ui";
 import { LoadingNotice } from "../../components/StateNotice";
 import ImagePickerInput from "../../components/admin/ImagePickerInput";
@@ -242,7 +243,7 @@ export default function AdminProductForm() {
 
       {/* Tabs */}
       <div className="mt-6 flex border-b border-charcoal/10 space-x-2 overflow-x-auto">
-        {TABS.map((tab) => (
+        {[...TABS, ...(isEdit && form.productType === "BOOK" ? [{ id: "BOOK_FORMATS", label: "Book Formats" }] : [])].map((tab) => (
           <button
             key={tab.id}
             type="button"
@@ -429,6 +430,14 @@ export default function AdminProductForm() {
             </fieldset>
           )}
         </section>
+
+        {/* BOOK FORMATS SECTION */}
+        {isEdit && form.productType === "BOOK" && (
+          <section id="sec-book-formats" className="rounded-2xl border border-charcoal/10 bg-white p-6 shadow-sm space-y-4">
+            <h2 className="font-serif-display text-lg text-charcoal border-b border-charcoal/10 pb-2">Book Formats</h2>
+            <BookFormatsTab productId={id} />
+          </section>
+        )}
 
         {/* FLAGS SECTION */}
         <section id="sec-flags" className="rounded-2xl border border-charcoal/10 bg-white p-6 shadow-sm space-y-4">

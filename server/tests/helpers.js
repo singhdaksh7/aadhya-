@@ -10,6 +10,7 @@ export async function resetDb() {
     throw new Error("Refusing to reset a database outside the dedicated test environment.");
   }
   await prisma.analyticsEvent.deleteMany();
+  await prisma.digitalDownload.deleteMany();
   await prisma.couponRedemption.deleteMany();
   await prisma.payment.deleteMany();
   await prisma.orderAddress.deleteMany();
@@ -27,6 +28,7 @@ export async function resetDb() {
   await prisma.collectionProduct.deleteMany();
   await prisma.productImage.deleteMany();
   await prisma.productBookDetails.deleteMany();
+  await prisma.bookFormatOption.deleteMany();
   await prisma.productVariant.deleteMany();
   await prisma.product.deleteMany();
   await prisma.category.updateMany({ data: { parentId: null } });
@@ -105,6 +107,30 @@ export async function seedTestProduct(overrides = {}) {
       isDigital: overrides.isDigital ?? false,
     },
   });
+}
+
+export async function seedTestBookWithFormats(overrides = {}) {
+  const product = await seedTestProduct({ ...overrides, productType: "BOOK" });
+  const formats = overrides.formats || { PHYSICAL: { price: 400, stockQuantity: 10 }, PDF: { price: 250 } };
+  for (const [format, opts] of Object.entries(formats)) {
+    await prisma.bookFormatOption.create({
+      data: {
+        productId: product.id,
+        format,
+        price: opts.price ?? 300,
+        salePrice: opts.salePrice ?? null,
+        sku: opts.sku ?? null,
+        isActive: opts.isActive ?? true,
+        stockQuantity: format === "PHYSICAL" ? (opts.stockQuantity ?? 10) : null,
+        trackInventory: format === "PHYSICAL" ? (opts.trackInventory ?? true) : null,
+        pdfFileKey: opts.pdfFileKey ?? null,
+        pdfOriginalName: opts.pdfOriginalName ?? null,
+        maxDownloads: opts.maxDownloads ?? null,
+        expiryDays: opts.expiryDays ?? null,
+      },
+    });
+  }
+  return product;
 }
 
 export const VALID_CUSTOMER = { name: "Test Customer", email: "customer@example.com", phone: "9876543210" };
