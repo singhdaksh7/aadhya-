@@ -6,6 +6,7 @@ import { rupeesToPaise } from "../../utils/money.js";
 import { getRazorpayClient, isRazorpayConfigured } from "./razorpay.client.js";
 import { sendOrderConfirmationEmail } from "../email/email.service.js";
 import { recordPurchaseEvent } from "../analytics/analytics.service.js";
+import { decrementStockForOrder } from "../orders/stock.js";
 
 // POST /api/orders/:orderId/payment — creates (or reuses) the Razorpay order
 // for an internal order. Idempotent: calling it twice for the same pending
@@ -97,9 +98,18 @@ export function verifyRazorpayWebhookSignature(rawBody, signatureHeader) {
 // — whichever arrives first wins, the other becomes a safe no-op. The
 // compare-and-swap is the `updateMany` with `status: { not: "PAID" }` below,
 // which takes its row lock atomically inside the transaction.
-export async function finalizePaidPayment({ providerOrderId, providerPaymentId, method, rawReference }) {
+export async function finalizePaidPayment({ providerOrderId, providerPaymentId, method, rawReference, amountPaise }) {
   const payment = await prisma.payment.findFirst({ where: { providerOrderId } });
   if (!payment) throw ApiError.notFound("No order matches this payment.");
+
+  // Server-authoritative amount check: if the caller (webhook payload or
+  // verify request) supplied the amount actually paid, it must match the
+  // amount we recorded when the Razorpay order was created. A mismatch
+  // means the payment does not cover what the order actually costs, so it
+  // is rejected rather than silently trusted.
+  if (amountPaise != null && amountPaise !== rupeesToPaise(payment.amount)) {
+    throw ApiError.badRequest("Paid amount does not match the order total.");
+  }
 
   const result = await prisma.$transaction(async (tx) => {
     const cas = await tx.payment.updateMany({
@@ -118,19 +128,18 @@ export async function finalizePaidPayment({ providerOrderId, providerPaymentId, 
       include: { items: true, address: true },
     });
 
+    await tx.orderStatusHistory.create({
+      data: { orderId: order.id, fromStatus: "PENDING", toStatus: "CONFIRMED", note: "Payment verified" },
+    });
+
     // Variant stock is authoritative for variant lines; base-product stock is
     // authoritative only for non-variant lines. Each conditional update is an
     // atomic non-negative check, so a payment never creates negative stock.
-    for (const item of order.items) {
-      if (item.variantId) {
-        const changed = await tx.productVariant.updateMany({ where: { id: item.variantId, stockQuantity: { gte: item.quantity } }, data: { stockQuantity: { decrement: item.quantity } } });
-        if (!changed.count) throw ApiError.conflict("Variant stock changed before payment could be finalized.");
-      } else if (item.productId) {
-        const product = await tx.product.findUnique({ where: { id: item.productId }, select: { trackInventory: true } });
-        if (!product?.trackInventory) continue;
-        const changed = await tx.product.updateMany({ where: { id: item.productId, trackInventory: true, stockQuantity: { gte: item.quantity } }, data: { stockQuantity: { decrement: item.quantity } } });
-        if (!changed.count) throw ApiError.conflict("Product stock changed before payment could be finalized.");
-      }
+    // Guarded by stockDecrementedAt so a webhook retry / duplicate verify
+    // call (both funnel through the payment-status CAS above, but this is a
+    // second independent guard) never decrements twice.
+    if (!order.stockDecrementedAt) {
+      await decrementStockForOrder(tx, order);
     }
 
     if (order.couponCode) {
@@ -186,4 +195,33 @@ export async function markPaymentFailed({ providerOrderId }) {
   ]);
 
   return { found: true, noop: false };
+}
+
+// Lets a customer retry after a failed/abandoned payment: clears the old
+// provider order id so createRazorpayOrderForOrder mints a fresh Razorpay
+// order, and resets both payment and order back to PENDING. Refuses to
+// touch anything that is already PAID.
+export async function retryFailedPayment(orderId) {
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: { payments: { orderBy: { createdAt: "desc" }, take: 1 } },
+  });
+  if (!order) throw ApiError.notFound("Order not found");
+  if (order.paymentStatus === "PAID") throw ApiError.conflict("This order has already been paid.");
+
+  const payment = order.payments[0];
+  if (!payment) throw ApiError.badRequest("This order has no payment record.");
+
+  await prisma.$transaction([
+    prisma.payment.updateMany({
+      where: { id: payment.id, status: { not: "PAID" } },
+      data: { status: "PENDING", providerOrderId: null, providerPaymentId: null },
+    }),
+    prisma.order.updateMany({
+      where: { id: orderId, paymentStatus: { not: "PAID" } },
+      data: { paymentStatus: "PENDING" },
+    }),
+  ]);
+
+  return createRazorpayOrderForOrder(orderId);
 }

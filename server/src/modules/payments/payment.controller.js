@@ -7,10 +7,16 @@ import {
   createRazorpayOrderForOrder,
   verifyRazorpaySignature,
   finalizePaidPayment,
+  retryFailedPayment,
 } from "./payment.service.js";
 
 export const createPaymentOrder = asyncHandler(async (req, res) => {
   const options = await createRazorpayOrderForOrder(req.params.orderId);
+  ok(res, options);
+});
+
+export const retryPayment = asyncHandler(async (req, res) => {
+  const options = await retryFailedPayment(req.params.orderId);
   ok(res, options);
 });
 

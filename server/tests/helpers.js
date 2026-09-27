@@ -13,8 +13,13 @@ export async function resetDb() {
   await prisma.couponRedemption.deleteMany();
   await prisma.payment.deleteMany();
   await prisma.orderAddress.deleteMany();
+  await prisma.orderBillingAddress.deleteMany();
+  await prisma.orderStatusHistory.deleteMany();
+  await prisma.shipment.deleteMany();
   await prisma.orderItem.deleteMany();
   await prisma.order.deleteMany();
+  await prisma.shippingRate.deleteMany();
+  await prisma.shippingZone.deleteMany();
   await prisma.productReview.deleteMany();
   await prisma.wishlistItem.deleteMany();
   await prisma.cartItem.deleteMany();
@@ -97,6 +102,7 @@ export async function seedTestProduct(overrides = {}) {
       trackInventory: overrides.trackInventory ?? true,
       isActive: overrides.isActive ?? true,
       sku: overrides.sku ?? null,
+      isDigital: overrides.isDigital ?? false,
     },
   });
 }

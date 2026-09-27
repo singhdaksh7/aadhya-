@@ -2,12 +2,19 @@ import { prisma } from "../../lib/prisma.js";
 import { ApiError } from "../../utils/ApiError.js";
 import { priceCartItemsOrThrow, computeTotals } from "./checkout.service.js";
 import { generateToken, hashToken, safeCompareHex } from "../../utils/secureToken.js";
+import { assertTransition } from "./orderStatus.js";
+import { assertCodEligible } from "../shipping/shipping.service.js";
+import { decrementStockForOrder, restoreStockForOrder } from "./stock.js";
+import { round2 } from "../../utils/money.js";
 import crypto from "node:crypto";
 
 const ADMIN_INCLUDE = {
   items: true,
   address: true,
+  billingAddress: true,
   payments: { orderBy: { createdAt: "desc" } },
+  statusHistory: { orderBy: { changedAt: "asc" } },
+  shipment: true,
 };
 
 // accessTokenHash must never leave the server — it's the secret the
@@ -31,11 +38,14 @@ function formatOrderNumber(orderSeq) {
 export async function createOrder({
   customer,
   shippingAddress,
+  billingAddress,
+  billingSameAsShipping = true,
   items,
   notes,
   couponCode,
   customerId,
   savedAddressId,
+  billingSavedAddressId,
   paymentMethod = "razorpay",
   utmSource,
   utmMedium,
@@ -64,6 +74,21 @@ export async function createOrder({
     if (!address) throw ApiError.notFound("Address not found");
     shippingAddress = address;
   }
+
+  let resolvedBillingAddress = null;
+  if (!billingSameAsShipping) {
+    if (billingSavedAddressId) {
+      if (!customerId) throw ApiError.forbidden("Sign in to use a saved address.");
+      const address = await prisma.address.findFirst({ where: { id: billingSavedAddressId, customerId } });
+      if (!address) throw ApiError.notFound("Billing address not found");
+      resolvedBillingAddress = address;
+    } else if (billingAddress) {
+      resolvedBillingAddress = billingAddress;
+    } else {
+      throw ApiError.badRequest("Provide a billing address or set billing same as shipping.");
+    }
+  }
+
   const pricedItems = await priceCartItemsOrThrow(items);
   let couponDiscount = 0;
   let validatedCouponCode = null;
@@ -80,9 +105,27 @@ export async function createOrder({
     validatedCouponCode = couponResult.code;
   }
 
-  const totals = await computeTotals(pricedItems, couponDiscount);
+  const totals = await computeTotals(pricedItems, couponDiscount, {
+    state: shippingAddress.state,
+    postalCode: shippingAddress.postalCode,
+  });
 
-  if (totals.total <= 0) {
+  let codFee = 0;
+  if (paymentMethod === "cod") {
+    // Every COD rejection reason lives in shipping.service — the client
+    // can never smuggle a COD order past digital items, min/max value, a
+    // disabled COD flag, or an unsupported shipping zone.
+    const codCheck = await assertCodEligible({
+      items: pricedItems.filter((i) => i.ok),
+      totalAmount: totals.total,
+      state: shippingAddress.state,
+      postalCode: shippingAddress.postalCode,
+    });
+    codFee = codCheck.codFee || 0;
+  }
+
+  const grandTotal = round2(totals.total + codFee);
+  if (grandTotal <= 0) {
     throw ApiError.badRequest("Order total must be greater than zero.");
   }
 
@@ -101,7 +144,7 @@ export async function createOrder({
         shippingAmount: totals.shipping,
         discountAmount: totals.discount,
         taxAmount: totals.tax,
-        totalAmount: totals.total,
+        totalAmount: grandTotal,
         currency: totals.currency,
         couponCode: validatedCouponCode,
         notes: notes || null,
@@ -111,6 +154,14 @@ export async function createOrder({
         utmCampaign: utmCampaign || null,
         utmContent: utmContent || null,
         utmTerm: utmTerm || null,
+        paymentMethod,
+        codFeeAmount: codFee,
+        shippingZoneId: totals.shippingZoneId,
+        billingSameAsShipping,
+        // COD orders skip the online-payment step entirely, so they go
+        // straight to CONFIRMED; Razorpay orders wait in PENDING until the
+        // signature/webhook path finalizes them (payment.service.js).
+        status: paymentMethod === "cod" ? "CONFIRMED" : "PENDING",
       },
     });
 
@@ -150,16 +201,49 @@ export async function createOrder({
           country: shippingAddress.country || "India",
         },
       }),
+      resolvedBillingAddress
+        ? tx.orderBillingAddress.create({
+            data: {
+              orderId: created.id,
+              fullName: resolvedBillingAddress.fullName,
+              phone: resolvedBillingAddress.phone,
+              addressLine1: resolvedBillingAddress.addressLine1,
+              addressLine2: resolvedBillingAddress.addressLine2 || null,
+              city: resolvedBillingAddress.city,
+              state: resolvedBillingAddress.state,
+              postalCode: resolvedBillingAddress.postalCode,
+              country: resolvedBillingAddress.country || "India",
+            },
+          })
+        : Promise.resolve(null),
       tx.payment.create({
         data: {
           orderId: created.id,
-          provider: "razorpay",
+          provider: paymentMethod === "cod" ? "cod" : "razorpay",
           status: "PENDING",
-          amount: totals.total,
+          amount: grandTotal,
           currency: totals.currency,
         },
       }),
+      tx.orderStatusHistory.create({
+        data: {
+          orderId: created.id,
+          fromStatus: null,
+          toStatus: paymentMethod === "cod" ? "CONFIRMED" : "PENDING",
+          note: paymentMethod === "cod" ? "COD order confirmed at checkout" : "Order created, awaiting payment",
+        },
+      }),
     ]);
+
+    // COD orders have no online-payment finalize step to hang stock
+    // decrement off of, so it happens here — once, guarded by the same
+    // exactly-once helper used by the Razorpay payment path.
+    if (paymentMethod === "cod") {
+      const full = await tx.order.findUnique({ where: { id: updated.id }, include: { items: true } });
+      if (!full.stockDecrementedAt) {
+        await decrementStockForOrder(tx, full);
+      }
+    }
 
     return updated;
   });
@@ -239,22 +323,31 @@ export async function getAdminOrderById(id) {
   return sanitizeOrder(order);
 }
 
-const TERMINAL_STATUSES = new Set(["CANCELLED", "DELIVERED"]);
-
 // Operational status only — paymentStatus is never writable here, so the
 // admin UI has no path to "mark PAID" outside the real payment workflow.
-export async function updateOrderStatus(id, nextStatus) {
-  const order = await prisma.order.findUnique({ where: { id } });
+// Every transition is validated against orderStatus.js's state machine and
+// recorded in OrderStatusHistory; cancelling restores stock exactly once.
+export async function updateOrderStatus(id, nextStatus, note) {
+  const order = await prisma.order.findUnique({ where: { id }, include: { items: true } });
   if (!order) throw ApiError.notFound("Order not found");
 
-  if (TERMINAL_STATUSES.has(order.status)) {
-    throw ApiError.conflict(`This order is already ${order.status.toLowerCase()} and cannot be changed further.`);
-  }
+  assertTransition(order.status, nextStatus);
 
   const data = { status: nextStatus };
   if (nextStatus === "CANCELLED") data.cancelledAt = new Date();
 
-  const updated = await prisma.order.update({ where: { id }, data, include: ADMIN_INCLUDE });
+  const updated = await prisma.$transaction(async (tx) => {
+    const saved = await tx.order.update({ where: { id }, data, include: ADMIN_INCLUDE });
+    await tx.orderStatusHistory.create({
+      data: { orderId: id, fromStatus: order.status, toStatus: nextStatus, note: note || null },
+    });
+
+    if (nextStatus === "CANCELLED" && order.stockDecrementedAt && !order.stockRestoredAt) {
+      await restoreStockForOrder(tx, order);
+    }
+
+    return saved;
+  });
 
   if (order.customerId && nextStatus !== order.status) {
     try {
@@ -301,4 +394,20 @@ export async function getOrderDashboardStats() {
     ordersToday,
     paidRevenue: Number(paidAgg._sum.totalAmount || 0),
   };
+}
+
+// Admin fulfilment: create or update tracking info for an order. Upsert
+// rather than create-only, since the admin may add the carrier first and
+// fill in the tracking number/estimated delivery afterwards.
+export async function upsertShipment(orderId, data) {
+  const order = await prisma.order.findUnique({ where: { id: orderId } });
+  if (!order) throw ApiError.notFound("Order not found");
+
+  const shipment = await prisma.shipment.upsert({
+    where: { orderId },
+    create: { orderId, ...data },
+    update: data,
+  });
+
+  return shipment;
 }

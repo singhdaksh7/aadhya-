@@ -328,8 +328,12 @@ export function adminGetOrder(id) {
   return api.get(`/admin/orders/${id}`, { auth: "admin" });
 }
 
-export function adminUpdateOrderStatus(id, status) {
-  return api.patch(`/admin/orders/${id}/status`, { status }, { auth: "admin" });
+export function adminUpdateOrderStatus(id, status, note) {
+  return api.patch(`/admin/orders/${id}/status`, { status, note }, { auth: "admin" });
+}
+
+export function adminUpsertShipment(id, payload) {
+  return api.put(`/admin/orders/${id}/shipment`, payload, { auth: "admin" });
 }
 
 // Customer accounts use a separate in-memory access token and httpOnly cookie session.

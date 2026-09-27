@@ -272,6 +272,7 @@ model Product {
   seoDescription      String?
   ogImage             String?
   attributes          Json?
+  isDigital           Boolean             @default(false)
   createdAt           DateTime            @default(now())
   updatedAt           DateTime            @updatedAt
 
@@ -410,11 +411,22 @@ model Order {
   paidAt          DateTime?
   cancelledAt     DateTime?
 
+  paymentMethod   String        @default("razorpay")
+  codFeeAmount    Decimal       @db.Decimal(10, 2) @default(0)
+  shippingZoneId  String?
+  billingSameAsShipping Boolean @default(true)
+  stockDecrementedAt DateTime?
+  stockRestoredAt    DateTime?
+
   items            OrderItem[]
   address          OrderAddress?
+  billingAddress   OrderBillingAddress?
   payments         Payment[]
   customer         Customer?         @relation(fields: [customerId], references: [id], onDelete: SetNull)
   couponRedemption CouponRedemption?
+  shippingZone     ShippingZone?     @relation(fields: [shippingZoneId], references: [id], onDelete: SetNull)
+  statusHistory    OrderStatusHistory[]
+  shipment         Shipment?
 
   @@index([orderNumber])
   @@index([customerEmail])
@@ -423,6 +435,83 @@ model Order {
   @@index([paymentStatus])
   @@index([createdAt])
   @@index([couponCode])
+  @@index([shippingZoneId])
+}
+
+model OrderBillingAddress {
+  id           String  @id @default(uuid())
+  orderId      String  @unique
+  fullName     String
+  phone        String
+  addressLine1 String
+  addressLine2 String?
+  city         String
+  state        String
+  postalCode   String
+  country      String  @default("India")
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+model OrderStatusHistory {
+  id         String      @id @default(uuid())
+  orderId    String
+  fromStatus OrderStatus?
+  toStatus   OrderStatus
+  changedAt  DateTime    @default(now())
+  note       String?
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([changedAt])
+}
+
+model Shipment {
+  id                String    @id @default(uuid())
+  orderId           String    @unique
+  carrier           String?
+  trackingNumber    String?
+  trackingUrl       String?
+  shippedDate       DateTime?
+  estimatedDelivery DateTime?
+  deliveredDate     DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+}
+
+model ShippingZone {
+  id           String         @id @default(cuid())
+  name         String
+  states       String[]
+  postalCodes  String[]       @default([])
+  codSupported Boolean        @default(true)
+  active       Boolean        @default(true)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  rates        ShippingRate[]
+  orders       Order[]
+
+  @@index([active])
+}
+
+model ShippingRate {
+  id               String   @id @default(cuid())
+  zoneId           String
+  rate             Decimal  @db.Decimal(10, 2)
+  freeAbove        Decimal? @db.Decimal(10, 2)
+  deliveryEstimate String?
+  active           Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  zone             ShippingZone @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+
+  @@index([zoneId])
+  @@index([active])
 }
 
 model OrderItem {

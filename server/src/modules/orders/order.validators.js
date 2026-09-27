@@ -38,6 +38,10 @@ export const shippingAddressSchema = z.object({
 
 export const checkoutPreviewSchema = checkoutItemsSchema.extend({
   couponCode: z.string().trim().max(40).optional().nullable(),
+  address: z
+    .object({ state: z.string().trim().max(100).optional(), postalCode: z.string().trim().max(20).optional() })
+    .optional()
+    .nullable(),
 });
 
 // UTM attribution captured client-side from the landing URL (see
@@ -55,9 +59,12 @@ const utmSchema = {
 export const createOrderSchema = checkoutItemsSchema.extend({
   customer: customerSchema,
   shippingAddress: shippingAddressSchema,
+  billingAddress: shippingAddressSchema.optional().nullable(),
+  billingSameAsShipping: z.boolean().optional().default(true),
   notes: z.string().trim().max(500).optional().nullable(),
   couponCode: z.string().trim().max(40).optional().nullable(),
   savedAddressId: z.string().uuid().optional(),
+  billingSavedAddressId: z.string().uuid().optional(),
   paymentMethod: z.enum(["razorpay", "cod"]).optional().default("razorpay"),
   ...utmSchema,
 });
@@ -73,6 +80,16 @@ export const confirmationQuerySchema = z.object({
 
 export const updateOrderStatusSchema = z.object({
   status: z.enum(["CONFIRMED", "PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED"]),
+  note: z.string().trim().max(500).optional().nullable(),
+});
+
+export const shipmentSchema = z.object({
+  carrier: z.string().trim().max(120).optional().nullable(),
+  trackingNumber: z.string().trim().max(120).optional().nullable(),
+  trackingUrl: z.string().trim().max(500).optional().nullable(),
+  shippedDate: z.coerce.date().optional().nullable(),
+  estimatedDelivery: z.coerce.date().optional().nullable(),
+  deliveredDate: z.coerce.date().optional().nullable(),
 });
 
 export const listOrdersQuerySchema = z.object({

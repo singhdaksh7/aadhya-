@@ -157,9 +157,16 @@ describe("admin orders", () => {
     expect(res.status).toBe(401);
   });
 
-  it("allows admin to move an order through operational statuses", async () => {
+  it("allows admin to move an order through operational statuses one legal step at a time", async () => {
     const { res } = await placeOrder();
     const token = await getAdminToken();
+    const confirm = await request(app)
+      .patch(`/api/admin/orders/${res.body.data.orderId}/status`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ status: "CONFIRMED" });
+    expect(confirm.status).toBe(200);
+    expect(confirm.body.data.status).toBe("CONFIRMED");
+
     const update = await request(app)
       .patch(`/api/admin/orders/${res.body.data.orderId}/status`)
       .set("Authorization", `Bearer ${token}`)
@@ -169,13 +176,23 @@ describe("admin orders", () => {
     expect(update.body.data.paymentStatus).toBe("PENDING"); // untouched
   });
 
+  it("rejects skipping a status in the PENDING -> CONFIRMED -> PROCESSING -> SHIPPED -> DELIVERED chain", async () => {
+    const { res } = await placeOrder();
+    const token = await getAdminToken();
+    const update = await request(app)
+      .patch(`/api/admin/orders/${res.body.data.orderId}/status`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ status: "PROCESSING" }); // skips CONFIRMED
+    expect(update.status).toBe(409);
+  });
+
   it("cannot manually mark an order's payment as PAID via the status endpoint", async () => {
     const { res } = await placeOrder();
     const token = await getAdminToken();
     const update = await request(app)
       .patch(`/api/admin/orders/${res.body.data.orderId}/status`)
       .set("Authorization", `Bearer ${token}`)
-      .send({ status: "PROCESSING", paymentStatus: "PAID" });
+      .send({ status: "CONFIRMED", paymentStatus: "PAID" });
 
     expect(update.status).toBe(200);
     const order = await prisma.order.findUnique({ where: { id: res.body.data.orderId } });
@@ -190,5 +207,50 @@ describe("admin orders", () => {
       .set("Authorization", `Bearer ${token}`)
       .send({ status: "PENDING" });
     expect(update.status).toBe(400);
+  });
+
+  it("records an OrderStatusHistory row for every status change", async () => {
+    const { res } = await placeOrder();
+    const token = await getAdminToken();
+    await request(app)
+      .patch(`/api/admin/orders/${res.body.data.orderId}/status`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ status: "CONFIRMED", note: "Confirmed manually" });
+
+    const history = await prisma.orderStatusHistory.findMany({
+      where: { orderId: res.body.data.orderId },
+      orderBy: { changedAt: "asc" },
+    });
+    expect(history.length).toBeGreaterThanOrEqual(2);
+    expect(history[0].toStatus).toBe("PENDING");
+    expect(history.at(-1).toStatus).toBe("CONFIRMED");
+    expect(history.at(-1).note).toBe("Confirmed manually");
+  });
+
+  it("restores stock exactly once when a paid order is cancelled", async () => {
+    const { res, product } = await placeOrder();
+    const token = await getAdminToken();
+
+    await prisma.order.update({
+      where: { id: res.body.data.orderId },
+      data: { stockDecrementedAt: new Date() },
+    });
+    // placeOrder() buys quantity 2 — mirror that decrement so the restore
+    // below can be checked against a known before/after delta.
+    await prisma.product.update({ where: { id: product.id }, data: { stockQuantity: { decrement: 2 } } });
+
+    const before = await prisma.product.findUnique({ where: { id: product.id } });
+
+    const cancel = await request(app)
+      .patch(`/api/admin/orders/${res.body.data.orderId}/status`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ status: "CANCELLED" });
+    expect(cancel.status).toBe(200);
+
+    const afterOrder = await prisma.order.findUnique({ where: { id: res.body.data.orderId } });
+    expect(afterOrder.stockRestoredAt).not.toBeNull();
+
+    const after = await prisma.product.findUnique({ where: { id: product.id } });
+    expect(after.stockQuantity).toBe(before.stockQuantity + 2);
   });
 });

@@ -33,6 +33,7 @@ import wishlistRouter from "../modules/wishlist/wishlist.routes.js";
 import notificationRouter from "../modules/notifications/notification.routes.js";
 import { publicAnalyticsRouter, adminAnalyticsRouter } from "../modules/analytics/analytics.routes.js";
 import { publicSearchRouter } from "../modules/search/search.routes.js";
+import { adminShippingRouter } from "../modules/shipping/shipping.routes.js";
 
 const router = Router();
 
@@ -101,6 +102,7 @@ router.use("/admin/banners", adminBannersRouter);
 router.use("/admin/promos", adminPromosRouter);
 router.use("/admin/reviews", adminReviewRouter);
 router.use("/admin/analytics", adminAnalyticsRouter);
+router.use("/admin/shipping", adminShippingRouter);
 
 // Admin Pages APIs: Specific /home route BEFORE parameterized /:id route!
 router.use("/admin/pages", adminPagesRouter);
