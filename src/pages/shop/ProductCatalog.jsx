@@ -239,7 +239,7 @@ export default function ProductCatalog({
           {/* Product Grid Area */}
           <main className="lg:col-span-9 space-y-6">
             {/* Sorting & Filter Trigger Bar */}
-            <div className="flex items-center justify-between gap-4 pb-4 border-b border-charcoal/10">
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 pb-4 border-b border-charcoal/10">
               <p className="text-xs font-semibold text-charcoal-soft uppercase tracking-wider">
                 Showing {products.length} {products.length === 1 ? "Object" : "Objects"}
               </p>

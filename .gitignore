@@ -45,6 +45,9 @@ playwright-report/
 test-results/
 *.log
 
+# Ad-hoc scratch output (e.g. responsive QA screenshots)
+scratch/
+
 # Uploaded product images (persisted via Docker volume in prod)
 server/uploads/
 !server/uploads/products/.gitkeep
