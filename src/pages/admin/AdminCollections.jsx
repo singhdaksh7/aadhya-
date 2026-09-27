@@ -9,6 +9,7 @@ import {
 } from "../../lib/api";
 import { Button } from "../../components/ui";
 import { LoadingNotice, ErrorNotice } from "../../components/StateNotice";
+import ImagePickerInput from "../../components/admin/ImagePickerInput";
 
 const COLLECTION_TYPES = [
   { value: "MANUAL", label: "Manual Selection" },
@@ -238,11 +239,12 @@ export default function AdminCollections() {
           onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
           className={inputCls}
         />
-        <input
-          placeholder="Banner / Cover image URL"
+        <ImagePickerInput
+          label="Hero / Banner Image"
           value={form.image}
-          onChange={(e) => setForm((f) => ({ ...f, image: e.target.value }))}
-          className={inputCls}
+          onChange={(url) => setForm((f) => ({ ...f, image: url }))}
+          pickerTitle="Select collection hero image"
+          inputClassName={inputCls}
         />
         <input
           type="number"

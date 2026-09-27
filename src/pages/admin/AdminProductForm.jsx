@@ -13,6 +13,7 @@ import {
 } from "../../lib/api";
 import { Button } from "../../components/ui";
 import { LoadingNotice } from "../../components/StateNotice";
+import ImagePickerInput from "../../components/admin/ImagePickerInput";
 
 const BOOK_FIELDS = [
   ["author", "Author", "text"],
@@ -450,9 +451,13 @@ export default function AdminProductForm() {
           <Field label="SEO Description">
             <textarea rows={2} value={form.seoDescription} onChange={(e) => set("seoDescription", e.target.value)} className={inputCls} />
           </Field>
-          <Field label="OG Image URL">
-            <input value={form.ogImage} onChange={(e) => set("ogImage", e.target.value)} placeholder="https://..." className={inputCls} />
-          </Field>
+          <ImagePickerInput
+            label="OG Image"
+            value={form.ogImage}
+            onChange={(url) => set("ogImage", url)}
+            pickerTitle="Select OG image"
+            inputClassName={inputCls}
+          />
         </section>
 
         {error && <p className="text-sm text-terracotta">{error}</p>}

@@ -4,11 +4,10 @@ import {
   adminCreatePage,
   adminUpdatePage,
   adminDeletePage,
-  adminPublishPage,
-  resolveProductImageUrl
+  adminPublishPage
 } from "../../lib/api";
 import RichTextEditor from "../../components/cms/RichTextEditor";
-import MediaPicker from "../../components/cms/MediaPicker";
+import ImagePickerInput from "../../components/admin/ImagePickerInput";
 
 export default function AdminPages() {
   const [pages, setPages] = useState([]);
@@ -33,7 +32,6 @@ export default function AdminPages() {
     seoDescription: ""
   });
   const [saving, setSaving] = useState(false);
-  const [showMediaPicker, setShowMediaPicker] = useState(false);
 
   useEffect(() => {
     loadPages();
@@ -380,36 +378,13 @@ export default function AdminPages() {
               </div>
 
               {/* Featured Image */}
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-charcoal-soft mb-1">
-                  Featured Header Image (Optional)
-                </label>
-                <div className="flex gap-2 items-center">
-                  <input
-                    type="text"
-                    value={formData.featuredImage}
-                    onChange={(e) => setFormData({ ...formData, featuredImage: e.target.value })}
-                    placeholder="https://... or select from Media Library"
-                    className="flex-1 px-3 py-2 text-xs rounded-xl border border-charcoal/15 bg-white text-charcoal focus:outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowMediaPicker(true)}
-                    className="px-3 py-2 text-xs font-semibold rounded-xl border border-charcoal/15 bg-white hover:bg-charcoal/5"
-                  >
-                    Select Media
-                  </button>
-                </div>
-                {formData.featuredImage && (
-                  <div className="mt-2 w-32 h-20 rounded-xl overflow-hidden border border-charcoal/10 bg-white">
-                    <img
-                      src={resolveProductImageUrl(formData.featuredImage)}
-                      alt="Featured Preview"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                )}
-              </div>
+              <ImagePickerInput
+                label="Featured Header Image (Optional)"
+                value={formData.featuredImage}
+                onChange={(url) => setFormData({ ...formData, featuredImage: url })}
+                pickerTitle="Select Featured Page Image"
+                inputClassName="w-full px-3 py-2 text-xs rounded-xl border border-charcoal/15 bg-white text-charcoal focus:outline-none"
+              />
 
               {/* Page Body Content */}
               <div>
@@ -469,16 +444,6 @@ export default function AdminPages() {
           </div>
         </div>
       )}
-
-      {/* Media Picker Modal */}
-      <MediaPicker
-        isOpen={showMediaPicker}
-        onClose={() => setShowMediaPicker(false)}
-        onSelect={(asset) => {
-          setFormData((prev) => ({ ...prev, featuredImage: asset.url }));
-        }}
-        title="Select Featured Page Image"
-      />
     </div>
   );
 }

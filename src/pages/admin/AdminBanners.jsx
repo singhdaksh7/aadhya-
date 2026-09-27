@@ -7,6 +7,7 @@ import {
 } from "../../lib/api";
 import { Button } from "../../components/ui";
 import { LoadingNotice, ErrorNotice } from "../../components/StateNotice";
+import ImagePickerInput from "../../components/admin/ImagePickerInput";
 
 const PLACEMENTS = [
   { value: "HOME_HERO", label: "Homepage Hero Banner" },
@@ -322,28 +323,24 @@ export default function AdminBanners() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs font-semibold text-charcoal-soft">Desktop Image URL *</label>
-                <input
-                  required
-                  type="text"
-                  placeholder="https://images.unsplash.com/..."
-                  value={form.desktopImage}
-                  onChange={(e) => setForm((f) => ({ ...f, desktopImage: e.target.value }))}
-                  className="w-full rounded-xl border border-charcoal/20 px-4 py-2.5 text-sm focus:border-terracotta focus:outline-none mt-1"
-                />
-              </div>
+              <ImagePickerInput
+                label="Desktop Image *"
+                required
+                value={form.desktopImage}
+                onChange={(url) => setForm((f) => ({ ...f, desktopImage: url }))}
+                placeholder="https://images.unsplash.com/..."
+                pickerTitle="Select banner desktop image"
+                inputClassName="w-full rounded-xl border border-charcoal/20 px-4 py-2.5 text-sm focus:border-terracotta focus:outline-none"
+              />
 
-              <div>
-                <label className="text-xs font-semibold text-charcoal-soft">Mobile Image URL (Optional)</label>
-                <input
-                  type="text"
-                  placeholder="Fallback to desktop if empty"
-                  value={form.mobileImage}
-                  onChange={(e) => setForm((f) => ({ ...f, mobileImage: e.target.value }))}
-                  className="w-full rounded-xl border border-charcoal/20 px-4 py-2.5 text-sm focus:border-terracotta focus:outline-none mt-1"
-                />
-              </div>
+              <ImagePickerInput
+                label="Mobile Image (Optional)"
+                value={form.mobileImage}
+                onChange={(url) => setForm((f) => ({ ...f, mobileImage: url }))}
+                placeholder="Fallback to desktop if empty"
+                pickerTitle="Select banner mobile image"
+                inputClassName="w-full rounded-xl border border-charcoal/20 px-4 py-2.5 text-sm focus:border-terracotta focus:outline-none"
+              />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { adminListCategories, adminCreateCategory, adminUpdateCategory, adminDeleteCategory } from "../../lib/api";
 import { Button } from "../../components/ui";
 import { LoadingNotice, ErrorNotice } from "../../components/StateNotice";
+import ImagePickerInput from "../../components/admin/ImagePickerInput";
 
 const emptyForm = {
   id: null,
@@ -157,24 +158,37 @@ export default function AdminCategories() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="text-xs font-semibold text-charcoal-soft">Image URL</label>
-            <input
-              placeholder="https://..."
-              value={form.image}
-              onChange={(e) => setForm((f) => ({ ...f, image: e.target.value }))}
-              className={inputCls}
-            />
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-charcoal-soft">Desktop Banner URL</label>
-            <input
-              placeholder="https://..."
-              value={form.desktopBanner}
-              onChange={(e) => setForm((f) => ({ ...f, desktopBanner: e.target.value }))}
-              className={inputCls}
-            />
-          </div>
+          <ImagePickerInput
+            label="Category Image"
+            value={form.image}
+            onChange={(url) => setForm((f) => ({ ...f, image: url }))}
+            pickerTitle="Select category image"
+            inputClassName={inputCls}
+          />
+          <ImagePickerInput
+            label="Icon"
+            value={form.icon}
+            onChange={(url) => setForm((f) => ({ ...f, icon: url }))}
+            pickerTitle="Select category icon"
+            inputClassName={inputCls}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <ImagePickerInput
+            label="Desktop Banner"
+            value={form.desktopBanner}
+            onChange={(url) => setForm((f) => ({ ...f, desktopBanner: url }))}
+            pickerTitle="Select category desktop banner"
+            inputClassName={inputCls}
+          />
+          <ImagePickerInput
+            label="Mobile Banner"
+            value={form.mobileBanner}
+            onChange={(url) => setForm((f) => ({ ...f, mobileBanner: url }))}
+            pickerTitle="Select category mobile banner"
+            inputClassName={inputCls}
+          />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
