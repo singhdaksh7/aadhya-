@@ -28,6 +28,8 @@ const emptyForm = {
   slug: "",
   description: "",
   image: "",
+  desktopBanner: "",
+  mobileBanner: "",
   type: "MANUAL",
   ruleCategoryId: "",
   ruleTag: "",
@@ -72,6 +74,8 @@ export default function AdminCollections() {
       slug: c.slug,
       description: c.description || "",
       image: c.image || c.heroImage || "",
+      desktopBanner: c.desktopBanner || "",
+      mobileBanner: c.mobileBanner || "",
       type: c.type || "MANUAL",
       ruleCategoryId: rc.categoryId || "",
       ruleTag: rc.tag || "",
@@ -104,6 +108,8 @@ export default function AdminCollections() {
       slug: form.slug || undefined,
       description: form.description || null,
       image: form.image || null,
+      desktopBanner: form.desktopBanner || null,
+      mobileBanner: form.mobileBanner || null,
       type: form.type,
       ruleConfig,
       sortOrder: Number(form.sortOrder) || 0,
@@ -240,12 +246,28 @@ export default function AdminCollections() {
           className={inputCls}
         />
         <ImagePickerInput
-          label="Hero / Banner Image"
+          label="Hero Image"
           value={form.image}
           onChange={(url) => setForm((f) => ({ ...f, image: url }))}
           pickerTitle="Select collection hero image"
           inputClassName={inputCls}
         />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <ImagePickerInput
+            label="Desktop Banner"
+            value={form.desktopBanner}
+            onChange={(url) => setForm((f) => ({ ...f, desktopBanner: url }))}
+            pickerTitle="Select collection desktop banner"
+            inputClassName={inputCls}
+          />
+          <ImagePickerInput
+            label="Mobile Banner"
+            value={form.mobileBanner}
+            onChange={(url) => setForm((f) => ({ ...f, mobileBanner: url }))}
+            pickerTitle="Select collection mobile banner"
+            inputClassName={inputCls}
+          />
+        </div>
         <input
           type="number"
           placeholder="Sort order"
