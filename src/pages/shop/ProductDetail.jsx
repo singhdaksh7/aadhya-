@@ -11,6 +11,7 @@ import { getProductBySlug, getProducts } from "../../services/api";
 import { IconCheck, IconCart } from "../../components/icons";
 import { trackProductView, recordRecentlyViewed } from "../../lib/analytics";
 import RecentlyViewed from "../../components/shop/RecentlyViewed";
+import { canonicalUrl, jsonLdProps } from "../../lib/seo";
 
 export default function ProductDetail() {
   const { slug } = useParams();
@@ -166,6 +167,51 @@ export default function ProductDetail() {
 
   const activeCoupon = activeCoupons[0] || null;
 
+  const pdpUrl = canonicalUrl(`/shop/${product.slug}`);
+  const metaDescription = (product.shortDescription || product.story || `${product.name} — handcrafted by Aadya Society.`).slice(0, 155);
+  const productJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: product.name,
+    description: metaDescription,
+    image: images,
+    sku: product.sku || product.id,
+    ...(isBook && product.isbn ? { isbn: product.isbn } : {}),
+    offers: {
+      "@type": "Offer",
+      url: pdpUrl,
+      priceCurrency: "INR",
+      price: (salePrice ?? price).toFixed ? (salePrice ?? price).toFixed(2) : salePrice ?? price,
+      availability: outOfStock
+        ? "https://schema.org/OutOfStock"
+        : "https://schema.org/InStock",
+    },
+    ...(product.reviewCount > 0
+      ? {
+          aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: product.averageRating,
+            reviewCount: product.reviewCount,
+          },
+        }
+      : {}),
+  };
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: canonicalUrl("/") },
+      { "@type": "ListItem", position: 2, name: "Shop", item: canonicalUrl("/shop") },
+      {
+        "@type": "ListItem",
+        position: 3,
+        name: product.category,
+        item: canonicalUrl(`/shop/category/${product.categorySlug}`),
+      },
+      { "@type": "ListItem", position: 4, name: product.name, item: pdpUrl },
+    ],
+  };
+
   const handleCopyCode = () => {
     if (activeCoupon?.code) {
       navigator.clipboard.writeText(activeCoupon.code);
@@ -176,6 +222,11 @@ export default function ProductDetail() {
 
   return (
     <div className="bg-white text-charcoal py-10 pb-20">
+      <title>{`${product.name} — Aadya Society Shop`}</title>
+      <meta name="description" content={metaDescription} />
+      <link rel="canonical" href={pdpUrl} />
+      <script type="application/ld+json" {...jsonLdProps(productJsonLd)} />
+      <script type="application/ld+json" {...jsonLdProps(breadcrumbJsonLd)} />
       <div className="mx-auto max-w-6xl px-4 sm:px-8 space-y-12">
         {/* Breadcrumb Header */}
         <nav className="flex items-center gap-2 text-xs text-charcoal-soft">
@@ -314,6 +365,7 @@ export default function ProductDetail() {
                     <button
                       key={f.format}
                       type="button"
+                      aria-pressed={selectedFormat === f.format}
                       onClick={() => setSelectedFormat(f.format)}
                       className={`rounded-full px-4 py-2 text-xs font-medium border transition ${
                         selectedFormat === f.format
@@ -419,7 +471,7 @@ export default function ProductDetail() {
 
         {/* Description & Specifications Tabs */}
         <section className="border-t border-charcoal/10 pt-10">
-          <div className="flex border-b border-charcoal/10 gap-8 overflow-x-auto text-sm font-medium">
+          <div role="tablist" aria-label="Product details" className="flex border-b border-charcoal/10 gap-8 overflow-x-auto text-sm font-medium">
             {[
               { id: "story", label: "Description & Craft" },
               { id: "specs", label: "Specifications & Material" },
@@ -428,6 +480,11 @@ export default function ProductDetail() {
             ].map((tab) => (
               <button
                 key={tab.id}
+                type="button"
+                role="tab"
+                id={`pdp-tab-${tab.id}`}
+                aria-selected={activeTab === tab.id}
+                aria-controls={`pdp-tabpanel-${tab.id}`}
                 onClick={() => setActiveTab(tab.id)}
                 className={`pb-3 text-xs font-semibold uppercase tracking-wider transition border-b-2 whitespace-nowrap ${
                   activeTab === tab.id
@@ -440,7 +497,12 @@ export default function ProductDetail() {
             ))}
           </div>
 
-          <div className="py-6 text-xs sm:text-sm leading-relaxed text-charcoal-soft max-w-3xl">
+          <div
+            role="tabpanel"
+            id={`pdp-tabpanel-${activeTab}`}
+            aria-labelledby={`pdp-tab-${activeTab}`}
+            className="py-6 text-xs sm:text-sm leading-relaxed text-charcoal-soft max-w-3xl"
+          >
             {activeTab === "story" && (
               <p className="whitespace-pre-line">{product.story || product.shortDescription}</p>
             )}

@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { fetchBlogPostBySlug, fetchBlogPosts, resolveProductImageUrl } from "../lib/api";
 import RichTextRenderer from "../components/cms/RichTextRenderer";
 import NotFound from "./NotFound";
+import { canonicalUrl, jsonLdProps } from "../lib/seo";
 
 export default function BlogDetail() {
   const { slug } = useParams();
@@ -51,9 +52,26 @@ export default function BlogDetail() {
   }
 
   const featuredImgUrl = resolveProductImageUrl(post.featuredImage);
+  const postUrl = canonicalUrl(`/blog/${post.slug}`);
+  const metaDescription = (post.excerpt || post.title || "").slice(0, 155);
+  const articleJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline: post.title,
+    description: metaDescription,
+    image: featuredImgUrl ? [featuredImgUrl] : undefined,
+    datePublished: post.publishDate || post.createdAt,
+    dateModified: post.updatedAt || post.publishDate || post.createdAt,
+    author: { "@type": "Person", name: post.author || "Aadya Editorial" },
+    mainEntityOfPage: postUrl,
+  };
 
   return (
     <div className="bg-white min-h-screen py-12 px-5 sm:px-8 animate-fade-in">
+      <title>{`${post.title} — Aadya Lifestyle Journal`}</title>
+      <meta name="description" content={metaDescription} />
+      <link rel="canonical" href={postUrl} />
+      <script type="application/ld+json" {...jsonLdProps(articleJsonLd)} />
       <article className="max-w-3xl mx-auto space-y-8">
         {/* Back Button */}
         <div>

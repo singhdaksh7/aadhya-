@@ -4,6 +4,7 @@ import { fetchPageBySlug, resolveProductImageUrl } from "../lib/api";
 import RichTextRenderer from "../components/cms/RichTextRenderer";
 import PageSectionRenderer from "../components/cms/PageSectionRenderer";
 import NotFound from "./NotFound";
+import { canonicalUrl } from "../lib/seo";
 
 export default function CmsPage({ overrideSlug }) {
   const { slug: routeSlug } = useParams();
@@ -51,9 +52,13 @@ export default function CmsPage({ overrideSlug }) {
   }
 
   const featuredImgUrl = resolveProductImageUrl(page.featuredImage);
+  const metaDescription = (page.excerpt || page.name || "").slice(0, 155);
 
   return (
     <div className="mx-auto max-w-4xl px-5 py-16 sm:px-8 space-y-8 animate-fade-in">
+      <title>{`${page.name} — Aadya Society`}</title>
+      <meta name="description" content={metaDescription} />
+      <link rel="canonical" href={canonicalUrl(`/pages/${page.slug || slug}`)} />
       {/* Page Header */}
       <div className="space-y-3 border-b border-charcoal/10 pb-6">
         <span className="text-xs font-semibold uppercase tracking-widest text-terracotta">Aadya Storefront</span>

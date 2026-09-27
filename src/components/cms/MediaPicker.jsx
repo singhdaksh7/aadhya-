@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { adminListMedia, adminUploadMedia, resolveProductImageUrl } from "../../lib/api";
 import { IconClose } from "../icons";
 
@@ -16,11 +16,51 @@ export default function MediaPicker({ isOpen, onClose, onSelect, title = "Select
   const [uploadTitle, setUploadTitle] = useState("");
   const [uploading, setUploading] = useState(false);
 
+  const dialogRef = useRef(null);
+  const closeButtonRef = useRef(null);
+  const previouslyFocusedRef = useRef(null);
+
   useEffect(() => {
     if (isOpen) {
       loadMedia();
     }
   }, [isOpen, search]);
+
+  // Focus management: move focus into the modal on open, trap Tab within it,
+  // close on Escape, and restore focus to the trigger element on close.
+  useEffect(() => {
+    if (!isOpen) return undefined;
+
+    previouslyFocusedRef.current = document.activeElement;
+    closeButtonRef.current?.focus();
+
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        onClose();
+        return;
+      }
+      if (e.key !== "Tab" || !dialogRef.current) return;
+      const focusable = dialogRef.current.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      previouslyFocusedRef.current?.focus?.();
+    };
+  }, [isOpen, onClose]);
 
   const loadMedia = async () => {
     try {
@@ -69,12 +109,22 @@ export default function MediaPicker({ isOpen, onClose, onSelect, title = "Select
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-charcoal/50 backdrop-blur-sm animate-fade-in">
-      <div className="flex flex-col w-full max-w-4xl max-h-[90vh] bg-ivory rounded-2xl shadow-2xl border border-charcoal/10 overflow-hidden">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-charcoal/50 backdrop-blur-sm animate-fade-in"
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="media-picker-title"
+        className="flex flex-col w-full max-w-4xl max-h-[90vh] bg-ivory rounded-2xl shadow-2xl border border-charcoal/10 overflow-hidden"
+      >
         {/* Modal Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-charcoal/10 bg-white">
-          <h3 className="font-serif-display text-xl text-charcoal">{title}</h3>
+          <h3 id="media-picker-title" className="font-serif-display text-xl text-charcoal">{title}</h3>
           <button
+            ref={closeButtonRef}
             onClick={onClose}
             className="p-1.5 rounded-full text-charcoal-soft hover:bg-charcoal/5 transition"
             aria-label="Close"
@@ -115,7 +165,9 @@ export default function MediaPicker({ isOpen, onClose, onSelect, title = "Select
           {tab === "browse" ? (
             <div className="space-y-4">
               {/* Search Bar */}
+              <label htmlFor="media-picker-search" className="sr-only">Search media library</label>
               <input
+                id="media-picker-search"
                 type="text"
                 placeholder="Search media by filename, alt text, title..."
                 value={search}
@@ -139,8 +191,17 @@ export default function MediaPicker({ isOpen, onClose, onSelect, title = "Select
                     return (
                       <div
                         key={asset.id}
+                        role="button"
+                        tabIndex={0}
+                        aria-pressed={isSelected}
                         onClick={() => setSelectedAsset(asset)}
-                        className={`group relative cursor-pointer rounded-xl overflow-hidden border-2 bg-white transition shadow-sm ${
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            setSelectedAsset(asset);
+                          }
+                        }}
+                        className={`group relative cursor-pointer rounded-xl overflow-hidden border-2 bg-white transition shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-terracotta ${
                           isSelected ? "border-terracotta ring-2 ring-terracotta/20" : "border-charcoal/10 hover:border-charcoal/30"
                         }`}
                       >
@@ -165,10 +226,11 @@ export default function MediaPicker({ isOpen, onClose, onSelect, title = "Select
             /* Upload Tab */
             <form onSubmit={handleUpload} className="space-y-4 max-w-lg mx-auto py-4">
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-charcoal-soft mb-2">
+                <label htmlFor="media-picker-file" className="block text-xs font-semibold uppercase tracking-wider text-charcoal-soft mb-2">
                   Select Image File (JPEG, PNG, WebP)
                 </label>
                 <input
+                  id="media-picker-file"
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
                   onChange={(e) => setUploadFile(e.target.files[0])}
@@ -178,10 +240,11 @@ export default function MediaPicker({ isOpen, onClose, onSelect, title = "Select
               </div>
 
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-charcoal-soft mb-1">
+                <label htmlFor="media-picker-alt" className="block text-xs font-semibold uppercase tracking-wider text-charcoal-soft mb-1">
                   Alt Text (Accessibility)
                 </label>
                 <input
+                  id="media-picker-alt"
                   type="text"
                   placeholder="Describe image content"
                   value={uploadAlt}
@@ -191,10 +254,11 @@ export default function MediaPicker({ isOpen, onClose, onSelect, title = "Select
               </div>
 
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-charcoal-soft mb-1">
+                <label htmlFor="media-picker-title" className="block text-xs font-semibold uppercase tracking-wider text-charcoal-soft mb-1">
                   Title (Optional)
                 </label>
                 <input
+                  id="media-picker-title"
                   type="text"
                   placeholder="Asset title"
                   value={uploadTitle}
