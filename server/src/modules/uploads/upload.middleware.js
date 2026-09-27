@@ -53,6 +53,14 @@ function looksLikePdf(buffer) {
 function verifyImageContent(req, res, next) {
   if (!req.file) return next();
   if (!looksLikeAllowedImage(req.file.buffer)) {
+    // A claimed-image upload whose bytes don't match any known image
+    // signature is a real security signal (spoofed extension/MIME), not
+    // just a validation nuisance — logged without the file content itself.
+    // eslint-disable-next-line no-console
+    console.warn("[upload] rejected file: content does not match declared image type", {
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+    });
     return next(ApiError.badRequest("File content does not match a JPEG, PNG, or WebP image"));
   }
   next();
@@ -80,6 +88,11 @@ export const bookPdfMulter = multer({
 function verifyPdfContent(req, res, next) {
   if (!req.file) return next();
   if (!looksLikePdf(req.file.buffer)) {
+    // eslint-disable-next-line no-console
+    console.warn("[upload] rejected file: content does not match declared PDF type", {
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+    });
     return next(ApiError.badRequest("File content does not match a PDF document"));
   }
   next();

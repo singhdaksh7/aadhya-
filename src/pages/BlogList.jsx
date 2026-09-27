@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { fetchBlogPosts, resolveProductImageUrl } from "../lib/api";
+import { canonicalUrl } from "../lib/seo";
 
 export default function BlogList() {
   const [posts, setPosts] = useState([]);
@@ -39,6 +40,12 @@ export default function BlogList() {
 
   return (
     <div className="bg-white min-h-screen py-12 px-5 sm:px-8 space-y-12 max-w-7xl mx-auto animate-fade-in">
+      <title>Living & Craft Stories — Aadya Lifestyle Journal</title>
+      <meta
+        name="description"
+        content="Artisanal inspirations, slow living philosophy, decor edits, and home styling guides curated by Aadya Society."
+      />
+      <link rel="canonical" href={canonicalUrl("/blog")} />
       {/* Header Section */}
       <div className="text-center max-w-2xl mx-auto space-y-3">
         <span className="text-xs font-semibold uppercase tracking-widest text-terracotta">Aadya Lifestyle Journal</span>

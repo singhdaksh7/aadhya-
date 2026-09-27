@@ -20,6 +20,10 @@ export const handleRazorpayWebhook = asyncHandler(async (req, res) => {
 
   const signature = req.headers["x-razorpay-signature"];
   if (!verifyRazorpayWebhookSignature(rawBody, signature)) {
+    // Logged without the signature/body value itself — an invalid signature
+    // is a security-relevant event (forged/replayed webhook attempt).
+    // eslint-disable-next-line no-console
+    console.warn("[webhook] rejected Razorpay webhook: invalid signature", { ip: req.ip });
     return res.status(400).json({ success: false, error: { message: "Invalid webhook signature" } });
   }
 
@@ -74,7 +78,11 @@ export const handleRazorpayWebhook = asyncHandler(async (req, res) => {
     }
   } else if (eventType === "payment.failed") {
     const providerOrderId = entity.order_id;
-    if (providerOrderId) await markPaymentFailed({ providerOrderId });
+    if (providerOrderId) {
+      // eslint-disable-next-line no-console
+      console.error("[webhook] payment.failed", { providerOrderId, reason: entity.error_description || entity.error_code || "unknown" });
+      await markPaymentFailed({ providerOrderId });
+    }
   }
   // Other event types (e.g. refund.processed) are accepted but not acted on
   // in this phase — refunds are explicitly out of scope.

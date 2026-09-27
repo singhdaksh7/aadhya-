@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import HomepageRenderer from "../components/HomepageRenderer";
 import { fetchHomepage } from "../lib/api";
+import { canonicalUrl } from "../lib/seo";
 
 export default function Home() {
   const [sections, setSections] = useState([]);
@@ -60,5 +61,15 @@ export default function Home() {
     );
   }
 
-  return <HomepageRenderer sections={sections} />;
+  return (
+    <>
+      <title>Aadya Society — Handcrafted Home Decor & Slow Living</title>
+      <meta
+        name="description"
+        content="Aadya Society: handcrafted oil lamps, unglazed ceramic vessels, linen runners, and slow-living monographs curated for thoughtful homes."
+      />
+      <link rel="canonical" href={canonicalUrl("/")} />
+      <HomepageRenderer sections={sections} />
+    </>
+  );
 }

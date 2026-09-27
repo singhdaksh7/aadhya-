@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { getCollections } from "../../services/api";
+import { canonicalUrl } from "../../lib/seo";
 
 export default function CollectionsHub() {
   const [collections, setCollections] = useState([]);
@@ -15,6 +16,12 @@ export default function CollectionsHub() {
 
   return (
     <div className="space-y-12 pb-20">
+      <title>Curated Collections — Aadya Society</title>
+      <meta
+        name="description"
+        content="Explore Aadya Society's editorial collections — handcrafted metalwork, home decor, and lifestyle objects grouped by materiality and mood."
+      />
+      <link rel="canonical" href={canonicalUrl("/collections")} />
       {/* Header */}
       <section className="bg-ivory-dark/60 py-12 sm:py-16 text-center">
         <div className="mx-auto max-w-4xl px-5 sm:px-8 space-y-3">

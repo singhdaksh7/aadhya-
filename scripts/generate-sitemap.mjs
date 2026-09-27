@@ -27,6 +27,8 @@ const STATIC_ROUTES = [
 ];
 
 async function fetchAllProductSlugs() {
+  // Includes book products — /products returns all productTypes (BOOK
+  // included), so no separate fetch is needed for book routes.
   const slugs = [];
   let page = 1;
   for (;;) {
@@ -40,7 +42,19 @@ async function fetchAllProductSlugs() {
   return slugs;
 }
 
-function buildXml(urls) {
+async function fetchSlugs(resourcePath, key = "slug") {
+  try {
+    const res = await fetch(`${API_URL}${resourcePath}`);
+    if (!res.ok) return [];
+    const body = await res.json();
+    const items = body.data || body.items || [];
+    return items.map((item) => item[key]).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+export function buildXml(urls) {
   const entries = urls
     .map((url) => `  <url><loc>${SITE_URL}${url}</loc></url>`)
     .join("\n");
@@ -49,18 +63,45 @@ function buildXml(urls) {
 
 async function main() {
   let productRoutes = [];
+  let categoryRoutes = [];
+  let collectionRoutes = [];
+  let blogRoutes = [];
   try {
     const slugs = await fetchAllProductSlugs();
     productRoutes = slugs.map((slug) => `/shop/${slug}`);
-    console.log(`sitemap: included ${productRoutes.length} product routes from ${API_URL}`);
+    console.log(`sitemap: included ${productRoutes.length} product routes (incl. books) from ${API_URL}`);
+
+    const categorySlugs = await fetchSlugs("/categories");
+    categoryRoutes = categorySlugs.map((slug) => `/shop/category/${slug}`);
+
+    const collectionSlugs = await fetchSlugs("/collections");
+    collectionRoutes = collectionSlugs.map((slug) => `/collections/${slug}`);
+
+    const blogSlugs = await fetchSlugs("/blog?limit=200");
+    blogRoutes = blogSlugs.map((slug) => `/blog/${slug}`);
+
+    console.log(
+      `sitemap: included ${categoryRoutes.length} categories, ${collectionRoutes.length} collections, ${blogRoutes.length} blog posts`
+    );
   } catch {
     console.warn(`sitemap: could not reach ${API_URL}, shipping static routes only`);
   }
 
-  const xml = buildXml([...STATIC_ROUTES, ...productRoutes]);
+  const xml = buildXml([
+    ...STATIC_ROUTES,
+    ...productRoutes,
+    ...categoryRoutes,
+    ...collectionRoutes,
+    ...blogRoutes,
+  ]);
   const outPath = path.resolve(process.cwd(), "public/sitemap.xml");
   fs.writeFileSync(outPath, xml);
   console.log(`sitemap: wrote ${outPath}`);
 }
 
-main();
+// Only run as a script (prebuild step) — guarded so this module can be
+// imported for unit testing buildXml() without triggering network calls
+// or writing to public/sitemap.xml.
+if (import.meta.url === `file://${process.argv[1]}`.replace(/\\/g, "/") || process.argv[1]?.endsWith("generate-sitemap.mjs")) {
+  main();
+}
