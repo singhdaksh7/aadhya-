@@ -23,6 +23,9 @@ import {
   deleteCustomerReview,
   accountDownloads,
   reissueAccountDownloadLink,
+  fetchCustomerNotifications,
+  markNotificationRead,
+  markAllNotificationsRead,
 } from "../../lib/api";
 import { formatInr } from "../../lib/format";
 
@@ -50,6 +53,7 @@ function AccountNav() {
     { path: "/account/wishlist", label: "Wishlist" },
     { path: "/account/reviews", label: "Reviews" },
     { path: "/account/downloads", label: "Downloads" },
+    { path: "/account/notifications", label: "Notifications" },
   ];
   return (
     <div className="flex gap-5 overflow-x-auto border-b border-charcoal/10 text-xs font-semibold uppercase tracking-wider no-scrollbar">
@@ -943,6 +947,111 @@ export function AccountDownloads() {
               </div>
             );
           })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function AccountNotifications() {
+  const [items, setItems] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [busyId, setBusyId] = useState(null);
+  const [markingAll, setMarkingAll] = useState(false);
+
+  const load = () => {
+    setLoading(true);
+    fetchCustomerNotifications()
+      .then((res) => {
+        setItems(res.data || []);
+        setUnreadCount(res.meta?.unreadCount ?? 0);
+      })
+      .catch(() => setError("Could not load your notifications."))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  const handleMarkRead = async (id) => {
+    setBusyId(id);
+    try {
+      await markNotificationRead(id);
+      setItems((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
+      setUnreadCount((prev) => Math.max(0, prev - 1));
+    } catch (err) {
+      setError(err.message || "Could not update the notification.");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    setMarkingAll(true);
+    try {
+      await markAllNotificationsRead();
+      setItems((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      setUnreadCount(0);
+    } catch (err) {
+      setError(err.message || "Could not update notifications.");
+    } finally {
+      setMarkingAll(false);
+    }
+  };
+
+  return (
+    <div className="mx-auto max-w-4xl px-5 py-12 sm:px-8 space-y-8">
+      <SectionHeading eyebrow="Customer Account" title="Notifications" />
+      <AccountNav />
+
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">
+          {unreadCount > 0 ? `${unreadCount} unread` : "All caught up"}
+        </p>
+        {unreadCount > 0 && (
+          <Button type="button" onClick={handleMarkAllRead} disabled={markingAll}>
+            {markingAll ? "Marking..." : "Mark all read"}
+          </Button>
+        )}
+      </div>
+
+      {loading ? (
+        <p className="text-xs text-charcoal-soft">Loading notifications...</p>
+      ) : error ? (
+        <p className="rounded-xl bg-terracotta/10 p-4 text-sm text-terracotta">{error}</p>
+      ) : items.length === 0 ? (
+        <div className="rounded-3xl border border-dashed border-charcoal/20 bg-ivory-dark/30 p-12 text-center">
+          <p className="text-sm text-charcoal-soft">You don't have any notifications yet.</p>
+        </div>
+      ) : (
+        <div className="divide-y divide-charcoal/10 rounded-2xl border border-charcoal/10">
+          {items.map((n) => (
+            <div
+              key={n.id}
+              className={`flex flex-col gap-2 p-5 sm:flex-row sm:items-center sm:justify-between ${n.isRead ? "" : "bg-terracotta/5"}`}
+            >
+              <div>
+                <p className="font-medium text-charcoal">{n.title}</p>
+                <p className="text-xs text-charcoal-soft">{n.message}</p>
+                <p className="mt-1 text-xs text-charcoal-soft">{new Date(n.createdAt).toLocaleDateString("en-IN")}</p>
+              </div>
+              <div className="flex shrink-0 items-center gap-3">
+                {n.link && (
+                  <Link to={n.link} className="text-xs font-semibold uppercase tracking-wider text-terracotta">
+                    View
+                  </Link>
+                )}
+                {!n.isRead && (
+                  <Button type="button" disabled={busyId === n.id} onClick={() => handleMarkRead(n.id)}>
+                    {busyId === n.id ? "..." : "Mark read"}
+                  </Button>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>
