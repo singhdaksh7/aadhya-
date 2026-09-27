@@ -7,7 +7,7 @@ import {
 } from "../../lib/api";
 import { Button } from "../../components/ui";
 import { LoadingNotice, ErrorNotice } from "../../components/StateNotice";
-import MediaPicker from "../../components/cms/MediaPicker";
+import ImagePickerInput from "../../components/admin/ImagePickerInput";
 import { applyThemeVariables, DEFAULT_SITE_SETTINGS } from "../../hooks/useSiteSettings";
 
 export default function AdminSettings() {
@@ -17,8 +17,6 @@ export default function AdminSettings() {
   const [pages, setPages] = useState([]);
   const [error, setError] = useState(null);
   const [saved, setSaved] = useState(false);
-  const [isMediaOpen, setIsMediaOpen] = useState(false);
-  const [mediaTargetField, setMediaTargetField] = useState(null);
 
   useEffect(() => {
     Promise.all([
@@ -76,32 +74,6 @@ export default function AdminSettings() {
     } catch (err) {
       setError(err.message || "Could not reset appearance.");
     }
-  };
-
-  const openMediaPicker = (fieldPath) => {
-    setMediaTargetField(fieldPath);
-    setIsMediaOpen(true);
-  };
-
-  const handleMediaSelect = (asset) => {
-    if (!mediaTargetField) return;
-    const url = asset.url;
-
-    // Helper to update nested state
-    setSettings((prev) => {
-      const copy = JSON.parse(JSON.stringify(prev));
-      const parts = mediaTargetField.split(".");
-      let curr = copy;
-      for (let i = 0; i < parts.length - 1; i++) {
-        if (!curr[parts[i]]) curr[parts[i]] = {};
-        curr = curr[parts[i]];
-      }
-      curr[parts[parts.length - 1]] = url;
-      return copy;
-    });
-
-    setIsMediaOpen(false);
-    setMediaTargetField(null);
   };
 
   if (status === "loading") return <LoadingNotice label="Loading store settings…" />;
@@ -300,39 +272,35 @@ export default function AdminSettings() {
         {activeTab === "branding" && (
           <div className="space-y-4 rounded-2xl border border-charcoal/10 bg-white p-6 shadow-xs">
             <h2 className="font-serif text-lg font-bold text-charcoal">Branding &amp; Media Assets</h2>
-            <div>
-              <label className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Desktop Store Logo</label>
-              <div className="flex gap-2 mt-1">
-                <input
-                  placeholder="Image URL or Media asset path"
-                  value={settings.branding?.desktopLogo || ""}
-                  onChange={(e) =>
-                    setSettings((s) => ({ ...s, branding: { ...s.branding, desktopLogo: e.target.value } }))
-                  }
-                  className={inputCls}
-                />
-                <Button type="button" onClick={() => openMediaPicker("branding.desktopLogo")} className="bg-charcoal text-white shrink-0 text-xs">
-                  Pick from Media
-                </Button>
-              </div>
-            </div>
+            <ImagePickerInput
+              label="Desktop Store Logo"
+              value={settings.branding?.desktopLogo}
+              onChange={(url) =>
+                setSettings((s) => ({ ...s, branding: { ...s.branding, desktopLogo: url } }))
+              }
+              pickerTitle="Select desktop logo"
+              inputClassName={inputCls}
+            />
 
-            <div>
-              <label className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Mobile Store Logo (Optional)</label>
-              <div className="flex gap-2 mt-1">
-                <input
-                  placeholder="Image URL or Media asset path"
-                  value={settings.branding?.mobileLogo || ""}
-                  onChange={(e) =>
-                    setSettings((s) => ({ ...s, branding: { ...s.branding, mobileLogo: e.target.value } }))
-                  }
-                  className={inputCls}
-                />
-                <Button type="button" onClick={() => openMediaPicker("branding.mobileLogo")} className="bg-charcoal text-white shrink-0 text-xs">
-                  Pick from Media
-                </Button>
-              </div>
-            </div>
+            <ImagePickerInput
+              label="Mobile Store Logo (Optional)"
+              value={settings.branding?.mobileLogo}
+              onChange={(url) =>
+                setSettings((s) => ({ ...s, branding: { ...s.branding, mobileLogo: url } }))
+              }
+              pickerTitle="Select mobile logo"
+              inputClassName={inputCls}
+            />
+
+            <ImagePickerInput
+              label="Favicon"
+              value={settings.branding?.favicon}
+              onChange={(url) =>
+                setSettings((s) => ({ ...s, branding: { ...s.branding, favicon: url } }))
+              }
+              pickerTitle="Select favicon"
+              inputClassName={inputCls}
+            />
 
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -436,6 +404,15 @@ export default function AdminSettings() {
         {activeTab === "footer" && (
           <div className="space-y-4 rounded-2xl border border-charcoal/10 bg-white p-6 shadow-xs">
             <h2 className="font-serif text-lg font-bold text-charcoal">Footer Configuration</h2>
+            <ImagePickerInput
+              label="Footer Logo (Optional — falls back to store logo)"
+              value={settings.footer?.footerLogo}
+              onChange={(url) =>
+                setSettings((s) => ({ ...s, footer: { ...s.footer, footerLogo: url } }))
+              }
+              pickerTitle="Select footer logo"
+              inputClassName={inputCls}
+            />
             <div>
               <label className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Brand Description in Footer</label>
               <textarea
@@ -880,14 +857,6 @@ export default function AdminSettings() {
           </div>
         )}
       </form>
-
-      {/* Media Picker Modal */}
-      <MediaPicker
-        isOpen={isMediaOpen}
-        onClose={() => setIsMediaOpen(false)}
-        onSelect={handleMediaSelect}
-        title="Select Logo Image"
-      />
     </div>
   );
 }

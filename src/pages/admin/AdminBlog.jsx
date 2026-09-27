@@ -8,7 +8,7 @@ import {
   resolveProductImageUrl
 } from "../../lib/api";
 import RichTextEditor from "../../components/cms/RichTextEditor";
-import MediaPicker from "../../components/cms/MediaPicker";
+import ImagePickerInput from "../../components/admin/ImagePickerInput";
 
 export default function AdminBlog() {
   const [posts, setPosts] = useState([]);
@@ -37,7 +37,6 @@ export default function AdminBlog() {
     seoDescription: ""
   });
   const [saving, setSaving] = useState(false);
-  const [showMediaPicker, setShowMediaPicker] = useState(false);
 
   useEffect(() => {
     loadBlogPosts();
@@ -461,36 +460,13 @@ export default function AdminBlog() {
               </div>
 
               {/* Featured Image */}
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-charcoal-soft mb-1">
-                  Featured Header Image
-                </label>
-                <div className="flex gap-2 items-center">
-                  <input
-                    type="text"
-                    value={formData.featuredImage}
-                    onChange={(e) => setFormData({ ...formData, featuredImage: e.target.value })}
-                    placeholder="https://... or choose from Media Library"
-                    className="flex-1 px-3 py-2 text-xs rounded-xl border border-charcoal/15 bg-white text-charcoal focus:outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowMediaPicker(true)}
-                    className="px-3 py-2 text-xs font-semibold rounded-xl border border-charcoal/15 bg-white hover:bg-charcoal/5"
-                  >
-                    Select Media
-                  </button>
-                </div>
-                {formData.featuredImage && (
-                  <div className="mt-2 w-36 h-24 rounded-xl overflow-hidden border border-charcoal/10 bg-white">
-                    <img
-                      src={resolveProductImageUrl(formData.featuredImage)}
-                      alt="Blog Featured Preview"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                )}
-              </div>
+              <ImagePickerInput
+                label="Featured Header Image"
+                value={formData.featuredImage}
+                onChange={(url) => setFormData({ ...formData, featuredImage: url })}
+                pickerTitle="Select Featured Blog Image"
+                inputClassName="w-full px-3 py-2 text-xs rounded-xl border border-charcoal/15 bg-white text-charcoal focus:outline-none"
+              />
 
               {/* Article Content */}
               <div>
@@ -525,16 +501,6 @@ export default function AdminBlog() {
           </div>
         </div>
       )}
-
-      {/* Media Picker Modal */}
-      <MediaPicker
-        isOpen={showMediaPicker}
-        onClose={() => setShowMediaPicker(false)}
-        onSelect={(asset) => {
-          setFormData((prev) => ({ ...prev, featuredImage: asset.url }));
-        }}
-        title="Select Featured Blog Image"
-      />
     </div>
   );
 }

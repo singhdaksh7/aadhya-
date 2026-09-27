@@ -9,6 +9,7 @@ import {
 } from "../../lib/api";
 import { Button } from "../../components/ui";
 import { LoadingNotice, ErrorNotice } from "../../components/StateNotice";
+import ImagePickerInput from "../../components/admin/ImagePickerInput";
 
 const COLLECTION_TYPES = [
   { value: "MANUAL", label: "Manual Selection" },
@@ -27,6 +28,8 @@ const emptyForm = {
   slug: "",
   description: "",
   image: "",
+  desktopBanner: "",
+  mobileBanner: "",
   type: "MANUAL",
   ruleCategoryId: "",
   ruleTag: "",
@@ -71,6 +74,8 @@ export default function AdminCollections() {
       slug: c.slug,
       description: c.description || "",
       image: c.image || c.heroImage || "",
+      desktopBanner: c.desktopBanner || "",
+      mobileBanner: c.mobileBanner || "",
       type: c.type || "MANUAL",
       ruleCategoryId: rc.categoryId || "",
       ruleTag: rc.tag || "",
@@ -103,6 +108,8 @@ export default function AdminCollections() {
       slug: form.slug || undefined,
       description: form.description || null,
       image: form.image || null,
+      desktopBanner: form.desktopBanner || null,
+      mobileBanner: form.mobileBanner || null,
       type: form.type,
       ruleConfig,
       sortOrder: Number(form.sortOrder) || 0,
@@ -238,12 +245,29 @@ export default function AdminCollections() {
           onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
           className={inputCls}
         />
-        <input
-          placeholder="Banner / Cover image URL"
+        <ImagePickerInput
+          label="Hero Image"
           value={form.image}
-          onChange={(e) => setForm((f) => ({ ...f, image: e.target.value }))}
-          className={inputCls}
+          onChange={(url) => setForm((f) => ({ ...f, image: url }))}
+          pickerTitle="Select collection hero image"
+          inputClassName={inputCls}
         />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <ImagePickerInput
+            label="Desktop Banner"
+            value={form.desktopBanner}
+            onChange={(url) => setForm((f) => ({ ...f, desktopBanner: url }))}
+            pickerTitle="Select collection desktop banner"
+            inputClassName={inputCls}
+          />
+          <ImagePickerInput
+            label="Mobile Banner"
+            value={form.mobileBanner}
+            onChange={(url) => setForm((f) => ({ ...f, mobileBanner: url }))}
+            pickerTitle="Select collection mobile banner"
+            inputClassName={inputCls}
+          />
+        </div>
         <input
           type="number"
           placeholder="Sort order"
