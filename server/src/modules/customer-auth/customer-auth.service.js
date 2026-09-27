@@ -66,7 +66,20 @@ export async function login(input, userAgent) {
 export async function refresh(token, userAgent) {
   if (!token) throw ApiError.unauthorized();
   const session = await prisma.customerRefreshSession.findUnique({ where: { tokenHash: hashToken(token) }, include: { customer: true } });
-  if (!session || session.revokedAt || session.expiresAt <= new Date() || !session.customer.isActive) throw ApiError.unauthorized("Invalid or expired session");
+  if (!session) throw ApiError.unauthorized("Invalid or expired session");
+  if (session.revokedAt) {
+    // Reuse of an already-rotated refresh token: either a benign race (a
+    // retried request) or a stolen token being replayed after the
+    // legitimate client already rotated past it. We can't tell which, so
+    // treat it as theft and revoke every session for this customer,
+    // forcing a fresh login everywhere.
+    await prisma.customerRefreshSession.updateMany({
+      where: { customerId: session.customerId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+    throw ApiError.unauthorized("Invalid or expired session");
+  }
+  if (session.expiresAt <= new Date() || !session.customer.isActive) throw ApiError.unauthorized("Invalid or expired session");
   await prisma.customerRefreshSession.update({ where: { id: session.id }, data: { revokedAt: new Date() } });
   return createSession(session.customer, userAgent);
 }
