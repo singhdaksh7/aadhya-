@@ -11,7 +11,11 @@ export async function checkVerifiedPurchase(customerId, productId) {
   const order = await prisma.order.findFirst({
     where: {
       customerId,
-      status: "DELIVERED",
+      status: { not: "CANCELLED" },
+      OR: [
+        { paymentStatus: "PAID" },
+        { status: { in: ["CONFIRMED", "PROCESSING", "SHIPPED", "DELIVERED"] } },
+      ],
       items: {
         some: {
           productId,
@@ -381,6 +385,10 @@ export async function moderateAdminReview(adminUserId, reviewId, status) {
     throw ApiError.notFound("Review not found.");
   }
 
+  if (review.status === upperStatus) {
+    return review;
+  }
+
   const updated = await prisma.productReview.update({
     where: { id: reviewId },
     data: {
@@ -390,7 +398,7 @@ export async function moderateAdminReview(adminUserId, reviewId, status) {
     },
   });
 
-  // Create customer notification
+  // Create customer notification idempotently
   try {
     const notifTitle = upperStatus === "APPROVED" ? "Review Approved" : "Review Rejected";
     const notifMsg =
@@ -398,15 +406,25 @@ export async function moderateAdminReview(adminUserId, reviewId, status) {
         ? `Your review for "${review.product?.name || "product"}" has been approved and published.`
         : `Your review for "${review.product?.name || "product"}" was not approved.`;
 
-    await prisma.customerNotification.create({
-      data: {
+    const existingNotif = await prisma.customerNotification.findFirst({
+      where: {
         customerId: review.customerId,
         type: `REVIEW_${upperStatus}`,
-        title: notifTitle,
-        message: notifMsg,
         link: `/product/${review.productId}`,
       },
     });
+
+    if (!existingNotif) {
+      await prisma.customerNotification.create({
+        data: {
+          customerId: review.customerId,
+          type: `REVIEW_${upperStatus}`,
+          title: notifTitle,
+          message: notifMsg,
+          link: `/product/${review.productId}`,
+        },
+      });
+    }
   } catch (err) {
     // Non-blocking notification creation error
     console.error("Failed to create customer notification for review moderation:", err);

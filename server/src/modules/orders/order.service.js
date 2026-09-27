@@ -236,6 +236,32 @@ export async function updateOrderStatus(id, nextStatus) {
   if (nextStatus === "CANCELLED") data.cancelledAt = new Date();
 
   const updated = await prisma.order.update({ where: { id }, data, include: ADMIN_INCLUDE });
+
+  if (order.customerId && nextStatus !== order.status) {
+    try {
+      const existingNotif = await prisma.customerNotification.findFirst({
+        where: {
+          customerId: order.customerId,
+          type: `ORDER_${nextStatus}`,
+          link: `/account/orders/${order.orderNumber}`,
+        },
+      });
+      if (!existingNotif) {
+        await prisma.customerNotification.create({
+          data: {
+            customerId: order.customerId,
+            type: `ORDER_${nextStatus}`,
+            title: `Order ${nextStatus.charAt(0) + nextStatus.slice(1).toLowerCase()}`,
+            message: `Your order ${order.orderNumber} is now ${nextStatus.toLowerCase()}.`,
+            link: `/account/orders/${order.orderNumber}`,
+          },
+        });
+      }
+    } catch (err) {
+      console.error("Failed to create customer notification for order status update:", err);
+    }
+  }
+
   return sanitizeOrder(updated);
 }
 

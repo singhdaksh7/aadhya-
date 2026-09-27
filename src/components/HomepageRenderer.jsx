@@ -21,7 +21,7 @@ export default function HomepageRenderer({ sections = [], categories = [], newAr
     const s = section.settings || {};
     switch (section.type) {
       case "CIRCULAR_CATEGORY_NAV": case "CATEGORY_CIRCLES": return <CircularCategoryNav key={section.id} categories={categories} />;
-      case "PROMO_STRIP": case "PROMO_TICKER": return <PromoStrip key={section.id} />;
+      case "PROMO_STRIP": case "PROMO_TICKER": return <PromoStrip key={section.id} promoConfig={s} />;
       case "HERO_CAROUSEL": case "HERO": return <HeroBannerCarousel key={section.id} />;
       case "TRUST_STRIP": case "TRUST_BADGES": return <TrustServiceStrip key={section.id} items={s.items} />;
       case "PROMO_BANNERS_2UP": case "MULTI_BANNER": return <PromoBanners2Up key={section.id} promoCards={s.items} />;

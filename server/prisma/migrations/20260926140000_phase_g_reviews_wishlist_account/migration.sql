@@ -98,8 +98,4 @@ ALTER TABLE "WishlistItem" ADD CONSTRAINT "WishlistItem_variantId_fkey" FOREIGN 
 -- AddForeignKey
 ALTER TABLE "CustomerNotification" ADD CONSTRAINT "CustomerNotification_customerId_fkey" FOREIGN KEY ("customerId") REFERENCES "Customer"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
--- Schema Drift Fixes
-ALTER TABLE "PageSection" ADD COLUMN IF NOT EXISTS "isActive" BOOLEAN NOT NULL DEFAULT true;
-ALTER TABLE "PageSection" ADD COLUMN IF NOT EXISTS "name" TEXT;
-ALTER TABLE "PageSection" ADD COLUMN IF NOT EXISTS "isEnabled" BOOLEAN NOT NULL DEFAULT true;
 
