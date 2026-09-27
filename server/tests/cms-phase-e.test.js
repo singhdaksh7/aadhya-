@@ -182,8 +182,11 @@ describe("Phase E CMS, Blog, FAQ, Media & Sanitizer", () => {
     it("uploads image, lists media, updates metadata, and protects referenced asset from silent deletion", async () => {
       const token = await getAdminToken();
 
-      // Upload mock buffer
-      const fileBuffer = Buffer.from("fake-image-bytes");
+      // Minimal valid 1x1 JPEG so magic-byte content verification passes.
+      const fileBuffer = Buffer.from(
+        "/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAMDAwMDAwQEBAQFBQUFBQcHBgYHBwsJCQkJCQsRCwwMDAwLERMUEBASFRMcHBweICg0KCEwMTU5OTVAREJERkT/2wBDAQUFBQgHCA8ICA8VDg4VFRoUFBQUGh8ODw4PDx8fERQXFxcRHyAgIiIhICw0KCg0LDs7Ozk5RERAQERAQE7/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIQAxAAAAF/9k=",
+        "base64"
+      );
       const uploadRes = await request(app)
         .post("/api/admin/media/upload")
         .set("Authorization", `Bearer ${token}`)
