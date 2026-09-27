@@ -1,11 +1,21 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { adminGetOrder, adminUpdateOrderStatus } from "../../lib/api";
+import { adminGetOrder, adminUpdateOrderStatus, adminUpsertShipment } from "../../lib/api";
 import { LoadingNotice, ErrorNotice } from "../../components/StateNotice";
 import { formatInr } from "../../lib/format";
 import { StatusPill } from "./AdminOrderList";
 
-const NEXT_STATUSES = ["CONFIRMED", "PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED"];
+// Mirrors server/src/modules/orders/orderStatus.js — only these moves are
+// legal from a given status, so the UI never even offers an invalid one
+// (the server rejects it either way, but this avoids a round-trip 409).
+const ALLOWED_TRANSITIONS = {
+  PENDING: ["CONFIRMED", "CANCELLED"],
+  CONFIRMED: ["PROCESSING", "CANCELLED"],
+  PROCESSING: ["SHIPPED", "CANCELLED"],
+  SHIPPED: ["DELIVERED"],
+  DELIVERED: [],
+  CANCELLED: [],
+};
 
 export default function AdminOrderDetail() {
   const { id } = useParams();
@@ -13,12 +23,25 @@ export default function AdminOrderDetail() {
   const [status, setStatus] = useState("loading");
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState(null);
+  const [shipment, setShipment] = useState({ carrier: "", trackingNumber: "", trackingUrl: "", estimatedDelivery: "" });
+  const [shipmentSaving, setShipmentSaving] = useState(false);
+  const [shipmentError, setShipmentError] = useState(null);
 
   const load = () => {
     setStatus("loading");
     adminGetOrder(id)
       .then((res) => {
         setOrder(res.data);
+        if (res.data.shipment) {
+          setShipment({
+            carrier: res.data.shipment.carrier || "",
+            trackingNumber: res.data.shipment.trackingNumber || "",
+            trackingUrl: res.data.shipment.trackingUrl || "",
+            estimatedDelivery: res.data.shipment.estimatedDelivery
+              ? res.data.shipment.estimatedDelivery.slice(0, 10)
+              : "",
+          });
+        }
         setStatus("ready");
       })
       .catch(() => setStatus("error"));
@@ -39,11 +62,31 @@ export default function AdminOrderDetail() {
     }
   };
 
+  const saveShipment = async (e) => {
+    e.preventDefault();
+    setShipmentSaving(true);
+    setShipmentError(null);
+    try {
+      const res = await adminUpsertShipment(id, {
+        carrier: shipment.carrier || null,
+        trackingNumber: shipment.trackingNumber || null,
+        trackingUrl: shipment.trackingUrl || null,
+        estimatedDelivery: shipment.estimatedDelivery || null,
+      });
+      setOrder((prev) => ({ ...prev, shipment: res.data }));
+    } catch (err) {
+      setShipmentError(err.message || "Could not save tracking info.");
+    } finally {
+      setShipmentSaving(false);
+    }
+  };
+
   if (status === "loading") return <LoadingNotice />;
   if (status === "error" || !order) return <ErrorNotice message="Unable to load this order." onRetry={load} />;
 
   const refundNeeded = order.status === "CANCELLED" && order.paymentStatus === "PAID";
   const isTerminal = order.status === "CANCELLED" || order.status === "DELIVERED";
+  const nextStatuses = ALLOWED_TRANSITIONS[order.status] || [];
 
   return (
     <div>
@@ -143,10 +186,11 @@ export default function AdminOrderDetail() {
           Payment status is controlled by the payment workflow and cannot be set manually here.
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
-          {NEXT_STATUSES.map((s) => (
+          {isTerminal && <span className="text-xs text-charcoal-soft">This order is {order.status.toLowerCase()} and cannot be changed further.</span>}
+          {nextStatuses.map((s) => (
             <button
               key={s}
-              disabled={updating || isTerminal || s === order.status}
+              disabled={updating}
               onClick={() => changeStatus(s)}
               className="rounded-full border border-charcoal/20 px-4 py-2 text-xs font-medium text-charcoal hover:bg-charcoal/5 disabled:cursor-not-allowed disabled:opacity-40"
             >
@@ -155,6 +199,66 @@ export default function AdminOrderDetail() {
           ))}
         </div>
         {error && <p className="mt-3 text-sm text-terracotta">{error}</p>}
+
+        {order.statusHistory?.length > 0 && (
+          <ul className="mt-4 space-y-1.5 border-t border-charcoal/10 pt-4 text-xs text-charcoal-soft">
+            {order.statusHistory.map((h) => (
+              <li key={h.id}>
+                {new Date(h.changedAt).toLocaleString("en-IN")} — {h.fromStatus || "created"} → {h.toStatus}
+                {h.note ? ` (${h.note})` : ""}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="mt-6 rounded-2xl border border-charcoal/10 bg-white/50 p-5">
+        <h2 className="font-serif-display text-lg text-charcoal">Fulfilment / Tracking</h2>
+        <form onSubmit={saveShipment} className="mt-3 grid gap-3 sm:grid-cols-2">
+          <label className="text-xs text-charcoal-soft">
+            Carrier
+            <input
+              className="mt-1 w-full rounded-lg border border-charcoal/20 px-3 py-2 text-sm"
+              value={shipment.carrier}
+              onChange={(e) => setShipment((s) => ({ ...s, carrier: e.target.value }))}
+            />
+          </label>
+          <label className="text-xs text-charcoal-soft">
+            Tracking number
+            <input
+              className="mt-1 w-full rounded-lg border border-charcoal/20 px-3 py-2 text-sm"
+              value={shipment.trackingNumber}
+              onChange={(e) => setShipment((s) => ({ ...s, trackingNumber: e.target.value }))}
+            />
+          </label>
+          <label className="text-xs text-charcoal-soft sm:col-span-2">
+            Tracking URL
+            <input
+              className="mt-1 w-full rounded-lg border border-charcoal/20 px-3 py-2 text-sm"
+              value={shipment.trackingUrl}
+              onChange={(e) => setShipment((s) => ({ ...s, trackingUrl: e.target.value }))}
+            />
+          </label>
+          <label className="text-xs text-charcoal-soft">
+            Estimated delivery
+            <input
+              type="date"
+              className="mt-1 w-full rounded-lg border border-charcoal/20 px-3 py-2 text-sm"
+              value={shipment.estimatedDelivery}
+              onChange={(e) => setShipment((s) => ({ ...s, estimatedDelivery: e.target.value }))}
+            />
+          </label>
+          <div className="sm:col-span-2">
+            <button
+              type="submit"
+              disabled={shipmentSaving}
+              className="rounded-full bg-charcoal px-5 py-2 text-xs font-medium text-white disabled:opacity-40"
+            >
+              {shipmentSaving ? "Saving…" : "Save tracking info"}
+            </button>
+          </div>
+        </form>
+        {shipmentError && <p className="mt-3 text-sm text-terracotta">{shipmentError}</p>}
       </section>
     </div>
   );

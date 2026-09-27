@@ -31,6 +31,7 @@ import { adminMediaRouter } from "../modules/media/media.routes.js";
 import { publicReviewRouter, customerReviewRouter, adminReviewRouter } from "../modules/reviews/review.routes.js";
 import wishlistRouter from "../modules/wishlist/wishlist.routes.js";
 import notificationRouter from "../modules/notifications/notification.routes.js";
+import { adminShippingRouter } from "../modules/shipping/shipping.routes.js";
 
 const router = Router();
 
@@ -96,6 +97,7 @@ router.use("/admin/admin-users", adminUserRouter);
 router.use("/admin/banners", adminBannersRouter);
 router.use("/admin/promos", adminPromosRouter);
 router.use("/admin/reviews", adminReviewRouter);
+router.use("/admin/shipping", adminShippingRouter);
 
 // Admin Pages APIs: Specific /home route BEFORE parameterized /:id route!
 router.use("/admin/pages", adminPagesRouter);

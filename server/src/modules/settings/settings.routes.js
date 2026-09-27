@@ -174,12 +174,17 @@ export const DEFAULT_SETTINGS = {
     standardShippingAmount: 150,
     freeShippingThreshold: 2499,
     shippingEnabled: true,
+    dispatchEstimate: "1-2 business days",
+    deliveryEstimate: "3-7 business days",
   },
   payments: {
     razorpayEnabled: true,
     codEnabled: true,
     razorpayDisplayLabel: "Pay Online via Razorpay (UPI, Cards, NetBanking)",
     codDisplayLabel: "Cash on Delivery (COD)",
+    codMinOrderValue: 0,
+    codMaxOrderValue: 50000,
+    codFee: 0,
   },
   checkout: {
     guestCheckoutEnabled: true,
@@ -348,6 +353,8 @@ const settingsValidationSchema = z.object({
     standardShippingAmount: z.number().nonnegative().max(100000).optional(),
     freeShippingThreshold: z.number().nonnegative().max(1000000).optional(),
     shippingEnabled: z.boolean().optional(),
+    dispatchEstimate: z.string().max(100).optional(),
+    deliveryEstimate: z.string().max(100).optional(),
   }).optional(),
 
   payments: z.object({
@@ -355,6 +362,9 @@ const settingsValidationSchema = z.object({
     codEnabled: z.boolean().optional(),
     razorpayDisplayLabel: z.string().max(150).optional(),
     codDisplayLabel: z.string().max(150).optional(),
+    codMinOrderValue: z.number().nonnegative().max(1000000).optional(),
+    codMaxOrderValue: z.number().nonnegative().max(1000000).optional(),
+    codFee: z.number().nonnegative().max(100000).optional(),
   }).optional(),
 
   checkout: z.object({

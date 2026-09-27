@@ -69,6 +69,7 @@ export const handleRazorpayWebhook = asyncHandler(async (req, res) => {
         providerPaymentId: entity.id,
         method: entity.method,
         rawReference: entity.id,
+        amountPaise: typeof entity.amount === "number" ? entity.amount : undefined,
       });
     }
   } else if (eventType === "payment.failed") {

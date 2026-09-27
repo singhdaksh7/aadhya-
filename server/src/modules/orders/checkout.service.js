@@ -2,6 +2,7 @@ import { prisma } from "../../lib/prisma.js";
 import { env } from "../../config/env.js";
 import { round2 } from "../../utils/money.js";
 import { ApiError } from "../../utils/ApiError.js";
+import { getShippingSettings, findZoneForAddress, computeShippingAmount } from "../shipping/shipping.service.js";
 
 // The one place cart items become priced, authoritative line items. Both
 // POST /api/checkout/preview and POST /api/orders call this — an order can
@@ -59,6 +60,7 @@ export async function priceCartItems(requestedItems) {
       variantId: variant?.id ?? null,
       variant: variant ? { id: variant.id, name: variant.name, sku: variant.sku, attributes: variant.attributes } : null,
       productType: product.productType,
+      isDigital: product.isDigital,
       unitPrice,
       requestedQuantity: requested.quantity,
       quantity,
@@ -81,38 +83,15 @@ function summarizeProduct(product) {
   };
 }
 
+// Retained for backward compatibility with any caller expecting the old
+// { freeThreshold, standardAmount, shippingEnabled } shape.
 export async function getShippingConfig() {
-  try {
-    const rows = await prisma.siteSetting.findMany({
-      where: { key: { in: ["shipping", "freeShippingThreshold", "standardShippingAmount"] } },
-    });
-    const map = Object.fromEntries(rows.map((r) => [r.key, r.value]));
-    const shippingGroup = map.shipping || {};
-
-    const freeThreshold =
-      typeof shippingGroup.freeShippingThreshold === "number"
-        ? shippingGroup.freeShippingThreshold
-        : typeof map.freeShippingThreshold === "number"
-        ? map.freeShippingThreshold
-        : env.shipping.freeThreshold;
-
-    const standardAmount =
-      typeof shippingGroup.standardShippingAmount === "number"
-        ? shippingGroup.standardShippingAmount
-        : typeof map.standardShippingAmount === "number"
-        ? map.standardShippingAmount
-        : env.shipping.standardAmount;
-
-    const shippingEnabled = shippingGroup.shippingEnabled ?? true;
-
-    return { freeThreshold, standardAmount, shippingEnabled };
-  } catch {
-    return {
-      freeThreshold: env.shipping.freeThreshold,
-      standardAmount: env.shipping.standardAmount,
-      shippingEnabled: true,
-    };
-  }
+  const settings = await getShippingSettings();
+  return {
+    freeThreshold: settings.freeShippingThreshold,
+    standardAmount: settings.standardShippingAmount,
+    shippingEnabled: settings.shippingEnabled,
+  };
 }
 
 export function computeShipping(subtotal, shippingConfig = null) {
@@ -122,18 +101,32 @@ export function computeShipping(subtotal, shippingConfig = null) {
   return subtotal >= freeThreshold ? 0 : standardAmount;
 }
 
-export async function computeTotals(pricedItems, couponDiscount = 0) {
+// Server-authoritative totals. `address` (state/postalCode), when supplied,
+// resolves a ShippingZone whose rate (with its own free-above threshold and
+// delivery estimate) takes precedence over the flat settings-driven fee.
+export async function computeTotals(pricedItems, couponDiscount = 0, address = null) {
   const validItems = pricedItems.filter((i) => i.ok);
   const subtotal = round2(validItems.reduce((sum, i) => sum + i.lineTotal, 0));
-  const shippingConfig = await getShippingConfig();
-  const shipping = round2(computeShipping(subtotal, shippingConfig));
+  const settings = await getShippingSettings();
+  const zone = address ? await findZoneForAddress(address) : null;
+  const { amount: shipping, deliveryEstimate } = computeShippingAmount(subtotal, settings, zone);
   const tax = 0;
   const discount = round2(couponDiscount);
-  const total = round2(Math.max(0, subtotal + shipping + tax - discount));
-  return { subtotal, shipping, tax, discount, total, currency: "INR" };
+  const total = round2(Math.max(0, subtotal + round2(shipping) + tax - discount));
+  return {
+    subtotal,
+    shipping: round2(shipping),
+    tax,
+    discount,
+    total,
+    currency: "INR",
+    shippingZoneId: zone?.id ?? null,
+    deliveryEstimate: deliveryEstimate || settings.deliveryEstimate,
+    dispatchEstimate: settings.dispatchEstimate,
+  };
 }
 
-export async function buildCheckoutPreview(requestedItems, { couponCode, customerId, customerEmail } = {}) {
+export async function buildCheckoutPreview(requestedItems, { couponCode, customerId, customerEmail, address } = {}) {
   const pricedItems = await priceCartItems(requestedItems);
   let couponResult = null;
   let couponDiscount = 0;
@@ -153,7 +146,7 @@ export async function buildCheckoutPreview(requestedItems, { couponCode, custome
     }
   }
 
-  const totals = await computeTotals(pricedItems, couponDiscount);
+  const totals = await computeTotals(pricedItems, couponDiscount, address);
   const hasBlockingIssues = pricedItems.some((i) => !i.ok);
   return { items: pricedItems, hasBlockingIssues, coupon: couponResult, ...totals };
 }
