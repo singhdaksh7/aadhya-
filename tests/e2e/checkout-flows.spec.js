@@ -80,8 +80,11 @@ async function chooseRazorpayAndPlace(page) {
   await expect(page.locator("body")).toContainText(/saved as pending|Opening Payment Window/i, { timeout: 15000 });
 }
 
-const BILLING = { fullName: "Riya Sharma", email: `riya.${RUN_ID}@example.com`, phone: "9876500001", addressLine1: "12 MG Road", city: "Pune", state: "MH", postalCode: "411001" };
-const SHIPPING = { fullName: "Riya Sharma Office", phone: "9876500002", addressLine1: "45 Business Park", city: "Mumbai", state: "MH", postalCode: "400001" };
+// State must match a seeded ShippingZone's `states` entry exactly
+// (case-insensitive, but not abbreviation-aware — see
+// findZoneForAddress in shipping.service.js), so "Maharashtra" not "MH".
+const BILLING = { fullName: "Riya Sharma", email: `riya.${RUN_ID}@example.com`, phone: "9876500001", addressLine1: "12 MG Road", city: "Pune", state: "Maharashtra", postalCode: "411001" };
+const SHIPPING = { fullName: "Riya Sharma Office", phone: "9876500002", addressLine1: "45 Business Park", city: "Mumbai", state: "Maharashtra", postalCode: "400001" };
 
 test.describe("Checkout — guest, address combos, digital/physical carts", () => {
   test.beforeEach(async ({ page }) => {
@@ -167,13 +170,13 @@ test.describe("Checkout — logged-in customer with saved addresses", () => {
     // default for BOTH shipping and billing when no explicit
     // isDefaultShipping/isDefaultBilling flag is set.
     await page.goto("/account/addresses");
-    await page.getByPlaceholder("label", { exact: true }).fill("Home");
-    await page.getByPlaceholder("fullName", { exact: true }).fill("Saved Address Customer");
-    await page.getByPlaceholder("phone", { exact: true }).fill("9876500020");
-    await page.getByPlaceholder("addressLine1", { exact: true }).fill("7 Saved Lane");
-    await page.getByPlaceholder("city", { exact: true }).fill("Pune");
-    await page.getByPlaceholder("state", { exact: true }).fill("MH");
-    await page.getByPlaceholder("postalCode", { exact: true }).fill("411002");
+    await page.getByPlaceholder("Address label", { exact: true }).fill("Home");
+    await page.getByPlaceholder("Full name", { exact: true }).fill("Saved Address Customer");
+    await page.getByPlaceholder("Phone", { exact: true }).fill("9876500020");
+    await page.getByPlaceholder("Address line 1", { exact: true }).fill("7 Saved Lane");
+    await page.getByPlaceholder("City", { exact: true }).fill("Pune");
+    await page.getByPlaceholder("State", { exact: true }).fill("Maharashtra");
+    await page.getByPlaceholder("Postal code", { exact: true }).fill("411002");
     await page.locator('input[type="checkbox"]').check();
     await page.locator('button:has-text("Add address")').click();
     await expect(page.locator("body")).toContainText("Default");

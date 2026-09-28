@@ -50,7 +50,9 @@ async function placeCodOrder(page, { name, email, phone }) {
   await section.locator('[data-testid="address-phone"]').fill(phone);
   await section.getByLabel("Address Line 1").fill("1 Invoice Test Street");
   await section.getByLabel("City").fill("Pune");
-  await section.getByLabel("State").fill("MH");
+  // Must match a seeded ShippingZone's `states` entry exactly (see
+  // findZoneForAddress in shipping.service.js) — "Maharashtra", not "MH".
+  await section.getByLabel("State").fill("Maharashtra");
   await section.getByLabel("PIN Code").fill("411001");
   await page.locator('input[name="paymentMethod"][value="cod"]').check();
   await page.locator('button[type="submit"]').click();
