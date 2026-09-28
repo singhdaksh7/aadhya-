@@ -175,7 +175,8 @@ export default function CartPage() {
                       className="flex-1 rounded-full border border-charcoal/20 bg-white px-4 py-2 text-xs text-charcoal focus:outline-none focus:border-terracotta uppercase font-mono"
                     />
                     <button
-                      type="submit"
+                      type="button"
+                      onClick={handleApplyCoupon}
                       disabled={validating}
                       className="rounded-full bg-charcoal px-5 py-2 text-xs font-semibold uppercase tracking-wider text-white transition hover:bg-charcoal/80 disabled:opacity-50"
                     >

@@ -656,7 +656,8 @@ function OrderSummary({ preview, status, appliedCoupon, couponError, applyCoupon
               className="flex-1 rounded-full border border-charcoal/20 bg-white px-3 py-1.5 text-xs text-charcoal focus:outline-none focus:border-terracotta uppercase font-mono"
             />
             <button
-              type="submit"
+              type="button"
+              onClick={handleApplyCoupon}
               disabled={validating}
               className="rounded-full bg-charcoal px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-white transition hover:bg-charcoal/80 disabled:opacity-50"
             >
