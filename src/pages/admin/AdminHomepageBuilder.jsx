@@ -10,6 +10,7 @@ import {
   adminListCollections,
   adminListCategories,
   adminListPages,
+  adminListProducts,
 } from "../../lib/api";
 import { Button } from "../../components/ui";
 import { LoadingNotice, ErrorNotice } from "../../components/StateNotice";
@@ -61,7 +62,7 @@ export default function AdminHomepageBuilder() {
   const [editName, setEditName] = useState("");
   const [editIsEnabled, setEditIsEnabled] = useState(true);
   const [editSettings, setEditSettings] = useState({});
-  const [targets, setTargets] = useState({ collections: [], categories: [], pages: [] });
+  const [targets, setTargets] = useState({ collections: [], categories: [], pages: [], products: [] });
   const [jsonError, setJsonError] = useState("");
 
   const loadHomepage = async () => {
@@ -82,8 +83,8 @@ export default function AdminHomepageBuilder() {
 
   useEffect(() => {
     loadHomepage();
-    Promise.all([adminListCollections(), adminListCategories(true), adminListPages({ limit: 100 })]).then(([collections, categories, pages]) => {
-      setTargets({ collections: collections.items || collections.data || collections || [], categories: categories.items || categories.data || categories || [], pages: pages.items || pages.data || pages || [] });
+    Promise.all([adminListCollections(), adminListCategories(true), adminListPages({ limit: 100 }), adminListProducts({ limit: 100 })]).then(([collections, categories, pages, products]) => {
+      setTargets({ collections: collections.items || collections.data || collections || [], categories: categories.items || categories.data || categories || [], pages: pages.items || pages.data || pages || [], products: products.items || products.data || products || [] });
     }).catch(() => {});
   }, []);
 
@@ -453,6 +454,7 @@ export default function AdminHomepageBuilder() {
               collections={targets.collections}
               categories={targets.categories}
               pages={targets.pages}
+              products={targets.products}
             />
 
             {jsonError && <p className="text-xs text-terracotta font-semibold">{jsonError}</p>}

@@ -284,3 +284,10 @@ export function useCart() {
   if (!ctx) throw new Error("useCart must be used within CartProvider");
   return ctx;
 }
+
+// Content sections can render in isolated CMS previews/tests where a cart is
+// intentionally not mounted. Their purchase controls remain hidden until a
+// live product is resolved, but the editorial copy should still be renderable.
+export function useOptionalCart() {
+  return useContext(CartContext);
+}
