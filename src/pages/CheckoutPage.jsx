@@ -305,7 +305,15 @@ export default function CheckoutPage() {
                   postalCode: form.postalCode,
                   country: form.country,
                 },
-                billingAddress: sameAsShipping ? undefined : billingAddress,
+                billingAddress: sameAsShipping
+                  ? undefined
+                  : {
+                      ...billingAddress,
+                      alternatePhone: billingAddress.alternatePhone || undefined,
+                      email: billingAddress.email || undefined,
+                      landmark: billingAddress.landmark || undefined,
+                      addressLine2: billingAddress.addressLine2 || undefined,
+                    },
                 billingSameAsShipping: sameAsShipping,
               }),
           items: items.map((i) => ({ slug: i.product.slug, quantity: i.quantity, bookFormat: i.bookFormat || undefined })),

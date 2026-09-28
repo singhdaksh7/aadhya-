@@ -11,7 +11,9 @@ function readStoredCart() {
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter((i) => i && typeof i.slug === "string" && Number.isInteger(i.quantity));
+    return parsed
+      .filter((i) => i && typeof i.slug === "string" && Number.isInteger(i.quantity))
+      .map((i) => ({ slug: i.slug, quantity: i.quantity, bookFormat: i.bookFormat || null }));
   } catch {
     return [];
   }
@@ -59,7 +61,7 @@ export function CartProvider({ children }) {
               guest.map(async (entry) => {
                 try {
                   const res = await fetchProductBySlug(entry.slug);
-                  return res && res.data ? { product: res.data, quantity: entry.quantity } : null;
+                  return res && res.data ? { product: res.data, quantity: entry.quantity, bookFormat: entry.bookFormat || null } : null;
                 } catch {
                   return null;
                 }
@@ -74,7 +76,7 @@ export function CartProvider({ children }) {
               guest.map(async (entry) => {
                 try {
                   const res = await fetchProductBySlug(entry.slug);
-                  return res && res.data ? { product: res.data, quantity: entry.quantity } : null;
+                  return res && res.data ? { product: res.data, quantity: entry.quantity, bookFormat: entry.bookFormat || null } : null;
                 } catch {
                   return null;
                 }
@@ -100,7 +102,7 @@ export function CartProvider({ children }) {
             const product = res?.data;
             if (!product) return null;
             const quantity = Math.max(1, Math.min(entry.quantity, availableStock(product)));
-            return { product, quantity };
+            return { product, quantity, bookFormat: entry.bookFormat || null };
           } catch {
             return null;
           }
@@ -123,7 +125,7 @@ export function CartProvider({ children }) {
 
   useEffect(() => {
     if (isLoading) return;
-    if (!user) writeStoredCart(items.map((i) => ({ slug: i.product.slug, quantity: i.quantity })));
+    if (!user) writeStoredCart(items.map((i) => ({ slug: i.product.slug, quantity: i.quantity, bookFormat: i.bookFormat || null })));
   }, [items, isLoading, user]);
 
   // bookFormat ("PHYSICAL" | "PDF" | null) is part of a cart line's identity
