@@ -264,7 +264,7 @@ describe("admin shipment tracking", () => {
 });
 
 describe("Razorpay signature verification", () => {
-  it("accepts a signature computed with the configured webhook/key secret", () => {
+  it("accepts a signature computed with the configured webhook/key secret", async () => {
     const orderId = "order_test123";
     const paymentId = "pay_test456";
     const secret = env.razorpay.keySecret || "test-secret-for-signature-check";
@@ -272,19 +272,19 @@ describe("Razorpay signature verification", () => {
     env.razorpay.keySecret = secret;
 
     const signature = crypto.createHmac("sha256", secret).update(`${orderId}|${paymentId}`).digest("hex");
-    const valid = verifyRazorpaySignature({ razorpayOrderId: orderId, razorpayPaymentId: paymentId, razorpaySignature: signature });
+    const valid = await verifyRazorpaySignature({ razorpayOrderId: orderId, razorpayPaymentId: paymentId, razorpaySignature: signature });
     expect(valid).toBe(true);
 
     env.razorpay.keySecret = originalSecret;
   });
 
-  it("rejects a tampered signature", () => {
+  it("rejects a tampered signature", async () => {
     const secret = "another-test-secret";
     const originalSecret = env.razorpay.keySecret;
     env.razorpay.keySecret = secret;
 
     const signature = crypto.createHmac("sha256", secret).update("order_a|pay_a").digest("hex");
-    const valid = verifyRazorpaySignature({ razorpayOrderId: "order_a", razorpayPaymentId: "pay_b", razorpaySignature: signature });
+    const valid = await verifyRazorpaySignature({ razorpayOrderId: "order_a", razorpayPaymentId: "pay_b", razorpaySignature: signature });
     expect(valid).toBe(false);
 
     env.razorpay.keySecret = originalSecret;

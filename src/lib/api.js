@@ -371,6 +371,8 @@ export async function downloadAccountInvoice(id) { const res = await fetch(`${AP
 export function adminGetIntegrationStatus() { return api.get("/admin/integrations", { auth: "admin" }); }
 export function adminSaveIntegration(data) { return api.put("/admin/integrations/credentials", data, { auth: "admin" }); }
 export function adminTestIntegration(provider, environment) { return api.post(`/admin/integrations/${provider}/${environment}/test`, {}, { auth: "admin" }); }
+export function adminGetShippingBusiness() { return api.get("/admin/shipping/business", { auth: "admin" }); }
+export function adminSaveShippingBusiness(data) { return api.put("/admin/shipping/business", data, { auth: "admin" }); }
 export function adminGetInvoiceSettings() { return api.get("/admin/invoices/settings", { auth: "admin" }); }
 export function adminSaveInvoiceSettings(data) { return api.put("/admin/invoices/settings", data, { auth: "admin" }); }
 export async function adminDownloadInvoice(id) { const res = await fetch(`${API_URL}/admin/invoices/${id}/download`, { headers: { Authorization: `Bearer ${tokens.admin}` }, credentials: "include" }); if (!res.ok) throw new ApiRequestError("Could not download invoice", res.status); return res.blob(); }

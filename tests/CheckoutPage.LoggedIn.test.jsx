@@ -89,7 +89,7 @@ describe("CheckoutPage — logged-in", () => {
     seedCart();
     render(<Harness />);
     await waitFor(() => expect(screen.getByLabelText("Name")).toHaveValue("Jane Doe"));
-    expect(screen.getByLabelText("Email")).toHaveValue("jane@example.com");
+    await waitFor(() => expect(screen.getByLabelText("Email")).toHaveValue("jane@example.com"));
   });
 
   it("loads saved addresses and preselects the default one", async () => {
@@ -104,7 +104,8 @@ describe("CheckoutPage — logged-in", () => {
     const user = userEvent.setup();
     render(<Harness />);
     await waitFor(() => expect(screen.getByDisplayValue("1 Home St")).toBeInTheDocument());
-    await user.click(screen.getByLabelText(/Work — Jane Doe/));
+    await user.click(screen.getByLabelText("Shipping address is same as billing address"));
+    await user.click(screen.getAllByLabelText(/Work — Jane Doe/)[1]);
     await waitFor(() => expect(screen.getByDisplayValue("2 Work Ave")).toBeInTheDocument());
   });
 
@@ -124,8 +125,8 @@ describe("CheckoutPage — logged-in", () => {
     const user = userEvent.setup();
     render(<Harness />);
     await waitFor(() => expect(screen.getByDisplayValue("1 Home St")).toBeInTheDocument());
-    await user.click(screen.getByLabelText("Use a new address"));
-    expect(screen.getByLabelText(/Save this address to my account/i)).toBeInTheDocument();
+    await user.click(screen.getAllByLabelText("Use a new address")[0]);
+    expect(screen.getByLabelText(/Save as a billing address/i)).toBeInTheDocument();
     expect(screen.getByDisplayValue("1 Home St")).toBeInTheDocument(); // form fields are not auto-cleared, still editable
   });
 
@@ -134,10 +135,10 @@ describe("CheckoutPage — logged-in", () => {
     const user = userEvent.setup();
     render(<Harness />);
     await waitFor(() => expect(screen.getByDisplayValue("1 Home St")).toBeInTheDocument());
-    await user.click(screen.getByLabelText("Use a new address"));
+    await user.click(screen.getAllByLabelText("Use a new address")[0]);
     await user.clear(screen.getByLabelText("Address Line 1"));
     await user.type(screen.getByLabelText("Address Line 1"), "9 New Street");
-    await user.click(screen.getByLabelText(/Save this address to my account/i));
+    await user.click(screen.getByLabelText(/Save as a billing address/i));
     await user.click(screen.getByRole("button", { name: /pay securely/i }));
 
     const api = await import("../src/lib/api");
@@ -152,7 +153,7 @@ describe("CheckoutPage — logged-in", () => {
     const user = userEvent.setup();
     render(<Harness />);
     await waitFor(() => expect(screen.getByDisplayValue("1 Home St")).toBeInTheDocument());
-    await user.click(screen.getByLabelText("Use a new address"));
+    await user.click(screen.getAllByLabelText("Use a new address")[0]);
     await user.clear(screen.getByLabelText("Address Line 1"));
     await user.type(screen.getByLabelText("Address Line 1"), "9 New Street");
     await user.click(screen.getByRole("button", { name: /pay securely/i }));
