@@ -66,3 +66,8 @@ export const upsertOrderShipment = asyncHandler(async (req, res) => {
   const shipment = await orderService.upsertShipment(req.params.id, input);
   ok(res, shipment);
 });
+
+export const createOrderShipment = asyncHandler(async (req, res) => {
+  const input = shipmentSchema.parse(req.body);
+  ok(res, await orderService.createOrderShipment(req.params.id, input));
+});

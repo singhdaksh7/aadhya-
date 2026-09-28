@@ -11,6 +11,7 @@ import {
   getAdminOrder,
   updateAdminOrderStatus,
   upsertOrderShipment,
+  createOrderShipment,
 } from "./order.controller.js";
 
 export const checkoutRouter = Router();
@@ -27,6 +28,7 @@ adminOrderRouter.get("/", listAdminOrders);
 adminOrderRouter.get("/:id", getAdminOrder);
 adminOrderRouter.patch("/:id/status", updateAdminOrderStatus);
 adminOrderRouter.put("/:id/shipment", upsertOrderShipment);
+adminOrderRouter.post("/:id/shipment/create", createOrderShipment);
 
 function requireCustomerOptional(req, res, next) {
   const header = req.headers.authorization || "";
