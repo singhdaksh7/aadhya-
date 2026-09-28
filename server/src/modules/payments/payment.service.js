@@ -9,6 +9,7 @@ import { decrementStockForOrder } from "../orders/stock.js";
 import { ensureDigitalDownloadForOrderItem } from "../downloads/download.service.js";
 import { ensureInvoiceForOrder } from "../invoices/invoice.service.js";
 import { sendInvoiceEmail } from "../email/email.service.js";
+import { attemptAutomaticShipment } from "../shipping/fulfilment.service.js";
 
 // POST /api/orders/:orderId/payment — creates (or reuses) the Razorpay order
 // for an internal order. Idempotent: calling it twice for the same pending
@@ -196,6 +197,7 @@ export async function finalizePaidPayment({ providerOrderId, providerPaymentId, 
     // analytics event is ever recorded — it is never accepted from a client.
     sendOrderConfirmationEmail(result.order.id).catch(() => {});
     ensureInvoiceForOrder(result.order.id).then((invoice) => invoice && sendInvoiceEmail(invoice.id)).catch((err) => console.error("Invoice generation failed:", err.message));
+    attemptAutomaticShipment(result.order.id).catch((err) => console.error("Automatic shipment failed:", err.message));
     recordPurchaseEvent(result.order).catch(() => {});
   }
 

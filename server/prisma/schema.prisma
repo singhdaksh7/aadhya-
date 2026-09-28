@@ -437,6 +437,7 @@ model Order {
   customerName    String
   customerEmail   String
   customerPhone   String
+  customerAlternatePhone String?
   customerId      String?
   status          OrderStatus   @default(PENDING)
   paymentStatus   PaymentStatus @default(PENDING)
@@ -493,6 +494,9 @@ model OrderBillingAddress {
   orderId      String  @unique
   fullName     String
   phone        String
+  alternatePhone String?
+  email        String?
+  landmark     String?
   addressLine1 String
   addressLine2 String?
   city         String
@@ -688,6 +692,9 @@ model OrderAddress {
   orderId      String  @unique
   fullName     String
   phone        String
+  alternatePhone String?
+  email        String?
+  landmark     String?
   addressLine1 String
   addressLine2 String?
   city         String

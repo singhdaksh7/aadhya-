@@ -24,11 +24,15 @@ export const customerSchema = z.object({
   name: z.string().trim().min(1).max(120),
   email: z.string().trim().toLowerCase().email(),
   phone: phoneSchema,
+  alternatePhone: phoneSchema.optional().nullable(),
 });
 
 export const shippingAddressSchema = z.object({
   fullName: z.string().trim().min(1).max(120),
   phone: phoneSchema,
+  alternatePhone: phoneSchema.optional().nullable(),
+  email: z.string().trim().email().optional().nullable(),
+  landmark: z.string().trim().max(200).optional().nullable(),
   addressLine1: z.string().trim().min(1).max(200),
   addressLine2: z.string().trim().max(200).optional().nullable(),
   city: z.string().trim().min(1).max(100),

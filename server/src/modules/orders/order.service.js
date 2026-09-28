@@ -10,6 +10,7 @@ import crypto from "node:crypto";
 import { ensureInvoiceForOrder } from "../invoices/invoice.service.js";
 import { sendInvoiceEmail } from "../email/email.service.js";
 import { getShippingProvider } from "../shipping/provider.service.js";
+import { attemptAutomaticShipment } from "../shipping/fulfilment.service.js";
 
 const ADMIN_INCLUDE = {
   items: true,
@@ -100,6 +101,7 @@ export async function createOrder({
         throw ApiError.badRequest("Provide a billing address or set billing same as shipping.");
       }
     }
+    if (billingSameAsShipping) resolvedBillingAddress = shippingAddress;
   }
 
   let couponDiscount = 0;
@@ -160,6 +162,7 @@ export async function createOrder({
         customerName: customer.name,
         customerEmail: customer.email,
         customerPhone: customer.phone,
+        customerAlternatePhone: customer.alternatePhone || null,
         customerId: customerId || null,
         subtotal: totals.subtotal,
         shippingAmount: totals.shipping,
@@ -221,6 +224,9 @@ export async function createOrder({
                 orderId: created.id,
                 fullName: shippingAddress.fullName,
                 phone: shippingAddress.phone,
+                alternatePhone: shippingAddress.alternatePhone || null,
+                email: shippingAddress.email || customer.email,
+                landmark: shippingAddress.landmark || null,
                 addressLine1: shippingAddress.addressLine1,
                 addressLine2: shippingAddress.addressLine2 || null,
                 city: shippingAddress.city,
@@ -235,6 +241,9 @@ export async function createOrder({
                     orderId: created.id,
                     fullName: resolvedBillingAddress.fullName,
                     phone: resolvedBillingAddress.phone,
+                    alternatePhone: resolvedBillingAddress.alternatePhone || null,
+                    email: resolvedBillingAddress.email || customer.email,
+                    landmark: resolvedBillingAddress.landmark || null,
                     addressLine1: resolvedBillingAddress.addressLine1,
                     addressLine2: resolvedBillingAddress.addressLine2 || null,
                     city: resolvedBillingAddress.city,
@@ -279,6 +288,7 @@ export async function createOrder({
 
   if (paymentMethod === "cod") {
     ensureInvoiceForOrder(order.id).then((invoice) => invoice && sendInvoiceEmail(invoice.id)).catch((err) => console.error("Invoice generation failed:", err.message));
+    attemptAutomaticShipment(order.id).catch((err) => console.error("Automatic shipment failed:", err.message));
   }
   return { order, accessToken: rawToken };
 }
