@@ -39,6 +39,7 @@ services:
     volumes:
       - aadya_uploads:/app/uploads
       - aadya_private_books:/app/private/books
+      - aadya_private_invoices:/app/private/invoices
     networks:
       - aadya_internal
       - aadya_public
@@ -90,6 +91,7 @@ volumes:
   aadya_postgres_data:
   aadya_uploads:
   aadya_private_books:
+  aadya_private_invoices:
 
 networks:
   # Private network shared only between aadya-api and aadya-db — Postgres is

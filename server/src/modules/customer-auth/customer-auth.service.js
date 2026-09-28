@@ -36,18 +36,15 @@ export async function register(input, userAgent) {
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const refresh = refreshSessionData(undefined, userAgent);
     try {
-      const customer = await prisma.$transaction(async (tx) => {
-        const created = await tx.customer.create({
-          data: { name: input.name, email: input.email, phone: input.phone || null, passwordHash },
-        });
-        try {
-          await tx.customerRefreshSession.create({ data: { ...refresh.data, customerId: created.id } });
-        } catch (error) {
-          error.registrationStage = "session";
-          throw error;
-        }
-        return created;
-      });
+      // A sequential interactive transaction can exhaust a one-connection
+      // test/database pool when two registrations race. Generate the UUID
+      // up front and use Prisma's batch transaction instead: both writes are
+      // still atomic, without holding a connection across callback awaits.
+      const customerId = crypto.randomUUID();
+      const [customer] = await prisma.$transaction([
+        prisma.customer.create({ data: { id: customerId, name: input.name, email: input.email, phone: input.phone || null, passwordHash } }),
+        prisma.customerRefreshSession.create({ data: { ...refresh.data, customerId } }),
+      ]);
       return { accessToken: signCustomerAccessToken(customer), refreshToken: refresh.refreshToken, customer: safe(customer) };
     } catch (error) {
       if (isUniqueViolation(error, "email")) throw ApiError.conflict("An account with this email already exists.");

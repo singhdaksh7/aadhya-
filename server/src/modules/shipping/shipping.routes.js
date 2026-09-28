@@ -1,5 +1,7 @@
 import { Router } from "express";
-import { requireAdmin } from "../../middleware/adminAuth.js";
+import { requireAdmin, requireRole } from "../../middleware/adminAuth.js";
+import { prisma } from "../../lib/prisma.js";
+import { z } from "zod";
 import { asyncHandler } from "../../utils/asyncHandler.js";
 import { ok, created } from "../../utils/apiResponse.js";
 import { zoneSchema, zoneUpdateSchema, rateSchema, rateUpdateSchema } from "./shipping.validators.js";
@@ -7,6 +9,20 @@ import * as shippingService from "./shipping.service.js";
 
 export const adminShippingRouter = Router();
 adminShippingRouter.use(requireAdmin);
+
+const businessSettings = z.object({
+  provider: z.enum(["MANUAL", "SHIPROCKET", "DELHIVERY"]).default("MANUAL"), environment: z.enum(["TEST", "LIVE"]).default("TEST"),
+  autoCreateShipment: z.boolean().default(false), autoGenerateAwb: z.boolean().default(false), autoSchedulePickup: z.boolean().default(false), codAllowed: z.boolean().default(true),
+  pickup: z.object({ location: z.string().max(120).optional(), name: z.string().max(120).optional(), contact: z.string().max(120).optional(), email: z.string().email().optional().or(z.literal("")), phone: z.string().max(30).optional(), address: z.string().max(300).optional(), city: z.string().max(100).optional(), state: z.string().max(100).optional(), postalCode: z.string().max(20).optional(), country: z.string().max(100).optional() }).default({}),
+  packageDefaults: z.object({ length: z.coerce.number().positive().default(20), width: z.coerce.number().positive().default(15), height: z.coerce.number().positive().default(10), weight: z.coerce.number().positive().default(.5) }).default({}),
+}).superRefine((value, ctx) => { if (value.provider === "DELHIVERY") ctx.addIssue({ code: z.ZodIssueCode.custom, message: "DELHIVERY is not available yet." }); });
+
+adminShippingRouter.get("/business", requireRole("SUPER_ADMIN"), asyncHandler(async (_req, res) => {
+  const row = await prisma.siteSetting.findUnique({ where: { key: "shippingBusiness" } }); ok(res, row?.value || { provider: "MANUAL", environment: "TEST", autoCreateShipment: false, autoGenerateAwb: false, autoSchedulePickup: false, codAllowed: true, pickup: {}, packageDefaults: { length: 20, width: 15, height: 10, weight: .5 } });
+}));
+adminShippingRouter.put("/business", requireRole("SUPER_ADMIN"), asyncHandler(async (req, res) => {
+  const value = businessSettings.parse(req.body); await prisma.siteSetting.upsert({ where: { key: "shippingBusiness" }, create: { key: "shippingBusiness", value }, update: { value } }); ok(res, value);
+}));
 
 adminShippingRouter.get(
   "/zones",

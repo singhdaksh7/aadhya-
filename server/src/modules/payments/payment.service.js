@@ -1,6 +1,5 @@
 import crypto from "node:crypto";
 import { prisma } from "../../lib/prisma.js";
-import { env } from "../../config/env.js";
 import { ApiError } from "../../utils/ApiError.js";
 import { rupeesToPaise } from "../../utils/money.js";
 import { getRazorpayClient, isRazorpayConfigured } from "./razorpay.client.js";
@@ -8,6 +7,9 @@ import { sendOrderConfirmationEmail } from "../email/email.service.js";
 import { recordPurchaseEvent } from "../analytics/analytics.service.js";
 import { decrementStockForOrder } from "../orders/stock.js";
 import { ensureDigitalDownloadForOrderItem } from "../downloads/download.service.js";
+import { ensureInvoiceForOrder } from "../invoices/invoice.service.js";
+import { sendInvoiceEmail } from "../email/email.service.js";
+import { attemptAutomaticShipment } from "../shipping/fulfilment.service.js";
 
 // POST /api/orders/:orderId/payment — creates (or reuses) the Razorpay order
 // for an internal order. Idempotent: calling it twice for the same pending
@@ -40,16 +42,16 @@ export async function createRazorpayOrderForOrder(orderId, requestingCustomerId)
   }
   if (payment.providerOrderId) {
     // Already has a live provider order — reuse it rather than mint another.
-    return buildCheckoutOptions(order, payment);
+    return await buildCheckoutOptions(order, payment);
   }
 
-  if (!isRazorpayConfigured()) {
+  if (!(await isRazorpayConfigured())) {
     throw ApiError.badRequest(
       "Payments are not configured on this server yet (RAZORPAY_KEY_ID/RAZORPAY_KEY_SECRET missing)."
     );
   }
 
-  const razorpay = getRazorpayClient();
+  const razorpay = await getRazorpayClient();
   const amountPaise = rupeesToPaise(order.totalAmount);
   const providerOrder = await razorpay.orders.create({
     amount: amountPaise,
@@ -63,12 +65,13 @@ export async function createRazorpayOrderForOrder(orderId, requestingCustomerId)
     data: { providerOrderId: providerOrder.id },
   });
 
-  return buildCheckoutOptions(order, updatedPayment);
+  return await buildCheckoutOptions(order, updatedPayment);
 }
 
-function buildCheckoutOptions(order, payment) {
+async function buildCheckoutOptions(order, payment) {
+  const config = await (await import("./razorpay.client.js")).getRazorpayConfig();
   return {
-    keyId: env.razorpay.keyId,
+    keyId: config?.keyId,
     razorpayOrderId: payment.providerOrderId,
     amount: rupeesToPaise(order.totalAmount),
     currency: order.currency,
@@ -83,9 +86,11 @@ function buildCheckoutOptions(order, payment) {
   };
 }
 
-export function verifyRazorpaySignature({ razorpayOrderId, razorpayPaymentId, razorpaySignature }) {
+export async function verifyRazorpaySignature({ razorpayOrderId, razorpayPaymentId, razorpaySignature }) {
+  const config = await (await import("./razorpay.client.js")).getRazorpayConfig();
+  if (!config?.keySecret) return false;
   const expected = crypto
-    .createHmac("sha256", env.razorpay.keySecret)
+    .createHmac("sha256", config.keySecret)
     .update(`${razorpayOrderId}|${razorpayPaymentId}`)
     .digest("hex");
 
@@ -95,9 +100,11 @@ export function verifyRazorpaySignature({ razorpayOrderId, razorpayPaymentId, ra
   );
 }
 
-export function verifyRazorpayWebhookSignature(rawBody, signatureHeader) {
+export async function verifyRazorpayWebhookSignature(rawBody, signatureHeader) {
   if (!signatureHeader) return false;
-  const expected = crypto.createHmac("sha256", env.razorpay.webhookSecret).update(rawBody).digest("hex");
+  const config = await (await import("./razorpay.client.js")).getRazorpayConfig();
+  if (!config?.webhookSecret) return false;
+  const expected = crypto.createHmac("sha256", config.webhookSecret).update(rawBody).digest("hex");
   if (expected.length !== signatureHeader.length) return false;
   return crypto.timingSafeEqual(Buffer.from(expected, "hex"), Buffer.from(signatureHeader, "hex"));
 }
@@ -189,6 +196,13 @@ export async function finalizePaidPayment({ providerOrderId, providerPaymentId, 
     // state. This is the single, server-authoritative place a `purchase`
     // analytics event is ever recorded — it is never accepted from a client.
     sendOrderConfirmationEmail(result.order.id).catch(() => {});
+    try {
+      const invoice = await ensureInvoiceForOrder(result.order.id);
+      if (invoice) sendInvoiceEmail(invoice.id).catch((err) => console.error("Invoice email failed:", err.message));
+    } catch (err) {
+      console.error("Invoice generation failed:", err.message);
+    }
+    attemptAutomaticShipment(result.order.id).catch((err) => console.error("Automatic shipment failed:", err.message));
     recordPurchaseEvent(result.order).catch(() => {});
   }
 

@@ -6,7 +6,7 @@ import { BrochureProvider } from "./context/BrochureContext";
 import { AdminAuthProvider } from "./context/AdminAuthContext";
 import { CustomerAuthProvider } from "./context/CustomerAuthContext";
 import RequireCustomer from "./components/RequireCustomer";
-import { Login, Account, Addresses, Orders, OrderDetail, Forgot, Reset, AccountWishlist, AccountReviews, AccountDownloads, AccountNotifications } from "./pages/account/AccountPages";
+import { Login, Account, Addresses, Orders, OrderDetail, Forgot, Reset, AccountWishlist, AccountReviews, AccountDownloads, AccountNotifications, AccountInvoices } from "./pages/account/AccountPages";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import CartDrawer from "./components/CartDrawer";
@@ -63,6 +63,7 @@ import AdminBlog from "./pages/admin/AdminBlog";
 import AdminFaq from "./pages/admin/AdminFaq";
 import AdminMedia from "./pages/admin/AdminMedia";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
+import AdminIntegrations from "./pages/admin/AdminIntegrations";
 import SearchResults from "./pages/shop/SearchResults";
 import { captureUtmFromUrl } from "./lib/attribution";
 
@@ -127,6 +128,7 @@ function SiteLayout() {
                 <Route path="/account/wishlist" element={<RequireCustomer><AccountWishlist /></RequireCustomer>} />
                 <Route path="/account/reviews" element={<RequireCustomer><AccountReviews /></RequireCustomer>} />
                 <Route path="/account/downloads" element={<RequireCustomer><AccountDownloads /></RequireCustomer>} />
+                <Route path="/account/invoices" element={<RequireCustomer><AccountInvoices /></RequireCustomer>} />
                 <Route path="/account/notifications" element={<RequireCustomer><AccountNotifications /></RequireCustomer>} />
 
                 {/* Informational & Policy Routes */}
@@ -225,6 +227,7 @@ function AdminRoutes() {
           <Route path="orders" element={<AdminOrderList />} />
           <Route path="orders/:id" element={<AdminOrderDetail />} />
           <Route path="analytics" element={<AdminAnalytics />} />
+          <Route path="integrations" element={<AdminIntegrations />} />
         </Route>
       </Routes>
     </AdminAuthProvider>

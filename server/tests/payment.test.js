@@ -13,6 +13,7 @@ import { env } from "../src/config/env.js";
 let orderCounter = 0;
 vi.mock("../src/modules/payments/razorpay.client.js", () => ({
   isRazorpayConfigured: () => true,
+  getRazorpayConfig: async () => ({ keyId: env.razorpay.keyId, keySecret: env.razorpay.keySecret, webhookSecret: env.razorpay.webhookSecret }),
   getRazorpayClient: () => ({
     orders: {
       create: vi.fn(async () => ({ id: `order_mock_${++orderCounter}` })),

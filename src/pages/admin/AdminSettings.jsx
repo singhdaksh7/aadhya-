@@ -200,9 +200,9 @@ export default function AdminSettings() {
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Address</label>
+                <label className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Address Line 1</label>
                 <input
                   value={settings.general?.businessAddress || ""}
                   onChange={(e) =>
@@ -212,11 +212,34 @@ export default function AdminSettings() {
                 />
               </div>
               <div>
+                <label className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Address Line 2 (Optional)</label>
+                <input
+                  value={settings.general?.businessAddressLine2 || ""}
+                  onChange={(e) =>
+                    setSettings((s) => ({ ...s, general: { ...s.general, businessAddressLine2: e.target.value } }))
+                  }
+                  className={inputCls}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-4 gap-4">
+              <div>
                 <label className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">City</label>
                 <input
                   value={settings.general?.city || ""}
                   onChange={(e) =>
                     setSettings((s) => ({ ...s, general: { ...s.general, city: e.target.value } }))
+                  }
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">State</label>
+                <input
+                  value={settings.general?.state || ""}
+                  onChange={(e) =>
+                    setSettings((s) => ({ ...s, general: { ...s.general, state: e.target.value } }))
                   }
                   className={inputCls}
                 />
@@ -231,6 +254,28 @@ export default function AdminSettings() {
                   className={inputCls}
                 />
               </div>
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Country</label>
+                <input
+                  value={settings.general?.country || ""}
+                  onChange={(e) =>
+                    setSettings((s) => ({ ...s, general: { ...s.general, country: e.target.value } }))
+                  }
+                  className={inputCls}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">WhatsApp Number (Optional)</label>
+              <input
+                placeholder="+91XXXXXXXXXX"
+                value={settings.general?.whatsappNumber || ""}
+                onChange={(e) =>
+                  setSettings((s) => ({ ...s, general: { ...s.general, whatsappNumber: e.target.value } }))
+                }
+                className={inputCls}
+              />
             </div>
 
             <div className="grid grid-cols-3 gap-4 pt-2 border-t border-charcoal/10">
@@ -447,6 +492,18 @@ export default function AdminSettings() {
                 Show Social Media Icons in Footer
               </label>
             </div>
+
+            <div>
+              <label className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Social Links Heading</label>
+              <input
+                placeholder="Connect With Us"
+                value={settings.footer?.socialHeading || ""}
+                onChange={(e) =>
+                  setSettings((s) => ({ ...s, footer: { ...s.footer, socialHeading: e.target.value } }))
+                }
+                className={inputCls}
+              />
+            </div>
           </div>
         )}
 
@@ -641,6 +698,28 @@ export default function AdminSettings() {
                   value={settings.social?.pinterest || ""}
                   onChange={(e) =>
                     setSettings((s) => ({ ...s, social: { ...s.social, pinterest: e.target.value } }))
+                  }
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">LinkedIn URL</label>
+                <input
+                  placeholder="https://linkedin.com/..."
+                  value={settings.social?.linkedin || ""}
+                  onChange={(e) =>
+                    setSettings((s) => ({ ...s, social: { ...s.social, linkedin: e.target.value } }))
+                  }
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">WhatsApp Link (Optional)</label>
+                <input
+                  placeholder="https://wa.me/91XXXXXXXXXX"
+                  value={settings.social?.whatsapp || ""}
+                  onChange={(e) =>
+                    setSettings((s) => ({ ...s, social: { ...s.social, whatsapp: e.target.value } }))
                   }
                   className={inputCls}
                 />

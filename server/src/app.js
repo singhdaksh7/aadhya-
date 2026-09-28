@@ -9,6 +9,7 @@ import { notFoundHandler, errorHandler } from "./middleware/errorHandler.js";
 import { uploadRootDir } from "./modules/uploads/storage.js";
 import routes from "./routes/index.js";
 import { handleRazorpayWebhook } from "./modules/payments/webhook.controller.js";
+import { handleShippingWebhook } from "./modules/shipping/webhook.controller.js";
 
 export function createApp() {
   const app = express();
@@ -25,6 +26,7 @@ export function createApp() {
   // bytes, so this one route is registered with a raw-body parser ahead of
   // the global express.json() below — every other route gets parsed JSON.
   app.post("/api/webhooks/razorpay", express.raw({ type: "application/json", limit: "1mb" }), handleRazorpayWebhook);
+  app.post("/api/webhooks/shipping/:provider", express.raw({ type: "application/json", limit: "1mb" }), handleShippingWebhook);
 
   app.use(express.json({ limit: "1mb" }));
   app.use(cookieParser());

@@ -79,8 +79,12 @@ test("Physical-only book: browse, add to cart, checkout via COD", async ({ page 
   await page.locator('a:has-text("Proceed to Checkout"), button:has-text("Proceed to Checkout")').first().click();
   await expect(page).toHaveURL(/\/checkout/);
 
-  // Shipping address IS required for a physical cart.
-  await expect(page.locator("legend", { hasText: "Shipping Address" })).toBeVisible();
+  // An address IS required for a physical cart. Checkout defaults to a
+  // single "same as billing" address (see checkout-flows.spec.js), so the
+  // combined Billing/Communication fieldset is what's shown here — not a
+  // separate Shipping Address fieldset (that only appears once the "same
+  // as billing" toggle is unchecked).
+  await expect(page.locator("legend", { hasText: "Billing / Communication Address" })).toBeVisible();
 
   await page.locator('input[data-testid="contact-phone"]').fill("9876543210");
   await page.getByLabel("Full Name").fill(CUSTOMER_NAME);

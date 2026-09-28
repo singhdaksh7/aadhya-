@@ -6,6 +6,7 @@
   "description": "Aadya Society commerce backend (catalog + admin foundation)",
   "scripts": {
     "dev": "node --watch src/server.js",
+    "dev:e2e": "set NODE_ENV=test&& node src/server.js",
     "start": "node src/server.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",

@@ -67,6 +67,7 @@ vi.mock("../src/lib/api", () => ({
     })
   ),
   verifyRazorpayPayment: vi.fn(() => Promise.resolve({ data: { orderNumber: "AAD-2026-000001" } })),
+  validateCouponCode: vi.fn(),
   ApiRequestError: class ApiRequestError extends Error {},
 }));
 
@@ -90,14 +91,16 @@ function Harness() {
 
 beforeEach(async () => {
   localStorage.clear();
+  sessionStorage.clear();
   navigateMock.mockClear();
   window.Razorpay = undefined;
   const api = await import("../src/lib/api");
   api.createOrder.mockClear();
   api.createRazorpayOrder.mockClear();
   api.verifyRazorpayPayment.mockClear();
-  api.checkoutPreview.mockClear();
+  api.checkoutPreview.mockReset();
   api.checkoutPreview.mockResolvedValue(previewResponse);
+  api.validateCouponCode.mockReset();
 });
 
 const VALID_FORM = {
@@ -202,7 +205,7 @@ describe("CheckoutPage", () => {
     expect(await screen.findByText(/payment didn't go through/i)).toBeInTheDocument();
     expect(navigateMock).not.toHaveBeenCalled();
     const stored = JSON.parse(localStorage.getItem("aadya.cart.v1"));
-    expect(stored).toEqual([{ slug: "test-basket", quantity: 1 }]);
+    expect(stored).toEqual([{ slug: "test-basket", quantity: 1, bookFormat: null }]);
   });
 
   it("surfaces a price/stock-changed message from the server preview instead of hiding it", async () => {
@@ -225,5 +228,59 @@ describe("CheckoutPage", () => {
     expect(
       await screen.findByText('Only 1 unit of "Test Basket" are available — quantity was adjusted.')
     ).toBeInTheDocument();
+  });
+
+  it("applies a coupon from the order summary and re-fetches server totals with the code", async () => {
+    const { validateCouponCode, checkoutPreview } = await import("../src/lib/api");
+    validateCouponCode.mockResolvedValue({
+      data: { code: "SAVE10", discountAmount: 99, discountType: "FIXED" },
+    });
+    checkoutPreview.mockImplementation((payload) =>
+      Promise.resolve(
+        payload?.couponCode
+          ? {
+              data: {
+                ...previewResponse.data,
+                discount: 99,
+                total: 990,
+                coupon: { code: "SAVE10" },
+              },
+            }
+          : previewResponse
+      )
+    );
+
+    const user = userEvent.setup();
+    seedCart();
+    render(<Harness />);
+    await waitFor(() => expect(screen.getByText("₹1,089")).toBeInTheDocument());
+
+    await user.type(screen.getByLabelText("Coupon code"), "SAVE10");
+    await user.click(screen.getByRole("button", { name: /apply/i }));
+
+    await waitFor(() => expect(screen.getByText("SAVE10 applied")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(checkoutPreview).toHaveBeenCalledWith(expect.objectContaining({ couponCode: "SAVE10" }))
+    );
+    await waitFor(() => expect(screen.getAllByText("₹990").length).toBeGreaterThan(0));
+
+    await user.click(screen.getByRole("button", { name: /remove/i }));
+    await waitFor(() => expect(screen.queryByText("SAVE10 applied")).not.toBeInTheDocument());
+  });
+
+  it("shows the backend's error for an invalid coupon and never invents a discount client-side", async () => {
+    const { validateCouponCode } = await import("../src/lib/api");
+    validateCouponCode.mockRejectedValue(new Error("Invalid coupon code"));
+
+    const user = userEvent.setup();
+    seedCart();
+    render(<Harness />);
+    await waitFor(() => expect(screen.getByText("₹1,089")).toBeInTheDocument());
+
+    await user.type(screen.getByLabelText("Coupon code"), "BADCODE");
+    await user.click(screen.getByRole("button", { name: /apply/i }));
+
+    expect(await screen.findByText("Invalid coupon code")).toBeInTheDocument();
+    expect(screen.queryByText(/applied/i)).not.toBeInTheDocument();
   });
 });

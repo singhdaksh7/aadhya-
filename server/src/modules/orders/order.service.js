@@ -7,6 +7,10 @@ import { assertCodEligible } from "../shipping/shipping.service.js";
 import { decrementStockForOrder, restoreStockForOrder } from "./stock.js";
 import { round2 } from "../../utils/money.js";
 import crypto from "node:crypto";
+import { ensureInvoiceForOrder } from "../invoices/invoice.service.js";
+import { sendInvoiceEmail } from "../email/email.service.js";
+import { getShippingProvider } from "../shipping/provider.service.js";
+import { attemptAutomaticShipment } from "../shipping/fulfilment.service.js";
 
 const ADMIN_INCLUDE = {
   items: true,
@@ -15,6 +19,7 @@ const ADMIN_INCLUDE = {
   payments: { orderBy: { createdAt: "desc" } },
   statusHistory: { orderBy: { changedAt: "asc" } },
   shipment: true,
+  invoice: true,
 };
 
 // accessTokenHash must never leave the server — it's the secret the
@@ -96,6 +101,7 @@ export async function createOrder({
         throw ApiError.badRequest("Provide a billing address or set billing same as shipping.");
       }
     }
+    if (billingSameAsShipping) resolvedBillingAddress = shippingAddress;
   }
 
   let couponDiscount = 0;
@@ -156,6 +162,7 @@ export async function createOrder({
         customerName: customer.name,
         customerEmail: customer.email,
         customerPhone: customer.phone,
+        customerAlternatePhone: customer.alternatePhone || null,
         customerId: customerId || null,
         subtotal: totals.subtotal,
         shippingAmount: totals.shipping,
@@ -217,6 +224,9 @@ export async function createOrder({
                 orderId: created.id,
                 fullName: shippingAddress.fullName,
                 phone: shippingAddress.phone,
+                alternatePhone: shippingAddress.alternatePhone || null,
+                email: shippingAddress.email || customer.email,
+                landmark: shippingAddress.landmark || null,
                 addressLine1: shippingAddress.addressLine1,
                 addressLine2: shippingAddress.addressLine2 || null,
                 city: shippingAddress.city,
@@ -231,6 +241,9 @@ export async function createOrder({
                     orderId: created.id,
                     fullName: resolvedBillingAddress.fullName,
                     phone: resolvedBillingAddress.phone,
+                    alternatePhone: resolvedBillingAddress.alternatePhone || null,
+                    email: resolvedBillingAddress.email || customer.email,
+                    landmark: resolvedBillingAddress.landmark || null,
                     addressLine1: resolvedBillingAddress.addressLine1,
                     addressLine2: resolvedBillingAddress.addressLine2 || null,
                     city: resolvedBillingAddress.city,
@@ -273,6 +286,15 @@ export async function createOrder({
     return updated;
   });
 
+  if (paymentMethod === "cod") {
+    try {
+      const invoice = await ensureInvoiceForOrder(order.id);
+      if (invoice) sendInvoiceEmail(invoice.id).catch((err) => console.error("Invoice email failed:", err.message));
+    } catch (err) {
+      console.error("Invoice generation failed:", err.message);
+    }
+    attemptAutomaticShipment(order.id).catch((err) => console.error("Automatic shipment failed:", err.message));
+  }
   return { order, accessToken: rawToken };
 }
 
@@ -399,6 +421,15 @@ export async function updateOrderStatus(id, nextStatus, note) {
     }
   }
 
+  if (updated.paymentMethod === "cod") {
+    try {
+      const invoice = await ensureInvoiceForOrder(updated.id);
+      if (invoice) sendInvoiceEmail(invoice.id).catch((err) => console.error("Invoice email failed:", err.message));
+    } catch (err) {
+      console.error("Invoice generation failed:", err.message);
+    }
+  }
+
   return sanitizeOrder(updated);
 }
 
@@ -428,6 +459,8 @@ export async function upsertShipment(orderId, data) {
   const order = await prisma.order.findUnique({ where: { id: orderId } });
   if (!order) throw ApiError.notFound("Order not found");
 
+  const physicalItems = await prisma.orderItem.count({ where: { orderId, OR: [{ bookFormatSnapshot: null }, { NOT: { bookFormatSnapshot: "PDF" } }] } });
+  if (!physicalItems) throw ApiError.badRequest("Digital-only orders cannot have a shipment.");
   const shipment = await prisma.shipment.upsert({
     where: { orderId },
     create: { orderId, ...data },
@@ -435,4 +468,19 @@ export async function upsertShipment(orderId, data) {
   });
 
   return shipment;
+}
+
+export async function createOrderShipment(orderId, data) {
+  const order = await prisma.order.findUnique({ where: { id: orderId }, include: { items: true, address: true } });
+  if (!order) throw ApiError.notFound("Order not found");
+  if (!order.items.some((item) => item.bookFormatSnapshot !== "PDF")) throw ApiError.badRequest("Digital-only orders cannot have a shipment.");
+  const setting = await prisma.siteSetting.findUnique({ where: { key: "shippingBusiness" } });
+  const providerName = setting?.value?.provider || "MANUAL";
+  try {
+    const result = await getShippingProvider(providerName).createShipment({ order, input: data, settings: setting?.value || {} });
+    return await prisma.shipment.upsert({ where: { orderId }, create: { orderId, ...result, shippedDate: data.shippedDate || null }, update: { ...result, shippedDate: data.shippedDate || undefined, lastError: null } });
+  } catch (error) {
+    await prisma.shipment.upsert({ where: { orderId }, create: { orderId, provider: providerName, status: "FAILED", lastError: "Shipment creation failed" }, update: { status: "FAILED", lastError: "Shipment creation failed" } });
+    throw error;
+  }
 }

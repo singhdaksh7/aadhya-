@@ -26,6 +26,8 @@ import {
   fetchCustomerNotifications,
   markNotificationRead,
   markAllNotificationsRead,
+  accountInvoices,
+  downloadAccountInvoice,
 } from "../../lib/api";
 import { formatInr } from "../../lib/format";
 
@@ -44,6 +46,18 @@ const blank = {
 
 const fields = Object.keys(blank).filter((k) => k !== "isDefault");
 
+const fieldLabels = {
+  label: "Address label",
+  fullName: "Full name",
+  phone: "Phone",
+  addressLine1: "Address line 1",
+  addressLine2: "Address line 2",
+  city: "City",
+  state: "State",
+  postalCode: "Postal code",
+  country: "Country",
+};
+
 function AccountNav() {
   const { pathname } = useLocation();
   const items = [
@@ -53,6 +67,7 @@ function AccountNav() {
     { path: "/account/wishlist", label: "Wishlist" },
     { path: "/account/reviews", label: "Reviews" },
     { path: "/account/downloads", label: "Downloads" },
+    { path: "/account/invoices", label: "Invoices" },
     { path: "/account/notifications", label: "Notifications" },
   ];
   return (
@@ -75,7 +90,8 @@ function AddressForm({ form, setForm, onSubmit, label }) {
             key={k}
             className="w-full rounded-xl border border-charcoal/15 bg-white px-4 py-2.5 text-sm text-charcoal focus:border-terracotta focus:outline-none"
             required={k !== "addressLine2"}
-            placeholder={k}
+            placeholder={fieldLabels[k] || k}
+            aria-label={fieldLabels[k] || k}
             value={form[k] || ""}
             onChange={(e) => setForm({ ...form, [k]: e.target.value })}
           />
@@ -503,7 +519,9 @@ export function OrderDetail() {
               <span>Total Amount</span>
               <span className="text-terracotta text-lg">{formatInr(Number(o.totalAmount))}</span>
             </div>
+            {o.invoice && <button type="button" onClick={async () => { const blob = await downloadAccountInvoice(o.invoice.id); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `${o.invoice.invoiceNumber}.pdf`; a.click(); URL.revokeObjectURL(url); }} className="rounded-full border border-charcoal/20 px-4 py-2 text-xs font-semibold text-charcoal">Download Invoice</button>}
           </div>
+          {o.shipment && <div className="rounded-3xl border border-charcoal/10 bg-white p-6"><h3 className="font-serif-display text-lg text-charcoal">Delivery tracking</h3><p className="mt-2 text-sm text-charcoal-soft">{o.shipment.status.replaceAll("_", " ")} {o.shipment.carrier ? `· ${o.shipment.carrier}` : ""}</p>{o.shipment.trackingNumber && <p className="mt-1 text-sm text-charcoal-soft">Tracking: {o.shipment.trackingNumber}</p>}{o.shipment.estimatedDelivery && <p className="mt-1 text-sm text-charcoal-soft">Estimated delivery: {new Date(o.shipment.estimatedDelivery).toLocaleDateString("en-IN")}</p>}{o.shipment.trackingUrl && <a className="mt-3 inline-block text-xs font-semibold text-terracotta" href={o.shipment.trackingUrl} target="_blank" rel="noreferrer">Track shipment</a>}</div>}
         </div>
       )}
       {error && <p className="text-sm font-medium text-terracotta bg-terracotta/10 p-4 rounded-xl">{error}</p>}
@@ -512,6 +530,13 @@ export function OrderDetail() {
       </Link>
     </div>
   );
+}
+
+export function AccountInvoices() {
+  const [items, setItems] = useState([]); const [error, setError] = useState("");
+  useEffect(() => { accountInvoices().then((r) => setItems(r.data || [])).catch((e) => setError(e.message)); }, []);
+  const download = async (item) => { try { const blob = await downloadAccountInvoice(item.id); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `${item.invoiceNumber}.pdf`; a.click(); URL.revokeObjectURL(url); } catch (e) { setError(e.message); } };
+  return <div className="mx-auto max-w-4xl space-y-8 px-5 py-12 sm:px-8"><SectionHeading eyebrow="Customer Account" title="Invoices" /><AccountNav />{error && <p className="rounded-xl bg-terracotta/10 p-3 text-sm text-terracotta">{error}</p>}<div className="overflow-x-auto rounded-2xl border border-charcoal/10"><table className="min-w-full text-left text-sm"><thead className="bg-ivory-dark/50 text-xs text-charcoal-soft"><tr><th className="p-4">Invoice</th><th className="p-4">Date</th><th className="p-4">Order</th><th className="p-4">Amount</th><th className="p-4"></th></tr></thead><tbody>{items.map((i)=><tr key={i.id} className="border-t border-charcoal/10"><td className="p-4 font-medium">{i.invoiceNumber}</td><td className="p-4">{new Date(i.invoiceDate).toLocaleDateString("en-IN")}</td><td className="p-4">{i.order.orderNumber}</td><td className="p-4">{formatInr(i.totalAmount)}</td><td className="p-4"><button onClick={()=>download(i)} className="text-xs font-semibold text-terracotta">Download</button></td></tr>)}</tbody></table>{!items.length && <p className="p-6 text-sm text-charcoal-soft">No invoices are available yet.</p>}</div></div>;
 }
 
 export function Forgot() {

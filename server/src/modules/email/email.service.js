@@ -1,6 +1,7 @@
 import nodemailer from "nodemailer";
 import { env } from "../../config/env.js";
 import { prisma } from "../../lib/prisma.js";
+import { readInvoicePdf } from "../invoices/invoice.storage.js";
 
 let transporter = null;
 function getTransporter() {
@@ -93,4 +94,73 @@ export async function sendOrderConfirmationEmail(orderId) {
     console.error(`[email] failed to send confirmation for ${order.orderNumber}:`, err.message);
     return { sent: false, reason: "send_failed" };
   }
+}
+
+// `emailedAt` is an atomic send claim for automatic mail. A webhook retry
+// cannot produce a second invoice email; an explicit admin resend bypasses
+// the claim and is separately recorded in EmailLog/AuditLog.
+// Invoice/order rows can be gone by the time this settles (e.g. an admin
+// deletes the order, or — in tests — the next test's teardown runs before
+// this detached dispatch finishes). Treat that as a safe no-op rather than
+// an unhandled failure, the same way shipment webhooks treat an unknown
+// shipment: the email was never going to be deliverable anyway.
+function isMissingParentRow(err) {
+  return err?.code === "P2025" || err?.code === "P2003";
+}
+
+export async function sendInvoiceEmail(invoiceId, { resend = false, adminId = null } = {}) {
+  const invoice = await prisma.invoice.findUnique({ where: { id: invoiceId }, include: { order: true } });
+  if (!invoice) return { sent: false, reason: "invoice_not_found" };
+  if (!resend) {
+    let claim;
+    try {
+      claim = await prisma.invoice.updateMany({ where: { id: invoiceId, emailedAt: null }, data: { emailedAt: new Date() } });
+    } catch (err) {
+      if (isMissingParentRow(err)) return { sent: false, reason: "invoice_not_found" };
+      throw err;
+    }
+    if (!claim.count) return { sent: false, reason: "already_emailed" };
+  }
+  const mailer = getTransporter();
+  try {
+    if (!mailer) {
+      if (!resend) await prisma.invoice.update({ where: { id: invoiceId }, data: { emailedAt: null } });
+      await prisma.emailLog.create({ data: { type: "INVOICE", recipient: invoice.customerEmail, orderId: invoice.orderId, invoiceId, status: "SKIPPED", failureMessage: "SMTP not configured" } });
+      return { sent: false, reason: "smtp_not_configured" };
+    }
+    const attachment = invoice.pdfStorageKey ? await readInvoicePdf(invoice.pdfStorageKey) : null;
+    const info = await mailer.sendMail({
+      from: env.smtp.from,
+      to: invoice.customerEmail,
+      subject: `Your Aadya Invoice — ${invoice.invoiceNumber}`,
+      html: `<div style="font-family:Georgia,serif;max-width:560px;margin:auto;color:#2b2723"><h1>Your Aadya invoice</h1><p>Hello ${escapeHtml(invoice.customerName)},</p><p>Invoice <strong>${escapeHtml(invoice.invoiceNumber)}</strong> for order <strong>${escapeHtml(invoice.order.orderNumber)}</strong> is attached.</p><p>Total: <strong>₹${Number(invoice.totalAmount).toLocaleString("en-IN")}</strong><br/>Payment method: ${escapeHtml(invoice.order.paymentMethod)}</p><p><a href="${env.frontendUrl.replace(/\/$/, "")}/account/orders/${encodeURIComponent(invoice.order.orderNumber)}">View your order</a></p></div>`,
+      attachments: attachment ? [{ filename: `${invoice.invoiceNumber.replace(/[^A-Za-z0-9._-]/g, "-")}.pdf`, content: attachment.stream, contentType: "application/pdf" }] : [],
+    });
+    if (resend) await prisma.invoice.update({ where: { id: invoiceId }, data: { emailedAt: invoice.emailedAt || new Date() } });
+    await prisma.emailLog.create({ data: { type: resend ? "INVOICE_RESEND" : "INVOICE", recipient: invoice.customerEmail, orderId: invoice.orderId, invoiceId, status: "SENT", providerMessageId: info.messageId || null, sentAt: new Date() } });
+    if (adminId && resend) await prisma.adminAuditLog.create({ data: { adminId, action: "INVOICE_RESEND", provider: "email", metadata: { invoiceId } } });
+    return { sent: true };
+  } catch (err) {
+    if (isMissingParentRow(err)) return { sent: false, reason: "invoice_not_found" };
+    try {
+      if (!resend) await prisma.invoice.update({ where: { id: invoiceId }, data: { emailedAt: null } });
+      await prisma.emailLog.create({ data: { type: resend ? "INVOICE_RESEND" : "INVOICE", recipient: invoice.customerEmail, orderId: invoice.orderId, invoiceId, status: "FAILED", failureMessage: String(err.message || "send failed").slice(0, 500) } });
+    } catch (writeErr) {
+      if (!isMissingParentRow(writeErr)) throw writeErr;
+    }
+    console.error("[email] invoice email failed:", err.message);
+    return { sent: false, reason: "send_failed" };
+  }
+}
+
+export async function sendShippingStatusEmail(orderId, status) {
+  const order = await prisma.order.findUnique({ where: { id: orderId }, include: { shipment: true, customer: true, items: true } });
+  if (!order || !["IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED"].includes(status)) return { sent: false };
+  const type = `${status}_EMAIL`;
+  const exists = await prisma.emailLog.findFirst({ where: { orderId, type, status: "SENT" } });
+  if (exists) return { sent: false, reason: "already_sent" };
+  const subject = status === "DELIVERED" ? "Your Aadya order has been delivered" : status === "OUT_FOR_DELIVERY" ? "Your Aadya order is out for delivery" : "Your Aadya order has shipped";
+  const mailer = getTransporter();
+  if (!mailer) return { sent: false, reason: "smtp_not_configured" };
+  try { await mailer.sendMail({ from: env.smtp.from, to: order.customerEmail, subject, html: `<p>Hello ${escapeHtml(order.customerName)},</p><p>Your order <strong>${escapeHtml(order.orderNumber)}</strong> is ${escapeHtml(status.replaceAll("_", " ").toLowerCase())}.</p><p>Carrier: ${escapeHtml(order.shipment?.carrier || "")}${order.shipment?.trackingNumber ? `<br/>Tracking: ${escapeHtml(order.shipment.trackingNumber)}` : ""}</p><p><a href="${env.frontendUrl.replace(/\/$/, "")}/account/orders/${encodeURIComponent(order.orderNumber)}">View your order</a></p>` }); await prisma.emailLog.create({ data: { type, recipient: order.customerEmail, orderId, status: "SENT", sentAt: new Date() } }); if (order.customerId) await prisma.customerNotification.create({ data: { customerId: order.customerId, type: `ORDER_${status}`, title: status === "DELIVERED" ? "Delivered" : status === "OUT_FOR_DELIVERY" ? "Out for delivery" : "Shipped", message: `Your order ${order.orderNumber} is ${status.replaceAll("_", " ").toLowerCase()}.`, link: `/account/orders/${order.orderNumber}` } }); return { sent: true }; } catch (err) { await prisma.emailLog.create({ data: { type, recipient: order.customerEmail, orderId, status: "FAILED", failureMessage: String(err.message).slice(0, 500) } }); return { sent: false }; }
 }

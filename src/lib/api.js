@@ -365,6 +365,19 @@ export function adminUpdateOrderStatus(id, status, note) {
 export function adminUpsertShipment(id, payload) {
   return api.put(`/admin/orders/${id}/shipment`, payload, { auth: "admin" });
 }
+export function adminCreateShipment(id, payload) { return api.post(`/admin/orders/${id}/shipment/create`, payload, { auth: "admin" }); }
+export function accountInvoices() { return api.get("/account/invoices", { auth: true }); }
+export async function downloadAccountInvoice(id) { const res = await fetch(`${API_URL}/account/invoices/${id}/download`, { headers: { Authorization: `Bearer ${tokens.customer}` }, credentials: "include" }); if (!res.ok) throw new ApiRequestError("Could not download invoice", res.status); return res.blob(); }
+export function adminGetIntegrationStatus() { return api.get("/admin/integrations", { auth: "admin" }); }
+export function adminSaveIntegration(data) { return api.put("/admin/integrations/credentials", data, { auth: "admin" }); }
+export function adminTestIntegration(provider, environment) { return api.post(`/admin/integrations/${provider}/${environment}/test`, {}, { auth: "admin" }); }
+export function adminGetShippingBusiness() { return api.get("/admin/shipping/business", { auth: "admin" }); }
+export function adminSaveShippingBusiness(data) { return api.put("/admin/shipping/business", data, { auth: "admin" }); }
+export function adminGetInvoiceSettings() { return api.get("/admin/invoices/settings", { auth: "admin" }); }
+export function adminSaveInvoiceSettings(data) { return api.put("/admin/invoices/settings", data, { auth: "admin" }); }
+export async function adminDownloadInvoice(id) { const res = await fetch(`${API_URL}/admin/invoices/${id}/download`, { headers: { Authorization: `Bearer ${tokens.admin}` }, credentials: "include" }); if (!res.ok) throw new ApiRequestError("Could not download invoice", res.status); return res.blob(); }
+export function adminRegenerateInvoice(id) { return api.post(`/admin/invoices/${id}/regenerate`, {}, { auth: "admin" }); }
+export function adminResendInvoice(id) { return api.post(`/admin/invoices/${id}/resend`, {}, { auth: "admin" }); }
 
 // Customer accounts use a separate in-memory access token and httpOnly cookie session.
 export function customerRegister(data) { return api.post("/auth/register", data); }
@@ -382,6 +395,7 @@ export function createAddress(data) { return api.post("/account/addresses", data
 export function updateAddress(id,data) { return api.patch(`/account/addresses/${id}`,data,{auth:true}); }
 export function deleteAddress(id) { return api.delete(`/account/addresses/${id}`,{auth:true}); }
 export function setDefaultAddress(id) { return api.post(`/account/addresses/${id}/default`,undefined,{auth:true}); }
+export function setAddressTypeDefault(id, type) { return api.post(`/account/addresses/${id}/default/${type}`, undefined, { auth: true }); }
 export function accountOrders(params={}) { const q=new URLSearchParams(params).toString(); return api.get(`/account/orders${q?`?${q}`:""}`,{auth:true}); }
 export function accountOrder(orderNumber) { return api.get(`/account/orders/${orderNumber}`,{auth:true}); }
 export function claimOrder(data) { return api.post("/account/claim-order",data,{auth:true}); }
