@@ -68,7 +68,7 @@ function validate(form, { requireAddress = true } = {}) {
 }
 
 export default function CheckoutPage() {
-  const { items, isLoading: cartLoading, clearCart, appliedCoupon } = useCart();
+  const { items, isLoading: cartLoading, clearCart, appliedCoupon, couponError, applyCoupon, removeCoupon } = useCart();
   const navigate = useNavigate();
   const { user } = useCustomerAuth();
   const { payments } = useSiteSettings();
@@ -562,7 +562,14 @@ export default function CheckoutPage() {
               )}
             </form>
 
-            <OrderSummary preview={preview} status={previewStatus} />
+            <OrderSummary
+              preview={preview}
+              status={previewStatus}
+              appliedCoupon={appliedCoupon}
+              couponError={couponError}
+              applyCoupon={applyCoupon}
+              removeCoupon={removeCoupon}
+            />
           </div>
         )}
       </div>
@@ -608,10 +615,57 @@ function CheckoutAddressFields({ value, onChange, errors, prefix, includeEmail =
   </>;
 }
 
-function OrderSummary({ preview, status }) {
+function OrderSummary({ preview, status, appliedCoupon, couponError, applyCoupon, removeCoupon }) {
+  const [couponInput, setCouponInput] = useState("");
+  const [validating, setValidating] = useState(false);
+
+  const handleApplyCoupon = async (e) => {
+    e.preventDefault();
+    setValidating(true);
+    const ok = await applyCoupon(couponInput);
+    if (ok) setCouponInput("");
+    setValidating(false);
+  };
+
   return (
     <div className="h-fit rounded-2xl border border-charcoal/10 bg-[#FAF6F0] p-6 space-y-4">
       <h2 className="font-serif-display text-lg font-bold text-charcoal">Order Summary</h2>
+
+      {appliedCoupon ? (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 space-y-1">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800">
+              {appliedCoupon.code} applied
+            </span>
+            <button type="button" onClick={removeCoupon} className="text-[11px] text-rose-600 hover:underline font-medium">
+              Remove
+            </button>
+          </div>
+          <p className="text-[11px] text-emerald-700">You saved {formatInr(appliedCoupon.discountAmount)}</p>
+        </div>
+      ) : (
+        <form onSubmit={handleApplyCoupon} className="space-y-1.5">
+          <label className="text-[11px] font-semibold uppercase tracking-wider text-charcoal-soft">Have a promo code?</label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={couponInput}
+              onChange={(e) => setCouponInput(e.target.value)}
+              placeholder="Enter code"
+              aria-label="Coupon code"
+              className="flex-1 rounded-full border border-charcoal/20 bg-white px-3 py-1.5 text-xs text-charcoal focus:outline-none focus:border-terracotta uppercase font-mono"
+            />
+            <button
+              type="submit"
+              disabled={validating}
+              className="rounded-full bg-charcoal px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-white transition hover:bg-charcoal/80 disabled:opacity-50"
+            >
+              {validating ? "..." : "Apply"}
+            </button>
+          </div>
+          {couponError && <p className="text-[11px] text-terracotta font-medium">{couponError}</p>}
+        </form>
+      )}
 
       {status === "loading" && <p className="text-xs text-charcoal-soft">Calculating totals…</p>}
       {status === "error" && <p className="text-xs text-terracotta">Unable to calculate your order right now.</p>}

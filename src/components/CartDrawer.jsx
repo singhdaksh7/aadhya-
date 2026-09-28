@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { IconClose, IconCart } from "./icons";
@@ -7,10 +7,33 @@ import { EmptyCartState } from "./ui/EmptyState";
 import { useSiteSettings } from "../hooks/useSiteSettings";
 
 export default function CartDrawer() {
-  const { items, isOpen, setIsOpen, removeItem, setQuantity, subtotal, lineTotal, isLoading } = useCart();
+  const {
+    items,
+    isOpen,
+    setIsOpen,
+    removeItem,
+    setQuantity,
+    subtotal,
+    lineTotal,
+    isLoading,
+    appliedCoupon,
+    couponError,
+    applyCoupon,
+    removeCoupon,
+  } = useCart();
   const { freeShippingThreshold } = useSiteSettings();
+  const [couponInput, setCouponInput] = useState("");
+  const [validating, setValidating] = useState(false);
 
   if (!isOpen) return null;
+
+  const handleApplyCoupon = async (e) => {
+    e.preventDefault();
+    setValidating(true);
+    const ok = await applyCoupon(couponInput);
+    if (ok) setCouponInput("");
+    setValidating(false);
+  };
 
   const freeShippingProgress = Math.min(100, Math.round((subtotal / freeShippingThreshold) * 100));
   const amountNeeded = freeShippingThreshold - subtotal;
@@ -130,11 +153,61 @@ export default function CartDrawer() {
         {/* Footer Checkout Summary */}
         {items.length > 0 && (
           <div className="border-t border-charcoal/10 bg-ivory-dark/40 px-6 py-5 space-y-4">
+            {appliedCoupon ? (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800">
+                    {appliedCoupon.code} applied
+                  </span>
+                  <button
+                    type="button"
+                    onClick={removeCoupon}
+                    className="text-[11px] text-rose-600 hover:underline font-medium"
+                  >
+                    Remove
+                  </button>
+                </div>
+                <p className="text-[11px] text-emerald-700">
+                  You saved {formatInr(appliedCoupon.discountAmount)}
+                </p>
+              </div>
+            ) : (
+              <form onSubmit={handleApplyCoupon} className="space-y-1.5">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-charcoal-soft">
+                  Have a promo code?
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={couponInput}
+                    onChange={(e) => setCouponInput(e.target.value)}
+                    placeholder="Enter code"
+                    aria-label="Coupon code"
+                    className="flex-1 rounded-full border border-charcoal/20 bg-white px-3 py-1.5 text-xs text-charcoal focus:outline-none focus:border-terracotta uppercase font-mono"
+                  />
+                  <button
+                    type="submit"
+                    disabled={validating}
+                    className="rounded-full bg-charcoal px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-white transition hover:bg-charcoal/80 disabled:opacity-50"
+                  >
+                    {validating ? "..." : "Apply"}
+                  </button>
+                </div>
+                {couponError && <p className="text-[11px] text-terracotta font-medium">{couponError}</p>}
+              </form>
+            )}
+
             <div className="space-y-1.5 text-xs text-charcoal-soft">
               <div className="flex justify-between">
                 <span>Subtotal</span>
                 <span className="font-semibold text-charcoal">{formatInr(subtotal)}</span>
               </div>
+              {appliedCoupon && (
+                <div className="flex justify-between text-emerald-700 font-medium">
+                  <span>Coupon Discount ({appliedCoupon.code})</span>
+                  <span>-{formatInr(appliedCoupon.discountAmount)}</span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span>Shipping</span>
                 <span>{subtotal >= freeShippingThreshold ? "FREE" : "Calculated at checkout"}</span>
