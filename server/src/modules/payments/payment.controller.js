@@ -27,7 +27,7 @@ export const verifyPayment = asyncHandler(async (req, res) => {
   const payment = await prisma.payment.findFirst({ where: { providerOrderId: razorpay_order_id } });
   if (!payment) throw ApiError.badRequest("This payment does not match any known order.");
 
-  const valid = verifyRazorpaySignature({
+  const valid = await verifyRazorpaySignature({
     razorpayOrderId: razorpay_order_id,
     razorpayPaymentId: razorpay_payment_id,
     razorpaySignature: razorpay_signature,

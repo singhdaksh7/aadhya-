@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import { asyncHandler } from "../../utils/asyncHandler.js";
 import { prisma } from "../../lib/prisma.js";
 import { verifyRazorpayWebhookSignature, finalizePaidPayment, markPaymentFailed } from "./payment.service.js";
-import { env } from "../../config/env.js";
+import { getRazorpayConfig } from "./razorpay.client.js";
 
 // Razorpay webhooks arrive with a JSON body but signature verification
 // needs the exact raw bytes — app.js mounts this route with express.raw()
@@ -10,7 +10,7 @@ import { env } from "../../config/env.js";
 export const handleRazorpayWebhook = asyncHandler(async (req, res) => {
   const rawBody = req.body; // Buffer
 
-  if (!env.razorpay.webhookSecret) {
+  if (!(await getRazorpayConfig())?.webhookSecret) {
     // Not configured yet — acknowledge so Razorpay doesn't hammer retries,
     // but do nothing. Logged, not silently swallowed.
     // eslint-disable-next-line no-console
@@ -19,7 +19,7 @@ export const handleRazorpayWebhook = asyncHandler(async (req, res) => {
   }
 
   const signature = req.headers["x-razorpay-signature"];
-  if (!verifyRazorpayWebhookSignature(rawBody, signature)) {
+  if (!(await verifyRazorpayWebhookSignature(rawBody, signature))) {
     // Logged without the signature/body value itself — an invalid signature
     // is a security-relevant event (forged/replayed webhook attempt).
     // eslint-disable-next-line no-console

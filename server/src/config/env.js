@@ -52,6 +52,7 @@ export const env = {
       return Boolean(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET);
     },
   },
+  integrationEncryptionKey: process.env.INTEGRATION_ENCRYPTION_KEY || "",
   smtp: {
     host: process.env.SMTP_HOST || "",
     port: Number(process.env.SMTP_PORT || 587),
