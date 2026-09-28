@@ -2,7 +2,10 @@ import { prisma } from "../../lib/prisma.js";
 import { getShippingProvider } from "./provider.service.js";
 import { sendShippingStatusEmail } from "../email/email.service.js";
 
-const terminal = new Set(["DELIVERED", "CANCELLED", "RTO", "RTO_DELIVERED"]);
+// RTO is an in-flight return state (the package is on its way back), not a
+// dead end — it must still be able to advance to RTO_DELIVERED. Only these
+// three are genuinely final.
+const terminal = new Set(["DELIVERED", "CANCELLED", "RTO_DELIVERED"]);
 export const normalizeShippingStatus = (raw) => ({ shipped: "IN_TRANSIT", in_transit: "IN_TRANSIT", out_for_delivery: "OUT_FOR_DELIVERY", delivered: "DELIVERED", failed_attempt: "FAILED_ATTEMPT", rto: "RTO", rto_delivered: "RTO_DELIVERED", cancelled: "CANCELLED", picked_up: "PICKED_UP", pickup_scheduled: "PICKUP_SCHEDULED" }[String(raw || "").toLowerCase()] || "PENDING");
 export function buildShipmentPayload(order, settings = {}) {
   const physicalItems = order.items.filter((item) => item.bookFormatSnapshot !== "PDF").map((item) => ({ name: item.productNameSnapshot, sku: item.variantSkuSnapshot || item.bookFormatSkuSnapshot || item.skuSnapshot || null, quantity: item.quantity, sellingPrice: Number(item.unitPrice), discount: 0, tax: 0 }));
