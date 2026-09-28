@@ -35,17 +35,6 @@ const SECTION_TYPE_LABELS = {
   BLOG_PREVIEW: "Blog Spotlights",
 };
 
-const DEFAULT_TICKER_SPEED = 60;
-
-function getTickerSpeed(settingsJson) {
-  try {
-    const speed = Number(JSON.parse(settingsJson || "{}").speed);
-    return Number.isFinite(speed) && speed > 0 ? speed : DEFAULT_TICKER_SPEED;
-  } catch {
-    return DEFAULT_TICKER_SPEED;
-  }
-}
-
 export default function AdminHomepageBuilder() {
   const [page, setPage] = useState(null);
   const [sections, setSections] = useState([]);
@@ -172,16 +161,6 @@ export default function AdminHomepageBuilder() {
     setEditIsEnabled(sec.isEnabled);
     setEditSettings(sec.settings || {});
     setJsonError("");
-  };
-
-  const updateTickerSpeed = (speed) => {
-    try {
-      const settings = JSON.parse(editSettingsJson || "{}");
-      setEditSettingsJson(JSON.stringify({ ...settings, speed }, null, 2));
-      setJsonError("");
-    } catch {
-      setJsonError("Fix the Section Settings JSON before changing ticker speed.");
-    }
   };
 
   const handleSaveEdit = async (e) => {

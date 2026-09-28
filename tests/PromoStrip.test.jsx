@@ -12,11 +12,11 @@ vi.mock("../src/lib/api", () => ({
 }));
 
 describe("PromoStrip", () => {
-  it("uses the calm 60-second duration and keeps hover pausing enabled by default", () => {
+  it("uses the new calm 90-second default and keeps hover pausing enabled", () => {
     const { container } = render(<BrowserRouter><PromoStrip /></BrowserRouter>);
 
     const ticker = container.querySelector(".animate-marquee-ticker");
-    expect(ticker).toHaveStyle({ "--ticker-duration": "60s" });
+    expect(ticker).toHaveStyle({ "--ticker-duration": "90s" });
     expect(ticker).toHaveClass("marquee-ticker-pauseable");
   });
 
@@ -26,5 +26,10 @@ describe("PromoStrip", () => {
     const ticker = container.querySelector(".animate-marquee-ticker");
     expect(ticker).toHaveStyle({ "--ticker-duration": "25s" });
     expect(ticker).not.toHaveClass("marquee-ticker-pauseable");
+  });
+
+  it("preserves a previously saved 60-second duration", () => {
+    const { container } = render(<BrowserRouter><PromoStrip promoConfig={{ speed: 60 }} /></BrowserRouter>);
+    expect(container.querySelector(".animate-marquee-ticker")).toHaveStyle({ "--ticker-duration": "60s" });
   });
 });

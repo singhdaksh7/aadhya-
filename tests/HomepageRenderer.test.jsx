@@ -68,4 +68,9 @@ describe("HomepageRenderer Component", () => {
 
     expect(screen.getByTestId("mock-promo-strip")).toHaveAttribute("data-speed", "60");
   });
+
+  it("passes the new 90-second slow setting through unchanged", () => {
+    render(<BrowserRouter><HomepageRenderer sections={[{ id: "ticker", type: "PROMO_STRIP", isEnabled: true, settings: { speed: 90 } }]} /></BrowserRouter>);
+    expect(screen.getByTestId("mock-promo-strip")).toHaveAttribute("data-speed", "90");
+  });
 });

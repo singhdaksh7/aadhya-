@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useSiteSettings } from "../hooks/useSiteSettings";
 import { fetchPromos } from "../lib/api";
 
-const DEFAULT_TICKER_DURATION_SECONDS = 60;
+const DEFAULT_TICKER_DURATION_SECONDS = 90;
 
 export default function PromoStrip({ promoConfig }) {
   const { promoStrip: settingsPromo } = useSiteSettings();
