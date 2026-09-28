@@ -393,6 +393,7 @@ export function createAddress(data) { return api.post("/account/addresses", data
 export function updateAddress(id,data) { return api.patch(`/account/addresses/${id}`,data,{auth:true}); }
 export function deleteAddress(id) { return api.delete(`/account/addresses/${id}`,{auth:true}); }
 export function setDefaultAddress(id) { return api.post(`/account/addresses/${id}/default`,undefined,{auth:true}); }
+export function setAddressTypeDefault(id, type) { return api.post(`/account/addresses/${id}/default/${type}`, undefined, { auth: true }); }
 export function accountOrders(params={}) { const q=new URLSearchParams(params).toString(); return api.get(`/account/orders${q?`?${q}`:""}`,{auth:true}); }
 export function accountOrder(orderNumber) { return api.get(`/account/orders/${orderNumber}`,{auth:true}); }
 export function claimOrder(data) { return api.post("/account/claim-order",data,{auth:true}); }

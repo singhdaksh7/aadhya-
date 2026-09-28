@@ -10,6 +10,9 @@ export async function resetDb() {
     throw new Error("Refusing to reset a database outside the dedicated test environment.");
   }
   await prisma.analyticsEvent.deleteMany();
+  await prisma.emailLog.deleteMany();
+  await prisma.invoice.deleteMany();
+  await prisma.invoiceSequence.deleteMany();
   await prisma.digitalDownload.deleteMany();
   await prisma.couponRedemption.deleteMany();
   await prisma.payment.deleteMany();

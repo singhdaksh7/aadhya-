@@ -88,6 +88,8 @@ model Address {
   postalCode   String
   country      String   @default("India")
   isDefault    Boolean  @default(false)
+  isDefaultBilling Boolean @default(false)
+  isDefaultShipping Boolean @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   customer     Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
@@ -531,6 +533,7 @@ model Shipment {
   estimatedDelivery DateTime?
   deliveredDate     DateTime?
   provider          String    @default("MANUAL")
+  providerOrderId   String?
   providerShipmentId String?
   awb               String?
   labelStorageKey   String?
