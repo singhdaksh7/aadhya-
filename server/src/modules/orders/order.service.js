@@ -7,6 +7,9 @@ import { assertCodEligible } from "../shipping/shipping.service.js";
 import { decrementStockForOrder, restoreStockForOrder } from "./stock.js";
 import { round2 } from "../../utils/money.js";
 import crypto from "node:crypto";
+import { ensureInvoiceForOrder } from "../invoices/invoice.service.js";
+import { sendInvoiceEmail } from "../email/email.service.js";
+import { getShippingProvider } from "../shipping/provider.service.js";
 
 const ADMIN_INCLUDE = {
   items: true,
@@ -15,6 +18,7 @@ const ADMIN_INCLUDE = {
   payments: { orderBy: { createdAt: "desc" } },
   statusHistory: { orderBy: { changedAt: "asc" } },
   shipment: true,
+  invoice: true,
 };
 
 // accessTokenHash must never leave the server — it's the secret the
@@ -273,6 +277,9 @@ export async function createOrder({
     return updated;
   });
 
+  if (paymentMethod === "cod") {
+    ensureInvoiceForOrder(order.id).then((invoice) => invoice && sendInvoiceEmail(invoice.id)).catch((err) => console.error("Invoice generation failed:", err.message));
+  }
   return { order, accessToken: rawToken };
 }
 
@@ -399,6 +406,10 @@ export async function updateOrderStatus(id, nextStatus, note) {
     }
   }
 
+  if (updated.paymentMethod === "cod") {
+    ensureInvoiceForOrder(updated.id).then((invoice) => invoice && sendInvoiceEmail(invoice.id)).catch((err) => console.error("Invoice generation failed:", err.message));
+  }
+
   return sanitizeOrder(updated);
 }
 
@@ -428,6 +439,8 @@ export async function upsertShipment(orderId, data) {
   const order = await prisma.order.findUnique({ where: { id: orderId } });
   if (!order) throw ApiError.notFound("Order not found");
 
+  const physicalItems = await prisma.orderItem.count({ where: { orderId, NOT: { bookFormatSnapshot: "PDF" } } });
+  if (!physicalItems) throw ApiError.badRequest("Digital-only orders cannot have a shipment.");
   const shipment = await prisma.shipment.upsert({
     where: { orderId },
     create: { orderId, ...data },
@@ -435,4 +448,19 @@ export async function upsertShipment(orderId, data) {
   });
 
   return shipment;
+}
+
+export async function createOrderShipment(orderId, data) {
+  const order = await prisma.order.findUnique({ where: { id: orderId }, include: { items: true, address: true } });
+  if (!order) throw ApiError.notFound("Order not found");
+  if (!order.items.some((item) => item.bookFormatSnapshot !== "PDF")) throw ApiError.badRequest("Digital-only orders cannot have a shipment.");
+  const setting = await prisma.siteSetting.findUnique({ where: { key: "shippingBusiness" } });
+  const providerName = setting?.value?.provider || "MANUAL";
+  try {
+    const result = await getShippingProvider(providerName).createShipment({ order, input: data, settings: setting?.value || {} });
+    return await prisma.shipment.upsert({ where: { orderId }, create: { orderId, ...result, shippedDate: data.shippedDate || null }, update: { ...result, shippedDate: data.shippedDate || undefined, lastError: null } });
+  } catch (error) {
+    await prisma.shipment.upsert({ where: { orderId }, create: { orderId, provider: providerName, status: "FAILED", lastError: "Shipment creation failed" }, update: { status: "FAILED", lastError: "Shipment creation failed" } });
+    throw error;
+  }
 }

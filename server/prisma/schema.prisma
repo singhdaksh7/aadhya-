@@ -476,6 +476,7 @@ model Order {
   shippingZone     ShippingZone?     @relation(fields: [shippingZoneId], references: [id], onDelete: SetNull)
   statusHistory    OrderStatusHistory[]
   shipment         Shipment?
+  invoice          Invoice?
 
   @@index([orderNumber])
   @@index([customerEmail])
@@ -525,12 +526,99 @@ model Shipment {
   shippedDate       DateTime?
   estimatedDelivery DateTime?
   deliveredDate     DateTime?
+  provider          String    @default("MANUAL")
+  providerShipmentId String?
+  awb               String?
+  labelStorageKey   String?
+  status            String    @default("PENDING")
+  lastError         String?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@index([orderId])
+}
+
+// A complete fiscal/legal snapshot. Nothing on an Invoice is derived from a
+// live product or settings row after it has been created.
+model Invoice {
+  id              String   @id @default(uuid())
+  orderId         String   @unique
+  invoiceNumber   String   @unique
+  invoiceDate     DateTime @default(now())
+  customerName    String
+  customerEmail   String
+  customerPhone   String?
+  billingAddress  Json
+  shippingAddress Json?
+  subtotal        Decimal  @db.Decimal(10, 2)
+  discountAmount  Decimal  @db.Decimal(10, 2) @default(0)
+  shippingAmount  Decimal  @db.Decimal(10, 2) @default(0)
+  taxAmount       Decimal  @db.Decimal(10, 2) @default(0)
+  totalAmount     Decimal  @db.Decimal(10, 2)
+  currency        String   @default("INR")
+  companySnapshot Json
+  taxSnapshot     Json?
+  itemsSnapshot   Json
+  pdfStorageKey   String?
+  emailedAt       DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  order           Order    @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  emailLogs       EmailLog[]
+
+  @@index([customerEmail])
+  @@index([createdAt])
+}
+
+model InvoiceSequence {
+  id         String   @id @default("default")
+  nextNumber Int      @default(1)
+  updatedAt  DateTime @updatedAt
+}
+
+model IntegrationCredential {
+  id            String   @id @default(uuid())
+  provider      String
+  environment   String
+  encryptedData String
+  isActive      Boolean  @default(true)
+  lastTestedAt  DateTime?
+  testStatus    String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([provider, environment])
+}
+
+model EmailLog {
+  id                String   @id @default(uuid())
+  type              String
+  recipient         String
+  orderId           String?
+  invoiceId         String?
+  status            String
+  providerMessageId String?
+  sentAt            DateTime?
+  failureMessage    String?
+  createdAt         DateTime @default(now())
+  invoice           Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([invoiceId])
+}
+
+model AdminAuditLog {
+  id        String   @id @default(uuid())
+  adminId   String
+  action    String
+  provider  String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([adminId])
+  @@index([createdAt])
 }
 
 model ShippingZone {

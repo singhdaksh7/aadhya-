@@ -7,7 +7,7 @@ import { asyncHandler } from "../../utils/asyncHandler.js";
 import { ok, created } from "../../utils/apiResponse.js";
 import { requireCustomer } from "../../middleware/customerAuth.js";
 const phone=z.string().trim().regex(/^[6-9]\d{9}$/), address=z.object({label:z.string().trim().min(1).max(60),fullName:z.string().trim().min(1).max(120),phone,addressLine1:z.string().trim().min(1).max(200),addressLine2:z.string().trim().max(200).optional().nullable(),city:z.string().trim().min(1).max(100),state:z.string().trim().min(1).max(100),postalCode:z.string().trim().regex(/^\d{6}$/),country:z.string().trim().min(1).max(100).default("India"),isDefault:z.boolean().optional()});
-const include={items:true,address:true,payments:{orderBy:{createdAt:"desc"},take:1}};
+const include={items:true,address:true,payments:{orderBy:{createdAt:"desc"},take:1},invoice:true,shipment:true};
 function clean(o){const {accessTokenHash: _accessTokenHash,...x}=o;return x;}
 export const accountRouter=Router(); accountRouter.use(requireCustomer);
 accountRouter.get("/addresses",asyncHandler(async(req,res)=>ok(res,await prisma.address.findMany({where:{customerId:req.customer.id},orderBy:[{isDefault:"desc"},{updatedAt:"desc"}]}))));

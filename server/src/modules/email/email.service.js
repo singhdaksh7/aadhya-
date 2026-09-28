@@ -1,6 +1,7 @@
 import nodemailer from "nodemailer";
 import { env } from "../../config/env.js";
 import { prisma } from "../../lib/prisma.js";
+import { readInvoicePdf } from "../invoices/invoice.storage.js";
 
 let transporter = null;
 function getTransporter() {
@@ -91,6 +92,43 @@ export async function sendOrderConfirmationEmail(orderId) {
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error(`[email] failed to send confirmation for ${order.orderNumber}:`, err.message);
+    return { sent: false, reason: "send_failed" };
+  }
+}
+
+// `emailedAt` is an atomic send claim for automatic mail. A webhook retry
+// cannot produce a second invoice email; an explicit admin resend bypasses
+// the claim and is separately recorded in EmailLog/AuditLog.
+export async function sendInvoiceEmail(invoiceId, { resend = false, adminId = null } = {}) {
+  const invoice = await prisma.invoice.findUnique({ where: { id: invoiceId }, include: { order: true } });
+  if (!invoice) return { sent: false, reason: "invoice_not_found" };
+  if (!resend) {
+    const claim = await prisma.invoice.updateMany({ where: { id: invoiceId, emailedAt: null }, data: { emailedAt: new Date() } });
+    if (!claim.count) return { sent: false, reason: "already_emailed" };
+  }
+  const mailer = getTransporter();
+  if (!mailer) {
+    if (!resend) await prisma.invoice.update({ where: { id: invoiceId }, data: { emailedAt: null } });
+    await prisma.emailLog.create({ data: { type: "INVOICE", recipient: invoice.customerEmail, orderId: invoice.orderId, invoiceId, status: "SKIPPED", failureMessage: "SMTP not configured" } });
+    return { sent: false, reason: "smtp_not_configured" };
+  }
+  try {
+    const attachment = invoice.pdfStorageKey ? await readInvoicePdf(invoice.pdfStorageKey) : null;
+    const info = await mailer.sendMail({
+      from: env.smtp.from,
+      to: invoice.customerEmail,
+      subject: `Your Aadya Invoice — ${invoice.invoiceNumber}`,
+      html: `<div style="font-family:Georgia,serif;max-width:560px;margin:auto;color:#2b2723"><h1>Your Aadya invoice</h1><p>Hello ${escapeHtml(invoice.customerName)},</p><p>Invoice <strong>${escapeHtml(invoice.invoiceNumber)}</strong> for order <strong>${escapeHtml(invoice.order.orderNumber)}</strong> is attached.</p><p>Total: <strong>₹${Number(invoice.totalAmount).toLocaleString("en-IN")}</strong><br/>Payment method: ${escapeHtml(invoice.order.paymentMethod)}</p><p><a href="${env.frontendUrl.replace(/\/$/, "")}/account/orders/${encodeURIComponent(invoice.order.orderNumber)}">View your order</a></p></div>`,
+      attachments: attachment ? [{ filename: `${invoice.invoiceNumber.replace(/[^A-Za-z0-9._-]/g, "-")}.pdf`, content: attachment.stream, contentType: "application/pdf" }] : [],
+    });
+    if (resend) await prisma.invoice.update({ where: { id: invoiceId }, data: { emailedAt: invoice.emailedAt || new Date() } });
+    await prisma.emailLog.create({ data: { type: resend ? "INVOICE_RESEND" : "INVOICE", recipient: invoice.customerEmail, orderId: invoice.orderId, invoiceId, status: "SENT", providerMessageId: info.messageId || null, sentAt: new Date() } });
+    if (adminId && resend) await prisma.adminAuditLog.create({ data: { adminId, action: "INVOICE_RESEND", provider: "email", metadata: { invoiceId } } });
+    return { sent: true };
+  } catch (err) {
+    if (!resend) await prisma.invoice.update({ where: { id: invoiceId }, data: { emailedAt: null } });
+    await prisma.emailLog.create({ data: { type: resend ? "INVOICE_RESEND" : "INVOICE", recipient: invoice.customerEmail, orderId: invoice.orderId, invoiceId, status: "FAILED", failureMessage: String(err.message || "send failed").slice(0, 500) } });
+    console.error("[email] invoice email failed:", err.message);
     return { sent: false, reason: "send_failed" };
   }
 }
