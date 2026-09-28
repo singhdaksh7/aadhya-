@@ -196,7 +196,12 @@ export async function finalizePaidPayment({ providerOrderId, providerPaymentId, 
     // state. This is the single, server-authoritative place a `purchase`
     // analytics event is ever recorded — it is never accepted from a client.
     sendOrderConfirmationEmail(result.order.id).catch(() => {});
-    ensureInvoiceForOrder(result.order.id).then((invoice) => invoice && sendInvoiceEmail(invoice.id)).catch((err) => console.error("Invoice generation failed:", err.message));
+    try {
+      const invoice = await ensureInvoiceForOrder(result.order.id);
+      if (invoice) sendInvoiceEmail(invoice.id).catch((err) => console.error("Invoice email failed:", err.message));
+    } catch (err) {
+      console.error("Invoice generation failed:", err.message);
+    }
     attemptAutomaticShipment(result.order.id).catch((err) => console.error("Automatic shipment failed:", err.message));
     recordPurchaseEvent(result.order).catch(() => {});
   }

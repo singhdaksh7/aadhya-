@@ -99,20 +99,35 @@ export async function sendOrderConfirmationEmail(orderId) {
 // `emailedAt` is an atomic send claim for automatic mail. A webhook retry
 // cannot produce a second invoice email; an explicit admin resend bypasses
 // the claim and is separately recorded in EmailLog/AuditLog.
+// Invoice/order rows can be gone by the time this settles (e.g. an admin
+// deletes the order, or — in tests — the next test's teardown runs before
+// this detached dispatch finishes). Treat that as a safe no-op rather than
+// an unhandled failure, the same way shipment webhooks treat an unknown
+// shipment: the email was never going to be deliverable anyway.
+function isMissingParentRow(err) {
+  return err?.code === "P2025" || err?.code === "P2003";
+}
+
 export async function sendInvoiceEmail(invoiceId, { resend = false, adminId = null } = {}) {
   const invoice = await prisma.invoice.findUnique({ where: { id: invoiceId }, include: { order: true } });
   if (!invoice) return { sent: false, reason: "invoice_not_found" };
   if (!resend) {
-    const claim = await prisma.invoice.updateMany({ where: { id: invoiceId, emailedAt: null }, data: { emailedAt: new Date() } });
+    let claim;
+    try {
+      claim = await prisma.invoice.updateMany({ where: { id: invoiceId, emailedAt: null }, data: { emailedAt: new Date() } });
+    } catch (err) {
+      if (isMissingParentRow(err)) return { sent: false, reason: "invoice_not_found" };
+      throw err;
+    }
     if (!claim.count) return { sent: false, reason: "already_emailed" };
   }
   const mailer = getTransporter();
-  if (!mailer) {
-    if (!resend) await prisma.invoice.update({ where: { id: invoiceId }, data: { emailedAt: null } });
-    await prisma.emailLog.create({ data: { type: "INVOICE", recipient: invoice.customerEmail, orderId: invoice.orderId, invoiceId, status: "SKIPPED", failureMessage: "SMTP not configured" } });
-    return { sent: false, reason: "smtp_not_configured" };
-  }
   try {
+    if (!mailer) {
+      if (!resend) await prisma.invoice.update({ where: { id: invoiceId }, data: { emailedAt: null } });
+      await prisma.emailLog.create({ data: { type: "INVOICE", recipient: invoice.customerEmail, orderId: invoice.orderId, invoiceId, status: "SKIPPED", failureMessage: "SMTP not configured" } });
+      return { sent: false, reason: "smtp_not_configured" };
+    }
     const attachment = invoice.pdfStorageKey ? await readInvoicePdf(invoice.pdfStorageKey) : null;
     const info = await mailer.sendMail({
       from: env.smtp.from,
@@ -126,8 +141,13 @@ export async function sendInvoiceEmail(invoiceId, { resend = false, adminId = nu
     if (adminId && resend) await prisma.adminAuditLog.create({ data: { adminId, action: "INVOICE_RESEND", provider: "email", metadata: { invoiceId } } });
     return { sent: true };
   } catch (err) {
-    if (!resend) await prisma.invoice.update({ where: { id: invoiceId }, data: { emailedAt: null } });
-    await prisma.emailLog.create({ data: { type: resend ? "INVOICE_RESEND" : "INVOICE", recipient: invoice.customerEmail, orderId: invoice.orderId, invoiceId, status: "FAILED", failureMessage: String(err.message || "send failed").slice(0, 500) } });
+    if (isMissingParentRow(err)) return { sent: false, reason: "invoice_not_found" };
+    try {
+      if (!resend) await prisma.invoice.update({ where: { id: invoiceId }, data: { emailedAt: null } });
+      await prisma.emailLog.create({ data: { type: resend ? "INVOICE_RESEND" : "INVOICE", recipient: invoice.customerEmail, orderId: invoice.orderId, invoiceId, status: "FAILED", failureMessage: String(err.message || "send failed").slice(0, 500) } });
+    } catch (writeErr) {
+      if (!isMissingParentRow(writeErr)) throw writeErr;
+    }
     console.error("[email] invoice email failed:", err.message);
     return { sent: false, reason: "send_failed" };
   }

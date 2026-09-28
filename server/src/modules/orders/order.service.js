@@ -287,7 +287,12 @@ export async function createOrder({
   });
 
   if (paymentMethod === "cod") {
-    ensureInvoiceForOrder(order.id).then((invoice) => invoice && sendInvoiceEmail(invoice.id)).catch((err) => console.error("Invoice generation failed:", err.message));
+    try {
+      const invoice = await ensureInvoiceForOrder(order.id);
+      if (invoice) sendInvoiceEmail(invoice.id).catch((err) => console.error("Invoice email failed:", err.message));
+    } catch (err) {
+      console.error("Invoice generation failed:", err.message);
+    }
     attemptAutomaticShipment(order.id).catch((err) => console.error("Automatic shipment failed:", err.message));
   }
   return { order, accessToken: rawToken };
@@ -417,7 +422,12 @@ export async function updateOrderStatus(id, nextStatus, note) {
   }
 
   if (updated.paymentMethod === "cod") {
-    ensureInvoiceForOrder(updated.id).then((invoice) => invoice && sendInvoiceEmail(invoice.id)).catch((err) => console.error("Invoice generation failed:", err.message));
+    try {
+      const invoice = await ensureInvoiceForOrder(updated.id);
+      if (invoice) sendInvoiceEmail(invoice.id).catch((err) => console.error("Invoice email failed:", err.message));
+    } catch (err) {
+      console.error("Invoice generation failed:", err.message);
+    }
   }
 
   return sanitizeOrder(updated);
@@ -449,7 +459,7 @@ export async function upsertShipment(orderId, data) {
   const order = await prisma.order.findUnique({ where: { id: orderId } });
   if (!order) throw ApiError.notFound("Order not found");
 
-  const physicalItems = await prisma.orderItem.count({ where: { orderId, NOT: { bookFormatSnapshot: "PDF" } } });
+  const physicalItems = await prisma.orderItem.count({ where: { orderId, OR: [{ bookFormatSnapshot: null }, { NOT: { bookFormatSnapshot: "PDF" } }] } });
   if (!physicalItems) throw ApiError.badRequest("Digital-only orders cannot have a shipment.");
   const shipment = await prisma.shipment.upsert({
     where: { orderId },
