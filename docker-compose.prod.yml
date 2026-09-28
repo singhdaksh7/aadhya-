@@ -38,6 +38,7 @@ services:
         condition: service_healthy
     volumes:
       - aadya_uploads:/app/uploads
+      - aadya_private_books:/app/private/books
     networks:
       - aadya_internal
       - aadya_public
@@ -88,6 +89,7 @@ services:
 volumes:
   aadya_postgres_data:
   aadya_uploads:
+  aadya_private_books:
 
 networks:
   # Private network shared only between aadya-api and aadya-db — Postgres is
