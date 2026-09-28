@@ -113,7 +113,7 @@ describe("CartContext", () => {
 
     await waitFor(() => {
       const stored = JSON.parse(localStorage.getItem("aadya.cart.v1"));
-      expect(stored).toEqual([{ slug: "product-a", quantity: 1 }]);
+      expect(stored).toEqual([{ slug: "product-a", quantity: 1, bookFormat: null }]);
     });
 
     unmount();

@@ -202,7 +202,7 @@ describe("CheckoutPage", () => {
     expect(await screen.findByText(/payment didn't go through/i)).toBeInTheDocument();
     expect(navigateMock).not.toHaveBeenCalled();
     const stored = JSON.parse(localStorage.getItem("aadya.cart.v1"));
-    expect(stored).toEqual([{ slug: "test-basket", quantity: 1 }]);
+    expect(stored).toEqual([{ slug: "test-basket", quantity: 1, bookFormat: null }]);
   });
 
   it("surfaces a price/stock-changed message from the server preview instead of hiding it", async () => {
