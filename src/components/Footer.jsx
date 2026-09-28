@@ -5,10 +5,19 @@ import { useSiteSettings } from "../hooks/useSiteSettings";
 export default function Footer() {
   const { footer, general, social, branding, supportEmail, supportPhone } = useSiteSettings();
 
-  const brandDesc = footer?.brandDescription || general?.shortDescription || "Aadya is a premium Indian home decor and lifestyle brand. We create and curate objects for thoughtful living — celebrating slow craft, natural minerals, and artisan traditions.";
-  const email = general?.supportEmail || supportEmail || "concierge@aadyahome.com";
-  const phone = general?.supportPhone || supportPhone || "+91 (800) 242-3921";
-  const address = general?.businessAddress ? `${general.businessAddress}, ${general.city || ""}` : "Crafted with care in India";
+  const brandDesc = footer?.brandDescription || general?.shortDescription || "";
+  const email = general?.supportEmail || supportEmail || "";
+  const phone = general?.supportPhone || supportPhone || "";
+  const addressParts = [
+    general?.businessAddress,
+    general?.businessAddressLine2,
+    general?.city,
+    general?.state,
+    general?.postalCode,
+    general?.country,
+  ].filter((part) => Boolean(part && String(part).trim()));
+  const address = addressParts.join(", ");
+  const socialHeading = footer?.socialHeading || "Connect With Us";
 
   // Social links filter
   const socialList = [
@@ -18,6 +27,7 @@ export default function Footer() {
     { key: "pinterest", label: "Pinterest", url: social?.pinterest },
     { key: "linkedin", label: "LinkedIn", url: social?.linkedin },
     { key: "twitter", label: "X/Twitter", url: social?.twitter },
+    { key: "whatsapp", label: "WhatsApp", url: social?.whatsapp || (general?.whatsappNumber ? `https://wa.me/${general.whatsappNumber.replace(/[^\d]/g, "")}` : "") },
   ].filter((s) => Boolean(s.url && s.url.trim()));
 
   // Default columns fallback
@@ -80,11 +90,13 @@ export default function Footer() {
             <p className="max-w-sm text-xs sm:text-sm leading-relaxed text-[#FAF6F0]/80">
               {brandDesc}
             </p>
-            {footer?.contactDetails !== false && (
+            {footer?.contactDetails !== false && (address || email || phone) && (
               <div className="pt-2 text-xs text-[#FAF6F0]/70 space-y-1.5 font-medium">
-                <p className="flex items-center gap-2">
-                  <span>📍</span> {address}
-                </p>
+                {address && (
+                  <p className="flex items-center gap-2">
+                    <span>📍</span> {address}
+                  </p>
+                )}
                 {email && (
                   <p className="flex items-center gap-2">
                     <span>✉️</span> {email}
@@ -101,7 +113,7 @@ export default function Footer() {
             {/* Configured Social Links */}
             {footer?.socialLinksVisibility !== false && socialList.length > 0 && (
               <div className="pt-3">
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-terracotta-light mb-2">Connect With Us</p>
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-terracotta-light mb-2">{socialHeading}</p>
                 <div className="flex flex-wrap gap-3 text-xs text-[#FAF6F0]/80">
                   {socialList.map((s) => (
                     <a key={s.key} href={s.url} target="_blank" rel="noopener noreferrer" className="hover:text-white transition underline font-medium">
