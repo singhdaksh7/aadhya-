@@ -365,6 +365,17 @@ export function adminUpdateOrderStatus(id, status, note) {
 export function adminUpsertShipment(id, payload) {
   return api.put(`/admin/orders/${id}/shipment`, payload, { auth: "admin" });
 }
+export function adminCreateShipment(id, payload) { return api.post(`/admin/orders/${id}/shipment/create`, payload, { auth: "admin" }); }
+export function accountInvoices() { return api.get("/account/invoices", { auth: true }); }
+export async function downloadAccountInvoice(id) { const res = await fetch(`${API_URL}/account/invoices/${id}/download`, { headers: { Authorization: `Bearer ${tokens.customer}` }, credentials: "include" }); if (!res.ok) throw new ApiRequestError("Could not download invoice", res.status); return res.blob(); }
+export function adminGetIntegrationStatus() { return api.get("/admin/integrations", { auth: "admin" }); }
+export function adminSaveIntegration(data) { return api.put("/admin/integrations/credentials", data, { auth: "admin" }); }
+export function adminTestIntegration(provider, environment) { return api.post(`/admin/integrations/${provider}/${environment}/test`, {}, { auth: "admin" }); }
+export function adminGetInvoiceSettings() { return api.get("/admin/invoices/settings", { auth: "admin" }); }
+export function adminSaveInvoiceSettings(data) { return api.put("/admin/invoices/settings", data, { auth: "admin" }); }
+export async function adminDownloadInvoice(id) { const res = await fetch(`${API_URL}/admin/invoices/${id}/download`, { headers: { Authorization: `Bearer ${tokens.admin}` }, credentials: "include" }); if (!res.ok) throw new ApiRequestError("Could not download invoice", res.status); return res.blob(); }
+export function adminRegenerateInvoice(id) { return api.post(`/admin/invoices/${id}/regenerate`, {}, { auth: "admin" }); }
+export function adminResendInvoice(id) { return api.post(`/admin/invoices/${id}/resend`, {}, { auth: "admin" }); }
 
 // Customer accounts use a separate in-memory access token and httpOnly cookie session.
 export function customerRegister(data) { return api.post("/auth/register", data); }

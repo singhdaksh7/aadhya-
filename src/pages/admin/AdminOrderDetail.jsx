@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { adminGetOrder, adminUpdateOrderStatus, adminUpsertShipment } from "../../lib/api";
+import { adminGetOrder, adminUpdateOrderStatus, adminUpsertShipment, adminCreateShipment, adminDownloadInvoice, adminRegenerateInvoice, adminResendInvoice } from "../../lib/api";
 import { LoadingNotice, ErrorNotice } from "../../components/StateNotice";
 import { formatInr } from "../../lib/format";
 import { StatusPill } from "./AdminOrderList";
@@ -80,6 +80,7 @@ export default function AdminOrderDetail() {
       setShipmentSaving(false);
     }
   };
+  const downloadInvoice = async () => { const blob = await adminDownloadInvoice(order.invoice.id); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `${order.invoice.invoiceNumber}.pdf`; a.click(); URL.revokeObjectURL(url); };
 
   if (status === "loading") return <LoadingNotice />;
   if (status === "error" || !order) return <ErrorNotice message="Unable to load this order." onRetry={load} />;
@@ -181,6 +182,11 @@ export default function AdminOrderDetail() {
       </div>
 
       <section className="mt-6 rounded-2xl border border-charcoal/10 bg-white/50 p-5">
+        <h2 className="font-serif-display text-lg text-charcoal">Invoice</h2>
+        {order.invoice ? <div className="mt-3 flex flex-wrap items-center gap-3 text-sm"><span>{order.invoice.invoiceNumber}</span><span className="text-charcoal-soft">Generated {new Date(order.invoice.createdAt).toLocaleDateString("en-IN")}</span><span className="text-charcoal-soft">{order.invoice.emailedAt ? "Emailed" : "Not emailed"}</span><button onClick={downloadInvoice} className="text-xs font-semibold text-terracotta">Download</button><button onClick={async()=>{await adminRegenerateInvoice(order.invoice.id);load();}} className="text-xs font-semibold text-terracotta">Regenerate PDF</button><button onClick={async()=>{await adminResendInvoice(order.invoice.id);load();}} className="text-xs font-semibold text-terracotta">Resend email</button></div> : <p className="mt-2 text-sm text-charcoal-soft">Invoice will be generated after the configured payment/confirmation event.</p>}
+      </section>
+
+      <section className="mt-6 rounded-2xl border border-charcoal/10 bg-white/50 p-5">
         <h2 className="font-serif-display text-lg text-charcoal">Update Status</h2>
         <p className="mt-1 text-xs text-charcoal-soft">
           Payment status is controlled by the payment workflow and cannot be set manually here.
@@ -256,6 +262,7 @@ export default function AdminOrderDetail() {
             >
               {shipmentSaving ? "Saving…" : "Save tracking info"}
             </button>
+            <button type="button" onClick={async()=>{try { const res = await adminCreateShipment(id, shipment); setOrder((prev)=>({...prev,shipment:res.data})); } catch (err) { setShipmentError(err.message); }}} className="ml-2 rounded-full border border-charcoal/20 px-5 py-2 text-xs font-medium text-charcoal">Create Shipment</button>
           </div>
         </form>
         {shipmentError && <p className="mt-3 text-sm text-terracotta">{shipmentError}</p>}

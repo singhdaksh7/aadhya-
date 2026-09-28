@@ -34,6 +34,7 @@ const linkGroups = [
     items: [
       { to: "/admin/navigation", label: "Navigation" },
       { to: "/admin/settings", label: "Store Settings" },
+      { to: "/admin/integrations", label: "Integrations & Invoices" },
     ],
   },
 ];

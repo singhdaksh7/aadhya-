@@ -26,6 +26,8 @@ import {
   fetchCustomerNotifications,
   markNotificationRead,
   markAllNotificationsRead,
+  accountInvoices,
+  downloadAccountInvoice,
 } from "../../lib/api";
 import { formatInr } from "../../lib/format";
 
@@ -53,6 +55,7 @@ function AccountNav() {
     { path: "/account/wishlist", label: "Wishlist" },
     { path: "/account/reviews", label: "Reviews" },
     { path: "/account/downloads", label: "Downloads" },
+    { path: "/account/invoices", label: "Invoices" },
     { path: "/account/notifications", label: "Notifications" },
   ];
   return (
@@ -503,6 +506,7 @@ export function OrderDetail() {
               <span>Total Amount</span>
               <span className="text-terracotta text-lg">{formatInr(Number(o.totalAmount))}</span>
             </div>
+            {o.invoice && <button type="button" onClick={async () => { const blob = await downloadAccountInvoice(o.invoice.id); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `${o.invoice.invoiceNumber}.pdf`; a.click(); URL.revokeObjectURL(url); }} className="rounded-full border border-charcoal/20 px-4 py-2 text-xs font-semibold text-charcoal">Download Invoice</button>}
           </div>
         </div>
       )}
@@ -512,6 +516,13 @@ export function OrderDetail() {
       </Link>
     </div>
   );
+}
+
+export function AccountInvoices() {
+  const [items, setItems] = useState([]); const [error, setError] = useState("");
+  useEffect(() => { accountInvoices().then((r) => setItems(r.data || [])).catch((e) => setError(e.message)); }, []);
+  const download = async (item) => { try { const blob = await downloadAccountInvoice(item.id); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `${item.invoiceNumber}.pdf`; a.click(); URL.revokeObjectURL(url); } catch (e) { setError(e.message); } };
+  return <div className="mx-auto max-w-4xl space-y-8 px-5 py-12 sm:px-8"><SectionHeading eyebrow="Customer Account" title="Invoices" /><AccountNav />{error && <p className="rounded-xl bg-terracotta/10 p-3 text-sm text-terracotta">{error}</p>}<div className="overflow-x-auto rounded-2xl border border-charcoal/10"><table className="min-w-full text-left text-sm"><thead className="bg-ivory-dark/50 text-xs text-charcoal-soft"><tr><th className="p-4">Invoice</th><th className="p-4">Date</th><th className="p-4">Order</th><th className="p-4">Amount</th><th className="p-4"></th></tr></thead><tbody>{items.map((i)=><tr key={i.id} className="border-t border-charcoal/10"><td className="p-4 font-medium">{i.invoiceNumber}</td><td className="p-4">{new Date(i.invoiceDate).toLocaleDateString("en-IN")}</td><td className="p-4">{i.order.orderNumber}</td><td className="p-4">{formatInr(i.totalAmount)}</td><td className="p-4"><button onClick={()=>download(i)} className="text-xs font-semibold text-terracotta">Download</button></td></tr>)}</tbody></table>{!items.length && <p className="p-6 text-sm text-charcoal-soft">No invoices are available yet.</p>}</div></div>;
 }
 
 export function Forgot() {
