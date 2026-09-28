@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { cloneElement, isValidElement, useEffect, useMemo, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { Button, SectionHeading } from "../components/ui";
 import { LoadingNotice } from "../components/StateNotice";
@@ -571,11 +571,22 @@ export default function CheckoutPage() {
 }
 
 function Field({ label, error, children }) {
+  const errorId = error ? `error-${label.replace(/[^a-zA-Z0-9]+/g, "-").toLowerCase()}` : undefined;
+  const child = isValidElement(children)
+    ? cloneElement(children, {
+        "aria-invalid": error ? "true" : undefined,
+        "aria-describedby": errorId,
+      })
+    : children;
   return (
     <label className="block">
       <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-charcoal-soft">{label}</span>
-      {children}
-      {error && <span className="mt-1 block text-xs text-terracotta font-medium">{error}</span>}
+      {child}
+      {error && (
+        <span id={errorId} className="mt-1 block text-xs text-terracotta font-medium">
+          {error}
+        </span>
+      )}
     </label>
   );
 }

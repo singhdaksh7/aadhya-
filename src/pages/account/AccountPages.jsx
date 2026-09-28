@@ -46,6 +46,18 @@ const blank = {
 
 const fields = Object.keys(blank).filter((k) => k !== "isDefault");
 
+const fieldLabels = {
+  label: "Address label",
+  fullName: "Full name",
+  phone: "Phone",
+  addressLine1: "Address line 1",
+  addressLine2: "Address line 2",
+  city: "City",
+  state: "State",
+  postalCode: "Postal code",
+  country: "Country",
+};
+
 function AccountNav() {
   const { pathname } = useLocation();
   const items = [
@@ -78,7 +90,8 @@ function AddressForm({ form, setForm, onSubmit, label }) {
             key={k}
             className="w-full rounded-xl border border-charcoal/15 bg-white px-4 py-2.5 text-sm text-charcoal focus:border-terracotta focus:outline-none"
             required={k !== "addressLine2"}
-            placeholder={k}
+            placeholder={fieldLabels[k] || k}
+            aria-label={fieldLabels[k] || k}
             value={form[k] || ""}
             onChange={(e) => setForm({ ...form, [k]: e.target.value })}
           />
