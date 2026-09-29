@@ -55,16 +55,36 @@ export async function ensureInvoiceForOrder(orderId, { forceCod = false } = {}) 
   const calculated = calculate(order, settings);
   let invoice;
   try {
-    invoice = await prisma.$transaction(async (tx) => {
-      const duplicate = await tx.invoice.findUnique({ where: { orderId } });
-      if (duplicate) return duplicate;
-      await tx.invoiceSequence.upsert({ where: { id: "default" }, create: { id: "default", nextNumber: Number(settings.nextInvoiceNumber || 1) }, update: {} });
-      const sequence = await tx.invoiceSequence.update({ where: { id: "default" }, data: { nextNumber: { increment: 1 } }, select: { nextNumber: true } });
-      const serial = sequence.nextNumber - 1;
-      const date = new Date();
-      const invoiceNumber = `${settings.prefix}/${financialYear(date)}/${String(serial).padStart(6, "0")}`;
-      return tx.invoice.create({ data: { orderId, invoiceNumber, invoiceDate: date, customerName: order.customerName, customerEmail: order.customerEmail, customerPhone: order.customerPhone || null, billingAddress: addressSnapshot(order.billingAddress || order.address, order), shippingAddress: order.address ? addressSnapshot(order.address, order) : undefined, subtotal: order.subtotal, discountAmount: order.discountAmount, shippingAmount: order.shippingAmount, taxAmount: calculated.tax.enabled ? calculated.tax.cgstAmount + calculated.tax.sgstAmount + calculated.tax.igstAmount : order.taxAmount, totalAmount: calculated.totalAmount, currency: order.currency, companySnapshot: { legalName: settings.legalName, address: settings.address, email: settings.email, phone: settings.phone, gstin: settings.gstin || null, pan: settings.pan || null, footer: settings.footer, terms: settings.terms }, taxSnapshot: calculated.tax, itemsSnapshot: calculated.items } });
-    });
+    invoice = await prisma.$transaction(
+      async (tx) => {
+        const duplicate = await tx.invoice.findUnique({ where: { orderId } });
+        if (duplicate) return duplicate;
+        // Two concurrent first-ever invoice creations can both find no
+        // InvoiceSequence row and race to create it. A plain Prisma
+        // upsert/create there can throw P2002 on the sequence's own `id` —
+        // and in Postgres a failed statement aborts the rest of this
+        // transaction, so even catching the JS error still leaves every
+        // later statement erroring with "current transaction is aborted".
+        // Worse, the outer catch below treats any P2002 as "duplicate
+        // invoice for this order" and returns null, silently dropping
+        // invoice creation for the order that lost the race. A raw
+        // INSERT ... ON CONFLICT DO NOTHING sidesteps all of that: it never
+        // errors, so the transaction stays healthy either way.
+        await tx.$executeRaw`INSERT INTO "InvoiceSequence" (id, "nextNumber", "updatedAt") VALUES ('default', ${Number(settings.nextInvoiceNumber || 1)}, now()) ON CONFLICT (id) DO NOTHING`;
+        const sequence = await tx.invoiceSequence.update({ where: { id: "default" }, data: { nextNumber: { increment: 1 } }, select: { nextNumber: true } });
+        const serial = sequence.nextNumber - 1;
+        const date = new Date();
+        const invoiceNumber = `${settings.prefix}/${financialYear(date)}/${String(serial).padStart(6, "0")}`;
+        return tx.invoice.create({ data: { orderId, invoiceNumber, invoiceDate: date, customerName: order.customerName, customerEmail: order.customerEmail, customerPhone: order.customerPhone || null, billingAddress: addressSnapshot(order.billingAddress || order.address, order), shippingAddress: order.address ? addressSnapshot(order.address, order) : undefined, subtotal: order.subtotal, discountAmount: order.discountAmount, shippingAmount: order.shippingAmount, taxAmount: calculated.tax.enabled ? calculated.tax.cgstAmount + calculated.tax.sgstAmount + calculated.tax.igstAmount : order.taxAmount, totalAmount: calculated.totalAmount, currency: order.currency, companySnapshot: { legalName: settings.legalName, address: settings.address, email: settings.email, phone: settings.phone, gstin: settings.gstin || null, pan: settings.pan || null, footer: settings.footer, terms: settings.terms }, taxSnapshot: calculated.tax, itemsSnapshot: calculated.items } });
+      },
+      // The InvoiceSequence row is a single global row, so concurrent
+      // ensureInvoiceForOrder calls (different orders paid at the same time,
+      // or duplicate webhook/verify races for the same order) serialize on
+      // it. The default 2s maxWait is too tight once more than a couple of
+      // callers queue up behind that row lock — widen it so a burst of
+      // concurrent invoice creation doesn't spuriously fail to even start.
+      { maxWait: 15000, timeout: 15000 }
+    );
   } catch (error) {
     if (error.code === "P2002") return prisma.invoice.findUnique({ where: { orderId } });
     throw error;

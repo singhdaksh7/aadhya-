@@ -118,7 +118,11 @@ export default function AdminIntegrations() {
           </Link>
         }
       />
-      {message && <p className="rounded-xl bg-sage-light px-3 py-2 text-sm text-green-deep">{message}</p>}
+      {message && (
+        <p role="status" aria-live="polite" className="rounded-xl bg-sage-light px-3 py-2 text-sm text-green-deep">
+          {message}
+        </p>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <ProviderCard

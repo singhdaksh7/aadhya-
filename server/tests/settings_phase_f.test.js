@@ -67,6 +67,22 @@ describe("Phase F — Dynamic Storefront & Store Settings Integration", () => {
       expect(updateRes.body.data.appearance.colors.primary).toBe("#CC5533");
     });
 
+    it("PUT /api/admin/settings accepts an empty legacy supportEmail (unset), matching the nested general.supportEmail contract", async () => {
+      // The admin UI's "Save All Settings" round-trips the full settings
+      // object, including the legacy top-level supportEmail field alongside
+      // general.supportEmail. When no support email is configured, GET
+      // returns "" for both — PUT must accept that back, not treat an
+      // unset email as an invalid one.
+      const res = await request
+        .put("/api/admin/settings")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({
+          general: { supportEmail: "" },
+          supportEmail: "",
+        });
+      expect(res.status).toBe(200);
+    });
+
     it("POST /api/admin/settings/reset-appearance restores appearance to Aadya defaults", async () => {
       // Custom color
       await request

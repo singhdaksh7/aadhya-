@@ -388,7 +388,7 @@ const settingsValidationSchema = z.object({
 
   // Legacy fields retained for backwards compatibility
   supportPhone: z.string().max(40).optional(),
-  supportEmail: z.string().email().optional(),
+  supportEmail: z.string().email().or(z.literal("")).optional(),
   standardShippingAmount: z.number().nonnegative().max(100000).optional(),
   freeShippingThreshold: z.number().nonnegative().max(1000000).optional(),
   socialLinks: z.record(z.string().max(40), z.string()).optional(),
