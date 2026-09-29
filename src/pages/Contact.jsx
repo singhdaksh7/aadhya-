@@ -42,7 +42,7 @@ export default function Contact() {
       <section className="mx-auto grid max-w-6xl gap-12 px-5 py-16 sm:px-8 lg:grid-cols-2">
         <div>
           {submitted ? (
-            <div className="rounded-2xl border border-charcoal/10 bg-sage-light p-8 text-center">
+            <div className="rounded-2xl border store-border bg-sage-light p-8 text-center">
               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-white/60 text-green-deep">
                 <IconCheck />
               </div>
@@ -63,7 +63,7 @@ export default function Contact() {
                 placeholder="Full name"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full rounded-xl border border-charcoal/15 bg-white/70 px-4 py-2.5 text-sm outline-none focus:border-green"
+                className="w-full rounded-xl border store-border store-bg px-4 py-2.5 text-sm outline-none store-ring-primary"
               />
               <input
                 required
@@ -71,7 +71,7 @@ export default function Contact() {
                 placeholder="Email address"
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
-                className="w-full rounded-xl border border-charcoal/15 bg-white/70 px-4 py-2.5 text-sm outline-none focus:border-green"
+                className="w-full rounded-xl border store-border store-bg px-4 py-2.5 text-sm outline-none store-ring-primary"
               />
               <input
                 required
@@ -79,12 +79,12 @@ export default function Contact() {
                 placeholder="Phone number"
                 value={form.phone}
                 onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                className="w-full rounded-xl border border-charcoal/15 bg-white/70 px-4 py-2.5 text-sm outline-none focus:border-green"
+                className="w-full rounded-xl border store-border store-bg px-4 py-2.5 text-sm outline-none store-ring-primary"
               />
               <select
                 value={form.enquiryType}
                 onChange={(e) => setForm({ ...form, enquiryType: e.target.value })}
-                className="w-full rounded-xl border border-charcoal/15 bg-white/70 px-4 py-2.5 text-sm outline-none focus:border-green"
+                className="w-full rounded-xl border store-border store-bg px-4 py-2.5 text-sm outline-none store-ring-primary"
               >
                 {enquiryTypes.map((t) => (
                   <option key={t} value={t}>
@@ -98,7 +98,7 @@ export default function Contact() {
                 placeholder="Your message"
                 value={form.message}
                 onChange={(e) => setForm({ ...form, message: e.target.value })}
-                className="w-full rounded-xl border border-charcoal/15 bg-white/70 px-4 py-2.5 text-sm outline-none focus:border-green"
+                className="w-full rounded-xl border store-border store-bg px-4 py-2.5 text-sm outline-none store-ring-primary"
               />
               <Button type="submit" className="w-full">
                 Send Enquiry
@@ -108,17 +108,17 @@ export default function Contact() {
         </div>
 
         <div className="space-y-6">
-          <div className="rounded-2xl border border-charcoal/10 bg-white/50 p-6">
-            <p className="text-xs uppercase tracking-wide text-charcoal-soft/70">Email</p>
-            <p className="mt-1 text-sm text-charcoal-soft">{supportEmail || "Contact email to be added by client."}</p>
+          <div className="rounded-2xl border store-border store-surface p-6">
+            <p className="text-xs uppercase tracking-wide store-muted/70">Email</p>
+            <p className="mt-1 text-sm store-muted">{supportEmail || "Contact email to be added by client."}</p>
           </div>
-          <div className="rounded-2xl border border-charcoal/10 bg-white/50 p-6">
-            <p className="text-xs uppercase tracking-wide text-charcoal-soft/70">Phone</p>
-            <p className="mt-1 text-sm text-charcoal-soft">{supportPhone || "Contact number to be added by client."}</p>
+          <div className="rounded-2xl border store-border store-surface p-6">
+            <p className="text-xs uppercase tracking-wide store-muted/70">Phone</p>
+            <p className="mt-1 text-sm store-muted">{supportPhone || "Contact number to be added by client."}</p>
           </div>
-          <div className="rounded-2xl border border-charcoal/10 bg-white/50 p-6">
-            <p className="text-xs uppercase tracking-wide text-charcoal-soft/70">Location</p>
-            <p className="mt-1 text-sm text-charcoal-soft">{address || "Location details to be added by client."}</p>
+          <div className="rounded-2xl border store-border store-surface p-6">
+            <p className="text-xs uppercase tracking-wide store-muted/70">Location</p>
+            <p className="mt-1 text-sm store-muted">{address || "Location details to be added by client."}</p>
           </div>
         </div>
       </section>

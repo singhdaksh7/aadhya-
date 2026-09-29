@@ -60,11 +60,11 @@ export default function CmsPage({ overrideSlug }) {
       <meta name="description" content={metaDescription} />
       <link rel="canonical" href={canonicalUrl(`/pages/${page.slug || slug}`)} />
       {/* Page Header */}
-      <div className="space-y-3 border-b border-charcoal/10 pb-6">
-        <span className="text-xs font-semibold uppercase tracking-widest text-terracotta">Aadya Storefront</span>
-        <h1 className="font-serif-display text-3xl sm:text-5xl text-charcoal leading-tight">{page.name}</h1>
+      <div className="space-y-3 border-b store-border pb-6">
+        <span className="text-xs font-semibold uppercase tracking-widest store-primary">Aadya Storefront</span>
+        <h1 className="font-serif-display text-3xl sm:text-5xl store-text leading-tight">{page.name}</h1>
         {page.excerpt && (
-          <p className="text-sm sm:text-base text-charcoal-soft leading-relaxed max-w-2xl">
+          <p className="text-sm sm:text-base store-muted leading-relaxed max-w-2xl">
             {page.excerpt}
           </p>
         )}
@@ -72,7 +72,7 @@ export default function CmsPage({ overrideSlug }) {
 
       {/* Featured Header Image */}
       {featuredImgUrl && (
-        <div className="rounded-2xl overflow-hidden shadow-sm border border-charcoal/10 max-h-96 w-full">
+        <div className="rounded-2xl overflow-hidden shadow-sm border store-border max-h-96 w-full">
           <img src={featuredImgUrl} alt={page.name} className="w-full h-full object-cover" />
         </div>
       )}

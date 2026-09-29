@@ -17,17 +17,17 @@ export default function RecentlyViewed({ excludeSlug, title = "Recently Viewed" 
 
   return (
     <div className="mt-12">
-      <h3 className="mb-4 font-serif-display text-xl text-charcoal">{title}</h3>
+      <h3 className="mb-4 font-serif-display text-xl store-text">{title}</h3>
       <div className="flex gap-4 overflow-x-auto pb-2">
         {items.map((p) => (
           <Link
             key={p.slug}
             to={`/products/${p.slug}`}
-            className="min-w-[140px] flex-shrink-0 rounded-xl border border-charcoal/10 bg-white p-3 hover:border-terracotta/40"
+            className="min-w-[140px] flex-shrink-0 rounded-xl border border-[var(--theme-border)] store-surface p-3 hover:border-[var(--theme-primary)]/40"
           >
             {p.image && <img src={p.image} alt={p.name} className="mb-2 h-24 w-full rounded-lg object-cover" />}
-            <p className="truncate text-xs font-medium text-charcoal">{p.name}</p>
-            <p className="text-xs text-terracotta">{formatInr(p.salePrice || p.price)}</p>
+            <p className="truncate text-xs font-medium store-text">{p.name}</p>
+            <p className="text-xs store-primary">{formatInr(p.salePrice || p.price)}</p>
           </Link>
         ))}
       </div>

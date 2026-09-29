@@ -350,11 +350,11 @@ export default function CheckoutPage() {
 
   const inputCls = (field) =>
     `w-full rounded-xl border px-4 py-2.5 text-sm focus:outline-none ${
-      errors[field] ? "border-terracotta" : "border-charcoal/15 focus:border-terracotta"
+      errors[field] ? "border-[var(--theme-primary)]" : "store-border focus:border-[var(--theme-primary)]"
     }`;
 
   return (
-    <div className="bg-white text-charcoal py-12 pb-20">
+    <div className="store-bg store-text py-12 pb-20">
       <div className="mx-auto max-w-5xl px-4 sm:px-8 space-y-8">
         <title>Checkout — Aadya Storefront</title>
         <SectionHeading eyebrow="Express Retail Checkout" title="Checkout" />
@@ -365,7 +365,7 @@ export default function CheckoutPage() {
           <div className="mt-8 grid gap-10 lg:grid-cols-[1.3fr_1fr]">
             <form onSubmit={onSubmit} className="space-y-8">
               <fieldset className="space-y-4">
-                <legend className="mb-1 font-serif-display text-lg text-charcoal font-bold">Contact Details</legend>
+                <legend className="mb-1 font-serif-display text-lg store-text font-bold">Contact Details</legend>
                 <Field label="Name" error={errors.name}>
                   <input value={form.name} onChange={set("name")} className={inputCls("name")} />
                 </Field>
@@ -385,22 +385,22 @@ export default function CheckoutPage() {
               </fieldset>
 
               {isDigitalOnly ? (
-                <p className="rounded-xl border border-charcoal/10 bg-[#FAF6F0] p-4 text-xs sm:text-sm text-charcoal-soft">
+                <p className="rounded-xl border store-border store-surface p-4 text-xs sm:text-sm store-muted">
                   This order is entirely digital (PDF) — no shipping address is needed. Your download(s) will be available in your account after payment.
                 </p>
               ) : (
               <>
               <fieldset className="space-y-4">
-                <legend className="mb-1 font-serif-display text-lg text-charcoal font-bold">Billing / Communication Address</legend>
+                <legend className="mb-1 font-serif-display text-lg store-text font-bold">Billing / Communication Address</legend>
                 {user && <SavedAddressPicker addresses={savedAddresses} selectedId={billingAddressId} type="billing" onSelect={(a) => { setBillingAddressId(a?.id || ""); if (sameAsShipping) setSelectedAddressId(a?.id || ""); if (a) setBillingAddress(toAddressForm({ ...a, email: a.email || form.email })); }} />}
                 <CheckoutAddressFields value={billingAddress} onChange={setBilling} errors={errors} prefix="billing." includeEmail />
                 {user && !billingAddressId && <label className="block text-xs cursor-pointer"><input type="checkbox" checked={saveBillingAddress} onChange={(e) => setSaveBillingAddress(e.target.checked)} /> Save as a billing address</label>}
               </fieldset>
-              <label className="flex items-center gap-2 rounded-xl border border-charcoal/10 bg-[#FAF6F0] p-3 text-sm font-medium cursor-pointer"><input type="checkbox" checked={sameAsShipping} onChange={(e) => setSameAsShipping(e.target.checked)} /> Shipping address is same as billing address</label>
+              <label className="flex items-center gap-2 rounded-xl border store-border store-surface p-3 text-sm font-medium cursor-pointer"><input type="checkbox" checked={sameAsShipping} onChange={(e) => setSameAsShipping(e.target.checked)} /> Shipping address is same as billing address</label>
               {!sameAsShipping && <fieldset className="space-y-4">
-                <legend className="mb-1 font-serif-display text-lg text-charcoal font-bold">Shipping Address</legend>
+                <legend className="mb-1 font-serif-display text-lg store-text font-bold">Shipping Address</legend>
                 {user && (
-                  <div className="space-y-2 rounded-xl border border-charcoal/10 bg-[#FAF6F0] p-3 text-xs sm:text-sm">
+                  <div className="space-y-2 rounded-xl border store-border store-surface p-3 text-xs sm:text-sm">
                     {savedAddresses.map((a) => (
                       <label key={a.id} className="block cursor-pointer">
                         <input
@@ -477,16 +477,16 @@ export default function CheckoutPage() {
                 )}
               </fieldset>
               }
-              {sameAsShipping && <p className="text-xs text-charcoal-soft">Shipping will use the billing / communication address above.</p>}
+              {sameAsShipping && <p className="text-xs store-muted">Shipping will use the billing / communication address above.</p>}
               </>
               )}
 
               <fieldset className="space-y-4">
-                <legend className="mb-1 font-serif-display text-lg text-charcoal font-bold">Payment Method</legend>
+                <legend className="mb-1 font-serif-display text-lg store-text font-bold">Payment Method</legend>
                 {!razorpayEnabled && !codEnabled ? (
-                  <p className="text-xs font-semibold text-terracotta">No payment methods are currently available.</p>
+                  <p className="text-xs font-semibold store-primary">No payment methods are currently available.</p>
                 ) : (
-                  <div className="space-y-2 rounded-xl border border-charcoal/10 bg-[#FAF6F0] p-4 text-xs sm:text-sm">
+                  <div className="space-y-2 rounded-xl border store-border store-surface p-4 text-xs sm:text-sm">
                     {razorpayEnabled && (
                       <label className="flex items-center gap-3 cursor-pointer">
                         <input
@@ -495,9 +495,9 @@ export default function CheckoutPage() {
                           value="razorpay"
                           checked={paymentMethod === "razorpay"}
                           onChange={() => setPaymentMethod("razorpay")}
-                          className="accent-terracotta"
+                          className="accent-[var(--theme-primary)]"
                         />
-                        <span className="font-medium text-charcoal">
+                        <span className="font-medium store-text">
                           {payments?.razorpayDisplayLabel || "Pay Online via Razorpay (UPI, Cards, NetBanking)"}
                         </span>
                       </label>
@@ -510,9 +510,9 @@ export default function CheckoutPage() {
                           value="cod"
                           checked={paymentMethod === "cod"}
                           onChange={() => setPaymentMethod("cod")}
-                          className="accent-terracotta"
+                          className="accent-[var(--theme-primary)]"
                         />
-                        <span className="font-medium text-charcoal">
+                        <span className="font-medium store-text">
                           {payments?.codDisplayLabel || "Cash on Delivery (COD)"}
                         </span>
                       </label>
@@ -549,7 +549,7 @@ export default function CheckoutPage() {
                     preview?.hasBlockingIssues ||
                     (!razorpayEnabled && !codEnabled)
                   }
-                  className="w-full rounded-full bg-terracotta py-4 text-xs font-semibold uppercase tracking-wider text-white shadow-xs transition hover:bg-terracotta-dark disabled:opacity-50"
+                  className="w-full rounded-full store-bg-primary py-4 text-xs font-semibold uppercase tracking-wider text-white shadow-xs transition store-primary-hover disabled:opacity-50"
                 >
                   {stage === "placing"
                     ? "Placing Order…"
@@ -587,10 +587,10 @@ function Field({ label, error, children }) {
     : children;
   return (
     <label className="block">
-      <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-charcoal-soft">{label}</span>
+      <span className="mb-1 block text-xs font-semibold uppercase tracking-wide store-muted">{label}</span>
       {child}
       {error && (
-        <span id={errorId} className="mt-1 block text-xs text-terracotta font-medium">
+        <span id={errorId} className="mt-1 block text-xs store-primary font-medium">
           {error}
         </span>
       )}
@@ -600,14 +600,14 @@ function Field({ label, error, children }) {
 
 function SavedAddressPicker({ addresses, selectedId, type, onSelect }) {
   const isDefault = (address) => type === "billing" ? address.isDefaultBilling || address.isDefault : address.isDefaultShipping || address.isDefault;
-  return <div className="space-y-2 rounded-xl border border-charcoal/10 bg-[#FAF6F0] p-3 text-xs sm:text-sm">
+  return <div className="space-y-2 rounded-xl border store-border store-surface p-3 text-xs sm:text-sm">
     {addresses.map((address) => <label key={address.id} className="block cursor-pointer"><input type="radio" name={`saved-${type}`} checked={selectedId === address.id} onChange={() => onSelect(address)} /> {address.label} — {address.fullName}{isDefault(address) ? " (Default)" : ""}</label>)}
     <label className="block cursor-pointer"><input type="radio" name={`saved-${type}`} checked={!selectedId} onChange={() => onSelect(null)} /> Use a new address</label>
   </div>;
 }
 
 function CheckoutAddressFields({ value, onChange, errors, prefix, includeEmail = false }) {
-  const field = (key, label, extra = {}) => <Field label={label} error={errors[`${prefix}${key}`]}><input {...extra} value={value[key] || ""} onChange={onChange(key)} className={`w-full rounded-xl border px-4 py-2.5 text-sm ${errors[`${prefix}${key}`] ? "border-terracotta" : "border-charcoal/15"}`} /></Field>;
+  const field = (key, label, extra = {}) => <Field label={label} error={errors[`${prefix}${key}`]}><input {...extra} value={value[key] || ""} onChange={onChange(key)} className={`w-full rounded-xl border px-4 py-2.5 text-sm ${errors[`${prefix}${key}`] ? "border-[var(--theme-primary)]" : "store-border"}`} /></Field>;
   return <>
     <div className="grid gap-4 sm:grid-cols-2">{field("fullName", "Full Name")}{includeEmail && field("email", "Billing email", { type: "email" })}{field("phone", "Mobile", { "data-testid": "address-phone" })}{field("alternatePhone", "Alternate mobile (optional)")}</div>
     {field("addressLine1", "Address Line 1")}{field("addressLine2", "Address Line 2 (optional)")}{field("landmark", "Landmark (optional)")}
@@ -628,8 +628,8 @@ function OrderSummary({ preview, status, appliedCoupon, couponError, applyCoupon
   };
 
   return (
-    <div className="h-fit rounded-2xl border border-charcoal/10 bg-[#FAF6F0] p-6 space-y-4">
-      <h2 className="font-serif-display text-lg font-bold text-charcoal">Order Summary</h2>
+    <div className="h-fit rounded-2xl border store-border store-surface p-6 space-y-4">
+      <h2 className="font-serif-display text-lg font-bold store-text">Order Summary</h2>
 
       {appliedCoupon ? (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 space-y-1">
@@ -645,7 +645,7 @@ function OrderSummary({ preview, status, appliedCoupon, couponError, applyCoupon
         </div>
       ) : (
         <form onSubmit={handleApplyCoupon} className="space-y-1.5">
-          <label className="text-[11px] font-semibold uppercase tracking-wider text-charcoal-soft">Have a promo code?</label>
+          <label className="text-[11px] font-semibold uppercase tracking-wider store-muted">Have a promo code?</label>
           <div className="flex gap-2">
             <input
               type="text"
@@ -653,22 +653,22 @@ function OrderSummary({ preview, status, appliedCoupon, couponError, applyCoupon
               onChange={(e) => setCouponInput(e.target.value)}
               placeholder="Enter code"
               aria-label="Coupon code"
-              className="flex-1 rounded-full border border-charcoal/20 bg-white px-3 py-1.5 text-xs text-charcoal focus:outline-none focus:border-terracotta uppercase font-mono"
+              className="flex-1 rounded-full border store-border store-bg px-3 py-1.5 text-xs store-text store-ring-primary focus:outline-none uppercase font-mono"
             />
             <button
               type="button"
               onClick={handleApplyCoupon}
               disabled={validating}
-              className="rounded-full bg-charcoal px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-white transition hover:bg-charcoal/80 disabled:opacity-50"
+              className="rounded-full store-bg-primary px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-white transition store-primary-hover disabled:opacity-50"
             >
               {validating ? "..." : "Apply"}
             </button>
           </div>
-          {couponError && <p className="text-[11px] text-terracotta font-medium">{couponError}</p>}
+          {couponError && <p className="text-[11px] store-primary font-medium">{couponError}</p>}
         </form>
       )}
 
-      {status === "loading" && <p className="text-xs text-charcoal-soft">Calculating totals…</p>}
+      {status === "loading" && <p className="text-xs store-muted">Calculating totals…</p>}
       {status === "error" && <p className="text-xs text-terracotta">Unable to calculate your order right now.</p>}
 
       {status === "ready" && preview && (
@@ -677,20 +677,20 @@ function OrderSummary({ preview, status, appliedCoupon, couponError, applyCoupon
             {preview.items.map((item) => (
               <li key={item.slug} className="text-xs sm:text-sm">
                 <div className="flex justify-between gap-2">
-                  <span className="text-charcoal font-medium">
+                  <span className="store-text font-medium">
                     {item.product?.name || item.slug} × {item.quantity}
                   </span>
-                  <span className="text-charcoal-soft font-semibold">{item.ok ? formatInr(item.lineTotal) : "—"}</span>
+                  <span className="store-muted font-semibold">{item.ok ? formatInr(item.lineTotal) : "—"}</span>
                 </div>
                 {item.message && <p className="mt-1 text-xs text-terracotta">{item.message}</p>}
               </li>
             ))}
           </ul>
 
-          <div className="space-y-2 border-t border-charcoal/10 pt-4 text-xs sm:text-sm">
-            <div className="flex justify-between text-charcoal-soft">
+          <div className="space-y-2 border-t store-border pt-4 text-xs sm:text-sm">
+            <div className="flex justify-between store-muted">
               <span>Subtotal</span>
-              <span className="font-medium text-charcoal">{formatInr(preview.subtotal)}</span>
+              <span className="font-medium store-text">{formatInr(preview.subtotal)}</span>
             </div>
             {preview.discount > 0 && (
               <div className="flex justify-between text-emerald-700 font-medium">
@@ -698,13 +698,13 @@ function OrderSummary({ preview, status, appliedCoupon, couponError, applyCoupon
                 <span>-{formatInr(preview.discount)}</span>
               </div>
             )}
-            <div className="flex justify-between text-charcoal-soft">
+            <div className="flex justify-between store-muted">
               <span>Shipping</span>
               <span>{preview.shipping === 0 ? <span className="text-emerald-700 font-semibold">FREE</span> : formatInr(preview.shipping)}</span>
             </div>
-            <div className="flex justify-between pt-2 font-serif-display text-base font-bold text-charcoal border-t border-charcoal/10">
+            <div className="flex justify-between pt-2 font-serif-display text-base font-bold store-text border-t store-border">
               <span>Total</span>
-              <span className="text-terracotta text-lg">{formatInr(preview.total)}</span>
+              <span className="store-primary text-lg">{formatInr(preview.total)}</span>
             </div>
           </div>
 

@@ -100,3 +100,27 @@ describe("Navbar logo rendering", () => {
     expect(widths).toContain("90px");
   });
 });
+
+describe("Navbar sticky header setting", () => {
+  it("renders sticky classes when header.stickyHeader is true", () => {
+    mockSettings = { general: { storeName: "Aadya" }, branding: {}, header: { stickyHeader: true }, announcementBar: {} };
+    const { container } = renderNavbar();
+    const header = container.querySelector("header");
+    expect(header.className).toMatch(/sticky/);
+    expect(header.className).toMatch(/top-0/);
+  });
+
+  it("renders sticky classes by default when header.stickyHeader is unset", () => {
+    mockSettings = { general: { storeName: "Aadya" }, branding: {}, header: {}, announcementBar: {} };
+    const { container } = renderNavbar();
+    const header = container.querySelector("header");
+    expect(header.className).toMatch(/sticky/);
+  });
+
+  it("renders static (non-sticky) layout when header.stickyHeader is false", () => {
+    mockSettings = { general: { storeName: "Aadya" }, branding: {}, header: { stickyHeader: false }, announcementBar: {} };
+    const { container } = renderNavbar();
+    const header = container.querySelector("header");
+    expect(header.className).not.toMatch(/sticky/);
+  });
+});

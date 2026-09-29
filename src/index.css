@@ -22,10 +22,73 @@ html {
   scroll-behavior: smooth;
 }
 
+/* ─── Storefront theme variables ───
+   Defaults mirror the Aadya default palette (see DEFAULT_THEME_COLORS in
+   src/hooks/useSiteSettings.js) so nothing changes visually before
+   applyThemeVariables() runs. These are plain custom properties on :root,
+   so declaring them here is harmless everywhere including the admin shell —
+   the admin never reads --theme-* variables and its own colors are hardcoded
+   (--admin-bg, --admin-card, etc. in .admin-shell below). What IS scoped to
+   the storefront only is the `body` background/color rule below, gated by
+   the `.storefront-theme` class that SiteLayout (src/App.jsx) wraps around
+   the whole storefront route tree. AdminLayout renders outside that class
+   entirely, so admin pages are never affected regardless of Appearance
+   settings. */
+:root {
+  --theme-primary: #B8674A;
+  --theme-primary-hover: #a35a3f;
+  --theme-primary-soft: #f1ddd4;
+  --theme-secondary: #8A9A82;
+  --theme-secondary-soft: #e4e9de;
+  --theme-background: #FFFFFF;
+  --theme-surface: #FAF6F0;
+  --theme-text: #2B2723;
+  --theme-muted: #766E65;
+  --theme-border: #E5E0D8;
+  --theme-accent: #D98A6C;
+}
+
 body {
   background-color: #FFFFFF;
   color: var(--color-charcoal);
   font-family: var(--font-sans);
+}
+
+/* Only the storefront route tree carries this class (see SiteLayout in
+   src/App.jsx); the admin dashboard is never inside it. */
+.storefront-theme {
+  background-color: var(--theme-background);
+  color: var(--theme-text);
+}
+
+/* ─── Storefront theme utility classes ───
+   Semantic vocabulary for sweeping hardcoded storefront colors. Prefer
+   these over ad-hoc inline styles. Defined via @utility (not plain classes)
+   so Tailwind generates hover:/group-hover:/focus-visible:/opacity-modifier
+   variants for them (e.g. `hover:store-bg-primary`, `store-bg-primary/50`) —
+   plain CSS classes would silently no-op under those variants. */
+@utility store-bg { background-color: var(--theme-background); }
+@utility store-surface { background-color: var(--theme-surface); }
+@utility store-text { color: var(--theme-text); }
+@utility store-muted { color: var(--theme-muted); }
+@utility store-primary { color: var(--theme-primary); }
+@utility store-bg-primary { background-color: var(--theme-primary); }
+@utility store-bg-primary-soft { background-color: var(--theme-primary-soft); }
+@utility store-border { border-color: var(--theme-border); }
+@utility store-secondary { color: var(--theme-secondary); }
+@utility store-bg-secondary { background-color: var(--theme-secondary); }
+@utility store-bg-secondary-soft { background-color: var(--theme-secondary-soft); }
+@utility store-accent { color: var(--theme-accent); }
+@utility store-bg-accent { background-color: var(--theme-accent); }
+
+/* These two bake in their own pseudo-state (used bare in JSX, not behind a
+   hover:/focus: variant prefix) so they stay plain classes rather than
+   @utility — Tailwind variants apply the base declaration under a prefixed
+   selector, which isn't what's wanted when the selector itself IS :hover. */
+.store-primary-hover:hover { background-color: var(--theme-primary-hover); }
+.store-ring-primary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--theme-background), 0 0 0 4px var(--theme-primary);
 }
 
 ::selection {

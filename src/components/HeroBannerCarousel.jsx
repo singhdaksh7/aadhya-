@@ -83,7 +83,7 @@ export default function HeroBannerCarousel({ bannersOverride }) {
 
   return (
     <section
-      className="relative w-full bg-[#FAF6F0] overflow-hidden group border-b border-charcoal/10"
+      className="relative w-full store-surface overflow-hidden group border-b store-border"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
       aria-label="Hero Banner Carousel"
@@ -135,22 +135,22 @@ export default function HeroBannerCarousel({ bannersOverride }) {
             }`}
           >
             {currentBanner.eyebrow && (
-              <span className="inline-block rounded-full bg-white/90 backdrop-blur border border-charcoal/10 px-3.5 py-1 text-xs font-semibold uppercase tracking-widest text-terracotta shadow-xs">
+              <span className="inline-block rounded-full bg-white/90 backdrop-blur border store-border px-3.5 py-1 text-xs font-semibold uppercase tracking-widest store-primary shadow-xs">
                 {currentBanner.eyebrow}
               </span>
             )}
 
-            <h1 className="font-serif-display text-3xl sm:text-5xl lg:text-6xl text-charcoal leading-[1.1] tracking-tight font-bold">
+            <h1 className="font-serif-display text-3xl sm:text-5xl lg:text-6xl store-text leading-[1.1] tracking-tight font-bold">
               {currentBanner.headline}{" "}
               {currentBanner.highlightText && (
-                <span className="block italic font-serif text-terracotta mt-1">
+                <span className="block italic font-serif store-primary mt-1">
                   {currentBanner.highlightText}
                 </span>
               )}
             </h1>
 
             {currentBanner.description && (
-              <p className="text-sm sm:text-base text-charcoal-soft leading-relaxed max-w-md">
+              <p className="text-sm sm:text-base store-muted leading-relaxed max-w-md">
                 {currentBanner.description}
               </p>
             )}
@@ -163,7 +163,7 @@ export default function HeroBannerCarousel({ bannersOverride }) {
               {currentBanner.primaryCtaLabel && (
                 <Link
                   to={currentBanner.primaryCtaUrl || "/shop"}
-                  className="rounded-full bg-terracotta px-7 py-3 text-xs sm:text-sm font-semibold uppercase tracking-wider text-white transition hover:bg-terracotta-dark shadow-md"
+                  className="rounded-full store-bg-primary px-7 py-3 text-xs sm:text-sm font-semibold uppercase tracking-wider text-white transition store-primary-hover shadow-md"
                 >
                   {currentBanner.primaryCtaLabel}
                 </Link>
@@ -171,7 +171,7 @@ export default function HeroBannerCarousel({ bannersOverride }) {
               {currentBanner.secondaryCtaLabel && (
                 <Link
                   to={currentBanner.secondaryCtaUrl || "/collections"}
-                  className="rounded-full border border-charcoal/20 bg-white/90 backdrop-blur px-7 py-3 text-xs sm:text-sm font-semibold uppercase tracking-wider text-charcoal transition hover:border-terracotta hover:text-terracotta"
+                  className="rounded-full border store-border bg-white/90 backdrop-blur px-7 py-3 text-xs sm:text-sm font-semibold uppercase tracking-wider store-text transition hover:border-[var(--theme-primary)] hover:store-primary"
                 >
                   {currentBanner.secondaryCtaLabel}
                 </Link>
@@ -185,7 +185,7 @@ export default function HeroBannerCarousel({ bannersOverride }) {
           <>
             <button
               onClick={handlePrev}
-              className="absolute left-4 sm:left-8 lg:left-10 top-1/2 -translate-y-1/2 z-30 flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-white/85 backdrop-blur text-charcoal shadow-md border border-charcoal/10 transition hover:bg-white hover:scale-105 focus:outline-none focus:ring-2 focus:ring-terracotta cursor-pointer"
+              className="absolute left-4 sm:left-8 lg:left-10 top-1/2 -translate-y-1/2 z-30 flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-white/85 backdrop-blur store-text shadow-md border store-border transition hover:bg-white hover:scale-105 focus:outline-none focus:ring-2 store-ring-primary cursor-pointer"
               aria-label="Previous Banner"
             >
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -194,7 +194,7 @@ export default function HeroBannerCarousel({ bannersOverride }) {
             </button>
             <button
               onClick={handleNext}
-              className="absolute right-4 sm:right-8 lg:right-10 top-1/2 -translate-y-1/2 z-30 flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-white/85 backdrop-blur text-charcoal shadow-md border border-charcoal/10 transition hover:bg-white hover:scale-105 focus:outline-none focus:ring-2 focus:ring-terracotta cursor-pointer"
+              className="absolute right-4 sm:right-8 lg:right-10 top-1/2 -translate-y-1/2 z-30 flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-white/85 backdrop-blur store-text shadow-md border store-border transition hover:bg-white hover:scale-105 focus:outline-none focus:ring-2 store-ring-primary cursor-pointer"
               aria-label="Next Banner"
             >
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -212,7 +212,7 @@ export default function HeroBannerCarousel({ bannersOverride }) {
                 key={idx}
                 onClick={() => setCurrentIndex(idx)}
                 className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${
-                  idx === currentIndex ? "w-8 bg-terracotta" : "w-2.5 bg-charcoal/30 hover:bg-charcoal/60"
+                  idx === currentIndex ? "w-8 store-bg-primary" : "w-2.5 bg-charcoal/30 hover:bg-charcoal/60"
                 }`}
                 aria-label={`Go to slide ${idx + 1}`}
               />

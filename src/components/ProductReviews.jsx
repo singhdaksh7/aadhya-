@@ -21,7 +21,7 @@ function StarDisplay({ rating, interactive = false, onSelect = () => {}, size = 
             onMouseLeave={() => interactive && setHoverRating(0)}
             className={`${interactive ? "cursor-pointer transition-transform hover:scale-110" : "cursor-default"}`}
           >
-            <span className={active ? "text-amber-500" : "text-charcoal/20"}>★</span>
+            <span className={active ? "text-amber-500" : "text-[var(--theme-border)]"}>★</span>
           </button>
         );
       })}
@@ -133,24 +133,24 @@ export default function ProductReviews({ productId }) {
   const totalBreakdown = summary.reviewCount || 1;
 
   return (
-    <section className="border-t border-charcoal/10 pt-12 mt-12 space-y-10">
+    <section className="border-t border-[var(--theme-border)] pt-12 mt-12 space-y-10">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
         <div>
-          <span className="text-xs font-semibold uppercase tracking-widest text-terracotta">Customer Reviews</span>
-          <h2 className="font-serif-display text-2xl sm:text-3xl text-charcoal mt-1">Ratings & Reviews</h2>
+          <span className="text-xs font-semibold uppercase tracking-widest store-primary">Customer Reviews</span>
+          <h2 className="font-serif-display text-2xl sm:text-3xl store-text mt-1">Ratings & Reviews</h2>
         </div>
 
         {/* Average Rating Banner */}
-        <div className="flex items-center gap-4 bg-ivory/80 p-4 rounded-2xl border border-charcoal/10 shadow-sm">
+        <div className="flex items-center gap-4 store-surface p-4 rounded-2xl border border-[var(--theme-border)] shadow-sm">
           <div className="text-center">
-            <span className="font-serif-display text-4xl font-bold text-charcoal">
+            <span className="font-serif-display text-4xl font-bold store-text">
               {summary.averageRating > 0 ? summary.averageRating.toFixed(1) : "0.0"}
             </span>
-            <span className="text-xs text-charcoal-soft block mt-0.5">out of 5</span>
+            <span className="text-xs store-muted block mt-0.5">out of 5</span>
           </div>
-          <div className="border-l border-charcoal/15 pl-4">
+          <div className="border-l border-[var(--theme-border)] pl-4">
             <StarDisplay rating={Math.round(summary.averageRating)} size="lg" />
-            <p className="text-xs text-charcoal-soft mt-1">
+            <p className="text-xs store-muted mt-1">
               Based on {summary.reviewCount} {summary.reviewCount === 1 ? "approved review" : "approved reviews"}
             </p>
           </div>
@@ -160,47 +160,47 @@ export default function ProductReviews({ productId }) {
       {/* Rating Breakdown Bars & Write Review CTA */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
         {/* Breakdown Bars */}
-        <div className="md:col-span-6 bg-white p-6 rounded-2xl border border-charcoal/10 space-y-3">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-charcoal mb-4">Rating Breakdown</h3>
+        <div className="md:col-span-6 store-bg p-6 rounded-2xl border border-[var(--theme-border)] space-y-3">
+          <h3 className="text-xs font-bold uppercase tracking-wider store-text mb-4">Rating Breakdown</h3>
           {[5, 4, 3, 2, 1].map((star) => {
             const count = summary.ratingBreakdown?.[star] || 0;
             const percentage = summary.reviewCount > 0 ? Math.round((count / totalBreakdown) * 100) : 0;
             return (
               <div key={star} className="flex items-center gap-3 text-xs">
-                <span className="w-12 font-medium text-charcoal">{star} Stars</span>
-                <div className="flex-1 h-2.5 bg-charcoal/10 rounded-full overflow-hidden">
+                <span className="w-12 font-medium store-text">{star} Stars</span>
+                <div className="flex-1 h-2.5 bg-[var(--theme-border)] rounded-full overflow-hidden">
                   <div className="h-full bg-amber-500 rounded-full transition-all duration-500" style={{ width: `${percentage}%` }} />
                 </div>
-                <span className="w-10 text-right text-charcoal-soft">{count}</span>
+                <span className="w-10 text-right store-muted">{count}</span>
               </div>
             );
           })}
         </div>
 
         {/* Customer Review Action Card */}
-        <div className="md:col-span-6 bg-ivory/50 p-6 rounded-2xl border border-charcoal/10 flex flex-col justify-between">
+        <div className="md:col-span-6 store-surface p-6 rounded-2xl border border-[var(--theme-border)] flex flex-col justify-between">
           <div>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-charcoal">Share Your Experience</h3>
-            <p className="text-xs text-charcoal-soft mt-2 leading-relaxed">
+            <h3 className="text-xs font-bold uppercase tracking-wider store-text">Share Your Experience</h3>
+            <p className="text-xs store-muted mt-2 leading-relaxed">
               Have you purchased or used this product? Let fellow readers and collectors know your thoughts on quality and craftsmanship.
             </p>
           </div>
 
           <div className="mt-6">
             {status !== "authenticated" ? (
-              <div className="rounded-xl border border-charcoal/15 bg-white p-4 text-center space-y-2">
-                <p className="text-xs text-charcoal font-medium">Please sign in to write a product review.</p>
+              <div className="rounded-xl border border-[var(--theme-border)] store-bg p-4 text-center space-y-2">
+                <p className="text-xs store-text font-medium">Please sign in to write a product review.</p>
                 <Link
                   to="/login"
-                  className="inline-block rounded-xl bg-terracotta px-5 py-2 text-xs font-semibold text-white hover:bg-terracotta-dark transition shadow-sm"
+                  className="inline-block rounded-xl store-bg-primary px-5 py-2 text-xs font-semibold text-white hover:brightness-95 transition shadow-sm"
                 >
                   Sign In to Review
                 </Link>
               </div>
             ) : myReview && !isEditing ? (
-              <div className="rounded-xl border border-charcoal/15 bg-white p-4 space-y-2">
+              <div className="rounded-xl border border-[var(--theme-border)] store-bg p-4 space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-charcoal">Your Submitted Review</span>
+                  <span className="text-xs font-semibold store-text">Your Submitted Review</span>
                   <span
                     className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
                       myReview.status === "APPROVED"
@@ -218,11 +218,11 @@ export default function ProductReviews({ productId }) {
                   </span>
                 </div>
                 <StarDisplay rating={myReview.rating} />
-                {myReview.title && <p className="text-xs font-semibold text-charcoal">{myReview.title}</p>}
-                <p className="text-xs text-charcoal-soft line-clamp-2">{myReview.comment}</p>
+                {myReview.title && <p className="text-xs font-semibold store-text">{myReview.title}</p>}
+                <p className="text-xs store-muted line-clamp-2">{myReview.comment}</p>
                 <button
                   onClick={() => setIsEditing(true)}
-                  className="mt-2 text-xs font-semibold text-terracotta hover:underline"
+                  className="mt-2 text-xs font-semibold store-primary hover:underline"
                 >
                   Edit Review
                 </button>
@@ -230,7 +230,7 @@ export default function ProductReviews({ productId }) {
             ) : (
               <button
                 onClick={() => setIsEditing(true)}
-                className="w-full rounded-xl bg-charcoal px-5 py-2.5 text-xs font-semibold text-white hover:bg-charcoal-dark transition shadow-sm"
+                className="w-full rounded-xl bg-[var(--theme-text)] px-5 py-2.5 text-xs font-semibold text-white hover:opacity-90 transition shadow-sm"
               >
                 {myReview ? "Edit Your Review" : "Write a Review"}
               </button>
@@ -241,15 +241,15 @@ export default function ProductReviews({ productId }) {
 
       {/* Review Submission Form Modal / Drawer */}
       {isEditing && (
-        <form onSubmit={handleSubmitReview} className="bg-white p-6 rounded-2xl border border-charcoal/15 shadow-md space-y-4">
-          <div className="flex items-center justify-between border-b border-charcoal/10 pb-3">
-            <h3 className="font-serif-display text-lg text-charcoal">
+        <form onSubmit={handleSubmitReview} className="store-bg p-6 rounded-2xl border border-[var(--theme-border)] shadow-md space-y-4">
+          <div className="flex items-center justify-between border-b border-[var(--theme-border)] pb-3">
+            <h3 className="font-serif-display text-lg store-text">
               {myReview ? "Edit Product Review" : "Write a Review"}
             </h3>
             <button
               type="button"
               onClick={() => setIsEditing(false)}
-              className="text-xs text-charcoal-soft hover:text-charcoal"
+              className="text-xs store-muted hover:text-[var(--theme-text)]"
             >
               Cancel
             </button>
@@ -259,29 +259,29 @@ export default function ProductReviews({ productId }) {
           {formSuccess && <div className="rounded-xl bg-green-50 p-3 text-xs text-green-700 font-medium">{formSuccess}</div>}
 
           <div className="space-y-1">
-            <label className="text-xs font-semibold text-charcoal block">Rating</label>
+            <label className="text-xs font-semibold store-text block">Rating</label>
             <StarDisplay rating={formRating} interactive onSelect={(r) => setFormRating(r)} size="lg" />
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-semibold text-charcoal block">Review Title (Optional)</label>
+            <label className="text-xs font-semibold store-text block">Review Title (Optional)</label>
             <input
               type="text"
               placeholder="e.g. Beautiful slow craftsmanship"
               value={formTitle}
               onChange={(e) => setFormTitle(e.target.value)}
-              className="w-full rounded-xl border border-charcoal/20 bg-ivory/50 px-3 py-2 text-xs text-charcoal focus:border-terracotta focus:outline-none"
+              className="w-full rounded-xl border border-[var(--theme-border)] store-surface px-3 py-2 text-xs store-text focus:border-[var(--theme-primary)] focus:outline-none"
             />
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-semibold text-charcoal block">Review Comment</label>
+            <label className="text-xs font-semibold store-text block">Review Comment</label>
             <textarea
               rows={4}
               placeholder="Share details about the quality, packaging, texture, or reading experience..."
               value={formComment}
               onChange={(e) => setFormComment(e.target.value)}
-              className="w-full rounded-xl border border-charcoal/20 bg-ivory/50 px-3 py-2 text-xs text-charcoal focus:border-terracotta focus:outline-none"
+              className="w-full rounded-xl border border-[var(--theme-border)] store-surface px-3 py-2 text-xs store-text focus:border-[var(--theme-primary)] focus:outline-none"
             />
           </div>
 
@@ -289,14 +289,14 @@ export default function ProductReviews({ productId }) {
             <button
               type="button"
               onClick={() => setIsEditing(false)}
-              className="rounded-xl border border-charcoal/20 px-4 py-2 text-xs font-medium text-charcoal hover:bg-charcoal/5"
+              className="rounded-xl border border-[var(--theme-border)] px-4 py-2 text-xs font-medium store-text hover:bg-[var(--theme-border)]/40"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="rounded-xl bg-terracotta px-6 py-2 text-xs font-semibold text-white hover:bg-terracotta-dark transition shadow-sm disabled:opacity-50"
+              className="rounded-xl store-bg-primary px-6 py-2 text-xs font-semibold text-white hover:brightness-95 transition shadow-sm disabled:opacity-50"
             >
               {submitting ? "Submitting..." : "Submit Review"}
             </button>
@@ -307,22 +307,22 @@ export default function ProductReviews({ productId }) {
       {/* Public Reviews List */}
       <div className="space-y-6">
         {/* Controls */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-charcoal/10 pb-4">
-          <h3 className="font-serif-display text-lg text-charcoal">Approved Reviews</h3>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-[var(--theme-border)] pb-4">
+          <h3 className="font-serif-display text-lg store-text">Approved Reviews</h3>
           <div className="flex items-center gap-4">
-            <label className="flex items-center gap-2 text-xs text-charcoal cursor-pointer">
+            <label className="flex items-center gap-2 text-xs store-text cursor-pointer">
               <input
                 type="checkbox"
                 checked={verifiedOnly}
                 onChange={(e) => setVerifiedOnly(e.target.checked)}
-                className="rounded border-charcoal/30 text-terracotta focus:ring-terracotta"
+                className="rounded border-[var(--theme-border)] text-[var(--theme-primary)] focus:ring-[var(--theme-primary)]"
               />
               Verified Buyers Only
             </label>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="rounded-xl border border-charcoal/20 bg-white px-3 py-1.5 text-xs text-charcoal focus:border-terracotta focus:outline-none"
+              className="rounded-xl border border-[var(--theme-border)] store-bg px-3 py-1.5 text-xs store-text focus:border-[var(--theme-primary)] focus:outline-none"
             >
               <option value="newest">Newest First</option>
               <option value="highest">Highest Rating</option>
@@ -332,34 +332,34 @@ export default function ProductReviews({ productId }) {
         </div>
 
         {loading ? (
-          <div className="py-8 text-center text-xs text-charcoal-soft">Loading reviews...</div>
+          <div className="py-8 text-center text-xs store-muted">Loading reviews...</div>
         ) : reviews.length === 0 ? (
-          <div className="py-8 text-center text-xs text-charcoal-soft bg-ivory/30 rounded-2xl border border-charcoal/10">
+          <div className="py-8 text-center text-xs store-muted store-surface rounded-2xl border border-[var(--theme-border)]">
             No public reviews available yet. Be the first to review this product!
           </div>
         ) : (
           <div className="space-y-4">
             {reviews.map((r) => (
-              <div key={r.id} className="bg-white p-5 rounded-2xl border border-charcoal/10 shadow-sm space-y-2">
+              <div key={r.id} className="store-bg p-5 rounded-2xl border border-[var(--theme-border)] shadow-sm space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <span className="font-semibold text-xs text-charcoal">{r.customerName || r.customer?.name || "Customer"}</span>
+                    <span className="font-semibold text-xs store-text">{r.customerName || r.customer?.name || "Customer"}</span>
                     {r.isVerifiedPurchase && (
                       <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 border border-emerald-200">
                         ✓ Verified Buyer
                       </span>
                     )}
                   </div>
-                  <span className="text-[11px] text-charcoal-soft">
+                  <span className="text-[11px] store-muted">
                     {new Date(r.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
                   </span>
                 </div>
 
                 <StarDisplay rating={r.rating} />
 
-                {r.title && <h4 className="font-semibold text-xs text-charcoal pt-1">{r.title}</h4>}
+                {r.title && <h4 className="font-semibold text-xs store-text pt-1">{r.title}</h4>}
 
-                <p className="text-xs text-charcoal-soft leading-relaxed whitespace-pre-line">{r.comment}</p>
+                <p className="text-xs store-muted leading-relaxed whitespace-pre-line">{r.comment}</p>
               </div>
             ))}
           </div>
@@ -368,21 +368,21 @@ export default function ProductReviews({ productId }) {
         {/* Pagination */}
         {meta.totalPages > 1 && (
           <div className="flex items-center justify-between pt-4">
-            <span className="text-xs text-charcoal-soft">
+            <span className="text-xs store-muted">
               Page {meta.page} of {meta.totalPages}
             </span>
             <div className="flex gap-2">
               <button
                 disabled={meta.page <= 1}
                 onClick={() => loadPublicReviews(meta.page - 1)}
-                className="rounded-xl border border-charcoal/20 px-3 py-1.5 text-xs text-charcoal hover:bg-charcoal/5 disabled:opacity-50"
+                className="rounded-xl border border-[var(--theme-border)] px-3 py-1.5 text-xs store-text hover:bg-[var(--theme-border)]/40 disabled:opacity-50"
               >
                 Previous
               </button>
               <button
                 disabled={meta.page >= meta.totalPages}
                 onClick={() => loadPublicReviews(meta.page + 1)}
-                className="rounded-xl border border-charcoal/20 px-3 py-1.5 text-xs text-charcoal hover:bg-charcoal/5 disabled:opacity-50"
+                className="rounded-xl border border-[var(--theme-border)] px-3 py-1.5 text-xs store-text hover:bg-[var(--theme-border)]/40 disabled:opacity-50"
               >
                 Next
               </button>

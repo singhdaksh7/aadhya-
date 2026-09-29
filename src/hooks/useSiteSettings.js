@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { fetchSiteSettings } from "../lib/api";
+import { lighten, darken, mix } from "../lib/color";
 
 export const DEFAULT_SITE_SETTINGS = {
   general: {
@@ -221,21 +222,94 @@ export const DEFAULT_SITE_SETTINGS = {
   ],
 };
 
+// Canonical default palette — must exactly match the current Aadya branding
+// so nothing visually changes when no custom theme is set. This is the
+// single source of truth for both the DEFAULT_SITE_SETTINGS.appearance.colors
+// object above and the --theme-* CSS variable fallbacks applied below.
+export const DEFAULT_THEME_COLORS = {
+  primary: "#B8674A",
+  secondary: "#8A9A82",
+  background: "#FFFFFF",
+  text: "#2B2723",
+  accent: "#D98A6C",
+  surface: "#FAF6F0",
+  muted: "#766E65",
+  border: "#E5E0D8",
+};
+
+/**
+ * Derive any theme color that wasn't explicitly set in SiteSettings from the
+ * base colors (primary/secondary/background/text), using simple HSL
+ * lighten/darken and alpha-mixing. Explicit values always win.
+ */
+export function deriveThemeColors(colors = {}) {
+  const primary = colors.primary || DEFAULT_THEME_COLORS.primary;
+  const secondary = colors.secondary || DEFAULT_THEME_COLORS.secondary;
+  const background = colors.background || DEFAULT_THEME_COLORS.background;
+  const text = colors.text || DEFAULT_THEME_COLORS.text;
+
+  // When primary/secondary/background/text are all still at their Aadya
+  // defaults (i.e. nothing custom set), fall back to the exact default
+  // values for the derived fields too, so a fresh/empty settings object
+  // renders pixel-identical to before this theming system existed. Only
+  // once the admin actually customizes the base colors do we compute
+  // derived accent/surface/muted/border/etc via HSL lighten/darken or
+  // alpha-mixing.
+  const isDefaultBase =
+    primary === DEFAULT_THEME_COLORS.primary &&
+    secondary === DEFAULT_THEME_COLORS.secondary &&
+    background === DEFAULT_THEME_COLORS.background &&
+    text === DEFAULT_THEME_COLORS.text;
+
+  return {
+    primary,
+    secondary,
+    background,
+    text,
+    accent: colors.accent || (isDefaultBase ? DEFAULT_THEME_COLORS.accent : lighten(primary, 0.12)),
+    surface: colors.surface || (isDefaultBase ? DEFAULT_THEME_COLORS.surface : mix(text, background, 0.03)),
+    muted: colors.mutedText || colors.muted || (isDefaultBase ? DEFAULT_THEME_COLORS.muted : mix(text, background, 0.55)),
+    border: colors.border || (isDefaultBase ? DEFAULT_THEME_COLORS.border : mix(text, background, 0.12)),
+    primaryHover: colors.primaryHover || darken(primary, 0.08),
+    primarySoft: colors.primarySoft || mix(primary, background, 0.12),
+    secondarySoft: colors.secondarySoft || mix(secondary, background, 0.14),
+  };
+}
+
+// Applies the storefront theme as CSS custom properties on :root. These
+// variables are the single vocabulary for storefront theming — consumed via
+// utility classes (.store-bg, .store-text, .store-bg-primary, ...) defined in
+// src/index.css, and directly by components like Button. They intentionally
+// use the --theme-* prefix (distinct from the Tailwind @theme design tokens
+// like --color-terracotta) so admin dashboard styling, which never reads
+// --theme-*, is unaffected regardless of what an admin sets here.
 export function applyThemeVariables(appearance) {
-  if (typeof document === "undefined" || !appearance) return;
+  if (typeof document === "undefined") return;
   const root = document.documentElement;
+  const colors = deriveThemeColors(appearance?.colors || {});
 
-  if (appearance.colors) {
-    if (appearance.colors.primary) root.style.setProperty("--color-primary", appearance.colors.primary);
-    if (appearance.colors.secondary) root.style.setProperty("--color-secondary", appearance.colors.secondary);
-    if (appearance.colors.background) root.style.setProperty("--color-background", appearance.colors.background);
-    if (appearance.colors.surface) root.style.setProperty("--color-surface", appearance.colors.surface);
-    if (appearance.colors.text) root.style.setProperty("--color-text", appearance.colors.text);
-    if (appearance.colors.mutedText) root.style.setProperty("--color-muted", appearance.colors.mutedText);
-    if (appearance.colors.border) root.style.setProperty("--color-border", appearance.colors.border);
-  }
+  root.style.setProperty("--theme-primary", colors.primary);
+  root.style.setProperty("--theme-secondary", colors.secondary);
+  root.style.setProperty("--theme-background", colors.background);
+  root.style.setProperty("--theme-surface", colors.surface);
+  root.style.setProperty("--theme-text", colors.text);
+  root.style.setProperty("--theme-muted", colors.muted);
+  root.style.setProperty("--theme-border", colors.border);
+  root.style.setProperty("--theme-accent", colors.accent);
+  root.style.setProperty("--theme-primary-hover", colors.primaryHover);
+  root.style.setProperty("--theme-primary-soft", colors.primarySoft);
+  root.style.setProperty("--theme-secondary-soft", colors.secondarySoft);
 
-  if (appearance.layout) {
+  // Legacy aliases kept in sync for any not-yet-migrated consumers.
+  root.style.setProperty("--color-primary", colors.primary);
+  root.style.setProperty("--color-secondary", colors.secondary);
+  root.style.setProperty("--color-background", colors.background);
+  root.style.setProperty("--color-surface", colors.surface);
+  root.style.setProperty("--color-text", colors.text);
+  root.style.setProperty("--color-muted", colors.muted);
+  root.style.setProperty("--color-border", colors.border);
+
+  if (appearance?.layout) {
     if (appearance.layout.cardRadius) root.style.setProperty("--radius-card", appearance.layout.cardRadius);
     if (appearance.layout.buttonRadius) root.style.setProperty("--radius-button", appearance.layout.buttonRadius);
     if (appearance.layout.inputRadius) root.style.setProperty("--radius-input", appearance.layout.inputRadius);

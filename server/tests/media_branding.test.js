@@ -55,6 +55,18 @@ describe("Media upload -> branding settings integration", () => {
     expect(res.status).toBe(400);
   });
 
+  it("rejects SVG uploads (no server-side SVG sanitization is in place)", async () => {
+    const svgBuffer = Buffer.from(
+      '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>'
+    );
+    const res = await request
+      .post("/api/admin/media/upload")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .attach("file", svgBuffer, { filename: "logo.svg", contentType: "image/svg+xml" });
+    expect(res.status).toBe(400);
+    expect(res.body.message || res.body.error?.message || JSON.stringify(res.body)).toMatch(/svg/i);
+  });
+
   it("rejects a double-extension upload trick (logo.png.exe)", async () => {
     const res = await request
       .post("/api/admin/media/upload")

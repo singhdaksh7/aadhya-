@@ -67,7 +67,7 @@ export default function BlogDetail() {
   };
 
   return (
-    <div className="bg-white min-h-screen py-12 px-5 sm:px-8 animate-fade-in">
+    <div className="store-bg min-h-screen py-12 px-5 sm:px-8 animate-fade-in">
       <title>{`${post.title} — Aadya Lifestyle Journal`}</title>
       <meta name="description" content={metaDescription} />
       <link rel="canonical" href={postUrl} />
@@ -75,18 +75,18 @@ export default function BlogDetail() {
       <article className="max-w-3xl mx-auto space-y-8">
         {/* Back Button */}
         <div>
-          <Link to="/blog" className="inline-flex items-center gap-2 text-xs font-semibold text-charcoal-soft hover:text-terracotta transition">
+          <Link to="/blog" className="inline-flex items-center gap-2 text-xs font-semibold store-muted hover:store-primary transition">
             ← Back to Journal
           </Link>
         </div>
 
         {/* Article Header */}
-        <header className="space-y-4 text-center border-b border-charcoal/10 pb-8">
+        <header className="space-y-4 text-center border-b store-border pb-8">
           <div className="flex items-center justify-center gap-3">
-            <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-terracotta/10 text-terracotta">
+            <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider store-bg-primary-soft store-primary">
               {post.category || "Journal"}
             </span>
-            <span className="text-xs text-charcoal-soft">
+            <span className="text-xs store-muted">
               {new Date(post.publishDate || post.createdAt).toLocaleDateString("en-IN", {
                 month: "long",
                 day: "numeric",
@@ -95,24 +95,24 @@ export default function BlogDetail() {
             </span>
           </div>
 
-          <h1 className="font-serif-display text-3xl sm:text-5xl text-charcoal leading-tight">
+          <h1 className="font-serif-display text-3xl sm:text-5xl store-text leading-tight">
             {post.title}
           </h1>
 
           {post.excerpt && (
-            <p className="text-base sm:text-lg text-charcoal-soft leading-relaxed max-w-2xl mx-auto">
+            <p className="text-base sm:text-lg store-muted leading-relaxed max-w-2xl mx-auto">
               {post.excerpt}
             </p>
           )}
 
-          <div className="pt-2 text-xs font-medium text-charcoal">
-            Written by <span className="font-semibold text-terracotta">{post.author || "Aadya Editorial"}</span>
+          <div className="pt-2 text-xs font-medium store-text">
+            Written by <span className="font-semibold store-primary">{post.author || "Aadya Editorial"}</span>
           </div>
         </header>
 
         {/* Featured Image */}
         {featuredImgUrl && (
-          <div className="rounded-3xl overflow-hidden shadow-sm border border-charcoal/10 max-h-[480px] w-full">
+          <div className="rounded-3xl overflow-hidden shadow-sm border store-border max-h-[480px] w-full">
             <img src={featuredImgUrl} alt={post.title} className="w-full h-full object-cover" />
           </div>
         )}
@@ -124,10 +124,10 @@ export default function BlogDetail() {
 
         {/* Article Footer & Tags */}
         {post.tags && (
-          <footer className="border-t border-b border-charcoal/10 py-6 flex flex-wrap items-center gap-2">
-            <span className="text-xs font-semibold uppercase text-charcoal-soft tracking-wider mr-2">Tags:</span>
+          <footer className="border-t border-b store-border py-6 flex flex-wrap items-center gap-2">
+            <span className="text-xs font-semibold uppercase store-muted tracking-wider mr-2">Tags:</span>
             {(Array.isArray(post.tags) ? post.tags : [post.tags]).map((tag) => (
-              <span key={tag} className="px-3 py-1 rounded-full bg-ivory text-xs text-charcoal font-medium border border-charcoal/10">
+              <span key={tag} className="px-3 py-1 rounded-full bg-ivory text-xs store-text font-medium border store-border">
                 #{tag}
               </span>
             ))}
@@ -137,12 +137,12 @@ export default function BlogDetail() {
         {/* Related Posts */}
         {relatedPosts.length > 0 && (
           <section className="pt-12 space-y-6">
-            <h3 className="font-serif-display text-2xl text-charcoal">More Stories in {post.category}</h3>
+            <h3 className="font-serif-display text-2xl store-text">More Stories in {post.category}</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               {relatedPosts.map((rel) => (
-                <Link key={rel.id} to={`/blog/${rel.slug}`} className="group space-y-3 rounded-2xl border border-charcoal/10 p-4 bg-ivory/50 hover:bg-white transition">
+                <Link key={rel.id} to={`/blog/${rel.slug}`} className="group space-y-3 rounded-2xl border store-border p-4 bg-ivory/50 hover:store-bg transition">
                   {rel.featuredImage && (
-                    <div className="aspect-video rounded-xl overflow-hidden bg-white border border-charcoal/5">
+                    <div className="aspect-video rounded-xl overflow-hidden store-surface border border-charcoal/5">
                       <img
                         src={resolveProductImageUrl(rel.featuredImage)}
                         alt={rel.title}
@@ -150,7 +150,7 @@ export default function BlogDetail() {
                       />
                     </div>
                   )}
-                  <h4 className="font-serif-display text-base text-charcoal group-hover:text-terracotta transition">
+                  <h4 className="font-serif-display text-base store-text group-hover:store-primary transition">
                     {rel.title}
                   </h4>
                 </Link>
