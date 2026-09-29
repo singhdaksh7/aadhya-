@@ -6,7 +6,7 @@ import { BrochureProvider } from "./context/BrochureContext";
 import { AdminAuthProvider } from "./context/AdminAuthContext";
 import { CustomerAuthProvider } from "./context/CustomerAuthContext";
 import RequireCustomer from "./components/RequireCustomer";
-import { Login, Account, Addresses, Orders, OrderDetail, Forgot, Reset, AccountWishlist, AccountReviews, AccountDownloads, AccountNotifications, AccountInvoices } from "./pages/account/AccountPages";
+import { Login, Account, Addresses, Orders, OrderDetail, Forgot, Reset, AccountWishlist, AccountReviews, AccountDownloads, AccountNotifications, AccountInvoices, AccountReturns, AccountReturnDetail } from "./pages/account/AccountPages";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import CartDrawer from "./components/CartDrawer";
@@ -65,6 +65,7 @@ import AdminMedia from "./pages/admin/AdminMedia";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import AdminIntegrations from "./pages/admin/AdminIntegrations";
 import AdminSystemHealth from "./pages/admin/AdminSystemHealth";
+import AdminNotifications from "./pages/admin/AdminNotifications";
 import AdminCustomers from "./pages/admin/AdminCustomers";
 import AdminInvoices from "./pages/admin/AdminInvoices";
 import AdminInventory from "./pages/admin/AdminInventory";
@@ -135,6 +136,8 @@ function SiteLayout() {
                 <Route path="/account/reviews" element={<RequireCustomer><AccountReviews /></RequireCustomer>} />
                 <Route path="/account/downloads" element={<RequireCustomer><AccountDownloads /></RequireCustomer>} />
                 <Route path="/account/invoices" element={<RequireCustomer><AccountInvoices /></RequireCustomer>} />
+                <Route path="/account/returns" element={<RequireCustomer><AccountReturns /></RequireCustomer>} />
+                <Route path="/account/returns/:id" element={<RequireCustomer><AccountReturnDetail /></RequireCustomer>} />
                 <Route path="/account/notifications" element={<RequireCustomer><AccountNotifications /></RequireCustomer>} />
 
                 {/* Informational & Policy Routes */}
@@ -241,6 +244,7 @@ function AdminRoutes() {
           <Route path="shipping" element={<AdminShipping />} />
           <Route path="integrations" element={<AdminIntegrations />} />
           <Route path="system-health" element={<AdminSystemHealth />} />
+          <Route path="notifications" element={<AdminNotifications />} />
         </Route>
       </Routes>
     </AdminAuthProvider>

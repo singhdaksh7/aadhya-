@@ -156,11 +156,20 @@ export default function AdminTopbar({ onMenuClick, collapsed }) {
             <div className="admin-dropdown w-80 max-h-96 overflow-y-auto" role="menu">
               <div className="flex items-center justify-between px-3 py-2 border-b border-black/5">
                 <p className="text-sm font-semibold text-charcoal">Notifications</p>
-                {unreadCount > 0 && (
-                  <button type="button" className="text-xs font-medium text-primary hover:underline" onClick={handleMarkAllRead}>
-                    Mark all read
-                  </button>
-                )}
+                <div className="flex items-center gap-2">
+                  {unreadCount > 0 && (
+                    <button type="button" className="text-xs font-medium text-primary hover:underline" onClick={handleMarkAllRead}>
+                      Mark all read
+                    </button>
+                  )}
+                  <Link
+                    to="/admin/notifications"
+                    className="text-xs font-medium text-primary hover:underline"
+                    onClick={() => setNotifOpen(false)}
+                  >
+                    View all
+                  </Link>
+                </div>
               </div>
               {notifications.length === 0 ? (
                 <p className="px-3 py-6 text-center text-xs text-charcoal-soft">No notifications yet.</p>

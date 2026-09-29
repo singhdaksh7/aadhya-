@@ -61,6 +61,7 @@ export const adminNavGroups = [
   {
     title: "System",
     items: [
+      { to: "/admin/notifications", label: "Notifications" },
       { to: "/admin/settings", label: "Settings" },
       { to: "/admin/system-health", label: "System Health" },
     ],
@@ -93,6 +94,7 @@ export function pageTitleFromPath(pathname) {
     "/admin/analytics": "Analytics",
     "/admin/settings": "Settings",
     "/admin/system-health": "System Health",
+    "/admin/notifications": "Notifications",
   };
   if (map[pathname]) return map[pathname];
   if (pathname.startsWith("/admin/orders/")) return "Order Detail";
