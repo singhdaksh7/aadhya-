@@ -68,6 +68,7 @@ import AdminSystemHealth from "./pages/admin/AdminSystemHealth";
 import AdminCustomers from "./pages/admin/AdminCustomers";
 import AdminInvoices from "./pages/admin/AdminInvoices";
 import AdminInventory from "./pages/admin/AdminInventory";
+import AdminLowStock from "./pages/admin/AdminLowStock";
 import AdminShipping from "./pages/admin/AdminShipping";
 import SearchResults from "./pages/shop/SearchResults";
 import { captureUtmFromUrl } from "./lib/attribution";
@@ -220,6 +221,7 @@ function AdminRoutes() {
           <Route path="products/new" element={<AdminProductForm />} />
           <Route path="products/:id" element={<AdminProductForm />} />
           <Route path="inventory" element={<AdminInventory />} />
+          <Route path="inventory/low-stock" element={<AdminLowStock />} />
           <Route path="categories" element={<AdminCategories />} />
           <Route path="collections" element={<AdminCollections />} />
           <Route path="coupons" element={<AdminCoupons />} />

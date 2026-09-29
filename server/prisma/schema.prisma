@@ -71,6 +71,7 @@ model Customer {
   reviews           ProductReview[]
   wishlistItems     WishlistItem[]
   notifications     CustomerNotification[]
+  returnRequests    ReturnRequest[]
 
   @@index([email])
 }
@@ -262,6 +263,7 @@ model Product {
   costPrice           Decimal?            @db.Decimal(10, 2)
   stockQuantity       Int                 @default(0)
   lowStockThreshold   Int                 @default(5)
+  lowStockNotifiedAt  DateTime? // dedupe: set when a LOW_STOCK/OUT_OF_STOCK notification fires, cleared once stock recovers above threshold
   trackInventory      Boolean             @default(true)
   isFeatured          Boolean             @default(false)
   isBestSeller        Boolean             @default(false)
@@ -312,6 +314,8 @@ model ProductVariant {
   sku           String   @unique
   priceOverride Decimal? @db.Decimal(10, 2)
   stockQuantity Int      @default(0)
+  lowStockThreshold Int? // nullable per-variant override; falls back to product/global threshold
+  lowStockNotifiedAt DateTime? // dedupe: set when a LOW_STOCK/OUT_OF_STOCK notification fires, cleared once stock recovers above threshold
   isActive      Boolean  @default(true)
   attributes    Json?
   createdAt     DateTime @default(now())
@@ -480,6 +484,7 @@ model Order {
   statusHistory    OrderStatusHistory[]
   shipment         Shipment?
   invoice          Invoice?
+  returnRequests   ReturnRequest[]
 
   @@index([orderNumber])
   @@index([customerEmail])
@@ -684,6 +689,7 @@ model OrderItem {
   product         Product?         @relation(fields: [productId], references: [id], onDelete: SetNull)
   variant         ProductVariant?  @relation(fields: [variantId], references: [id], onDelete: SetNull)
   digitalDownload DigitalDownload?
+  returnItems     ReturnItem[]
 
   @@index([orderId])
   @@index([productId])
@@ -719,14 +725,134 @@ model Payment {
   currency          String        @default("INR")
   method            String?
   rawReference      String?
+  refundedAmount    Decimal       @db.Decimal(10, 2) @default(0)
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
 
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  refunds Refund[]
 
   @@index([orderId])
   @@index([providerOrderId])
   @@index([providerPaymentId])
+}
+
+// --- Returns / Refunds / RTO ---------------------------------------------
+
+enum ReturnStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+  PICKUP_SCHEDULED
+  IN_TRANSIT
+  RECEIVED
+  REFUND_PENDING
+  REFUNDED
+  CLOSED
+}
+
+enum ReturnResolution {
+  REFUND
+  REPLACEMENT
+  STORE_CREDIT
+}
+
+enum RefundStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum InventoryMovementType {
+  SALE
+  RETURN
+  ADJUSTMENT
+  RESTOCK
+}
+
+model ReturnRequest {
+  id               String            @id @default(cuid())
+  orderId          String
+  customerId       String?
+  status           ReturnStatus      @default(REQUESTED)
+  reason           String
+  details          String?
+  resolution       ReturnResolution?
+  refundAmount     Decimal?          @db.Decimal(10, 2)
+  refundStatus     RefundStatus?
+  providerRefundId String?
+  restockedAt      DateTime?
+  requestedAt      DateTime          @default(now())
+  approvedAt       DateTime?
+  rejectedAt       DateTime?
+  receivedAt       DateTime?
+  completedAt      DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  order    Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  customer Customer?  @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  items    ReturnItem[]
+  refunds  Refund[]
+
+  @@index([orderId])
+  @@index([customerId])
+  @@index([status])
+}
+
+model ReturnItem {
+  id              String   @id @default(cuid())
+  returnRequestId String
+  orderItemId     String
+  quantity        Int
+  createdAt       DateTime @default(now())
+
+  returnRequest ReturnRequest @relation(fields: [returnRequestId], references: [id], onDelete: Cascade)
+  orderItem     OrderItem     @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+
+  @@index([returnRequestId])
+  @@index([orderItemId])
+}
+
+model InventoryMovement {
+  id              String                @id @default(cuid())
+  productId       String?
+  variantId       String?
+  type            InventoryMovementType
+  quantity        Int
+  orderId         String?
+  returnRequestId String?
+  note            String?
+  createdAt       DateTime              @default(now())
+
+  @@index([productId])
+  @@index([variantId])
+  @@index([returnRequestId])
+  @@index([orderId])
+}
+
+model Refund {
+  id                  String       @id @default(cuid())
+  returnRequestId     String?
+  paymentId           String
+  orderId             String
+  amount              Decimal      @db.Decimal(10, 2)
+  method              String
+  status              RefundStatus @default(PENDING)
+  providerRefundId    String?
+  reference           String?
+  note                String?
+  processedByAdminId  String?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  payment       Payment        @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  returnRequest ReturnRequest? @relation(fields: [returnRequestId], references: [id], onDelete: SetNull)
+
+  @@index([paymentId])
+  @@index([orderId])
+  @@index([returnRequestId])
 }
 
 model WebhookEvent {
@@ -1094,5 +1220,49 @@ model AnalyticsEvent {
   @@index([productId])
   @@index([orderId])
   @@index([type, createdAt])
+}
+
+// --- Admin Notifications (low stock, order/payment/shipment/return/email/
+// webhook/backup failures, system warnings). Admin-facing only — distinct
+// from CustomerNotification. Other in-flight modules (email ops, returns,
+// backup/monitoring) should call createAdminNotification() from
+// server/src/modules/admin-notifications/admin-notification.service.js
+// rather than writing to this table directly.
+enum AdminNotificationType {
+  NEW_ORDER
+  PAYMENT_FAILED
+  LOW_STOCK
+  OUT_OF_STOCK
+  SHIPMENT_FAILED
+  RETURN_REQUESTED
+  REFUND_FAILED
+  EMAIL_FAILED
+  WEBHOOK_FAILED
+  BACKUP_FAILED
+  SYSTEM_WARNING
+}
+
+enum AdminNotificationSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+model AdminNotification {
+  id         String                     @id @default(uuid())
+  type       AdminNotificationType
+  title      String
+  message    String
+  severity   AdminNotificationSeverity  @default(INFO)
+  entityType String?
+  entityId   String?
+  isRead     Boolean                    @default(false)
+  createdAt  DateTime                   @default(now())
+  updatedAt  DateTime                   @updatedAt
+
+  @@index([isRead])
+  @@index([type])
+  @@index([createdAt])
+  @@index([entityType, entityId])
 }
 

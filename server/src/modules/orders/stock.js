@@ -1,4 +1,14 @@
 import { ApiError } from "../../utils/ApiError.js";
+import { checkAndNotifyLowStock } from "../inventory/low-stock.service.js";
+
+// Best-effort — a notification failure must never block order finalization.
+async function notifyLowStockSafely(args) {
+  try {
+    await checkAndNotifyLowStock(args);
+  } catch (err) {
+    console.error("Low stock notification check failed:", err);
+  }
+}
 
 // Decrements stock for every item on an order, exactly once. Guarded two
 // ways: (1) the CAS `updateMany` with a `stockQuantity: { gte: quantity }`
@@ -14,6 +24,7 @@ export async function decrementStockForOrder(tx, order) {
         data: { stockQuantity: { decrement: item.quantity } },
       });
       if (!changed.count) throw ApiError.conflict("Variant stock changed before the order could be finalized.");
+      queueMicrotask(() => notifyLowStockSafely({ variantId: item.variantId }));
     } else if (item.productId) {
       const product = await tx.product.findUnique({ where: { id: item.productId }, select: { trackInventory: true } });
       if (!product?.trackInventory) continue;
@@ -22,6 +33,7 @@ export async function decrementStockForOrder(tx, order) {
         data: { stockQuantity: { decrement: item.quantity } },
       });
       if (!changed.count) throw ApiError.conflict("Product stock changed before the order could be finalized.");
+      queueMicrotask(() => notifyLowStockSafely({ productId: item.productId }));
     }
   }
   await tx.order.update({ where: { id: order.id }, data: { stockDecrementedAt: new Date() } });

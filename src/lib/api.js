@@ -630,4 +630,35 @@ export function sendAbandonedCartRecoveryEmail(cartId) {
   return api.post(`/admin/analytics/abandoned-carts/${cartId}/recovery-email`, {}, { auth: "admin" });
 }
 
+// --- Admin notifications (topbar bell) ---
+export function adminListNotifications(params = {}) {
+  const query = new URLSearchParams(
+    Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== "" && v !== null))
+  ).toString();
+  return api.get(`/admin/notifications${query ? `?${query}` : ""}`, { auth: "admin" });
+}
+export function adminMarkNotificationRead(id) {
+  return api.patch(`/admin/notifications/${id}/read`, {}, { auth: "admin" });
+}
+export function adminMarkAllNotificationsRead() {
+  return api.patch("/admin/notifications/read-all", {}, { auth: "admin" });
+}
+
+// --- Low stock inventory ---
+export function adminGetLowStockOverview() {
+  return api.get("/admin/inventory/low-stock", { auth: "admin" });
+}
+export function adminGetLowStockThreshold() {
+  return api.get("/admin/inventory/low-stock/threshold", { auth: "admin" });
+}
+export function adminSetLowStockThreshold(threshold) {
+  return api.put("/admin/inventory/low-stock/threshold", { threshold }, { auth: "admin" });
+}
+export function adminRunLowStockSweep() {
+  return api.post("/admin/inventory/low-stock/sweep", {}, { auth: "admin" });
+}
+export function adminRestockItem(data) {
+  return api.post("/admin/inventory/low-stock/restock", data, { auth: "admin" });
+}
+
 export { API_URL };

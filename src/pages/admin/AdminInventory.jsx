@@ -47,6 +47,11 @@ export default function AdminInventory() {
         eyebrow="Catalog"
         title="Inventory"
         description="Stock levels for tracked products. Edit stock from the product form."
+        actions={
+          <Link to="/admin/inventory/low-stock" className="admin-btn admin-btn--primary">
+            Low Stock &amp; Restock
+          </Link>
+        }
       />
       <FilterBar>
         <FilterInput

@@ -10,6 +10,10 @@ export async function resetDb() {
     throw new Error("Refusing to reset a database outside the dedicated test environment.");
   }
   await prisma.analyticsEvent.deleteMany();
+  await prisma.refund.deleteMany();
+  await prisma.inventoryMovement.deleteMany();
+  await prisma.returnItem.deleteMany();
+  await prisma.returnRequest.deleteMany();
   await prisma.emailLog.deleteMany();
   await prisma.invoice.deleteMany();
   await prisma.invoiceSequence.deleteMany();
@@ -60,6 +64,7 @@ export async function resetDb() {
   await prisma.webhookEvent.deleteMany();
   await prisma.adminAuditLog.deleteMany();
   await prisma.integrationCredential.deleteMany();
+  await prisma.adminNotification.deleteMany();
 }
 
 export async function seedTestAdmin(overrides = {}) {
