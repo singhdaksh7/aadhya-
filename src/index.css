@@ -644,6 +644,12 @@ body {
   border-color: rgba(184, 103, 74, 0.2);
 }
 
+.admin-badge--warning {
+  background: rgba(212, 160, 23, 0.12);
+  color: #9a6b00;
+  border-color: rgba(212, 160, 23, 0.3);
+}
+
 .admin-btn {
   display: inline-flex;
   align-items: center;

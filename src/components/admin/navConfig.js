@@ -28,6 +28,7 @@ export const adminNavGroups = [
     title: "Sales",
     items: [
       { to: "/admin/orders", label: "Orders" },
+      { to: "/admin/returns", label: "Returns" },
       { to: "/admin/invoices", label: "Invoices" },
       { to: "/admin/coupons", label: "Coupons" },
       { to: "/admin/customers", label: "Customers" },
@@ -77,6 +78,7 @@ export function pageTitleFromPath(pathname) {
     "/admin/collections": "Collections",
     "/admin/inventory": "Inventory",
     "/admin/orders": "Orders",
+    "/admin/returns": "Returns",
     "/admin/invoices": "Invoices",
     "/admin/coupons": "Coupons",
     "/admin/customers": "Customers",
@@ -98,6 +100,7 @@ export function pageTitleFromPath(pathname) {
   };
   if (map[pathname]) return map[pathname];
   if (pathname.startsWith("/admin/orders/")) return "Order Detail";
+  if (pathname.startsWith("/admin/returns/")) return "Return Detail";
   if (pathname.startsWith("/admin/products/")) return "Edit Product";
   if (pathname.startsWith("/admin/customers/")) return "Customer Detail";
   return "Admin";
