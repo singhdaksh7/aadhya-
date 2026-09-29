@@ -65,8 +65,11 @@ export default function AdminAnalytics() {
 
   return (
     <div>
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="font-serif-display text-2xl text-charcoal">Analytics</h1>
+      <div className="admin-page-header">
+        <div>
+          <p className="admin-page-header__eyebrow">Analytics</p>
+          <h1 className="admin-page-header__title">Analytics</h1>
+        </div>
         <div className="flex flex-wrap items-center gap-2">
           {RANGE_OPTIONS.map((o) => (
             <button

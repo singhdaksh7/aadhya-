@@ -237,21 +237,21 @@ export default function AdminProductForm() {
 
   return (
     <div>
-      <div className="flex items-center justify-between">
-        <h1 className="font-serif-display text-2xl text-charcoal">{isEdit ? "Edit Product" : "Add Product"}</h1>
+      <div className="admin-page-header">
+        <div>
+          <p className="admin-page-header__eyebrow">Catalog</p>
+          <h1 className="admin-page-header__title">{isEdit ? "Edit Product" : "Add Product"}</h1>
+        </div>
       </div>
 
-      {/* Tabs */}
-      <div className="mt-6 flex border-b border-charcoal/10 space-x-2 overflow-x-auto">
+      <div className="mt-2 flex gap-1.5 overflow-x-auto border-b border-charcoal/10 pb-2">
         {[...TABS, ...(isEdit && form.productType === "BOOK" ? [{ id: "BOOK_FORMATS", label: "Book Formats" }] : [])].map((tab) => (
           <button
             key={tab.id}
             type="button"
             onClick={() => setActiveTab(tab.id)}
-            className={`border-b-2 px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap ${
-              activeTab === tab.id
-                ? "border-terracotta text-terracotta font-semibold"
-                : "border-transparent text-charcoal-soft hover:text-charcoal"
+            className={`admin-btn whitespace-nowrap ${
+              activeTab === tab.id ? "admin-btn--accent" : "admin-btn--ghost"
             }`}
           >
             {tab.label}
@@ -259,10 +259,10 @@ export default function AdminProductForm() {
         ))}
       </div>
 
-      <form onSubmit={onSubmit} className="mt-6 max-w-3xl space-y-8">
+      <form onSubmit={onSubmit} className="mt-5 max-w-3xl space-y-4">
         {/* BASIC SECTION */}
-        <section id="sec-basic" className="rounded-2xl border border-charcoal/10 bg-white p-6 shadow-sm space-y-4">
-          <h2 className="font-serif-display text-lg text-charcoal border-b border-charcoal/10 pb-2">Basic Details</h2>
+        <section id="sec-basic" className="admin-card space-y-4 p-5">
+          <h2 className="admin-card__title border-b border-charcoal/10 pb-2">Basic Details</h2>
           <Field label="Name">
             <input required value={form.name} onChange={(e) => set("name", e.target.value)} className={inputCls} />
           </Field>
@@ -303,8 +303,8 @@ export default function AdminProductForm() {
         </section>
 
         {/* PRICING SECTION */}
-        <section id="sec-pricing" className="rounded-2xl border border-charcoal/10 bg-white p-6 shadow-sm space-y-4">
-          <h2 className="font-serif-display text-lg text-charcoal border-b border-charcoal/10 pb-2">Pricing</h2>
+        <section id="sec-pricing" className="admin-card space-y-4 p-5">
+          <h2 className="admin-card__title border-b border-charcoal/10 pb-2">Pricing</h2>
           <div className="grid grid-cols-3 gap-4">
             <Field label="Price">
               <input required type="number" min="0" step="0.01" value={form.price} onChange={(e) => set("price", e.target.value)} className={inputCls} />
@@ -325,8 +325,8 @@ export default function AdminProductForm() {
         </section>
 
         {/* INVENTORY SECTION */}
-        <section id="sec-inventory" className="rounded-2xl border border-charcoal/10 bg-white p-6 shadow-sm space-y-4">
-          <h2 className="font-serif-display text-lg text-charcoal border-b border-charcoal/10 pb-2">Inventory Management</h2>
+        <section id="sec-inventory" className="admin-card space-y-4 p-5">
+          <h2 className="admin-card__title border-b border-charcoal/10 pb-2">Inventory Management</h2>
           <div className="grid grid-cols-2 gap-4">
             <Field label="Stock Quantity">
               <input type="number" min="0" value={form.stockQuantity} onChange={(e) => set("stockQuantity", e.target.value)} className={inputCls} />
@@ -341,8 +341,8 @@ export default function AdminProductForm() {
         </section>
 
         {/* MEDIA SECTION */}
-        <section id="sec-media" className="rounded-2xl border border-charcoal/10 bg-white p-6 shadow-sm space-y-4">
-          <h2 className="font-serif-display text-lg text-charcoal border-b border-charcoal/10 pb-2">Media & Gallery</h2>
+        <section id="sec-media" className="admin-card space-y-4 p-5">
+          <h2 className="admin-card__title border-b border-charcoal/10 pb-2">Media & Gallery</h2>
           {isEdit ? (
             <fieldset className="rounded-2xl border border-charcoal/10 p-4">
               <legend className="px-2 text-xs font-medium uppercase tracking-wide text-charcoal-soft">Product Images</legend>
@@ -384,8 +384,8 @@ export default function AdminProductForm() {
         </section>
 
         {/* CONTENT SECTION */}
-        <section id="sec-content" className="rounded-2xl border border-charcoal/10 bg-white p-6 shadow-sm space-y-4">
-          <h2 className="font-serif-display text-lg text-charcoal border-b border-charcoal/10 pb-2">Product Content & Specs</h2>
+        <section id="sec-content" className="admin-card space-y-4 p-5">
+          <h2 className="admin-card__title border-b border-charcoal/10 pb-2">Product Content & Specs</h2>
           <Field label="Short Description">
             <input value={form.shortDescription} onChange={(e) => set("shortDescription", e.target.value)} className={inputCls} />
           </Field>
@@ -433,15 +433,15 @@ export default function AdminProductForm() {
 
         {/* BOOK FORMATS SECTION */}
         {isEdit && form.productType === "BOOK" && (
-          <section id="sec-book-formats" className="rounded-2xl border border-charcoal/10 bg-white p-6 shadow-sm space-y-4">
-            <h2 className="font-serif-display text-lg text-charcoal border-b border-charcoal/10 pb-2">Book Formats</h2>
+          <section id="sec-book-formats" className="admin-card space-y-4 p-5">
+            <h2 className="admin-card__title border-b border-charcoal/10 pb-2">Book Formats</h2>
             <BookFormatsTab productId={id} />
           </section>
         )}
 
         {/* FLAGS SECTION */}
-        <section id="sec-flags" className="rounded-2xl border border-charcoal/10 bg-white p-6 shadow-sm space-y-4">
-          <h2 className="font-serif-display text-lg text-charcoal border-b border-charcoal/10 pb-2">Merchandising Flags</h2>
+        <section id="sec-flags" className="admin-card space-y-4 p-5">
+          <h2 className="admin-card__title border-b border-charcoal/10 pb-2">Merchandising Flags</h2>
           <div className="flex flex-col gap-3 rounded-2xl border border-charcoal/10 p-4">
             <Checkbox label="Active (Visible in Storefront)" checked={form.isActive} onChange={(v) => set("isActive", v)} />
             <Checkbox label="Featured Product" checked={form.isFeatured} onChange={(v) => set("isFeatured", v)} />
@@ -452,8 +452,8 @@ export default function AdminProductForm() {
         </section>
 
         {/* SEO SECTION */}
-        <section id="sec-seo" className="rounded-2xl border border-charcoal/10 bg-white p-6 shadow-sm space-y-4">
-          <h2 className="font-serif-display text-lg text-charcoal border-b border-charcoal/10 pb-2">SEO & Social Meta</h2>
+        <section id="sec-seo" className="admin-card space-y-4 p-5">
+          <h2 className="admin-card__title border-b border-charcoal/10 pb-2">SEO & Social Meta</h2>
           <Field label="SEO Title">
             <input value={form.seoTitle} onChange={(e) => set("seoTitle", e.target.value)} className={inputCls} />
           </Field>
@@ -471,11 +471,11 @@ export default function AdminProductForm() {
 
         {error && <p className="text-sm text-terracotta">{error}</p>}
 
-        <div className="flex gap-3 pt-4 border-t border-charcoal/10">
-          <Button disabled={saving}>{saving ? "Saving…" : isEdit ? "Save Changes" : "Create Product"}</Button>
+        <div className="admin-sticky-actions">
           <Button type="button" variant="secondary" onClick={() => navigate("/admin/products")}>
             Cancel
           </Button>
+          <Button disabled={saving}>{saving ? "Saving…" : isEdit ? "Save Changes" : "Create Product"}</Button>
         </div>
       </form>
     </div>

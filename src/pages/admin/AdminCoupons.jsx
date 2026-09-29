@@ -127,9 +127,15 @@ export default function AdminCoupons() {
 
   return (
     <div>
-      <h1 className="font-serif-display text-2xl text-charcoal">Coupons & Offers</h1>
+      <div className="admin-page-header">
+        <div>
+          <p className="admin-page-header__eyebrow">Sales</p>
+          <h1 className="admin-page-header__title">Coupons</h1>
+          <p className="admin-page-header__desc">Discount codes, usage limits, and expiry.</p>
+        </div>
+      </div>
 
-      <form onSubmit={onSubmit} className="mt-6 max-w-2xl space-y-4 rounded-2xl border border-charcoal/10 p-5 bg-white">
+      <form onSubmit={onSubmit} className="admin-card max-w-2xl space-y-4 p-5">
         <p className="text-sm font-medium text-charcoal">{form.id ? "Edit Coupon" : "New Coupon"}</p>
 
         <div className="grid grid-cols-2 gap-4">
@@ -350,7 +356,7 @@ export default function AdminCoupons() {
         </div>
       </form>
 
-      <div className="mt-8 overflow-x-auto rounded-2xl border border-charcoal/10 bg-white">
+      <div className="admin-card mt-5 overflow-hidden">
         {status === "loading" && <LoadingNotice />}
         {status === "error" && <ErrorNotice message="Unable to load coupons." />}
         {status === "ready" && (

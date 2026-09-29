@@ -149,7 +149,12 @@ export default function AdminCollections() {
 
   return (
     <div>
-      <h1 className="font-serif-display text-2xl text-charcoal">Collections</h1>
+      <div className="admin-page-header">
+        <div>
+          <p className="admin-page-header__eyebrow">Catalog</p>
+          <h1 className="admin-page-header__title">Collections</h1>
+        </div>
+      </div>
 
       <form onSubmit={onSubmit} className="mt-6 max-w-xl space-y-4 rounded-2xl border border-charcoal/10 p-5 bg-white">
         <p className="text-sm font-medium text-charcoal">{form.id ? "Edit Collection" : "New Collection"}</p>

@@ -80,28 +80,33 @@ export default function AdminSettings() {
   if (status === "error") return <ErrorNotice message={error || "Unable to load settings."} />;
 
   const tabs = [
-    { id: "general", label: "General Store" },
-    { id: "branding", label: "Branding & Logo" },
-    { id: "header", label: "Header & Nav" },
-    { id: "footer", label: "Footer System" },
-    { id: "appearance", label: "Appearance / Theme" },
+    { id: "general", label: "General" },
     { id: "social", label: "Contact & Social" },
-    { id: "shipping", label: "Shipping Rules" },
-    { id: "payments", label: "Payment Methods" },
-    { id: "checkout", label: "Checkout Options" },
-    { id: "shop", label: "Shop Display" },
+    { id: "header", label: "Header / Footer" },
+    { id: "footer", label: "Footer Details" },
+    { id: "checkout", label: "Commerce" },
+    { id: "payments", label: "Payments" },
+    { id: "shipping", label: "Shipping" },
+    { id: "shop", label: "SEO / Shop" },
+    { id: "branding", label: "Branding" },
+    { id: "appearance", label: "Appearance" },
   ];
 
   return (
-    <div className="space-y-6 max-w-5xl">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-charcoal/10 pb-4">
+    <div className="space-y-5 max-w-5xl">
+      <div className="admin-page-header">
         <div>
-          <h1 className="font-serif-display text-2xl text-charcoal font-bold">Storefront Settings &amp; Theme</h1>
-          <p className="text-xs text-charcoal-soft mt-1">Configure global store identity, dynamic navigation header/footer, shipping &amp; checkout authority.</p>
+          <p className="admin-page-header__eyebrow">System</p>
+          <h1 className="admin-page-header__title">Settings</h1>
+          <p className="admin-page-header__desc">
+            Store identity, commerce rules, and appearance — existing settings APIs only.
+          </p>
         </div>
-        <Button onClick={handleSave} className="bg-terracotta text-white self-start sm:self-auto">
-          Save All Settings
-        </Button>
+        <div className="admin-page-header__actions">
+          <Button onClick={handleSave} className="bg-terracotta text-white">
+            Save All Settings
+          </Button>
+        </div>
       </div>
 
       {saved && (
@@ -111,16 +116,13 @@ export default function AdminSettings() {
       )}
       {error && <p className="text-xs font-semibold text-terracotta">{error}</p>}
 
-      {/* Tabs */}
-      <div className="flex gap-2 overflow-x-auto no-scrollbar border-b border-charcoal/15 pb-2">
+      <div className="flex gap-1.5 overflow-x-auto no-scrollbar border-b border-charcoal/10 pb-2">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`px-3 py-2 text-xs font-medium rounded-xl whitespace-nowrap transition ${
-              activeTab === tab.id
-                ? "bg-terracotta text-white font-semibold shadow-xs"
-                : "text-charcoal-soft hover:bg-charcoal/5"
+            className={`admin-btn whitespace-nowrap ${
+              activeTab === tab.id ? "admin-btn--accent" : "admin-btn--ghost"
             }`}
           >
             {tab.label}

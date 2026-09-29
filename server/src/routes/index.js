@@ -126,17 +126,46 @@ router.get(
   "/admin/dashboard",
   requireAdmin,
   asyncHandler(async (req, res) => {
-    const [totalProducts, activeProducts, books, otherProducts, categories, lowStock, activeCoupons, orderStats] =
-      await Promise.all([
-        prisma.product.count(),
-        prisma.product.count({ where: { isActive: true } }),
-        prisma.product.count({ where: { productType: "BOOK" } }),
-        prisma.product.count({ where: { productType: "PHYSICAL" } }),
-        prisma.category.count(),
-        prisma.product.count({ where: { trackInventory: true, stockQuantity: { lte: 5 } } }),
-        prisma.coupon.count({ where: { isActive: true } }),
-        getOrderDashboardStats(),
-      ]);
+    const [
+      totalProducts,
+      activeProducts,
+      books,
+      otherProducts,
+      categories,
+      lowStock,
+      activeCoupons,
+      customers,
+      digitalDownloads,
+      orderStats,
+      recentOrders,
+    ] = await Promise.all([
+      prisma.product.count(),
+      prisma.product.count({ where: { isActive: true } }),
+      prisma.product.count({ where: { productType: "BOOK" } }),
+      prisma.product.count({ where: { productType: "PHYSICAL" } }),
+      prisma.category.count(),
+      prisma.product.count({ where: { trackInventory: true, stockQuantity: { lte: 5 } } }),
+      prisma.coupon.count({ where: { isActive: true } }),
+      prisma.customer.count(),
+      prisma.digitalDownload.count(),
+      getOrderDashboardStats(),
+      prisma.order.findMany({
+        take: 8,
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          orderNumber: true,
+          customerName: true,
+          customerEmail: true,
+          totalAmount: true,
+          paymentStatus: true,
+          paymentMethod: true,
+          status: true,
+          createdAt: true,
+          shipment: { select: { carrier: true, trackingNumber: true, status: true } },
+        },
+      }),
+    ]);
 
     ok(res, {
       totalProducts,
@@ -146,6 +175,12 @@ router.get(
       categories,
       lowStockProducts: lowStock,
       activeCoupons,
+      customers,
+      digitalDownloads,
+      recentOrders: recentOrders.map((o) => ({
+        ...o,
+        totalAmount: Number(o.totalAmount),
+      })),
       ...orderStats,
     });
   })

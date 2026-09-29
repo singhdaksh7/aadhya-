@@ -375,9 +375,28 @@ export function adminGetShippingBusiness() { return api.get("/admin/shipping/bus
 export function adminSaveShippingBusiness(data) { return api.put("/admin/shipping/business", data, { auth: "admin" }); }
 export function adminGetInvoiceSettings() { return api.get("/admin/invoices/settings", { auth: "admin" }); }
 export function adminSaveInvoiceSettings(data) { return api.put("/admin/invoices/settings", data, { auth: "admin" }); }
+export function adminListInvoices(params = {}) {
+  const query = new URLSearchParams(
+    Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== "" && v !== null))
+  ).toString();
+  return api.get(`/admin/invoices${query ? `?${query}` : ""}`, { auth: "admin" });
+}
 export async function adminDownloadInvoice(id) { const res = await fetch(`${API_URL}/admin/invoices/${id}/download`, { headers: { Authorization: `Bearer ${tokens.admin}` }, credentials: "include" }); if (!res.ok) throw new ApiRequestError("Could not download invoice", res.status); return res.blob(); }
 export function adminRegenerateInvoice(id) { return api.post(`/admin/invoices/${id}/regenerate`, {}, { auth: "admin" }); }
 export function adminResendInvoice(id) { return api.post(`/admin/invoices/${id}/resend`, {}, { auth: "admin" }); }
+
+export function adminListCustomers(params = {}) {
+  const query = new URLSearchParams(
+    Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== "" && v !== null))
+  ).toString();
+  return api.get(`/admin/customers${query ? `?${query}` : ""}`, { auth: "admin" });
+}
+export function adminGetCustomer(id) {
+  return api.get(`/admin/customers/${id}`, { auth: "admin" });
+}
+export function adminUpdateCustomerStatus(id, isActive) {
+  return api.patch(`/admin/customers/${id}/status`, { isActive }, { auth: "admin" });
+}
 
 // Customer accounts use a separate in-memory access token and httpOnly cookie session.
 export function customerRegister(data) { return api.post("/auth/register", data); }

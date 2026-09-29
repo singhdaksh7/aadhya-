@@ -101,9 +101,15 @@ export default function AdminCategories() {
 
   return (
     <div>
-      <h1 className="font-serif-display text-2xl text-charcoal">Category Hierarchy & Subcategories</h1>
+      <div className="admin-page-header">
+        <div>
+          <p className="admin-page-header__eyebrow">Catalog</p>
+          <h1 className="admin-page-header__title">Categories</h1>
+          <p className="admin-page-header__desc">Hierarchy, status, images, and parent relationships.</p>
+        </div>
+      </div>
 
-      <form onSubmit={onSubmit} className="mt-6 max-w-2xl space-y-4 rounded-2xl border border-charcoal/10 p-6 bg-white">
+      <form onSubmit={onSubmit} className="admin-card max-w-2xl space-y-4 p-5">
         <p className="text-base font-semibold text-charcoal">{form.id ? "Edit Category" : "New Category"}</p>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -236,40 +242,39 @@ export default function AdminCategories() {
         </div>
       </form>
 
-      <div className="mt-8 overflow-x-auto rounded-2xl border border-charcoal/10">
+      <div className="admin-card mt-5 overflow-hidden">
         {status === "loading" && <LoadingNotice />}
         {status === "error" && <ErrorNotice message="Unable to load categories." />}
         {status === "ready" && (
-          <table className="w-full min-w-[600px] text-left text-sm">
-            <thead className="bg-ivory-dark text-xs uppercase tracking-wide text-charcoal-soft">
+          <div className="admin-table-wrap">
+          <table className="admin-table" style={{ minWidth: 720 }}>
+            <thead className="admin-table__head--sticky">
               <tr>
-                <th className="px-4 py-3">Name</th>
-                <th className="px-4 py-3">Slug</th>
-                <th className="px-4 py-3">Parent</th>
-                <th className="px-4 py-3">Products</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Actions</th>
+                <th>Name</th>
+                <th>Slug</th>
+                <th>Parent</th>
+                <th>Products</th>
+                <th>Status</th>
+                <th>Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-charcoal/10">
+            <tbody>
               {categories.map((c) => (
                 <tr key={c.id}>
-                  <td className="px-4 py-3 font-medium text-charcoal">{c.name}</td>
-                  <td className="px-4 py-3 text-charcoal-soft">{c.slug}</td>
-                  <td className="px-4 py-3 text-charcoal-soft">
-                    {categories.find((p) => p.id === c.parentId)?.name || "—"}
-                  </td>
-                  <td className="px-4 py-3 text-charcoal-soft">{c._count?.products ?? 0}</td>
-                  <td className="px-4 py-3">
+                  <td>{c.name}</td>
+                  <td>{c.slug}</td>
+                  <td>{categories.find((p) => p.id === c.parentId)?.name || "—"}</td>
+                  <td>{c._count?.products ?? 0}</td>
+                  <td>
                     <span className={c.isActive ? "text-green-deep" : "text-charcoal-soft"}>
                       {c.isActive ? "Active" : "Inactive"}
                     </span>
                   </td>
-                  <td className="px-4 py-3">
+                  <td>
                     <div className="flex items-center gap-2 whitespace-nowrap text-xs">
                       <button
                         onClick={() => startEdit(c)}
-                        className="rounded-full border border-charcoal/20 bg-white px-3 py-1 font-medium text-charcoal transition hover:border-terracotta hover:text-terracotta"
+                        className="admin-btn admin-btn--ghost"
                       >
                         Edit
                       </button>
@@ -291,6 +296,7 @@ export default function AdminCategories() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
     </div>
