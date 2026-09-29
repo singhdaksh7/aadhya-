@@ -6,6 +6,10 @@ import { IconClose } from "../icons";
 // cropping. `null` means "free" (no fixed ratio).
 export const CROP_ASPECT_PRESETS = {
   free: { label: "Free", value: null },
+  // For header/nav logos: crops tightly around just the main wordmark,
+  // excluding a tagline or large canvas whitespace below/around it — see
+  // BrandLogo's max-height-capped, object-fit:contain rendering in Navbar.
+  header: { label: "Header Logo (5:1)", value: 5 / 1 },
   wide: { label: "Wide (16:9)", value: 16 / 9 },
   square: { label: "Square (1:1)", value: 1 },
   banner: { label: "Banner (21:9)", value: 21 / 9 },

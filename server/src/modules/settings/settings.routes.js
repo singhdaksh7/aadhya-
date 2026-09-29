@@ -38,6 +38,8 @@ export const DEFAULT_SETTINGS = {
     logoAltText: "Aadya Logo",
     logoWidthDesktop: 140,
     logoWidthMobile: 110,
+    logoMaxHeightDesktop: 60,
+    logoMaxHeightMobile: 44,
   },
   header: {
     showUtilityBar: true,
@@ -238,6 +240,8 @@ const settingsValidationSchema = z.object({
     logoAltText: z.string().max(100).optional(),
     logoWidthDesktop: z.number().int().min(40).max(400).optional(),
     logoWidthMobile: z.number().int().min(30).max(300).optional(),
+    logoMaxHeightDesktop: z.number().int().min(32).max(96).optional(),
+    logoMaxHeightMobile: z.number().int().min(24).max(72).optional(),
   }).optional(),
 
   header: z.object({

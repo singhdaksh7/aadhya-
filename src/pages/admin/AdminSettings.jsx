@@ -8,7 +8,23 @@ import {
 import { Button } from "../../components/ui";
 import { LoadingNotice, ErrorNotice } from "../../components/StateNotice";
 import ImagePickerInput from "../../components/admin/ImagePickerInput";
+import BrandLogo from "../../components/BrandLogo";
 import { applyThemeVariables, DEFAULT_SITE_SETTINGS, refreshSiteSettings } from "../../hooks/useSiteSettings";
+
+// Renders the logo exactly as <BrandLogo> renders it in the real Navbar
+// (same width + max-height + object-fit:contain), so the admin sees the true
+// navbar result instead of a raw, uncropped preview thumbnail.
+function HeaderLogoPreview({ src, widthPx, maxHeightPx, label }) {
+  if (!src) return null;
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-dashed border-charcoal/15 bg-ivory-dark/30 px-4 py-3">
+      <span className="text-[10px] font-semibold uppercase tracking-wider text-charcoal-soft shrink-0">{label}</span>
+      <div className="flex items-center rounded-lg border border-charcoal/10 bg-white px-3 py-2">
+        <BrandLogo src={src} widthPx={widthPx} maxHeightPx={maxHeightPx} className="w-auto" />
+      </div>
+    </div>
+  );
+}
 
 export default function AdminSettings() {
   const [activeTab, setActiveTab] = useState("general");
@@ -332,6 +348,12 @@ export default function AdminSettings() {
         {activeTab === "branding" && (
           <div className="space-y-4 rounded-2xl border border-charcoal/10 bg-white p-6 shadow-xs">
             <h2 className="font-serif text-lg font-bold text-charcoal">Branding &amp; Media Assets</h2>
+            <p className="text-xs text-charcoal-soft -mt-2">
+              Use the <strong>Header Logo (5:1)</strong> crop preset to select just the main wordmark —
+              not a tagline or the surrounding canvas whitespace — for the logos below. This is what
+              renders in the navbar; the Footer Logo further down can keep the full tall/tagline version.
+            </p>
+
             <ImagePickerInput
               label="Desktop Store Logo"
               value={settings.branding?.desktopLogo}
@@ -341,7 +363,14 @@ export default function AdminSettings() {
               pickerTitle="Select desktop logo"
               inputClassName={inputCls}
               enableCrop
-              aspectOptions={["free", "wide", "square"]}
+              aspect={5 / 1}
+              aspectOptions={["header", "free", "wide", "square"]}
+            />
+            <HeaderLogoPreview
+              src={settings.branding?.desktopLogo}
+              widthPx={settings.branding?.logoWidthDesktop || 140}
+              maxHeightPx={settings.branding?.logoMaxHeightDesktop || 60}
+              label="Desktop navbar preview"
             />
 
             <ImagePickerInput
@@ -353,7 +382,14 @@ export default function AdminSettings() {
               pickerTitle="Select mobile logo"
               inputClassName={inputCls}
               enableCrop
-              aspectOptions={["free", "wide", "square"]}
+              aspect={5 / 1}
+              aspectOptions={["header", "free", "wide", "square"]}
+            />
+            <HeaderLogoPreview
+              src={settings.branding?.mobileLogo || settings.branding?.desktopLogo}
+              widthPx={settings.branding?.logoWidthMobile || 110}
+              maxHeightPx={settings.branding?.logoMaxHeightMobile || 44}
+              label="Mobile navbar preview"
             />
 
             <ImagePickerInput
@@ -365,7 +401,8 @@ export default function AdminSettings() {
               pickerTitle="Select secondary logo"
               inputClassName={inputCls}
               enableCrop
-              aspectOptions={["free", "wide", "square"]}
+              aspect={5 / 1}
+              aspectOptions={["header", "free", "wide", "square"]}
             />
 
             <ImagePickerInput
@@ -421,6 +458,36 @@ export default function AdminSettings() {
                   className={inputCls}
                 />
                 <p className="mt-1 text-[11px] text-charcoal-soft">Constrained 30–300px so the mobile header can't be broken.</p>
+              </div>
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Logo Max Height Desktop (px)</label>
+                <input
+                  type="number"
+                  min={32}
+                  max={96}
+                  value={settings.branding?.logoMaxHeightDesktop || 60}
+                  onChange={(e) => {
+                    const clamped = Math.min(96, Math.max(32, Number(e.target.value) || 60));
+                    setSettings((s) => ({ ...s, branding: { ...s.branding, logoMaxHeightDesktop: clamped } }));
+                  }}
+                  className={inputCls}
+                />
+                <p className="mt-1 text-[11px] text-charcoal-soft">Height is only ever capped, never stretched — a tall or wide logo keeps its own proportions within this limit (suggested 56–64px).</p>
+              </div>
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Logo Max Height Mobile (px)</label>
+                <input
+                  type="number"
+                  min={24}
+                  max={72}
+                  value={settings.branding?.logoMaxHeightMobile || 44}
+                  onChange={(e) => {
+                    const clamped = Math.min(72, Math.max(24, Number(e.target.value) || 44));
+                    setSettings((s) => ({ ...s, branding: { ...s.branding, logoMaxHeightMobile: clamped } }));
+                  }}
+                  className={inputCls}
+                />
+                <p className="mt-1 text-[11px] text-charcoal-soft">Suggested 42–48px on mobile.</p>
               </div>
             </div>
           </div>

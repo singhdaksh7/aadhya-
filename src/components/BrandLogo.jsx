@@ -14,6 +14,7 @@ export default function BrandLogo({
   alt = "Aadya",
   fallbackText = "Aadya",
   widthPx,
+  maxHeightPx,
   className = "",
   textClassName = "font-serif-display text-2xl tracking-tight text-charcoal sm:text-3xl font-bold",
 }) {
@@ -31,12 +32,21 @@ export default function BrandLogo({
     return <span className={textClassName}>{fallbackText}</span>;
   }
 
+  // Width comes from the admin-controlled logo-width setting; height is only
+  // ever CAPPED (maxHeight), never fixed, so a tall/wide/square source image
+  // keeps its own aspect ratio instead of being squashed or clipped into a
+  // fixed box. object-fit: contain + object-position: center handle the rest.
+  const style = {
+    ...(widthPx ? { width: `${widthPx}px` } : undefined),
+    ...(maxHeightPx ? { maxHeight: `${maxHeightPx}px` } : undefined),
+  };
+
   return (
     <img
       src={resolved}
       alt={alt}
-      style={widthPx ? { width: `${widthPx}px` } : undefined}
-      className={className}
+      style={style}
+      className={`${className} object-contain object-center`}
       onError={() => {
         // The real fix is a correct stored URL; this is only the safety net.
         if (import.meta.env.DEV) {

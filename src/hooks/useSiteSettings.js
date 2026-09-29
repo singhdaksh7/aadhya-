@@ -32,6 +32,8 @@ export const DEFAULT_SITE_SETTINGS = {
     logoAltText: "Aadya Logo",
     logoWidthDesktop: 140,
     logoWidthMobile: 110,
+    logoMaxHeightDesktop: 60,
+    logoMaxHeightMobile: 44,
   },
   header: {
     showUtilityBar: true,

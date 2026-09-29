@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import ImageCropModal from "../src/components/admin/ImageCropModal";
+import ImageCropModal, { CROP_ASPECT_PRESETS } from "../src/components/admin/ImageCropModal";
 
 // react-easy-crop needs real image layout/measurement to compute crop
 // geometry, which jsdom doesn't provide. Stub it with a minimal control that
@@ -85,5 +85,38 @@ describe("ImageCropModal", () => {
     expect(screen.getByText("Free")).toBeInTheDocument();
     expect(screen.getByText("Wide (16:9)")).toBeInTheDocument();
     expect(screen.getByText("Square (1:1)")).toBeInTheDocument();
+  });
+
+  it("defines a dedicated 5:1 Header Logo preset for cropping just the main wordmark", () => {
+    expect(CROP_ASPECT_PRESETS.header).toBeDefined();
+    expect(CROP_ASPECT_PRESETS.header.value).toBe(5);
+    expect(CROP_ASPECT_PRESETS.header.label).toMatch(/Header Logo/);
+  });
+
+  it("shows the Header Logo preset button when aspectOptions includes it, alongside other presets", () => {
+    render(
+      <ImageCropModal
+        isOpen
+        imageSrc="http://api.test/uploads/x.png"
+        aspectOptions={["header", "free", "wide", "square"]}
+        onCancel={vi.fn()}
+        onConfirm={vi.fn()}
+      />
+    );
+    expect(screen.getByText("Header Logo (5:1)")).toBeInTheDocument();
+  });
+
+  it("does not force a single crop ratio for every image — favicon can use a locked 1:1 while logos use 5:1", () => {
+    const { unmount } = render(
+      <ImageCropModal isOpen imageSrc="http://api.test/uploads/x.png" aspect={1} onCancel={vi.fn()} onConfirm={vi.fn()} />
+    );
+    // No preset switcher shown for a single fixed aspect (favicon usage).
+    expect(screen.queryByText("Square (1:1)")).not.toBeInTheDocument();
+    unmount();
+
+    render(
+      <ImageCropModal isOpen imageSrc="http://api.test/uploads/x.png" aspect={5 / 1} aspectOptions={["header", "free"]} onCancel={vi.fn()} onConfirm={vi.fn()} />
+    );
+    expect(screen.getByText("Header Logo (5:1)")).toBeInTheDocument();
   });
 });
