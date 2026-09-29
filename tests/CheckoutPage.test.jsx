@@ -283,4 +283,140 @@ describe("CheckoutPage", () => {
     expect(await screen.findByText("Invalid coupon code")).toBeInTheDocument();
     expect(screen.queryByText(/applied/i)).not.toBeInTheDocument();
   });
+
+  it("shows a 'Checking Order…' reason and disables the CTA while the preview is in flight", async () => {
+    const { checkoutPreview } = await import("../src/lib/api");
+    checkoutPreview.mockReset();
+    checkoutPreview.mockReturnValue(new Promise(() => {})); // never resolves
+    seedCart();
+    render(<Harness />);
+
+    expect(await screen.findByText(/Checking your order…/i)).toBeInTheDocument();
+    const button = screen.getByRole("button", { name: /pay securely/i });
+    expect(button).toBeDisabled();
+    expect(button).toHaveTextContent(/Checking Order…/i);
+  });
+
+  it("shows a visible, safe error and a Retry Checkout button when the preview request fails, and retry re-fetches it", async () => {
+    const { checkoutPreview, ApiRequestError } = await import("../src/lib/api");
+    checkoutPreview.mockReset();
+    checkoutPreview.mockRejectedValueOnce(new ApiRequestError("This item is no longer available."));
+    seedCart();
+    render(<Harness />);
+
+    expect(
+      await screen.findByText(/Could not prepare checkout: This item is no longer available\./i)
+    ).toBeInTheDocument();
+    const retryButton = screen.getByRole("button", { name: /Retry Checkout/i });
+
+    checkoutPreview.mockResolvedValueOnce(previewResponse);
+    const user = userEvent.setup();
+    await user.click(retryButton);
+
+    await waitFor(() => expect(screen.getByText("₹1,089")).toBeInTheDocument());
+    expect(checkoutPreview).toHaveBeenCalledTimes(2);
+  });
+
+  it("renders every blocking issue above the payment button and keeps the CTA disabled", async () => {
+    const { checkoutPreview } = await import("../src/lib/api");
+    checkoutPreview.mockReset();
+    checkoutPreview.mockResolvedValue({
+      data: {
+        ...previewResponse.data,
+        hasBlockingIssues: true,
+        items: [
+          { slug: "test-basket", ok: false, message: '"test-basket" is out of stock.', requestedQuantity: 1 },
+        ],
+      },
+    });
+    seedCart();
+    render(<Harness />);
+
+    expect(await screen.findByText(/Some items need attention before you can pay/i)).toBeInTheDocument();
+    expect(screen.getAllByText('"test-basket" is out of stock.').length).toBeGreaterThan(0);
+    const button = screen.getByRole("button", { name: /pay securely/i });
+    expect(button).toBeDisabled();
+  });
+
+  it("shows a validation summary and focuses the first invalid field instead of doing nothing", async () => {
+    const user = userEvent.setup();
+    seedCart();
+    render(<Harness />);
+    await waitFor(() => expect(screen.getByText("₹1,089")).toBeInTheDocument());
+
+    await user.click(screen.getByRole("button", { name: /pay securely/i }));
+
+    expect(
+      await screen.findByText(/Please complete the highlighted checkout fields\./i)
+    ).toBeInTheDocument();
+    const { createOrder } = await import("../src/lib/api");
+    expect(createOrder).not.toHaveBeenCalled();
+  });
+
+  it("shows a safe error when order creation fails", async () => {
+    const { createOrder, ApiRequestError } = await import("../src/lib/api");
+    createOrder.mockRejectedValueOnce(new ApiRequestError("Coupon is no longer valid."));
+
+    const user = userEvent.setup();
+    seedCart();
+    render(<Harness />);
+    await waitFor(() => expect(screen.getByText("₹1,089")).toBeInTheDocument());
+    await fillValidForm(user);
+
+    await user.click(screen.getByRole("button", { name: /pay securely/i }));
+
+    expect(await screen.findByText("Coupon is no longer valid.")).toBeInTheDocument();
+  });
+
+  it("shows a Retry Payment action when Razorpay order creation fails", async () => {
+    const { createRazorpayOrder, ApiRequestError } = await import("../src/lib/api");
+    createRazorpayOrder.mockRejectedValueOnce(new ApiRequestError("Payment provider unavailable."));
+
+    const user = userEvent.setup();
+    seedCart();
+    render(<Harness />);
+    await waitFor(() => expect(screen.getByText("₹1,089")).toBeInTheDocument());
+    await fillValidForm(user);
+
+    await user.click(screen.getByRole("button", { name: /pay securely/i }));
+
+    expect((await screen.findAllByText("Payment provider unavailable.")).length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: /Retry Payment/i })).toBeInTheDocument();
+  });
+
+  it("shows a clear error when the Razorpay script fails to load", async () => {
+    const { loadRazorpayScript } = await import("../src/lib/razorpay");
+    loadRazorpayScript.mockResolvedValueOnce(false);
+
+    const user = userEvent.setup();
+    seedCart();
+    render(<Harness />);
+    await waitFor(() => expect(screen.getByText("₹1,089")).toBeInTheDocument());
+    await fillValidForm(user);
+
+    await user.click(screen.getByRole("button", { name: /pay securely/i }));
+
+    expect(
+      await screen.findByText(/Could not load Razorpay\. Check your connection and retry\./i)
+    ).toBeInTheDocument();
+  });
+
+  it("places a COD order via a single createOrder call without touching any Razorpay code path", async () => {
+    const { createOrder, createRazorpayOrder } = await import("../src/lib/api");
+    const user = userEvent.setup();
+    seedCart();
+    render(<Harness />);
+    await waitFor(() => expect(screen.getByText("₹1,089")).toBeInTheDocument());
+
+    await user.click(screen.getByLabelText(/Cash on Delivery/i));
+    await fillValidForm(user);
+    await user.click(screen.getByRole("button", { name: /place order, cash on delivery/i }));
+
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith(
+      "/order/AAD-2026-000001/confirmation?token=tok123",
+      { replace: true }
+    ));
+    expect(createOrder).toHaveBeenCalledTimes(1);
+    expect(createRazorpayOrder).not.toHaveBeenCalled();
+  });
 });
