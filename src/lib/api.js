@@ -434,6 +434,10 @@ export function setDefaultAddress(id) { return api.post(`/account/addresses/${id
 export function setAddressTypeDefault(id, type) { return api.post(`/account/addresses/${id}/default/${type}`, undefined, { auth: true }); }
 export function accountOrders(params={}) { const q=new URLSearchParams(params).toString(); return api.get(`/account/orders${q?`?${q}`:""}`,{auth:true}); }
 export function accountOrder(orderNumber) { return api.get(`/account/orders/${orderNumber}`,{auth:true}); }
+export function accountReturnEligibility(orderNumber) { return api.get(`/account/returns/eligibility/${orderNumber}`,{auth:true}); }
+export function createAccountReturn(data) { return api.post("/account/returns", data, { auth: true }); }
+export function accountReturns() { return api.get("/account/returns", { auth: true }); }
+export function accountReturn(id) { return api.get(`/account/returns/${id}`, { auth: true }); }
 export function claimOrder(data) { return api.post("/account/claim-order",data,{auth:true}); }
 export function serverCart() { return normalizedCart(api.get("/cart",{auth:true})); }
 export function mergeCart(items) { return normalizedCart(api.post("/cart/merge",{items},{auth:true})); }
@@ -659,6 +663,38 @@ export function adminRunLowStockSweep() {
 }
 export function adminRestockItem(data) {
   return api.post("/admin/inventory/low-stock/restock", data, { auth: "admin" });
+}
+
+// --- Admin returns / refunds / RTO ---
+export function adminListReturns(params = {}) {
+  const query = new URLSearchParams(
+    Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== "" && v !== null))
+  ).toString();
+  return api.get(`/admin/returns${query ? `?${query}` : ""}`, { auth: "admin" });
+}
+export function adminGetReturn(id) {
+  return api.get(`/admin/returns/${id}`, { auth: "admin" });
+}
+export function adminApproveReturn(id, resolution) {
+  return api.post(`/admin/returns/${id}/approve`, resolution ? { resolution } : undefined, { auth: "admin" });
+}
+export function adminRejectReturn(id, note) {
+  return api.post(`/admin/returns/${id}/reject`, note ? { note } : undefined, { auth: "admin" });
+}
+export function adminSchedulePickup(id) {
+  return api.post(`/admin/returns/${id}/schedule-pickup`, undefined, { auth: "admin" });
+}
+export function adminMarkReturnInTransit(id) {
+  return api.post(`/admin/returns/${id}/in-transit`, undefined, { auth: "admin" });
+}
+export function adminMarkReturnReceived(id) {
+  return api.post(`/admin/returns/${id}/received`, undefined, { auth: "admin" });
+}
+export function adminIssueReturnRefund(id, data) {
+  return api.post(`/admin/returns/${id}/refund`, data, { auth: "admin" });
+}
+export function adminCloseReturn(id) {
+  return api.post(`/admin/returns/${id}/close`, undefined, { auth: "admin" });
 }
 
 export { API_URL };

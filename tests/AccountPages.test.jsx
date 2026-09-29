@@ -24,6 +24,10 @@ const api = vi.hoisted(() => ({
   setDefaultAddress: vi.fn(),
   accountOrders: vi.fn(),
   accountOrder: vi.fn(),
+  accountReturnEligibility: vi.fn(),
+  createAccountReturn: vi.fn(),
+  accountReturns: vi.fn(),
+  accountReturn: vi.fn(),
 }));
 
 vi.mock("../src/lib/api", () => api);
@@ -52,6 +56,7 @@ const CUSTOMER = { id: "c1", name: "Test Customer", email: "test@example.com", p
 beforeEach(() => {
   Object.values(api).filter((value) => typeof value.mockReset === "function").forEach((fn) => fn.mockReset());
   api.customerRefresh.mockRejectedValue(new Error("no session")); // logged-out bootstrap by default
+  api.accountReturnEligibility.mockResolvedValue({ data: { eligible: false, reason: null, returnableItemIds: [] } });
 });
 
 describe("bootstrap", () => {

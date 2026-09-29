@@ -49,6 +49,8 @@ import AdminNavigation from "./pages/admin/AdminNavigation";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminOrderList from "./pages/admin/AdminOrderList";
 import AdminOrderDetail from "./pages/admin/AdminOrderDetail";
+import AdminReturnList from "./pages/admin/AdminReturnList";
+import AdminReturnDetail from "./pages/admin/AdminReturnDetail";
 import AdminHomepageBuilder from "./pages/admin/AdminHomepageBuilder";
 import AdminBanners from "./pages/admin/AdminBanners";
 import AdminPromos from "./pages/admin/AdminPromos";
@@ -240,6 +242,8 @@ function AdminRoutes() {
           <Route path="settings" element={<AdminSettings />} />
           <Route path="orders" element={<AdminOrderList />} />
           <Route path="orders/:id" element={<AdminOrderDetail />} />
+          <Route path="returns" element={<AdminReturnList />} />
+          <Route path="returns/:id" element={<AdminReturnDetail />} />
           <Route path="analytics" element={<AdminAnalytics />} />
           <Route path="shipping" element={<AdminShipping />} />
           <Route path="integrations" element={<AdminIntegrations />} />

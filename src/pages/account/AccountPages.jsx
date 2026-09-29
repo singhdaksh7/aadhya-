@@ -28,6 +28,10 @@ import {
   markAllNotificationsRead,
   accountInvoices,
   downloadAccountInvoice,
+  accountReturnEligibility,
+  createAccountReturn,
+  accountReturns,
+  accountReturn,
 } from "../../lib/api";
 import { formatInr } from "../../lib/format";
 
@@ -68,12 +72,13 @@ function AccountNav() {
     { path: "/account/reviews", label: "Reviews" },
     { path: "/account/downloads", label: "Downloads" },
     { path: "/account/invoices", label: "Invoices" },
+    { path: "/account/returns", label: "Returns" },
     { path: "/account/notifications", label: "Notifications" },
   ];
   return (
     <div className="flex gap-5 overflow-x-auto border-b border-charcoal/10 text-xs font-semibold uppercase tracking-wider no-scrollbar">
       {items.map((item) => {
-        const active = pathname === item.path;
+        const active = pathname === item.path || (item.path === "/account/returns" && pathname.startsWith("/account/returns"));
         return <Link key={item.path} to={item.path} className={`shrink-0 border-b-2 px-1 pb-3 transition ${active ? "border-terracotta text-terracotta" : "border-transparent text-charcoal-soft hover:text-terracotta"}`}>{item.label}</Link>;
       })}
     </div>
@@ -472,6 +477,128 @@ export function Orders() {
   );
 }
 
+function ReturnRequestPanel({ orderNumber, order }) {
+  const [eligibility, setEligibility] = useState(null);
+  const [showForm, setShowForm] = useState(false);
+  const [selected, setSelected] = useState({});
+  const [reason, setReason] = useState("");
+  const [details, setDetails] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    accountReturnEligibility(orderNumber)
+      .then((r) => setEligibility(r.data))
+      .catch(() => setEligibility({ eligible: false, reason: "Could not check return eligibility right now." }));
+  }, [orderNumber]);
+
+  if (!eligibility) return null;
+
+  if (!eligibility.eligible) {
+    return (
+      <div className="rounded-3xl border border-charcoal/10 bg-white p-6">
+        <h3 className="font-serif-display text-lg text-charcoal">Returns</h3>
+        <p className="mt-2 text-sm text-charcoal-soft">{eligibility.reason || "This order is not eligible for return."}</p>
+      </div>
+    );
+  }
+
+  const eligibleItems = (order.items || []).filter((i) => (eligibility.returnableItemIds || []).includes(i.id));
+
+  const toggleItem = (id) => {
+    setSelected((prev) => {
+      const next = { ...prev };
+      if (next[id] != null) delete next[id];
+      else next[id] = 1;
+      return next;
+    });
+  };
+
+  const setQty = (id, qty, max) => {
+    const n = Math.max(1, Math.min(max, Number(qty) || 1));
+    setSelected((prev) => ({ ...prev, [id]: n }));
+  };
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setError("");
+    const items = Object.entries(selected).map(([orderItemId, quantity]) => ({ orderItemId, quantity }));
+    if (!items.length) return setError("Select at least one item to return.");
+    if (!reason.trim()) return setError("Please provide a reason for the return.");
+    setSubmitting(true);
+    try {
+      await createAccountReturn({ orderNumber, reason, details: details.trim() || undefined, items });
+      setSuccess(true);
+      setShowForm(false);
+    } catch (err) {
+      setError(err.message || "Could not submit the return request.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (success) {
+    return (
+      <div className="rounded-3xl border border-charcoal/10 bg-white p-6">
+        <p role="status" className="rounded-xl bg-sage-light p-3 text-sm font-medium text-green-deep">
+          Your return request has been submitted. Track its status under <Link className="underline" to="/account/returns">Returns</Link>.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-3xl border border-charcoal/10 bg-white p-6 space-y-4">
+      <h3 className="font-serif-display text-lg text-charcoal">Returns</h3>
+      {!showForm ? (
+        <Button type="button" onClick={() => setShowForm(true)}>Request Return</Button>
+      ) : (
+        <form onSubmit={submit} className="space-y-4">
+          <div className="space-y-2">
+            {eligibleItems.map((item) => {
+              const checked = selected[item.id] != null;
+              return (
+                <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-charcoal/10 p-3">
+                  <label className="flex items-center gap-2 text-sm text-charcoal">
+                    <input type="checkbox" checked={checked} onChange={() => toggleItem(item.id)} className="accent-terracotta" />
+                    {item.productNameSnapshot} (Qty ordered: {item.quantity})
+                  </label>
+                  {checked && (
+                    <input
+                      type="number"
+                      min={1}
+                      max={item.quantity}
+                      value={selected[item.id]}
+                      onChange={(e) => setQty(item.id, e.target.value, item.quantity)}
+                      aria-label={`Quantity to return for ${item.productNameSnapshot}`}
+                      className="w-20 rounded-lg border border-charcoal/15 px-2 py-1 text-sm"
+                    />
+                  )}
+                </div>
+              );
+            })}
+            {!eligibleItems.length && <p className="text-xs text-charcoal-soft">No returnable items were found for this order.</p>}
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-charcoal-soft" htmlFor="return-reason">Reason</label>
+            <input id="return-reason" required className={inputClass} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Reason for return" />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-charcoal-soft" htmlFor="return-details">Additional details (optional)</label>
+            <textarea id="return-details" rows={3} className={inputClass} value={details} onChange={(e) => setDetails(e.target.value)} />
+          </div>
+          {error && <p className="text-xs font-medium text-terracotta bg-terracotta/10 p-3 rounded-xl">{error}</p>}
+          <div className="flex gap-3">
+            <Button type="submit" disabled={submitting}>{submitting ? "Submitting..." : "Submit Return Request"}</Button>
+            <button type="button" onClick={() => setShowForm(false)} className="rounded-full px-4 text-xs font-semibold text-charcoal-soft hover:text-charcoal">Cancel</button>
+          </div>
+        </form>
+      )}
+    </div>
+  );
+}
+
 export function OrderDetail() {
   const { orderNumber } = useParams();
   const [o, set] = useState(null);
@@ -522,6 +649,7 @@ export function OrderDetail() {
             {o.invoice && <button type="button" onClick={async () => { const blob = await downloadAccountInvoice(o.invoice.id); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `${o.invoice.invoiceNumber}.pdf`; a.click(); URL.revokeObjectURL(url); }} className="rounded-full border border-charcoal/20 px-4 py-2 text-xs font-semibold text-charcoal">Download Invoice</button>}
           </div>
           {o.shipment && <div className="rounded-3xl border border-charcoal/10 bg-white p-6"><h3 className="font-serif-display text-lg text-charcoal">Delivery tracking</h3><p className="mt-2 text-sm text-charcoal-soft">{o.shipment.status.replaceAll("_", " ")} {o.shipment.carrier ? `· ${o.shipment.carrier}` : ""}</p>{o.shipment.trackingNumber && <p className="mt-1 text-sm text-charcoal-soft">Tracking: {o.shipment.trackingNumber}</p>}{o.shipment.estimatedDelivery && <p className="mt-1 text-sm text-charcoal-soft">Estimated delivery: {new Date(o.shipment.estimatedDelivery).toLocaleDateString("en-IN")}</p>}{o.shipment.trackingUrl && <a className="mt-3 inline-block text-xs font-semibold text-terracotta" href={o.shipment.trackingUrl} target="_blank" rel="noreferrer">Track shipment</a>}</div>}
+          <ReturnRequestPanel orderNumber={o.orderNumber} order={o} />
         </div>
       )}
       {error && <p className="text-sm font-medium text-terracotta bg-terracotta/10 p-4 rounded-xl">{error}</p>}
@@ -537,6 +665,207 @@ export function AccountInvoices() {
   useEffect(() => { accountInvoices().then((r) => setItems(r.data || [])).catch((e) => setError(e.message)); }, []);
   const download = async (item) => { try { const blob = await downloadAccountInvoice(item.id); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `${item.invoiceNumber}.pdf`; a.click(); URL.revokeObjectURL(url); } catch (e) { setError(e.message); } };
   return <div className="mx-auto max-w-4xl space-y-8 px-5 py-12 sm:px-8"><SectionHeading eyebrow="Customer Account" title="Invoices" /><AccountNav />{error && <p className="rounded-xl bg-terracotta/10 p-3 text-sm text-terracotta">{error}</p>}<div className="overflow-x-auto rounded-2xl border border-charcoal/10"><table className="min-w-full text-left text-sm"><thead className="bg-ivory-dark/50 text-xs text-charcoal-soft"><tr><th className="p-4">Invoice</th><th className="p-4">Date</th><th className="p-4">Order</th><th className="p-4">Amount</th><th className="p-4"></th></tr></thead><tbody>{items.map((i)=><tr key={i.id} className="border-t border-charcoal/10"><td className="p-4 font-medium">{i.invoiceNumber}</td><td className="p-4">{new Date(i.invoiceDate).toLocaleDateString("en-IN")}</td><td className="p-4">{i.order.orderNumber}</td><td className="p-4">{formatInr(i.totalAmount)}</td><td className="p-4"><button onClick={()=>download(i)} className="text-xs font-semibold text-terracotta">Download</button></td></tr>)}</tbody></table>{!items.length && <p className="p-6 text-sm text-charcoal-soft">No invoices are available yet.</p>}</div></div>;
+}
+
+const RETURN_STATUS_LABELS = {
+  REQUESTED: "Requested",
+  APPROVED: "Approved",
+  REJECTED: "Rejected",
+  PICKUP_SCHEDULED: "Pickup Scheduled",
+  IN_TRANSIT: "In Transit",
+  RECEIVED: "Received",
+  REFUND_PENDING: "Refund Pending",
+  REFUNDED: "Refunded",
+  CLOSED: "Closed",
+};
+
+function ReturnStatusBadge({ status }) {
+  const rejected = status === "REJECTED";
+  const done = status === "REFUNDED" || status === "CLOSED";
+  const cls = rejected ? "bg-terracotta/10 text-terracotta" : done ? "bg-sage-light text-green-deep" : "bg-beige text-charcoal";
+  return <span className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider ${cls}`}>{RETURN_STATUS_LABELS[status] || status}</span>;
+}
+
+export function AccountReturns() {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    accountReturns()
+      .then((r) => setItems(r.data || []))
+      .catch((e) => setError(e.message || "Could not load your returns."))
+      .finally(() => setLoading(false));
+  }, []);
+
+  return (
+    <div className="mx-auto max-w-4xl space-y-8 px-5 py-12 sm:px-8">
+      <SectionHeading eyebrow="Customer Account" title="Returns" />
+      <AccountNav />
+
+      {loading ? (
+        <p className="text-xs text-charcoal-soft">Loading returns...</p>
+      ) : error ? (
+        <p className="rounded-xl bg-terracotta/10 p-4 text-sm text-terracotta">{error}</p>
+      ) : !items.length ? (
+        <div className="rounded-3xl border border-dashed border-charcoal/20 bg-ivory-dark/30 p-12 text-center">
+          <p className="text-sm text-charcoal-soft">You haven't requested any returns yet.</p>
+          <Link to="/account/orders" className="mt-4 inline-block text-xs font-semibold text-terracotta hover:underline">View your orders →</Link>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {items.map((r) => (
+            <Link
+              key={r.id}
+              to={`/account/returns/${r.id}`}
+              className="flex flex-col gap-3 rounded-2xl border border-charcoal/10 bg-white p-5 transition hover:border-terracotta/30 hover:shadow-md sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div className="space-y-1">
+                <span className="font-serif-display text-base text-charcoal block">Return #{r.id.slice(0, 8)}</span>
+                <p className="text-xs text-charcoal-soft">
+                  Order: {r.order?.orderNumber || "—"} · Requested {r.createdAt ? new Date(r.createdAt).toLocaleDateString("en-IN") : "—"}
+                </p>
+                <p className="text-xs text-charcoal-soft">
+                  {(r.items || []).map((ri) => `${ri.orderItem?.productNameSnapshot || "Item"} × ${ri.quantity}`).join(", ")}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                {r.refundStatus && <span className="text-xs font-medium text-charcoal-soft">Refund: {r.refundStatus}</span>}
+                <ReturnStatusBadge status={r.status} />
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const RETURN_TIMELINE_STEPS = [
+  { status: "REQUESTED", label: "Requested", timestampKey: "createdAt" },
+  { status: "APPROVED", label: "Approved", timestampKey: "approvedAt" },
+  { status: "PICKUP_SCHEDULED", label: "Pickup Scheduled" },
+  { status: "IN_TRANSIT", label: "In Transit" },
+  { status: "RECEIVED", label: "Received", timestampKey: "receivedAt" },
+  { status: "REFUND_PENDING", label: "Refund Pending" },
+  { status: "REFUNDED", label: "Refunded", timestampKey: "completedAt" },
+  { status: "CLOSED", label: "Closed", timestampKey: "completedAt" },
+];
+
+function ReturnTimeline({ returnRequest }) {
+  if (returnRequest.status === "REJECTED") {
+    return (
+      <div className="rounded-3xl border border-terracotta/30 bg-terracotta/5 p-6">
+        <p className="text-sm font-semibold text-terracotta">This return request was rejected.</p>
+        {returnRequest.rejectedAt && <p className="mt-1 text-xs text-charcoal-soft">Rejected on {new Date(returnRequest.rejectedAt).toLocaleString("en-IN")}</p>}
+        {returnRequest.details && <p className="mt-2 text-xs text-charcoal-soft whitespace-pre-line">{returnRequest.details}</p>}
+      </div>
+    );
+  }
+
+  const currentIndex = RETURN_TIMELINE_STEPS.findIndex((s) => s.status === returnRequest.status);
+
+  return (
+    <div className="rounded-3xl border border-charcoal/10 bg-white p-6">
+      <h3 className="font-serif-display text-lg text-charcoal mb-5">Status Timeline</h3>
+      <ol className="space-y-4">
+        {RETURN_TIMELINE_STEPS.map((step, idx) => {
+          const reached = currentIndex >= 0 && idx <= currentIndex;
+          const current = idx === currentIndex;
+          const ts = step.timestampKey ? returnRequest[step.timestampKey] : null;
+          return (
+            <li key={step.status} className="flex items-start gap-3">
+              <span
+                aria-hidden="true"
+                className={`mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full text-[10px] font-bold ${
+                  current ? "bg-terracotta text-white" : reached ? "bg-sage-light text-green-deep" : "bg-charcoal/10 text-charcoal-soft"
+                }`}
+              >
+                {reached ? "✓" : idx + 1}
+              </span>
+              <div>
+                <p className={`text-sm font-semibold ${current ? "text-terracotta" : reached ? "text-charcoal" : "text-charcoal-soft"}`}>
+                  {step.label}
+                  {current && <span className="ml-2 rounded-full bg-terracotta/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-terracotta">Current</span>}
+                </p>
+                {ts && <p className="text-xs text-charcoal-soft">{new Date(ts).toLocaleString("en-IN")}</p>}
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  );
+}
+
+export function AccountReturnDetail() {
+  const { id } = useParams();
+  const [r, setR] = useState(null);
+  const [notFound, setNotFound] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    setR(null);
+    setNotFound(false);
+    setError("");
+    accountReturn(id)
+      .then((res) => setR(res.data))
+      .catch((e) => {
+        if (e instanceof ApiRequestError && e.status === 404) setNotFound(true);
+        else setError(e.message || "Could not load this return request.");
+      });
+  }, [id]);
+
+  if (notFound) {
+    return (
+      <div className="mx-auto max-w-3xl px-5 py-12 sm:px-8 space-y-6 text-center">
+        <SectionHeading eyebrow="Customer Account" title="Return Not Found" />
+        <p className="text-sm text-charcoal-soft">We couldn't find that return request.</p>
+        <Link to="/account/returns" className="inline-block text-xs font-semibold uppercase tracking-wider text-terracotta hover:underline">← Back to Returns</Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto max-w-3xl px-5 py-12 sm:px-8 space-y-6">
+      {r && (
+        <div className="space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-charcoal/10 pb-4">
+            <div>
+              <span className="text-xs font-semibold uppercase tracking-widest text-terracotta">Return Request</span>
+              <h1 className="font-serif-display text-3xl text-charcoal">#{r.id.slice(0, 8)}</h1>
+              <p className="mt-1 text-xs text-charcoal-soft">Order: {r.order?.orderNumber || "—"}</p>
+            </div>
+            <ReturnStatusBadge status={r.status} />
+          </div>
+
+          <div className="rounded-3xl border border-charcoal/10 bg-white p-6 space-y-4">
+            <h3 className="font-serif-display text-lg text-charcoal">Returned Items</h3>
+            <ul className="divide-y divide-charcoal/5">
+              {(r.items || []).map((ri) => (
+                <li key={ri.id} className="flex justify-between py-3 text-xs">
+                  <span className="font-medium text-charcoal">{ri.orderItem?.productNameSnapshot || "Item"} × {ri.quantity}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="border-t border-charcoal/10 pt-4 text-sm">
+              <p><span className="font-semibold text-charcoal">Reason: </span><span className="text-charcoal-soft">{r.reason}</span></p>
+              {r.details && <p className="mt-1"><span className="font-semibold text-charcoal">Details: </span><span className="text-charcoal-soft whitespace-pre-line">{r.details}</span></p>}
+              {r.refundAmount != null && Number(r.refundAmount) > 0 && (
+                <p className="mt-1"><span className="font-semibold text-charcoal">Refund amount: </span><span className="text-charcoal-soft">{formatInr(Number(r.refundAmount))}{r.refundStatus ? ` (${r.refundStatus})` : ""}</span></p>
+              )}
+            </div>
+          </div>
+
+          <ReturnTimeline returnRequest={r} />
+        </div>
+      )}
+      {error && <p className="text-sm font-medium text-terracotta bg-terracotta/10 p-4 rounded-xl">{error}</p>}
+      <Link to="/account/returns" className="inline-block text-xs font-semibold uppercase tracking-wider text-terracotta hover:underline">
+        ← Return to Returns
+      </Link>
+    </div>
+  );
 }
 
 export function Forgot() {
