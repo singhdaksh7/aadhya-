@@ -331,6 +331,8 @@ export default function AdminBanners() {
                 placeholder="https://images.unsplash.com/..."
                 pickerTitle="Select banner desktop image"
                 inputClassName="w-full rounded-xl border border-charcoal/20 px-4 py-2.5 text-sm focus:border-terracotta focus:outline-none"
+                enableCrop
+                aspectOptions={["wide", "banner", "free"]}
               />
 
               <ImagePickerInput
@@ -340,6 +342,8 @@ export default function AdminBanners() {
                 placeholder="Fallback to desktop if empty"
                 pickerTitle="Select banner mobile image"
                 inputClassName="w-full rounded-xl border border-charcoal/20 px-4 py-2.5 text-sm focus:border-terracotta focus:outline-none"
+                enableCrop
+                aspectOptions={["wide", "square", "free"]}
               />
             </div>
 

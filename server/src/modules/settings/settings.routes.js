@@ -33,6 +33,7 @@ export const DEFAULT_SETTINGS = {
   branding: {
     desktopLogo: "",
     mobileLogo: "",
+    secondaryLogo: "",
     favicon: "",
     logoAltText: "Aadya Logo",
     logoWidthDesktop: 140,
@@ -232,6 +233,7 @@ const settingsValidationSchema = z.object({
   branding: z.object({
     desktopLogo: z.string().max(500).optional(),
     mobileLogo: z.string().max(500).optional(),
+    secondaryLogo: z.string().max(500).optional(),
     favicon: z.string().max(500).optional(),
     logoAltText: z.string().max(100).optional(),
     logoWidthDesktop: z.number().int().min(40).max(400).optional(),

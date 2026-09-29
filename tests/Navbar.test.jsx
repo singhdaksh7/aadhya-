@@ -1,0 +1,102 @@
+import { describe, it, expect, vi } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/react";
+import { BrowserRouter } from "react-router-dom";
+import Navbar from "../src/components/Navbar";
+
+let mockSettings = {};
+
+vi.mock("../src/context/CartContext", () => ({
+  useCart: () => ({ count: 0, setIsOpen: vi.fn() }),
+}));
+vi.mock("../src/context/CustomerAuthContext", () => ({
+  useCustomerAuth: () => ({ user: null }),
+}));
+vi.mock("../src/hooks/useSiteSettings", () => ({
+  useSiteSettings: () => mockSettings,
+}));
+vi.mock("../src/lib/api", () => ({
+  fetchNavigation: vi.fn(() => Promise.resolve({ data: { items: [] } })),
+  resolveMediaUrl: (url) => {
+    if (!url) return null;
+    return /^https?:\/\//.test(url) ? url : `http://api.test${url}`;
+  },
+}));
+
+function renderNavbar() {
+  return render(
+    <BrowserRouter>
+      <Navbar />
+    </BrowserRouter>
+  );
+}
+
+describe("Navbar logo rendering", () => {
+  it("shows the store name text when no logo is configured", () => {
+    mockSettings = { general: { storeName: "Aadya" }, branding: {}, header: {}, announcementBar: {} };
+    renderNavbar();
+    expect(screen.getAllByText("Aadya").length).toBeGreaterThan(0);
+    expect(screen.queryByAltText(/Aadya Logo/)).not.toBeInTheDocument();
+  });
+
+  it("renders the uploaded desktop logo with a normalized absolute URL", () => {
+    mockSettings = {
+      general: { storeName: "Aadya" },
+      branding: { desktopLogo: "/uploads/products/logo.png", logoAltText: "Aadya Logo", logoWidthDesktop: 150 },
+      header: {},
+      announcementBar: {},
+    };
+    renderNavbar();
+    const images = screen.getAllByAltText("Aadya Logo");
+    expect(images.length).toBeGreaterThan(0);
+    images.forEach((img) => {
+      expect(img.getAttribute("src")).toMatch(/^http:\/\/api\.test\/uploads\/products\/logo\.png$/);
+    });
+  });
+
+  it("passes an already-absolute logo URL through unchanged (no double-prepending)", () => {
+    mockSettings = {
+      general: { storeName: "Aadya" },
+      branding: { desktopLogo: "https://cdn.example.com/logo.png", logoAltText: "Aadya Logo" },
+      header: {},
+      announcementBar: {},
+    };
+    renderNavbar();
+    const images = screen.getAllByAltText("Aadya Logo");
+    images.forEach((img) => {
+      expect(img.getAttribute("src")).toBe("https://cdn.example.com/logo.png");
+    });
+  });
+
+  it("falls back to the text wordmark if the configured logo fails to load", () => {
+    mockSettings = {
+      general: { storeName: "Aadya" },
+      branding: { desktopLogo: "/uploads/products/broken.png", logoAltText: "Aadya Logo" },
+      header: {},
+      announcementBar: {},
+    };
+    renderNavbar();
+    const images = screen.getAllByAltText("Aadya Logo");
+    images.forEach((img) => fireEvent.error(img));
+    expect(screen.getAllByText("Aadya").length).toBeGreaterThan(0);
+  });
+
+  it("uses the dedicated mobile logo width when set", () => {
+    mockSettings = {
+      general: { storeName: "Aadya" },
+      branding: {
+        desktopLogo: "/uploads/products/logo.png",
+        mobileLogo: "/uploads/products/logo-mobile.png",
+        logoAltText: "Aadya Logo",
+        logoWidthDesktop: 160,
+        logoWidthMobile: 90,
+      },
+      header: {},
+      announcementBar: {},
+    };
+    renderNavbar();
+    const images = screen.getAllByAltText("Aadya Logo");
+    const widths = images.map((img) => img.style.width);
+    expect(widths).toContain("160px");
+    expect(widths).toContain("90px");
+  });
+});

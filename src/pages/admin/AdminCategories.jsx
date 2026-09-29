@@ -170,6 +170,8 @@ export default function AdminCategories() {
             onChange={(url) => setForm((f) => ({ ...f, image: url }))}
             pickerTitle="Select category image"
             inputClassName={inputCls}
+            enableCrop
+            aspect={1}
           />
           <ImagePickerInput
             label="Icon"
@@ -187,6 +189,8 @@ export default function AdminCategories() {
             onChange={(url) => setForm((f) => ({ ...f, desktopBanner: url }))}
             pickerTitle="Select category desktop banner"
             inputClassName={inputCls}
+            enableCrop
+            aspectOptions={["wide", "free"]}
           />
           <ImagePickerInput
             label="Mobile Banner"
@@ -194,6 +198,8 @@ export default function AdminCategories() {
             onChange={(url) => setForm((f) => ({ ...f, mobileBanner: url }))}
             pickerTitle="Select category mobile banner"
             inputClassName={inputCls}
+            enableCrop
+            aspectOptions={["wide", "free"]}
           />
         </div>
 

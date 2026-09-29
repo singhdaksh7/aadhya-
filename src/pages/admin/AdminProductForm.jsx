@@ -466,6 +466,8 @@ export default function AdminProductForm() {
             onChange={(url) => set("ogImage", url)}
             pickerTitle="Select OG image"
             inputClassName={inputCls}
+            enableCrop
+            aspectOptions={["wide", "square", "free"]}
           />
         </section>
 

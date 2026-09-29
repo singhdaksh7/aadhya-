@@ -8,7 +8,7 @@ import {
 import { Button } from "../../components/ui";
 import { LoadingNotice, ErrorNotice } from "../../components/StateNotice";
 import ImagePickerInput from "../../components/admin/ImagePickerInput";
-import { applyThemeVariables, DEFAULT_SITE_SETTINGS } from "../../hooks/useSiteSettings";
+import { applyThemeVariables, DEFAULT_SITE_SETTINGS, refreshSiteSettings } from "../../hooks/useSiteSettings";
 
 export default function AdminSettings() {
   const [activeTab, setActiveTab] = useState("general");
@@ -17,6 +17,7 @@ export default function AdminSettings() {
   const [pages, setPages] = useState([]);
   const [error, setError] = useState(null);
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -43,6 +44,7 @@ export default function AdminSettings() {
     if (e) e.preventDefault();
     setError(null);
     setSaved(false);
+    setSaving(true);
     try {
       const res = await adminUpdateSiteSettings(settings);
       if (res.data) {
@@ -51,10 +53,16 @@ export default function AdminSettings() {
           applyThemeVariables(res.data.appearance);
         }
       }
+      // Push the freshly-saved settings (logo, header/footer, colors, ...) to
+      // every mounted storefront component (Navbar, Footer, homepage) right
+      // away — no server restart or hard browser refresh required.
+      await refreshSiteSettings();
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
-      setError(err.message || "Could not save settings.");
+      setError(err.message || "Could not save settings. Please check the fields above and try again.");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -62,6 +70,7 @@ export default function AdminSettings() {
     if (!window.confirm("Reset all appearance and theme colors to Aadya defaults?")) return;
     setError(null);
     setSaved(false);
+    setSaving(true);
     try {
       const res = await adminResetAppearanceSettings();
       if (res.data) {
@@ -70,9 +79,13 @@ export default function AdminSettings() {
           applyThemeVariables(res.data.appearance);
         }
       }
+      await refreshSiteSettings();
       setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
     } catch (err) {
       setError(err.message || "Could not reset appearance.");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -103,8 +116,8 @@ export default function AdminSettings() {
           </p>
         </div>
         <div className="admin-page-header__actions">
-          <Button onClick={handleSave} className="bg-terracotta text-white">
-            Save All Settings
+          <Button onClick={handleSave} disabled={saving} className="bg-terracotta text-white disabled:opacity-60">
+            {saving ? "Saving…" : "Save All Settings"}
           </Button>
         </div>
       </div>
@@ -327,16 +340,32 @@ export default function AdminSettings() {
               }
               pickerTitle="Select desktop logo"
               inputClassName={inputCls}
+              enableCrop
+              aspectOptions={["free", "wide", "square"]}
             />
 
             <ImagePickerInput
-              label="Mobile Store Logo (Optional)"
+              label="Mobile Store Logo (Optional — falls back to desktop logo)"
               value={settings.branding?.mobileLogo}
               onChange={(url) =>
                 setSettings((s) => ({ ...s, branding: { ...s.branding, mobileLogo: url } }))
               }
               pickerTitle="Select mobile logo"
               inputClassName={inputCls}
+              enableCrop
+              aspectOptions={["free", "wide", "square"]}
+            />
+
+            <ImagePickerInput
+              label="Secondary / Light Logo (Optional — for dark backgrounds)"
+              value={settings.branding?.secondaryLogo}
+              onChange={(url) =>
+                setSettings((s) => ({ ...s, branding: { ...s.branding, secondaryLogo: url } }))
+              }
+              pickerTitle="Select secondary logo"
+              inputClassName={inputCls}
+              enableCrop
+              aspectOptions={["free", "wide", "square"]}
             />
 
             <ImagePickerInput
@@ -347,6 +376,8 @@ export default function AdminSettings() {
               }
               pickerTitle="Select favicon"
               inputClassName={inputCls}
+              enableCrop
+              aspect={1}
             />
 
             <div className="grid grid-cols-2 gap-4">
@@ -360,16 +391,36 @@ export default function AdminSettings() {
                   className={inputCls}
                 />
               </div>
+              <div />
               <div>
                 <label className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Logo Width Desktop (px)</label>
                 <input
                   type="number"
+                  min={40}
+                  max={400}
                   value={settings.branding?.logoWidthDesktop || 140}
-                  onChange={(e) =>
-                    setSettings((s) => ({ ...s, branding: { ...s.branding, logoWidthDesktop: Number(e.target.value) || 140 } }))
-                  }
+                  onChange={(e) => {
+                    const clamped = Math.min(400, Math.max(40, Number(e.target.value) || 140));
+                    setSettings((s) => ({ ...s, branding: { ...s.branding, logoWidthDesktop: clamped } }));
+                  }}
                   className={inputCls}
                 />
+                <p className="mt-1 text-[11px] text-charcoal-soft">Constrained 40–400px so the header can't be broken.</p>
+              </div>
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Logo Width Mobile (px)</label>
+                <input
+                  type="number"
+                  min={30}
+                  max={300}
+                  value={settings.branding?.logoWidthMobile || 110}
+                  onChange={(e) => {
+                    const clamped = Math.min(300, Math.max(30, Number(e.target.value) || 110));
+                    setSettings((s) => ({ ...s, branding: { ...s.branding, logoWidthMobile: clamped } }));
+                  }}
+                  className={inputCls}
+                />
+                <p className="mt-1 text-[11px] text-charcoal-soft">Constrained 30–300px so the mobile header can't be broken.</p>
               </div>
             </div>
           </div>
@@ -459,6 +510,8 @@ export default function AdminSettings() {
               }
               pickerTitle="Select footer logo"
               inputClassName={inputCls}
+              enableCrop
+              aspectOptions={["free", "wide", "square"]}
             />
             <div>
               <label className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Brand Description in Footer</label>

@@ -91,6 +91,44 @@ describe("Footer", () => {
     expect(link).toHaveAttribute("rel", "noopener noreferrer");
   });
 
+  it("falls back to the primary logo when no dedicated footer logo is set", () => {
+    mockSettings = {
+      general: { storeName: "Aadya" },
+      footer: { socialHeading: "Connect With Us" },
+      social: {},
+      branding: { desktopLogo: "/uploads/products/logo.png" },
+    };
+    renderFooter();
+
+    const img = screen.getByAltText("Aadya");
+    expect(img.getAttribute("src")).toMatch(/\/uploads\/products\/logo\.png$/);
+  });
+
+  it("prefers a dedicated footer logo over the primary logo when both are set", () => {
+    mockSettings = {
+      general: { storeName: "Aadya" },
+      footer: { socialHeading: "Connect With Us", footerLogo: "/uploads/products/footer-logo.png" },
+      social: {},
+      branding: { desktopLogo: "/uploads/products/logo.png" },
+    };
+    renderFooter();
+
+    const img = screen.getByAltText("Aadya");
+    expect(img.getAttribute("src")).toMatch(/\/uploads\/products\/footer-logo\.png$/);
+  });
+
+  it("falls back to the text wordmark when neither logo is set", () => {
+    mockSettings = {
+      general: { storeName: "Aadya" },
+      footer: { socialHeading: "Connect With Us" },
+      social: {},
+      branding: {},
+    };
+    renderFooter();
+
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+  });
+
   it("does not render contact rows when no contact info is configured", () => {
     mockSettings = {
       general: {},

@@ -466,6 +466,8 @@ export default function AdminBlog() {
                 onChange={(url) => setFormData({ ...formData, featuredImage: url })}
                 pickerTitle="Select Featured Blog Image"
                 inputClassName="w-full px-3 py-2 text-xs rounded-xl border border-charcoal/15 bg-white text-charcoal focus:outline-none"
+                enableCrop
+                aspectOptions={["wide", "square", "free"]}
               />
 
               {/* Article Content */}

@@ -7,7 +7,8 @@ import { useSiteSettings } from "../hooks/useSiteSettings";
 import TopUtilityBar from "./TopUtilityBar";
 import SearchModal from "./SearchModal";
 
-import { fetchNavigation } from "../lib/api";
+import { fetchNavigation, resolveMediaUrl } from "../lib/api";
+import BrandLogo from "./BrandLogo";
 
 const DEFAULT_NAV_LINKS = [
   { to: "/shop", label: "Home Decor" },
@@ -57,6 +58,31 @@ export default function Navbar() {
     setMobileMenuOpen(false);
   }, [location.pathname]);
 
+  // Keep the browser tab favicon in sync with the admin-configured branding
+  // favicon, falling back to the static /favicon.svg shipped with the app if
+  // none is set or the configured one fails to load.
+  useEffect(() => {
+    const favicon = resolveMediaUrl(branding?.favicon);
+    if (!favicon) return;
+    let link = document.querySelector('link[rel="icon"]');
+    if (!link) {
+      link = document.createElement("link");
+      link.rel = "icon";
+      document.head.appendChild(link);
+    }
+    const previousHref = link.href;
+    const testImg = new Image();
+    testImg.onload = () => { link.href = favicon; };
+    testImg.onerror = () => {
+      if (import.meta.env.DEV) {
+        // eslint-disable-next-line no-console
+        console.warn("[Navbar] configured favicon failed to load, keeping previous favicon.");
+      }
+      link.href = previousHref;
+    };
+    testImg.src = favicon;
+  }, [branding?.favicon]);
+
   return (
     <>
       {/* 1. Slim Top Utility Bar */}
@@ -85,20 +111,29 @@ export default function Navbar() {
             <IconMenu className="h-6 w-6" />
           </button>
 
-          {/* Left: Logo */}
+          {/* Left: Logo — desktop and mobile variants both fall back to the
+              store name text if unset or broken, and each has its own
+              admin-controlled width so neither can blow out the header. */}
           <Link to="/" className="flex items-center gap-2 shrink-0">
-            {branding?.desktopLogo ? (
-              <img
-                src={branding.desktopLogo}
-                alt={branding.logoAltText || "Aadya Logo"}
-                style={{ width: branding.logoWidthDesktop ? `${branding.logoWidthDesktop}px` : "auto" }}
-                className="h-8 object-contain"
+            <span className="hidden sm:inline-flex items-center">
+              <BrandLogo
+                src={branding?.desktopLogo}
+                alt={branding?.logoAltText || `${general?.storeName || "Aadya"} Logo`}
+                fallbackText={general?.storeName || "Aadya"}
+                widthPx={branding?.logoWidthDesktop || 140}
+                className="h-8 object-contain max-w-[240px]"
               />
-            ) : (
-              <span className="font-serif-display text-2xl tracking-tight text-charcoal sm:text-3xl font-bold">
-                {general?.storeName || "Aadya"}
-              </span>
-            )}
+            </span>
+            <span className="inline-flex sm:hidden items-center">
+              <BrandLogo
+                src={branding?.mobileLogo || branding?.desktopLogo}
+                alt={branding?.logoAltText || `${general?.storeName || "Aadya"} Logo`}
+                fallbackText={general?.storeName || "Aadya"}
+                widthPx={branding?.logoWidthMobile || 110}
+                className="h-7 object-contain max-w-[180px]"
+                textClassName="font-serif-display text-xl tracking-tight text-charcoal font-bold"
+              />
+            </span>
           </Link>
 
           {/* Center: Large Search Bar */}

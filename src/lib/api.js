@@ -11,6 +11,14 @@ export function resolveProductImageUrl(url) {
   return /^https?:\/\//.test(url) ? url : `${API_ORIGIN}${url}`;
 }
 
+// Single canonical media URL normalizer, reused everywhere an admin-uploaded
+// asset (logo, favicon, banner, category image, etc.) needs to be rendered.
+// Handles: a full https URL (S3/CDN/public storage — returned unchanged), a
+// server-relative "/uploads/..." path (resolved against the API origin), and
+// a falsy/empty value (returns null so callers can fall back cleanly). Never
+// double-prepends the API origin because the absolute-URL check runs first.
+export const resolveMediaUrl = resolveProductImageUrl;
+
 export class ApiRequestError extends Error {
   constructor(message, status, details) {
     super(message);

@@ -384,6 +384,8 @@ export default function AdminPages() {
                 onChange={(url) => setFormData({ ...formData, featuredImage: url })}
                 pickerTitle="Select Featured Page Image"
                 inputClassName="w-full px-3 py-2 text-xs rounded-xl border border-charcoal/15 bg-white text-charcoal focus:outline-none"
+                enableCrop
+                aspectOptions={["wide", "square", "free"]}
               />
 
               {/* Page Body Content */}

@@ -26,6 +26,7 @@ export const DEFAULT_SITE_SETTINGS = {
   branding: {
     desktopLogo: "",
     mobileLogo: "",
+    secondaryLogo: "",
     favicon: "",
     logoAltText: "Aadya Logo",
     logoWidthDesktop: 140,
@@ -242,35 +243,60 @@ export function applyThemeVariables(appearance) {
   }
 }
 
+// Module-level shared store so every component using useSiteSettings() across
+// the storefront (Navbar, Footer, homepage, ...) re-renders from the same
+// fetched data, and so an admin save can push fresh settings to all of them
+// via refreshSiteSettings() without requiring a hard browser refresh.
+let sharedSettings = DEFAULT_SITE_SETTINGS;
+let hasFetchedOnce = false;
+const subscribers = new Set();
+
+function notifySubscribers() {
+  subscribers.forEach((cb) => cb(sharedSettings));
+}
+
+function loadSiteSettings() {
+  try {
+    if (typeof fetchSiteSettings !== "function") return Promise.resolve();
+    const promise = fetchSiteSettings();
+    if (!promise || typeof promise.then !== "function") return Promise.resolve();
+    return promise
+      .then((res) => {
+        if (!res?.data) return;
+        sharedSettings = { ...sharedSettings, ...res.data };
+        hasFetchedOnce = true;
+        if (sharedSettings.appearance) {
+          applyThemeVariables(sharedSettings.appearance);
+        }
+        notifySubscribers();
+      })
+      .catch(() => {});
+  } catch {
+    // Silently fall back to DEFAULT_SITE_SETTINGS if api mock omits fetchSiteSettings in test suite
+    return Promise.resolve();
+  }
+}
+
+// Call after any admin save that touches site settings (branding, header,
+// footer, appearance, ...) so already-mounted storefront components pick up
+// the change immediately instead of requiring a server restart or a hard
+// browser refresh.
+export function refreshSiteSettings() {
+  return loadSiteSettings();
+}
+
 export function useSiteSettings() {
-  const [settings, setSettings] = useState(DEFAULT_SITE_SETTINGS);
+  const [settings, setSettings] = useState(sharedSettings);
 
   useEffect(() => {
-    let cancelled = false;
-    try {
-      if (typeof fetchSiteSettings === "function") {
-        const promise = fetchSiteSettings();
-        if (promise && typeof promise.then === "function") {
-          promise
-            .then((res) => {
-              if (cancelled || !res?.data) return;
-              const data = res.data;
-              setSettings((prev) => {
-                const next = { ...prev, ...data };
-                if (next.appearance) {
-                  applyThemeVariables(next.appearance);
-                }
-                return next;
-              });
-            })
-            .catch(() => {});
-        }
-      }
-    } catch {
-      // Silently fall back to DEFAULT_SITE_SETTINGS if api mock omits fetchSiteSettings in test suite
+    subscribers.add(setSettings);
+    if (!hasFetchedOnce) {
+      loadSiteSettings();
+    } else {
+      setSettings(sharedSettings);
     }
     return () => {
-      cancelled = true;
+      subscribers.delete(setSettings);
     };
   }, []);
 
