@@ -112,7 +112,7 @@ describe("Role gating on Razorpay credential endpoints", () => {
     const res = await request(app)
       .put("/api/admin/integrations/credentials")
       .set("Authorization", `Bearer ${token}`)
-      .send({ provider: "RAZORPAY", environment: "LIVE", data: { keyId: ADMIN_KEY_ID, keySecret: ADMIN_SECRET } });
+      .send({ provider: "RAZORPAY", environment: "LIVE", data: { keyId: ADMIN_KEY_ID, keySecret: ADMIN_SECRET, webhookSecret: ADMIN_WEBHOOK_SECRET } });
     expect(res.status).toBe(200);
   });
 
