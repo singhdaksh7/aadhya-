@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { useSiteSettings } from "../hooks/useSiteSettings";
+import BrandLogo from "./BrandLogo";
 
 export default function Footer() {
   const { footer, general, social, branding, supportEmail, supportPhone } = useSiteSettings();
@@ -76,16 +77,14 @@ export default function Footer() {
         <div className="grid grid-cols-2 gap-10 md:grid-cols-5">
           {/* Brand Intro Column */}
           <div className="col-span-2 space-y-4">
-            <Link to="/" className="font-serif-display text-3xl tracking-tight text-white font-bold inline-block">
-              {footer?.footerLogo || branding?.desktopLogo ? (
-                <img
-                  src={footer?.footerLogo || branding?.desktopLogo}
-                  alt={general?.storeName || "Aadya"}
-                  className="h-8 object-contain brightness-200"
-                />
-              ) : (
-                general?.storeName || "Aadya"
-              )}
+            <Link to="/" className="inline-block">
+              <BrandLogo
+                src={footer?.footerLogo || branding?.desktopLogo}
+                alt={general?.storeName || "Aadya"}
+                fallbackText={general?.storeName || "Aadya"}
+                className="h-8 object-contain brightness-200"
+                textClassName="font-serif-display text-3xl tracking-tight text-white font-bold"
+              />
             </Link>
             <p className="max-w-sm text-xs sm:text-sm leading-relaxed text-[#FAF6F0]/80">
               {brandDesc}

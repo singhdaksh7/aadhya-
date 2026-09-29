@@ -256,6 +256,8 @@ export default function AdminCollections() {
           onChange={(url) => setForm((f) => ({ ...f, image: url }))}
           pickerTitle="Select collection hero image"
           inputClassName={inputCls}
+          enableCrop
+          aspectOptions={["wide", "square", "free"]}
         />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <ImagePickerInput
@@ -264,6 +266,8 @@ export default function AdminCollections() {
             onChange={(url) => setForm((f) => ({ ...f, desktopBanner: url }))}
             pickerTitle="Select collection desktop banner"
             inputClassName={inputCls}
+            enableCrop
+            aspectOptions={["wide", "free"]}
           />
           <ImagePickerInput
             label="Mobile Banner"
@@ -271,6 +275,8 @@ export default function AdminCollections() {
             onChange={(url) => setForm((f) => ({ ...f, mobileBanner: url }))}
             pickerTitle="Select collection mobile banner"
             inputClassName={inputCls}
+            enableCrop
+            aspectOptions={["wide", "free"]}
           />
         </div>
         <input
