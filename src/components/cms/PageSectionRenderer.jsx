@@ -21,24 +21,24 @@ function SectionItem({ section }) {
   switch (type) {
     case "HERO":
       return (
-        <div className="relative rounded-3xl overflow-hidden bg-ivory border border-charcoal/10 p-8 sm:p-14 flex flex-col md:flex-row items-center gap-8 shadow-sm">
+        <div className="relative rounded-3xl overflow-hidden store-surface border store-border p-8 sm:p-14 flex flex-col md:flex-row items-center gap-8 shadow-sm">
           <div className="flex-1 space-y-4">
             {content.eyebrow && (
-              <span className="text-xs font-semibold uppercase tracking-widest text-terracotta">{content.eyebrow}</span>
+              <span className="text-xs font-semibold uppercase tracking-widest store-primary">{content.eyebrow}</span>
             )}
-            <h2 className="font-serif-display text-3xl sm:text-4xl text-charcoal">{content.title}</h2>
-            {content.body && <p className="text-sm text-charcoal-soft leading-relaxed">{content.body}</p>}
+            <h2 className="font-serif-display text-3xl sm:text-4xl store-text">{content.title}</h2>
+            {content.body && <p className="text-sm store-muted leading-relaxed">{content.body}</p>}
             {content.buttonText && content.buttonUrl && (
               <Link
                 to={content.buttonUrl}
-                className="inline-block rounded-xl bg-terracotta px-6 py-3 text-xs font-semibold text-white shadow-sm hover:bg-terracotta/90 transition"
+                className="inline-block rounded-xl store-bg-primary px-6 py-3 text-xs font-semibold text-white shadow-sm store-primary-hover transition"
               >
                 {content.buttonText}
               </Link>
             )}
           </div>
           {content.imageUrl && (
-            <div className="w-full md:w-1/2 aspect-video rounded-2xl overflow-hidden border border-charcoal/10 shadow-sm">
+            <div className="w-full md:w-1/2 aspect-video rounded-2xl overflow-hidden border store-border shadow-sm">
               <img src={resolveProductImageUrl(content.imageUrl)} alt="" className="w-full h-full object-cover" />
             </div>
           )}
@@ -49,15 +49,15 @@ function SectionItem({ section }) {
       return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center py-4">
           {content.imageUrl && (
-            <div className="aspect-square rounded-2xl overflow-hidden border border-charcoal/10 shadow-sm">
+            <div className="aspect-square rounded-2xl overflow-hidden border store-border shadow-sm">
               <img src={resolveProductImageUrl(content.imageUrl)} alt="" className="w-full h-full object-cover" />
             </div>
           )}
           <div className="space-y-4">
             {content.eyebrow && (
-              <span className="text-xs font-semibold uppercase tracking-widest text-terracotta">{content.eyebrow}</span>
+              <span className="text-xs font-semibold uppercase tracking-widest store-primary">{content.eyebrow}</span>
             )}
-            <h3 className="font-serif-display text-2xl sm:text-3xl text-charcoal">{content.title}</h3>
+            <h3 className="font-serif-display text-2xl sm:text-3xl store-text">{content.title}</h3>
             {content.body && <RichTextRenderer content={content.body} />}
           </div>
         </div>
@@ -65,21 +65,21 @@ function SectionItem({ section }) {
 
     case "RICH_TEXT":
       return (
-        <div className="bg-white p-8 sm:p-12 rounded-3xl border border-charcoal/10 shadow-sm">
-          {content.title && <h3 className="font-serif-display text-2xl text-charcoal mb-6">{content.title}</h3>}
+        <div className="store-surface p-8 sm:p-12 rounded-3xl border store-border shadow-sm">
+          {content.title && <h3 className="font-serif-display text-2xl store-text mb-6">{content.title}</h3>}
           <RichTextRenderer content={content.body || content.html || ""} />
         </div>
       );
 
     case "CTA":
       return (
-        <div className="rounded-3xl bg-sage-light p-8 sm:p-12 text-center space-y-4 border border-sage/20">
-          <h3 className="font-serif-display text-2xl sm:text-3xl text-green-deep">{content.title || settings.title}</h3>
-          {content.body && <p className="text-sm text-green-deep/80 max-w-xl mx-auto">{content.body}</p>}
+        <div className="rounded-3xl store-bg-secondary-soft p-8 sm:p-12 text-center space-y-4 border border-[var(--theme-secondary)]/20">
+          <h3 className="font-serif-display text-2xl sm:text-3xl store-secondary">{content.title || settings.title}</h3>
+          {content.body && <p className="text-sm store-secondary max-w-xl mx-auto">{content.body}</p>}
           {content.buttonText && content.buttonUrl && (
             <Link
               to={content.buttonUrl}
-              className="inline-block rounded-xl bg-terracotta px-6 py-3 text-xs font-semibold text-white shadow-sm hover:bg-terracotta/90 transition"
+              className="inline-block rounded-xl store-bg-primary px-6 py-3 text-xs font-semibold text-white shadow-sm store-primary-hover transition"
             >
               {content.buttonText}
             </Link>
@@ -113,12 +113,12 @@ function BlogPreviewSection({ settings = {}, content = {} }) {
 
   return (
     <div className="space-y-6 py-4">
-      <div className="flex justify-between items-end border-b border-charcoal/10 pb-4">
+      <div className="flex justify-between items-end border-b store-border pb-4">
         <div>
-          <span className="text-xs font-semibold uppercase tracking-widest text-terracotta">Editorial Journal</span>
-          <h3 className="font-serif-display text-2xl text-charcoal">{content.title || settings.title || "Latest Stories"}</h3>
+          <span className="text-xs font-semibold uppercase tracking-widest store-primary">Editorial Journal</span>
+          <h3 className="font-serif-display text-2xl store-text">{content.title || settings.title || "Latest Stories"}</h3>
         </div>
-        <Link to={settings.viewAllUrl || "/blog"} className="text-xs font-semibold text-terracotta hover:underline">
+        <Link to={settings.viewAllUrl || "/blog"} className="text-xs font-semibold store-primary hover:underline">
           View All Stories →
         </Link>
       </div>
@@ -127,7 +127,7 @@ function BlogPreviewSection({ settings = {}, content = {} }) {
         {posts.map((post) => (
           <Link key={post.id} to={`/blog/${post.slug}`} className="group space-y-3">
             {post.featuredImage && (
-              <div className="aspect-[4/3] rounded-2xl overflow-hidden bg-ivory border border-charcoal/10">
+              <div className="aspect-[4/3] rounded-2xl overflow-hidden store-surface border store-border">
                 <img
                   src={resolveProductImageUrl(post.featuredImage)}
                   alt={post.title}
@@ -135,9 +135,9 @@ function BlogPreviewSection({ settings = {}, content = {} }) {
                 />
               </div>
             )}
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-terracotta">{post.category}</span>
-            <h4 className="font-serif-display text-lg text-charcoal group-hover:text-terracotta transition">{post.title}</h4>
-            {post.excerpt && <p className="text-xs text-charcoal-soft line-clamp-2">{post.excerpt}</p>}
+            <span className="text-[10px] font-semibold uppercase tracking-wider store-primary">{post.category}</span>
+            <h4 className="font-serif-display text-lg store-text group-hover:store-primary transition">{post.title}</h4>
+            {post.excerpt && <p className="text-xs store-muted line-clamp-2">{post.excerpt}</p>}
           </Link>
         ))}
       </div>
@@ -163,12 +163,12 @@ function FaqPreviewSection({ settings = {}, content = {} }) {
 
   return (
     <div className="space-y-6 py-4">
-      <div className="flex justify-between items-end border-b border-charcoal/10 pb-4">
+      <div className="flex justify-between items-end border-b store-border pb-4">
         <div>
-          <span className="text-xs font-semibold uppercase tracking-widest text-terracotta">Customer Help</span>
-          <h3 className="font-serif-display text-2xl text-charcoal">{content.title || settings.title || "Frequently Asked Questions"}</h3>
+          <span className="text-xs font-semibold uppercase tracking-widest store-primary">Customer Help</span>
+          <h3 className="font-serif-display text-2xl store-text">{content.title || settings.title || "Frequently Asked Questions"}</h3>
         </div>
-        <Link to={settings.viewAllUrl || "/faq"} className="text-xs font-semibold text-terracotta hover:underline">
+        <Link to={settings.viewAllUrl || "/faq"} className="text-xs font-semibold store-primary hover:underline">
           View All FAQs →
         </Link>
       </div>
@@ -177,16 +177,16 @@ function FaqPreviewSection({ settings = {}, content = {} }) {
         {faqs.map((faq, idx) => {
           const isOpen = openIdx === idx;
           return (
-            <div key={faq.id} className="rounded-2xl border border-charcoal/10 bg-white overflow-hidden shadow-sm">
+            <div key={faq.id} className="rounded-2xl border store-border store-surface overflow-hidden shadow-sm">
               <button
                 onClick={() => setOpenIdx(isOpen ? -1 : idx)}
-                className="w-full px-6 py-4 text-left font-semibold text-sm text-charcoal flex justify-between items-center hover:bg-ivory/50 transition"
+                className="w-full px-6 py-4 text-left font-semibold text-sm store-text flex justify-between items-center hover:bg-black/5 transition"
               >
                 <span>{faq.question}</span>
-                <span className={`text-terracotta text-lg transition-transform ${isOpen ? "rotate-45" : ""}`}>+</span>
+                <span className={`store-primary text-lg transition-transform ${isOpen ? "rotate-45" : ""}`}>+</span>
               </button>
               {isOpen && (
-                <div className="px-6 pb-5 pt-1 text-xs text-charcoal-soft border-t border-charcoal/5 bg-ivory/20">
+                <div className="px-6 pb-5 pt-1 text-xs store-muted border-t store-border store-surface">
                   <RichTextRenderer content={faq.answer} />
                 </div>
               )}

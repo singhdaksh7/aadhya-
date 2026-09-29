@@ -27,7 +27,7 @@ export default function PromoBanners2Up({ promoCards }) {
           <Link
             key={idx}
             to={card.ctaUrl || "/shop"}
-            className="group relative overflow-hidden rounded-2xl border border-charcoal/10 aspect-[16/9] sm:aspect-[2/1] bg-[#FAF6F0] block shadow-sm hover:shadow-lg transition-all duration-300"
+            className="group relative overflow-hidden rounded-2xl border store-border aspect-[16/9] sm:aspect-[2/1] store-surface block shadow-sm hover:shadow-lg transition-all duration-300"
           >
             {/* Background Image */}
             <img
@@ -37,7 +37,7 @@ export default function PromoBanners2Up({ promoCards }) {
             />
             {/* Subtle Gradient Overlay */}
             <div className="absolute inset-0 bg-gradient-to-t from-charcoal/80 via-charcoal/30 to-transparent p-6 sm:p-8 flex flex-col justify-end text-white">
-              <span className="text-xs font-semibold uppercase tracking-widest text-terracotta-light">
+              <span className="text-xs font-semibold uppercase tracking-widest store-accent">
                 {card.eyebrow || "Curated Edit"}
               </span>
               <h3 className="font-serif-display text-2xl sm:text-3xl text-white mt-1">
@@ -46,7 +46,7 @@ export default function PromoBanners2Up({ promoCards }) {
               <p className="text-xs sm:text-sm text-white/90 mt-1">
                 {card.subtitle}
               </p>
-              <div className="mt-4 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-white group-hover:text-terracotta-light transition-colors">
+              <div className="mt-4 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-white group-hover:store-accent transition-colors">
                 <span>{card.ctaLabel || "Discover Now"}</span>
                 <svg className="h-4 w-4 transform transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />

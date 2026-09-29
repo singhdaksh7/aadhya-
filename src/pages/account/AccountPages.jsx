@@ -71,10 +71,10 @@ function AccountNav() {
     { path: "/account/notifications", label: "Notifications" },
   ];
   return (
-    <div className="flex gap-5 overflow-x-auto border-b border-charcoal/10 text-xs font-semibold uppercase tracking-wider no-scrollbar">
+    <div className="flex gap-5 overflow-x-auto border-b border-[var(--theme-border)]/10 text-xs font-semibold uppercase tracking-wider no-scrollbar">
       {items.map((item) => {
-        const active = pathname === item.path;
-        return <Link key={item.path} to={item.path} className={`shrink-0 border-b-2 px-1 pb-3 transition ${active ? "border-terracotta text-terracotta" : "border-transparent text-charcoal-soft hover:text-terracotta"}`}>{item.label}</Link>;
+        const active = pathname === item.path || (item.path === "/account/returns" && pathname.startsWith("/account/returns"));
+        return <Link key={item.path} to={item.path} className={`shrink-0 border-b-2 px-1 pb-3 transition ${active ? "border-[var(--theme-primary)] store-primary" : "border-transparent store-muted hover:text-[var(--theme-primary-hover)]"}`}>{item.label}</Link>;
       })}
     </div>
   );
@@ -82,13 +82,13 @@ function AccountNav() {
 
 function AddressForm({ form, setForm, onSubmit, label }) {
   return (
-    <form onSubmit={onSubmit} className="rounded-3xl border border-charcoal/10 bg-ivory-dark/30 p-6 space-y-4">
-      <h3 className="font-serif-display text-lg text-charcoal">{label}</h3>
+    <form onSubmit={onSubmit} className="rounded-3xl border border-[var(--theme-border)]/10 bg-ivory-dark/30 p-6 space-y-4">
+      <h3 className="font-serif-display text-lg store-text">{label}</h3>
       <div className="grid gap-3 sm:grid-cols-2">
         {fields.map((k) => (
           <input
             key={k}
-            className="w-full rounded-xl border border-charcoal/15 bg-white px-4 py-2.5 text-sm text-charcoal focus:border-terracotta focus:outline-none"
+            className="w-full rounded-xl border border-[var(--theme-border)]/15 store-bg px-4 py-2.5 text-sm store-text focus:border-[var(--theme-primary)] focus:outline-none"
             required={k !== "addressLine2"}
             placeholder={fieldLabels[k] || k}
             aria-label={fieldLabels[k] || k}
@@ -97,12 +97,12 @@ function AddressForm({ form, setForm, onSubmit, label }) {
           />
         ))}
       </div>
-      <label className="flex items-center gap-2 text-xs font-medium text-charcoal cursor-pointer">
+      <label className="flex items-center gap-2 text-xs font-medium store-text cursor-pointer">
         <input
           type="checkbox"
           checked={form.isDefault}
           onChange={(e) => setForm({ ...form, isDefault: e.target.checked })}
-          className="accent-terracotta rounded"
+          className="accent-[var(--theme-primary)] rounded"
         />
         <span>Set as default shipping address</span>
       </label>
@@ -145,67 +145,67 @@ export function Login({ register = false }) {
   return (
     <div className="mx-auto max-w-md px-5 py-16">
       <SectionHeading eyebrow="Account Portal" title={register ? "Create Your Account" : "Welcome Back"} />
-      <form onSubmit={submit} className="mt-8 space-y-4 rounded-3xl border border-charcoal/10 bg-ivory-dark/40 p-6 sm:p-8 shadow-sm">
+      <form onSubmit={submit} className="mt-8 space-y-4 rounded-3xl border border-[var(--theme-border)]/10 bg-ivory-dark/40 p-6 sm:p-8 shadow-sm">
         {register && (
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-charcoal-soft mb-1">Full Name</label>
+            <label className="block text-xs font-semibold uppercase tracking-wider store-muted mb-1">Full Name</label>
             <input
               required
               placeholder="Name"
-              className="w-full rounded-xl border border-charcoal/15 bg-white px-4 py-2.5 text-sm text-charcoal focus:border-terracotta focus:outline-none"
+              className="w-full rounded-xl border border-[var(--theme-border)]/15 store-bg px-4 py-2.5 text-sm store-text focus:border-[var(--theme-primary)] focus:outline-none"
               value={form.name}
               onChange={(e) => set({ ...form, name: e.target.value })}
             />
           </div>
         )}
         <div>
-          <label className="block text-xs font-semibold uppercase tracking-wider text-charcoal-soft mb-1">Email Address</label>
+          <label className="block text-xs font-semibold uppercase tracking-wider store-muted mb-1">Email Address</label>
           <input
             required
             type="email"
             placeholder="Email"
-            className="w-full rounded-xl border border-charcoal/15 bg-white px-4 py-2.5 text-sm text-charcoal focus:border-terracotta focus:outline-none"
+            className="w-full rounded-xl border border-[var(--theme-border)]/15 store-bg px-4 py-2.5 text-sm store-text focus:border-[var(--theme-primary)] focus:outline-none"
             value={form.email}
             onChange={(e) => set({ ...form, email: e.target.value })}
           />
         </div>
         {register && (
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-charcoal-soft mb-1">Mobile Phone (Optional)</label>
+            <label className="block text-xs font-semibold uppercase tracking-wider store-muted mb-1">Mobile Phone (Optional)</label>
             <input
               placeholder="phone"
-              className="w-full rounded-xl border border-charcoal/15 bg-white px-4 py-2.5 text-sm text-charcoal focus:border-terracotta focus:outline-none"
+              className="w-full rounded-xl border border-[var(--theme-border)]/15 store-bg px-4 py-2.5 text-sm store-text focus:border-[var(--theme-primary)] focus:outline-none"
               value={form.phone}
               onChange={(e) => set({ ...form, phone: e.target.value })}
             />
-            <p className="mt-1 text-xs text-charcoal-soft">10-digit Indian mobile number</p>
+            <p className="mt-1 text-xs store-muted">10-digit Indian mobile number</p>
           </div>
         )}
         <div>
-          <label className="block text-xs font-semibold uppercase tracking-wider text-charcoal-soft mb-1">Password</label>
+          <label className="block text-xs font-semibold uppercase tracking-wider store-muted mb-1">Password</label>
           <input
             required
             type="password"
             minLength="10"
             placeholder="Password"
-            className="w-full rounded-xl border border-charcoal/15 bg-white px-4 py-2.5 text-sm text-charcoal focus:border-terracotta focus:outline-none"
+            className="w-full rounded-xl border border-[var(--theme-border)]/15 store-bg px-4 py-2.5 text-sm store-text focus:border-[var(--theme-primary)] focus:outline-none"
             value={form.password}
             onChange={(e) => set({ ...form, password: e.target.value })}
           />
-          {register && <p className="mt-1 text-xs text-charcoal-soft">At least 10 characters, including a letter and a number.</p>}
+          {register && <p className="mt-1 text-xs store-muted">At least 10 characters, including a letter and a number.</p>}
         </div>
 
-        {error && <p className="text-xs font-medium text-terracotta bg-terracotta/10 p-3 rounded-xl">{error}</p>}
+        {error && <p className="text-xs font-medium store-primary store-bg-primary-soft p-3 rounded-xl">{error}</p>}
 
         <Button disabled={submitting} className="w-full py-3">{submitting ? (register ? "Creating account..." : "Signing in...") : (register ? "Create account" : "Log in")}</Button>
       </form>
 
-      <div className="mt-6 text-center text-xs text-charcoal-soft space-x-3">
-        <Link className="hover:text-terracotta underline" to={register ? "/login" : "/register"}>
+      <div className="mt-6 text-center text-xs store-muted space-x-3">
+        <Link className="hover:text-[var(--theme-primary-hover)] underline" to={register ? "/login" : "/register"}>
           {register ? "Already registered? Sign In" : "New to Aadya? Create an account"}
         </Link>
         <span>•</span>
-        <Link className="hover:text-terracotta underline" to="/forgot-password">
+        <Link className="hover:text-[var(--theme-primary-hover)] underline" to="/forgot-password">
           Forgot Password?
         </Link>
       </div>
@@ -213,28 +213,28 @@ export function Login({ register = false }) {
   );
 }
 
-const inputClass = "w-full rounded-xl border border-charcoal/15 bg-white px-4 py-2.5 text-sm text-charcoal focus:border-terracotta focus:outline-none focus:ring-2 focus:ring-terracotta/15";
+const inputClass = "w-full rounded-xl border border-[var(--theme-border)]/15 store-bg px-4 py-2.5 text-sm store-text focus:border-[var(--theme-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-primary)]/15";
 
 function SummaryCard({ title, detail, action, to }) {
-  return <Link to={to} className="group rounded-2xl border border-charcoal/10 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-terracotta/35 hover:shadow-md">
-    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-terracotta">{title}</p>
-    <p className="mt-2 text-sm leading-relaxed text-charcoal-soft">{detail}</p>
-    <span className="mt-4 inline-block text-xs font-semibold text-charcoal group-hover:text-terracotta">{action} <span aria-hidden="true">→</span></span>
+  return <Link to={to} className="group rounded-2xl border border-[var(--theme-border)]/10 store-bg p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-[var(--theme-primary)]/35 hover:shadow-md">
+    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] store-primary">{title}</p>
+    <p className="mt-2 text-sm leading-relaxed store-muted">{detail}</p>
+    <span className="mt-4 inline-block text-xs font-semibold store-text group-hover:text-[var(--theme-primary-hover)]">{action} <span aria-hidden="true">→</span></span>
   </Link>;
 }
 
 function OrderSummary({ orders, loading, error }) {
-  return <section className="rounded-3xl border border-charcoal/10 bg-white p-6 shadow-sm sm:p-7" aria-labelledby="recent-orders-heading">
-    <div className="flex items-baseline justify-between gap-4"><div><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-terracotta">Purchases</p><h2 id="recent-orders-heading" className="mt-1 font-serif-display text-2xl text-charcoal">Recent Orders</h2></div><Link to="/account/orders" className="shrink-0 text-xs font-semibold text-terracotta hover:underline">View all orders →</Link></div>
-    {loading ? <div className="mt-6 space-y-3"><div className="h-16 animate-pulse rounded-2xl bg-ivory-dark/60" /><div className="h-16 animate-pulse rounded-2xl bg-ivory-dark/60" /></div> : error ? <p className="mt-6 rounded-xl bg-terracotta/10 p-4 text-sm text-terracotta">We couldn’t load your orders. Please try again later.</p> : orders.length ? <div className="mt-6 divide-y divide-charcoal/10">{orders.slice(0, 3).map((order) => <div key={order.id || order.orderNumber} className="flex flex-col gap-3 py-4 first:pt-0 sm:flex-row sm:items-center sm:justify-between"><div><Link to={`/account/orders/${order.orderNumber}`} className="font-medium text-charcoal hover:text-terracotta">{order.orderNumber}</Link><p className="mt-1 text-xs text-charcoal-soft">{order.createdAt ? new Date(order.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "Order date unavailable"} · {order.status} · {order.paymentStatus}</p></div><div className="flex items-center justify-between gap-4"><span className="font-semibold text-charcoal">{formatInr(Number(order.totalAmount))}</span><Link to={`/account/orders/${order.orderNumber}`} className="text-xs font-semibold text-terracotta hover:underline">View order</Link></div></div>)}</div> : <div className="mt-6 rounded-2xl bg-ivory-dark/55 p-6"><p className="font-medium text-charcoal">No orders yet.</p><p className="mt-1 text-sm text-charcoal-soft">Your purchases and order status will appear here.</p><Link to="/shop" className="mt-4 inline-block text-xs font-semibold text-terracotta hover:underline">Explore the Store →</Link></div>}
+  return <section className="rounded-3xl border border-[var(--theme-border)]/10 store-bg p-6 shadow-sm sm:p-7" aria-labelledby="recent-orders-heading">
+    <div className="flex items-baseline justify-between gap-4"><div><p className="text-[10px] font-semibold uppercase tracking-[0.16em] store-primary">Purchases</p><h2 id="recent-orders-heading" className="mt-1 font-serif-display text-2xl store-text">Recent Orders</h2></div><Link to="/account/orders" className="shrink-0 text-xs font-semibold store-primary hover:underline">View all orders →</Link></div>
+    {loading ? <div className="mt-6 space-y-3"><div className="h-16 animate-pulse rounded-2xl bg-ivory-dark/60" /><div className="h-16 animate-pulse rounded-2xl bg-ivory-dark/60" /></div> : error ? <p className="mt-6 rounded-xl store-bg-primary-soft p-4 text-sm store-primary">We couldn’t load your orders. Please try again later.</p> : orders.length ? <div className="mt-6 divide-y divide-[var(--theme-border)]/10">{orders.slice(0, 3).map((order) => <div key={order.id || order.orderNumber} className="flex flex-col gap-3 py-4 first:pt-0 sm:flex-row sm:items-center sm:justify-between"><div><Link to={`/account/orders/${order.orderNumber}`} className="font-medium store-text hover:text-[var(--theme-primary-hover)]">{order.orderNumber}</Link><p className="mt-1 text-xs store-muted">{order.createdAt ? new Date(order.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "Order date unavailable"} · {order.status} · {order.paymentStatus}</p></div><div className="flex items-center justify-between gap-4"><span className="font-semibold store-text">{formatInr(Number(order.totalAmount))}</span><Link to={`/account/orders/${order.orderNumber}`} className="text-xs font-semibold store-primary hover:underline">View order</Link></div></div>)}</div> : <div className="mt-6 rounded-2xl bg-ivory-dark/55 p-6"><p className="font-medium store-text">No orders yet.</p><p className="mt-1 text-sm store-muted">Your purchases and order status will appear here.</p><Link to="/shop" className="mt-4 inline-block text-xs font-semibold store-primary hover:underline">Explore the Store →</Link></div>}
   </section>;
 }
 
 function AddressSummary({ addresses, loading, error }) {
   const address = addresses.find((item) => item.isDefault) || addresses[0];
-  return <section className="rounded-3xl border border-charcoal/10 bg-white p-6 shadow-sm sm:p-7" aria-labelledby="delivery-address-heading">
-    <div className="flex items-baseline justify-between gap-4"><div><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-terracotta">Delivery</p><h2 id="delivery-address-heading" className="mt-1 font-serif-display text-2xl text-charcoal">Default Delivery Address</h2></div><Link to="/account/addresses" className="shrink-0 text-xs font-semibold text-terracotta hover:underline">Manage addresses →</Link></div>
-    {loading ? <div className="mt-6 h-28 animate-pulse rounded-2xl bg-ivory-dark/60" /> : error ? <p className="mt-6 rounded-xl bg-terracotta/10 p-4 text-sm text-terracotta">We couldn’t load your addresses. Please try again later.</p> : address ? <div className="mt-6 text-sm leading-relaxed text-charcoal-soft"><span className="inline-flex rounded-full bg-sage-light px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-green-deep">{address.label}</span><p className="mt-3 font-medium text-charcoal">{address.fullName}</p><p>{address.addressLine1}{address.addressLine2 ? `, ${address.addressLine2}` : ""}</p><p>{address.city}, {address.state} – {address.postalCode}</p></div> : <div className="mt-6 rounded-2xl bg-ivory-dark/55 p-6"><p className="font-medium text-charcoal">No delivery address saved yet.</p><Link to="/account/addresses" className="mt-4 inline-block text-xs font-semibold text-terracotta hover:underline">Add address →</Link></div>}
+  return <section className="rounded-3xl border border-[var(--theme-border)]/10 store-bg p-6 shadow-sm sm:p-7" aria-labelledby="delivery-address-heading">
+    <div className="flex items-baseline justify-between gap-4"><div><p className="text-[10px] font-semibold uppercase tracking-[0.16em] store-primary">Delivery</p><h2 id="delivery-address-heading" className="mt-1 font-serif-display text-2xl store-text">Default Delivery Address</h2></div><Link to="/account/addresses" className="shrink-0 text-xs font-semibold store-primary hover:underline">Manage addresses →</Link></div>
+    {loading ? <div className="mt-6 h-28 animate-pulse rounded-2xl bg-ivory-dark/60" /> : error ? <p className="mt-6 rounded-xl store-bg-primary-soft p-4 text-sm store-primary">We couldn’t load your addresses. Please try again later.</p> : address ? <div className="mt-6 text-sm leading-relaxed store-muted"><span className="inline-flex rounded-full bg-sage-light px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-green-deep">{address.label}</span><p className="mt-3 font-medium store-text">{address.fullName}</p><p>{address.addressLine1}{address.addressLine2 ? `, ${address.addressLine2}` : ""}</p><p>{address.city}, {address.state} – {address.postalCode}</p></div> : <div className="mt-6 rounded-2xl bg-ivory-dark/55 p-6"><p className="font-medium store-text">No delivery address saved yet.</p><Link to="/account/addresses" className="mt-4 inline-block text-xs font-semibold store-primary hover:underline">Add address →</Link></div>}
   </section>;
 }
 
@@ -295,34 +295,34 @@ export function Account() {
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-10 sm:px-8 sm:py-12 space-y-8">
-      <section className="rounded-3xl border border-charcoal/10 bg-ivory-dark/45 p-6 shadow-sm sm:flex sm:items-center sm:justify-between sm:p-8"><div><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-terracotta">Customer Account</p><h1 className="mt-2 font-serif-display text-3xl text-charcoal sm:text-4xl">Welcome back, {user.name}</h1><p className="mt-3 max-w-xl text-sm leading-relaxed text-charcoal-soft">Manage your profile, orders, addresses and account security.</p></div><div className="mt-6 flex items-center gap-3 sm:mt-0 sm:pl-8"><div aria-hidden="true" className="grid h-12 w-12 place-items-center rounded-full bg-sage-light font-serif-display text-lg text-green-deep">{user.name?.trim()?.charAt(0)?.toUpperCase() || "A"}</div><div className="min-w-0"><p className="truncate text-sm font-semibold text-charcoal">{user.name}</p><p className="truncate text-xs text-charcoal-soft">{user.email}</p></div></div></section>
+      <section className="rounded-3xl border border-[var(--theme-border)]/10 bg-ivory-dark/45 p-6 shadow-sm sm:flex sm:items-center sm:justify-between sm:p-8"><div><p className="text-[10px] font-semibold uppercase tracking-[0.16em] store-primary">Customer Account</p><h1 className="mt-2 font-serif-display text-3xl store-text sm:text-4xl">Welcome back, {user.name}</h1><p className="mt-3 max-w-xl text-sm leading-relaxed store-muted">Manage your profile, orders, addresses and account security.</p></div><div className="mt-6 flex items-center gap-3 sm:mt-0 sm:pl-8"><div aria-hidden="true" className="grid h-12 w-12 place-items-center rounded-full store-bg-primary-soft font-serif-display text-lg store-primary">{user.name?.trim()?.charAt(0)?.toUpperCase() || "A"}</div><div className="min-w-0"><p className="truncate text-sm font-semibold store-text">{user.name}</p><p className="truncate text-xs store-muted">{user.email}</p></div></div></section>
       <AccountNav />
 
       {/* Dashboard Stat Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <Link to="/account/orders" className="rounded-2xl border border-charcoal/10 bg-ivory-dark/40 p-5 transition hover:border-terracotta/40 hover:shadow-sm text-center">
-          <p className="text-2xl font-bold text-terracotta">{stats.orders}</p>
-          <p className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft mt-1">Orders</p>
+        <Link to="/account/orders" className="rounded-2xl border border-[var(--theme-border)]/10 bg-ivory-dark/40 p-5 transition hover:border-[var(--theme-primary)]/40 hover:shadow-sm text-center">
+          <p className="text-2xl font-bold store-primary">{stats.orders}</p>
+          <p className="text-xs font-semibold uppercase tracking-wider store-muted mt-1">Orders</p>
         </Link>
-        <Link to="/account/wishlist" className="rounded-2xl border border-charcoal/10 bg-ivory-dark/40 p-5 transition hover:border-terracotta/40 hover:shadow-sm text-center">
-          <p className="text-2xl font-bold text-terracotta">{stats.wishlist}</p>
-          <p className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft mt-1">Wishlist</p>
+        <Link to="/account/wishlist" className="rounded-2xl border border-[var(--theme-border)]/10 bg-ivory-dark/40 p-5 transition hover:border-[var(--theme-primary)]/40 hover:shadow-sm text-center">
+          <p className="text-2xl font-bold store-primary">{stats.wishlist}</p>
+          <p className="text-xs font-semibold uppercase tracking-wider store-muted mt-1">Wishlist</p>
         </Link>
-        <Link to="/account/addresses" className="rounded-2xl border border-charcoal/10 bg-ivory-dark/40 p-5 transition hover:border-terracotta/40 hover:shadow-sm text-center">
-          <p className="text-2xl font-bold text-terracotta">{stats.addresses}</p>
-          <p className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft mt-1">Addresses</p>
+        <Link to="/account/addresses" className="rounded-2xl border border-[var(--theme-border)]/10 bg-ivory-dark/40 p-5 transition hover:border-[var(--theme-primary)]/40 hover:shadow-sm text-center">
+          <p className="text-2xl font-bold store-primary">{stats.addresses}</p>
+          <p className="text-xs font-semibold uppercase tracking-wider store-muted mt-1">Addresses</p>
         </Link>
-        <Link to="/account/reviews" className="rounded-2xl border border-charcoal/10 bg-ivory-dark/40 p-5 transition hover:border-terracotta/40 hover:shadow-sm text-center">
-          <p className="text-2xl font-bold text-terracotta">{stats.reviews}</p>
-          <p className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft mt-1">Reviews</p>
+        <Link to="/account/reviews" className="rounded-2xl border border-[var(--theme-border)]/10 bg-ivory-dark/40 p-5 transition hover:border-[var(--theme-primary)]/40 hover:shadow-sm text-center">
+          <p className="text-2xl font-bold store-primary">{stats.reviews}</p>
+          <p className="text-xs font-semibold uppercase tracking-wider store-muted mt-1">Reviews</p>
         </Link>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"><SummaryCard title="Orders" detail="View your purchases and order status." action="View orders" to="/account/orders" /><SummaryCard title="Addresses" detail="Manage your delivery addresses." action="Manage addresses" to="/account/addresses" /><SummaryCard title="Profile" detail="Update your personal information." action="Edit profile" to="#personal-information" /><SummaryCard title="Security" detail="Password and account security." action="Manage security" to="#security" /></div>
-      <div className="grid gap-6 lg:grid-cols-3"><div className="space-y-6 lg:col-span-2"><OrderSummary orders={orders} {...ordersState} /><AddressSummary addresses={addresses} {...addressesState} /></div><div className="space-y-6"><section id="personal-information" className="rounded-3xl border border-charcoal/10 bg-white p-6 shadow-sm"><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-terracotta">Profile</p><div className="mt-1 flex items-center justify-between gap-3"><h2 className="font-serif-display text-2xl text-charcoal">Personal Information</h2>{!editing && <button type="button" onClick={() => { setError(""); setMessage(""); setEditing(true); }} className="text-xs font-semibold text-terracotta hover:underline">Edit profile</button>}</div>{editing ? <form className="mt-6 space-y-4" onSubmit={saveProfile}><div><label htmlFor="account-name" className="mb-1 block text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Full Name</label><input id="account-name" required className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div><div><label htmlFor="account-email" className="mb-1 block text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Email Address</label><input id="account-email" readOnly className={`${inputClass} cursor-not-allowed bg-ivory-dark/40`} value={user.email} /></div><div><label htmlFor="account-phone" className="mb-1 block text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Phone Number</label><input id="account-phone" className={inputClass} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Mobile phone" /></div><div className="flex gap-3"><Button type="submit" disabled={saving} className="flex-1">{saving ? "Saving..." : "Save changes"}</Button><button type="button" onClick={() => { setName(user.name); setPhone(user.phone || ""); setEditing(false); }} className="rounded-full px-4 text-xs font-semibold text-charcoal-soft hover:text-charcoal">Cancel</button></div></form> : <dl className="mt-6 space-y-4 text-sm"><div><dt className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Full Name</dt><dd className="mt-1 text-charcoal">{user.name}</dd></div><div><dt className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Email Address</dt><dd className="mt-1 break-all text-charcoal">{user.email}</dd></div><div><dt className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Phone Number</dt><dd className="mt-1 text-charcoal">{user.phone || "Not added"}</dd></div></dl>}</section><section id="security" className="rounded-3xl border border-charcoal/10 bg-white p-6 shadow-sm"><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-terracotta">Security</p><div className="mt-1 flex items-center justify-between gap-3"><div><h2 className="font-serif-display text-2xl text-charcoal">Password &amp; Security</h2><p className="mt-2 text-sm text-charcoal-soft">Keep your Aadya account secure.</p></div><span aria-label="Password protected" className="text-lg tracking-widest text-charcoal-soft">••••••••</span></div>{!securityOpen ? <button type="button" onClick={() => { setError(""); setMessage(""); setSecurityOpen(true); }} className="mt-5 text-xs font-semibold text-terracotta hover:underline">Change password</button> : <form className="mt-6 space-y-4 border-t border-charcoal/10 pt-5" onSubmit={changePassword}>{[["currentPassword", "Current Password"], ["newPassword", "New Password"], ["confirmPassword", "Confirm New Password"]].map(([key, label]) => <div key={key}><label htmlFor={key} className="mb-1 block text-xs font-semibold uppercase tracking-wider text-charcoal-soft">{label}</label><input id={key} required minLength="10" type={showPasswords ? "text" : "password"} className={inputClass} placeholder={label} value={pw[key]} onChange={(e) => setPw({ ...pw, [key]: e.target.value })} /></div>)}<label className="flex cursor-pointer items-center gap-2 text-xs text-charcoal-soft"><input type="checkbox" checked={showPasswords} onChange={(e) => setShowPasswords(e.target.checked)} /> Show passwords</label><p className="text-xs leading-relaxed text-charcoal-soft">At least 10 characters, including a letter and a number. You’ll be asked to sign in again after changing it.</p><div className="flex gap-3"><Button type="submit" disabled={changingPassword} className="flex-1">{changingPassword ? "Changing..." : "Change password"}</Button><button type="button" onClick={() => setSecurityOpen(false)} className="rounded-full px-4 text-xs font-semibold text-charcoal-soft hover:text-charcoal">Cancel</button></div></form>}</section></div></div>
-      {error && <p className="text-xs font-medium text-terracotta bg-terracotta/10 p-3 rounded-xl">{error}</p>}
+      <div className="grid gap-6 lg:grid-cols-3"><div className="space-y-6 lg:col-span-2"><OrderSummary orders={orders} {...ordersState} /><AddressSummary addresses={addresses} {...addressesState} /></div><div className="space-y-6"><section id="personal-information" className="rounded-3xl border border-[var(--theme-border)]/10 store-bg p-6 shadow-sm"><p className="text-[10px] font-semibold uppercase tracking-[0.16em] store-primary">Profile</p><div className="mt-1 flex items-center justify-between gap-3"><h2 className="font-serif-display text-2xl store-text">Personal Information</h2>{!editing && <button type="button" onClick={() => { setError(""); setMessage(""); setEditing(true); }} className="text-xs font-semibold store-primary hover:underline">Edit profile</button>}</div>{editing ? <form className="mt-6 space-y-4" onSubmit={saveProfile}><div><label htmlFor="account-name" className="mb-1 block text-xs font-semibold uppercase tracking-wider store-muted">Full Name</label><input id="account-name" required className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div><div><label htmlFor="account-email" className="mb-1 block text-xs font-semibold uppercase tracking-wider store-muted">Email Address</label><input id="account-email" readOnly className={`${inputClass} cursor-not-allowed bg-ivory-dark/40`} value={user.email} /></div><div><label htmlFor="account-phone" className="mb-1 block text-xs font-semibold uppercase tracking-wider store-muted">Phone Number</label><input id="account-phone" className={inputClass} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Mobile phone" /></div><div className="flex gap-3"><Button type="submit" disabled={saving} className="flex-1">{saving ? "Saving..." : "Save changes"}</Button><button type="button" onClick={() => { setName(user.name); setPhone(user.phone || ""); setEditing(false); }} className="rounded-full px-4 text-xs font-semibold store-muted hover:store-text">Cancel</button></div></form> : <dl className="mt-6 space-y-4 text-sm"><div><dt className="text-xs font-semibold uppercase tracking-wider store-muted">Full Name</dt><dd className="mt-1 store-text">{user.name}</dd></div><div><dt className="text-xs font-semibold uppercase tracking-wider store-muted">Email Address</dt><dd className="mt-1 break-all store-text">{user.email}</dd></div><div><dt className="text-xs font-semibold uppercase tracking-wider store-muted">Phone Number</dt><dd className="mt-1 store-text">{user.phone || "Not added"}</dd></div></dl>}</section><section id="security" className="rounded-3xl border border-[var(--theme-border)]/10 store-bg p-6 shadow-sm"><p className="text-[10px] font-semibold uppercase tracking-[0.16em] store-primary">Security</p><div className="mt-1 flex items-center justify-between gap-3"><div><h2 className="font-serif-display text-2xl store-text">Password &amp; Security</h2><p className="mt-2 text-sm store-muted">Keep your Aadya account secure.</p></div><span aria-label="Password protected" className="text-lg tracking-widest store-muted">••••••••</span></div>{!securityOpen ? <button type="button" onClick={() => { setError(""); setMessage(""); setSecurityOpen(true); }} className="mt-5 text-xs font-semibold store-primary hover:underline">Change password</button> : <form className="mt-6 space-y-4 border-t border-[var(--theme-border)]/10 pt-5" onSubmit={changePassword}>{[["currentPassword", "Current Password"], ["newPassword", "New Password"], ["confirmPassword", "Confirm New Password"]].map(([key, label]) => <div key={key}><label htmlFor={key} className="mb-1 block text-xs font-semibold uppercase tracking-wider store-muted">{label}</label><input id={key} required minLength="10" type={showPasswords ? "text" : "password"} className={inputClass} placeholder={label} value={pw[key]} onChange={(e) => setPw({ ...pw, [key]: e.target.value })} /></div>)}<label className="flex cursor-pointer items-center gap-2 text-xs store-muted"><input type="checkbox" checked={showPasswords} onChange={(e) => setShowPasswords(e.target.checked)} /> Show passwords</label><p className="text-xs leading-relaxed store-muted">At least 10 characters, including a letter and a number. You’ll be asked to sign in again after changing it.</p><div className="flex gap-3"><Button type="submit" disabled={changingPassword} className="flex-1">{changingPassword ? "Changing..." : "Change password"}</Button><button type="button" onClick={() => setSecurityOpen(false)} className="rounded-full px-4 text-xs font-semibold store-muted hover:store-text">Cancel</button></div></form>}</section></div></div>
+      {error && <p className="text-xs font-medium store-primary store-bg-primary-soft p-3 rounded-xl">{error}</p>}
       {message && <p role="status" className="text-xs font-medium text-green-deep bg-sage-light p-3 rounded-xl">{message}</p>}
-      <section className="border-t border-charcoal/10 pt-6"><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-charcoal-soft">Account Actions</p><button type="button" onClick={logout} className="mt-3 text-xs font-semibold text-terracotta hover:underline">Sign out</button></section>
+      <section className="border-t border-[var(--theme-border)]/10 pt-6"><p className="text-[10px] font-semibold uppercase tracking-[0.16em] store-muted">Account Actions</p><button type="button" onClick={logout} className="mt-3 text-xs font-semibold store-primary hover:underline">Sign out</button></section>
     </div>
   );
 }
@@ -365,29 +365,29 @@ export function Addresses() {
       <AccountNav />
 
       <AddressForm form={form} setForm={setForm} onSubmit={save} label={editing ? "Save address" : "Add address"} />
-      {error && <p className="text-xs font-medium text-terracotta bg-terracotta/10 p-3 rounded-xl">{error}</p>}
+      {error && <p className="text-xs font-medium store-primary store-bg-primary-soft p-3 rounded-xl">{error}</p>}
 
       <div className="grid gap-4 sm:grid-cols-2 pt-4">
         {items.map((a) => (
-          <article key={a.id} className="rounded-2xl border border-charcoal/10 bg-white p-5 space-y-2 shadow-sm">
+          <article key={a.id} className="rounded-2xl border border-[var(--theme-border)]/10 store-bg p-5 space-y-2 shadow-sm">
             <div className="flex justify-between items-center">
-              <span className="font-serif-display text-base text-charcoal">{a.label}</span>
+              <span className="font-serif-display text-base store-text">{a.label}</span>
               {a.isDefault && (
                 <span className="rounded-full bg-sage-light px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-green-deep">
                   Default
                 </span>
               )}
             </div>
-            <p className="text-xs text-charcoal-soft leading-relaxed">
-              <strong className="text-charcoal block">{a.fullName}</strong>
+            <p className="text-xs store-muted leading-relaxed">
+              <strong className="store-text block">{a.fullName}</strong>
               {a.addressLine1}, {a.addressLine2 ? `${a.addressLine2}, ` : ""}
               {a.city}, {a.state} {a.postalCode}
               <br />
               Ph: {a.phone}
             </p>
-            <div className="pt-3 flex gap-4 text-xs font-medium border-t border-charcoal/5">
+            <div className="pt-3 flex gap-4 text-xs font-medium border-t border-[var(--theme-border)]/5">
               <button
-                className="text-charcoal hover:text-terracotta underline"
+                className="store-text hover:text-[var(--theme-primary-hover)] underline"
                 onClick={() => {
                   setEditing(a);
                   setForm(a);
@@ -396,7 +396,7 @@ export function Addresses() {
                 Edit
               </button>
               <button
-                className="text-charcoal hover:text-terracotta underline"
+                className="store-text hover:text-[var(--theme-primary-hover)] underline"
                 onClick={async () => {
                   try {
                     await setDefaultAddress(a.id);
@@ -409,7 +409,7 @@ export function Addresses() {
                 Set default
               </button>
               <button
-                className="text-terracotta hover:underline ml-auto"
+                className="store-primary hover:underline ml-auto"
                 onClick={async () => {
                   try {
                     await deleteAddress(a.id);
@@ -424,7 +424,7 @@ export function Addresses() {
             </div>
           </article>
         ))}
-        {!items.length && <p className="text-sm text-charcoal-soft col-span-2">No saved addresses yet.</p>}
+        {!items.length && <p className="text-sm store-muted col-span-2">No saved addresses yet.</p>}
       </div>
     </div>
   );
@@ -445,24 +445,24 @@ export function Orders() {
       <div className="space-y-4">
         {items.map((o) => (
           <Link
-            className="flex flex-col sm:flex-row sm:items-center justify-between rounded-2xl border border-charcoal/10 bg-white p-5 transition hover:border-terracotta/30 hover:shadow-md"
+            className="flex flex-col sm:flex-row sm:items-center justify-between rounded-2xl border border-[var(--theme-border)]/10 store-bg p-5 transition hover:border-[var(--theme-primary)]/30 hover:shadow-md"
             key={o.id}
             to={`/account/orders/${o.orderNumber}`}
           >
             <div className="space-y-1">
-              <span className="font-serif-display text-base text-charcoal block">{o.orderNumber}</span>
-              <p className="text-xs text-charcoal-soft">Status: <span className="font-semibold text-terracotta">{o.status}</span> • Payment: {o.paymentStatus}</p>
+              <span className="font-serif-display text-base store-text block">{o.orderNumber}</span>
+              <p className="text-xs store-muted">Status: <span className="font-semibold store-primary">{o.status}</span> • Payment: {o.paymentStatus}</p>
             </div>
             <div className="mt-3 sm:mt-0 flex items-center justify-between sm:justify-end gap-4">
-              <span className="text-base font-bold text-terracotta">{formatInr(Number(o.totalAmount))}</span>
-              <span className="text-xs font-semibold uppercase tracking-wider text-charcoal underline">View Details →</span>
+              <span className="text-base font-bold store-primary">{formatInr(Number(o.totalAmount))}</span>
+              <span className="text-xs font-semibold uppercase tracking-wider store-text underline">View Details →</span>
             </div>
           </Link>
         ))}
         {!items.length && (
-          <div className="rounded-3xl border border-dashed border-charcoal/20 bg-ivory-dark/30 p-12 text-center">
-            <p className="text-sm text-charcoal-soft">No account orders yet.</p>
-            <Link to="/shop" className="mt-4 inline-block rounded-full bg-terracotta px-6 py-2.5 text-xs font-semibold uppercase tracking-wider text-ivory">
+          <div className="rounded-3xl border border-dashed border-[var(--theme-border)]/20 bg-ivory-dark/30 p-12 text-center">
+            <p className="text-sm store-muted">No account orders yet.</p>
+            <Link to="/shop" className="mt-4 inline-block rounded-full store-bg-primary px-6 py-2.5 text-xs font-semibold uppercase tracking-wider text-ivory">
               Browse Storefront
             </Link>
           </div>
@@ -487,45 +487,45 @@ export function OrderDetail() {
     <div className="mx-auto max-w-3xl px-5 py-12 sm:px-8 space-y-8">
       {o && (
         <div className="space-y-6">
-          <div className="flex flex-wrap items-center justify-between border-b border-charcoal/10 pb-4">
+          <div className="flex flex-wrap items-center justify-between border-b border-[var(--theme-border)]/10 pb-4">
             <div>
-              <span className="text-xs font-semibold uppercase tracking-widest text-terracotta">Order Summary</span>
-              <h1 className="font-serif-display text-3xl text-charcoal">{o.orderNumber}</h1>
+              <span className="text-xs font-semibold uppercase tracking-widest store-primary">Order Summary</span>
+              <h1 className="font-serif-display text-3xl store-text">{o.orderNumber}</h1>
             </div>
             <div className="flex gap-2">
               <span className="rounded-full bg-sage-light px-3 py-1 text-xs font-semibold uppercase tracking-wider text-green-deep">
                 {o.status}
               </span>
-              <span className="rounded-full bg-beige px-3 py-1 text-xs font-semibold uppercase tracking-wider text-charcoal">
+              <span className="rounded-full bg-beige px-3 py-1 text-xs font-semibold uppercase tracking-wider store-text">
                 {o.paymentStatus}
               </span>
             </div>
           </div>
 
-          <div className="rounded-3xl border border-charcoal/10 bg-white p-6 space-y-4">
-            <h3 className="font-serif-display text-lg text-charcoal">Purchased Items</h3>
-            <ul className="divide-y divide-charcoal/5">
+          <div className="rounded-3xl border border-[var(--theme-border)]/10 store-bg p-6 space-y-4">
+            <h3 className="font-serif-display text-lg store-text">Purchased Items</h3>
+            <ul className="divide-y divide-[var(--theme-border)]/5">
               {o.items.map((i) => (
                 <li key={i.id} className="flex justify-between py-3 text-xs">
-                  <span className="font-medium text-charcoal">
+                  <span className="font-medium store-text">
                     {i.productNameSnapshot} × {i.quantity}
                   </span>
-                  <span className="font-semibold text-terracotta">{formatInr(Number(i.lineTotal))}</span>
+                  <span className="font-semibold store-primary">{formatInr(Number(i.lineTotal))}</span>
                 </li>
               ))}
             </ul>
 
-            <div className="flex justify-between border-t border-charcoal/10 pt-4 text-sm font-bold text-charcoal">
+            <div className="flex justify-between border-t border-[var(--theme-border)]/10 pt-4 text-sm font-bold store-text">
               <span>Total Amount</span>
-              <span className="text-terracotta text-lg">{formatInr(Number(o.totalAmount))}</span>
+              <span className="store-primary text-lg">{formatInr(Number(o.totalAmount))}</span>
             </div>
-            {o.invoice && <button type="button" onClick={async () => { const blob = await downloadAccountInvoice(o.invoice.id); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `${o.invoice.invoiceNumber}.pdf`; a.click(); URL.revokeObjectURL(url); }} className="rounded-full border border-charcoal/20 px-4 py-2 text-xs font-semibold text-charcoal">Download Invoice</button>}
+            {o.invoice && <button type="button" onClick={async () => { const blob = await downloadAccountInvoice(o.invoice.id); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `${o.invoice.invoiceNumber}.pdf`; a.click(); URL.revokeObjectURL(url); }} className="rounded-full border border-[var(--theme-border)]/20 px-4 py-2 text-xs font-semibold store-text">Download Invoice</button>}
           </div>
-          {o.shipment && <div className="rounded-3xl border border-charcoal/10 bg-white p-6"><h3 className="font-serif-display text-lg text-charcoal">Delivery tracking</h3><p className="mt-2 text-sm text-charcoal-soft">{o.shipment.status.replaceAll("_", " ")} {o.shipment.carrier ? `· ${o.shipment.carrier}` : ""}</p>{o.shipment.trackingNumber && <p className="mt-1 text-sm text-charcoal-soft">Tracking: {o.shipment.trackingNumber}</p>}{o.shipment.estimatedDelivery && <p className="mt-1 text-sm text-charcoal-soft">Estimated delivery: {new Date(o.shipment.estimatedDelivery).toLocaleDateString("en-IN")}</p>}{o.shipment.trackingUrl && <a className="mt-3 inline-block text-xs font-semibold text-terracotta" href={o.shipment.trackingUrl} target="_blank" rel="noreferrer">Track shipment</a>}</div>}
+          {o.shipment && <div className="rounded-3xl border border-[var(--theme-border)]/10 store-bg p-6"><h3 className="font-serif-display text-lg store-text">Delivery tracking</h3><p className="mt-2 text-sm store-muted">{o.shipment.status.replaceAll("_", " ")} {o.shipment.carrier ? `· ${o.shipment.carrier}` : ""}</p>{o.shipment.trackingNumber && <p className="mt-1 text-sm store-muted">Tracking: {o.shipment.trackingNumber}</p>}{o.shipment.estimatedDelivery && <p className="mt-1 text-sm store-muted">Estimated delivery: {new Date(o.shipment.estimatedDelivery).toLocaleDateString("en-IN")}</p>}{o.shipment.trackingUrl && <a className="mt-3 inline-block text-xs font-semibold store-primary" href={o.shipment.trackingUrl} target="_blank" rel="noreferrer">Track shipment</a>}</div>}
         </div>
       )}
-      {error && <p className="text-sm font-medium text-terracotta bg-terracotta/10 p-4 rounded-xl">{error}</p>}
-      <Link to="/account/orders" className="inline-block text-xs font-semibold uppercase tracking-wider text-terracotta hover:underline">
+      {error && <p className="text-sm font-medium store-primary store-bg-primary-soft p-4 rounded-xl">{error}</p>}
+      <Link to="/account/orders" className="inline-block text-xs font-semibold uppercase tracking-wider store-primary hover:underline">
         ← Return to Order History
       </Link>
     </div>
@@ -536,7 +536,7 @@ export function AccountInvoices() {
   const [items, setItems] = useState([]); const [error, setError] = useState("");
   useEffect(() => { accountInvoices().then((r) => setItems(r.data || [])).catch((e) => setError(e.message)); }, []);
   const download = async (item) => { try { const blob = await downloadAccountInvoice(item.id); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `${item.invoiceNumber}.pdf`; a.click(); URL.revokeObjectURL(url); } catch (e) { setError(e.message); } };
-  return <div className="mx-auto max-w-4xl space-y-8 px-5 py-12 sm:px-8"><SectionHeading eyebrow="Customer Account" title="Invoices" /><AccountNav />{error && <p className="rounded-xl bg-terracotta/10 p-3 text-sm text-terracotta">{error}</p>}<div className="overflow-x-auto rounded-2xl border border-charcoal/10"><table className="min-w-full text-left text-sm"><thead className="bg-ivory-dark/50 text-xs text-charcoal-soft"><tr><th className="p-4">Invoice</th><th className="p-4">Date</th><th className="p-4">Order</th><th className="p-4">Amount</th><th className="p-4"></th></tr></thead><tbody>{items.map((i)=><tr key={i.id} className="border-t border-charcoal/10"><td className="p-4 font-medium">{i.invoiceNumber}</td><td className="p-4">{new Date(i.invoiceDate).toLocaleDateString("en-IN")}</td><td className="p-4">{i.order.orderNumber}</td><td className="p-4">{formatInr(i.totalAmount)}</td><td className="p-4"><button onClick={()=>download(i)} className="text-xs font-semibold text-terracotta">Download</button></td></tr>)}</tbody></table>{!items.length && <p className="p-6 text-sm text-charcoal-soft">No invoices are available yet.</p>}</div></div>;
+  return <div className="mx-auto max-w-4xl space-y-8 px-5 py-12 sm:px-8"><SectionHeading eyebrow="Customer Account" title="Invoices" /><AccountNav />{error && <p className="rounded-xl store-bg-primary-soft p-3 text-sm store-primary">{error}</p>}<div className="overflow-x-auto rounded-2xl border border-[var(--theme-border)]/10"><table className="min-w-full text-left text-sm"><thead className="bg-ivory-dark/50 text-xs store-muted"><tr><th className="p-4">Invoice</th><th className="p-4">Date</th><th className="p-4">Order</th><th className="p-4">Amount</th><th className="p-4"></th></tr></thead><tbody>{items.map((i)=><tr key={i.id} className="border-t border-[var(--theme-border)]/10"><td className="p-4 font-medium">{i.invoiceNumber}</td><td className="p-4">{new Date(i.invoiceDate).toLocaleDateString("en-IN")}</td><td className="p-4">{i.order.orderNumber}</td><td className="p-4">{formatInr(i.totalAmount)}</td><td className="p-4"><button onClick={()=>download(i)} className="text-xs font-semibold store-primary">Download</button></td></tr>)}</tbody></table>{!items.length && <p className="p-6 text-sm store-muted">No invoices are available yet.</p>}</div></div>;
 }
 
 export function Forgot() {
@@ -553,10 +553,10 @@ export function Forgot() {
       }}
     >
       <SectionHeading eyebrow="Security" title="Reset Password" />
-      <p className="text-xs text-charcoal-soft">Enter your registered email address to receive password reset instructions.</p>
+      <p className="text-xs store-muted">Enter your registered email address to receive password reset instructions.</p>
       <input
         required
-        className="w-full rounded-xl border border-charcoal/15 bg-white px-4 py-3 text-sm text-charcoal focus:border-terracotta focus:outline-none"
+        className="w-full rounded-xl border border-[var(--theme-border)]/15 store-bg px-4 py-3 text-sm store-text focus:border-[var(--theme-primary)] focus:outline-none"
         type="email"
         placeholder="you@example.com"
         value={email}
@@ -599,7 +599,7 @@ export function Reset() {
         type="password"
         minLength="10"
         placeholder="New password"
-        className="w-full rounded-xl border border-charcoal/15 bg-white px-4 py-3 text-sm text-charcoal focus:border-terracotta focus:outline-none"
+        className="w-full rounded-xl border border-[var(--theme-border)]/15 store-bg px-4 py-3 text-sm store-text focus:border-[var(--theme-primary)] focus:outline-none"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
       />
@@ -608,12 +608,12 @@ export function Reset() {
         type="password"
         minLength="10"
         placeholder="Confirm new password"
-        className="w-full rounded-xl border border-charcoal/15 bg-white px-4 py-3 text-sm text-charcoal focus:border-terracotta focus:outline-none"
+        className="w-full rounded-xl border border-[var(--theme-border)]/15 store-bg px-4 py-3 text-sm store-text focus:border-[var(--theme-primary)] focus:outline-none"
         value={confirm}
         onChange={(e) => setConfirm(e.target.value)}
       />
       <Button className="w-full py-3">Reset password</Button>
-      {error && <p className="text-xs font-medium text-terracotta bg-terracotta/10 p-3 rounded-xl">{error}</p>}
+      {error && <p className="text-xs font-medium store-primary store-bg-primary-soft p-3 rounded-xl">{error}</p>}
       {done && <p className="text-xs font-medium text-sage bg-sage-light p-3 rounded-xl">Password reset. You can now log in.</p>}
     </form>
   );
@@ -641,11 +641,11 @@ export function AccountWishlist() {
       <AccountNav />
 
       {loading ? (
-        <p className="text-xs text-charcoal-soft">Loading wishlist...</p>
+        <p className="text-xs store-muted">Loading wishlist...</p>
       ) : wishlist.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-charcoal/20 bg-ivory-dark/30 p-12 text-center">
-          <p className="text-sm text-charcoal-soft">Your wishlist is currently empty.</p>
-          <Link to="/shop" className="mt-4 inline-block rounded-full bg-terracotta px-6 py-2.5 text-xs font-semibold uppercase tracking-wider text-white">
+        <div className="rounded-3xl border border-dashed border-[var(--theme-border)]/20 bg-ivory-dark/30 p-12 text-center">
+          <p className="text-sm store-muted">Your wishlist is currently empty.</p>
+          <Link to="/shop" className="mt-4 inline-block rounded-full store-bg-primary px-6 py-2.5 text-xs font-semibold uppercase tracking-wider text-white">
             Discover Objects
           </Link>
         </div>
@@ -668,7 +668,7 @@ export function AccountWishlist() {
             const outOfStock = p.inStock === false || stockQty <= 0;
 
             return (
-              <div key={item.id} className="group relative flex flex-col overflow-hidden rounded-2xl border border-charcoal/10 bg-white p-4 transition hover:shadow-md">
+              <div key={item.id} className="group relative flex flex-col overflow-hidden rounded-2xl border border-[var(--theme-border)]/10 store-bg p-4 transition hover:shadow-md">
                 <Link to={`/shop/${p.slug}`} className="relative aspect-square w-full overflow-hidden rounded-xl bg-ivory-dark/40 mb-3">
                   <img
                     src={p.images?.[0] || p.image || "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?q=80&w=800&auto=format&fit=crop"}
@@ -678,40 +678,40 @@ export function AccountWishlist() {
                 </Link>
 
                 <div className="flex-1 flex flex-col">
-                  <Link to={`/shop/${p.slug}`} className="font-serif-display text-base text-charcoal hover:text-terracotta line-clamp-1 font-bold">
+                  <Link to={`/shop/${p.slug}`} className="font-serif-display text-base store-text hover:text-[var(--theme-primary-hover)] line-clamp-1 font-bold">
                     {p.name}
                   </Link>
 
                   {item.variant && (
-                    <p className="text-xs text-charcoal-soft mt-0.5">Option: {item.variant.name}</p>
+                    <p className="text-xs store-muted mt-0.5">Option: {item.variant.name}</p>
                   )}
 
                   <div className="mt-2 flex items-baseline gap-2">
-                    <span className="text-sm font-bold text-terracotta">{formatInr(salePrice ?? price)}</span>
-                    {salePrice && <span className="text-xs text-charcoal-soft line-through">{formatInr(price)}</span>}
+                    <span className="text-sm font-bold store-primary">{formatInr(salePrice ?? price)}</span>
+                    {salePrice && <span className="text-xs store-muted line-through">{formatInr(price)}</span>}
                   </div>
 
                   <p className="text-[11px] font-medium mt-1">
                     {outOfStock ? (
-                      <span className="text-terracotta">Out of Stock</span>
+                      <span className="store-primary">Out of Stock</span>
                     ) : (
                       <span className="text-sage">In Stock</span>
                     )}
                   </p>
 
-                  <div className="mt-4 pt-3 border-t border-charcoal/10 flex items-center justify-between gap-2">
+                  <div className="mt-4 pt-3 border-t border-[var(--theme-border)]/10 flex items-center justify-between gap-2">
                     <button
                       onClick={() => handleMoveToCart(item)}
                       disabled={outOfStock}
                       className={`flex-1 rounded-xl py-2 px-3 text-xs font-semibold uppercase tracking-wider text-white transition ${
-                        outOfStock ? "bg-charcoal/30 cursor-not-allowed" : "bg-terracotta hover:bg-terracotta-dark"
+                        outOfStock ? "bg-charcoal/30 cursor-not-allowed" : "store-bg-primary store-primary-hover"
                       }`}
                     >
                       {p.variants?.length > 0 && !item.variant ? "Select Option" : "Move to Cart"}
                     </button>
                     <button
                       onClick={() => removeFromWishlist(item.id)}
-                      className="rounded-xl border border-charcoal/20 px-3 py-2 text-xs font-semibold text-charcoal hover:border-terracotta hover:text-terracotta transition"
+                      className="rounded-xl border border-[var(--theme-border)]/20 px-3 py-2 text-xs font-semibold store-text hover:border-[var(--theme-primary)] hover:text-[var(--theme-primary-hover)] transition"
                     >
                       Remove
                     </button>
@@ -780,21 +780,21 @@ export function AccountReviews() {
       <AccountNav />
 
       {notice && <div className="rounded-xl bg-sage-light p-4 text-xs font-semibold text-green-deep">{notice}</div>}
-      {error && <div className="rounded-xl bg-terracotta/10 p-4 text-xs font-semibold text-terracotta">{error}</div>}
+      {error && <div className="rounded-xl store-bg-primary-soft p-4 text-xs font-semibold store-primary">{error}</div>}
 
       {/* Edit Review Modal / Form */}
       {editingReview && (
-        <form onSubmit={handleUpdate} className="rounded-3xl border border-terracotta/30 bg-ivory-dark/40 p-6 space-y-4 shadow-sm">
-          <h3 className="font-serif-display text-lg font-bold text-charcoal">Edit Review</h3>
+        <form onSubmit={handleUpdate} className="rounded-3xl border border-[var(--theme-primary)]/30 bg-ivory-dark/40 p-6 space-y-4 shadow-sm">
+          <h3 className="font-serif-display text-lg font-bold store-text">Edit Review</h3>
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-charcoal-soft mb-1">Rating</label>
+            <label className="block text-xs font-semibold uppercase tracking-wider store-muted mb-1">Rating</label>
             <div className="flex gap-2 text-xl cursor-pointer">
               {[1, 2, 3, 4, 5].map((star) => (
                 <button
                   key={star}
                   type="button"
                   onClick={() => setEditForm({ ...editForm, rating: star })}
-                  className={star <= editForm.rating ? "text-amber-500" : "text-charcoal/20"}
+                  className={star <= editForm.rating ? "text-amber-500" : "store-text/20"}
                 >
                   ★
                 </button>
@@ -802,20 +802,20 @@ export function AccountReviews() {
             </div>
           </div>
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-charcoal-soft mb-1">Title</label>
+            <label className="block text-xs font-semibold uppercase tracking-wider store-muted mb-1">Title</label>
             <input
               required
-              className="w-full rounded-xl border border-charcoal/15 bg-white px-4 py-2.5 text-sm text-charcoal focus:border-terracotta focus:outline-none"
+              className="w-full rounded-xl border border-[var(--theme-border)]/15 store-bg px-4 py-2.5 text-sm store-text focus:border-[var(--theme-primary)] focus:outline-none"
               value={editForm.title}
               onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-charcoal-soft mb-1">Review Comment</label>
+            <label className="block text-xs font-semibold uppercase tracking-wider store-muted mb-1">Review Comment</label>
             <textarea
               required
               rows={3}
-              className="w-full rounded-xl border border-charcoal/15 bg-white px-4 py-2.5 text-sm text-charcoal focus:border-terracotta focus:outline-none"
+              className="w-full rounded-xl border border-[var(--theme-border)]/15 store-bg px-4 py-2.5 text-sm store-text focus:border-[var(--theme-primary)] focus:outline-none"
               value={editForm.comment}
               onChange={(e) => setEditForm({ ...editForm, comment: e.target.value })}
             />
@@ -825,7 +825,7 @@ export function AccountReviews() {
             <button
               type="button"
               onClick={() => setEditingReview(null)}
-              className="rounded-full border border-charcoal/20 px-5 py-2.5 text-xs font-semibold text-charcoal hover:bg-charcoal/5"
+              className="rounded-full border border-[var(--theme-border)]/20 px-5 py-2.5 text-xs font-semibold store-text hover:bg-charcoal/5"
             >
               Cancel
             </button>
@@ -834,17 +834,17 @@ export function AccountReviews() {
       )}
 
       {loading ? (
-        <p className="text-xs text-charcoal-soft">Loading reviews...</p>
+        <p className="text-xs store-muted">Loading reviews...</p>
       ) : reviews.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-charcoal/20 bg-ivory-dark/30 p-12 text-center">
-          <p className="text-sm text-charcoal-soft">You haven't written any reviews yet.</p>
+        <div className="rounded-3xl border border-dashed border-[var(--theme-border)]/20 bg-ivory-dark/30 p-12 text-center">
+          <p className="text-sm store-muted">You haven't written any reviews yet.</p>
         </div>
       ) : (
         <div className="space-y-4">
           {reviews.map((r) => (
-            <div key={r.id} className="rounded-2xl border border-charcoal/10 bg-white p-5 space-y-3 shadow-xs">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-charcoal/5 pb-3">
-                <Link to={`/shop/${r.product?.slug}`} className="font-serif-display text-base font-bold text-charcoal hover:text-terracotta">
+            <div key={r.id} className="rounded-2xl border border-[var(--theme-border)]/10 store-bg p-5 space-y-3 shadow-xs">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--theme-border)]/5 pb-3">
+                <Link to={`/shop/${r.product?.slug}`} className="font-serif-display text-base font-bold store-text hover:text-[var(--theme-primary-hover)]">
                   {r.product?.name || "Product"}
                 </Link>
                 <div className="flex items-center gap-2">
@@ -859,7 +859,7 @@ export function AccountReviews() {
                     </span>
                   )}
                   {r.status === "REJECTED" && (
-                    <span className="rounded-full bg-terracotta/10 px-3 py-0.5 text-[10px] font-semibold text-terracotta uppercase tracking-wider">
+                    <span className="rounded-full store-bg-primary-soft px-3 py-0.5 text-[10px] font-semibold store-primary uppercase tracking-wider">
                       Rejected
                     </span>
                   )}
@@ -875,10 +875,10 @@ export function AccountReviews() {
                 {"★".repeat(r.rating)}{"☆".repeat(5 - r.rating)}
               </div>
 
-              <h4 className="font-semibold text-sm text-charcoal">{r.title}</h4>
-              <p className="text-xs text-charcoal-soft leading-relaxed">{r.comment}</p>
+              <h4 className="font-semibold text-sm store-text">{r.title}</h4>
+              <p className="text-xs store-muted leading-relaxed">{r.comment}</p>
 
-              <div className="pt-2 flex items-center justify-between text-xs border-t border-charcoal/5 text-charcoal-soft">
+              <div className="pt-2 flex items-center justify-between text-xs border-t border-[var(--theme-border)]/5 store-muted">
                 <span>Submitted on {new Date(r.createdAt).toLocaleDateString()}</span>
                 <div className="flex gap-3">
                   <button
@@ -886,13 +886,13 @@ export function AccountReviews() {
                       setEditingReview(r);
                       setEditForm({ rating: r.rating, title: r.title, comment: r.comment });
                     }}
-                    className="text-charcoal hover:text-terracotta underline font-medium"
+                    className="store-text hover:text-[var(--theme-primary-hover)] underline font-medium"
                   >
                     Edit Review
                   </button>
                   <button
                     onClick={() => handleDelete(r.id)}
-                    className="text-terracotta hover:underline font-medium"
+                    className="store-primary hover:underline font-medium"
                   >
                     Delete
                   </button>
@@ -938,27 +938,27 @@ export function AccountDownloads() {
       <AccountNav />
 
       {loading ? (
-        <p className="text-xs text-charcoal-soft">Loading downloads...</p>
+        <p className="text-xs store-muted">Loading downloads...</p>
       ) : error ? (
-        <p className="rounded-xl bg-terracotta/10 p-4 text-sm text-terracotta">{error}</p>
+        <p className="rounded-xl store-bg-primary-soft p-4 text-sm store-primary">{error}</p>
       ) : downloads.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-charcoal/20 bg-ivory-dark/30 p-12 text-center">
-          <p className="text-sm text-charcoal-soft">You don't have any digital books yet.</p>
-          <Link to="/books" className="mt-4 inline-block rounded-full bg-terracotta px-6 py-2.5 text-xs font-semibold uppercase tracking-wider text-white">
+        <div className="rounded-3xl border border-dashed border-[var(--theme-border)]/20 bg-ivory-dark/30 p-12 text-center">
+          <p className="text-sm store-muted">You don't have any digital books yet.</p>
+          <Link to="/books" className="mt-4 inline-block rounded-full store-bg-primary px-6 py-2.5 text-xs font-semibold uppercase tracking-wider text-white">
             Browse Books
           </Link>
         </div>
       ) : (
-        <div className="divide-y divide-charcoal/10 rounded-2xl border border-charcoal/10">
+        <div className="divide-y divide-[var(--theme-border)]/10 rounded-2xl border border-[var(--theme-border)]/10">
           {downloads.map((d) => {
             const disabled = d.paymentStatus !== "PAID" || d.expired || d.exhausted;
             const reason = d.paymentStatus !== "PAID" ? "Payment pending" : d.expired ? "Link expired" : d.exhausted ? "Download limit reached" : null;
             return (
               <div key={d.orderItemId || `${d.orderNumber}-${d.pdfFilename}`} className="flex flex-col gap-2 p-5 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <p className="font-medium text-charcoal">{d.productTitle}</p>
-                  <p className="text-xs text-charcoal-soft">{d.pdfFilename}</p>
-                  <p className="mt-1 text-xs text-charcoal-soft">
+                  <p className="font-medium store-text">{d.productTitle}</p>
+                  <p className="text-xs store-muted">{d.pdfFilename}</p>
+                  <p className="mt-1 text-xs store-muted">
                     Downloads used: {d.downloadCount}{d.maxDownloads != null ? ` / ${d.maxDownloads}` : ""}
                     {d.expiresAt ? ` · Expires ${new Date(d.expiresAt).toLocaleDateString("en-IN")}` : ""}
                   </p>
@@ -967,7 +967,7 @@ export function AccountDownloads() {
                   <Button type="button" disabled={disabled || busyId} onClick={() => handleDownload(d)}>
                     {busyId ? "Preparing…" : "Download"}
                   </Button>
-                  {disabled && reason && <p className="mt-1 text-xs text-terracotta text-right">{reason}</p>}
+                  {disabled && reason && <p className="mt-1 text-xs store-primary text-right">{reason}</p>}
                 </div>
               </div>
             );
@@ -1033,7 +1033,7 @@ export function AccountNotifications() {
       <AccountNav />
 
       <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">
+        <p className="text-xs font-semibold uppercase tracking-wider store-muted">
           {unreadCount > 0 ? `${unreadCount} unread` : "All caught up"}
         </p>
         {unreadCount > 0 && (
@@ -1044,28 +1044,28 @@ export function AccountNotifications() {
       </div>
 
       {loading ? (
-        <p className="text-xs text-charcoal-soft">Loading notifications...</p>
+        <p className="text-xs store-muted">Loading notifications...</p>
       ) : error ? (
-        <p className="rounded-xl bg-terracotta/10 p-4 text-sm text-terracotta">{error}</p>
+        <p className="rounded-xl store-bg-primary-soft p-4 text-sm store-primary">{error}</p>
       ) : items.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-charcoal/20 bg-ivory-dark/30 p-12 text-center">
-          <p className="text-sm text-charcoal-soft">You don't have any notifications yet.</p>
+        <div className="rounded-3xl border border-dashed border-[var(--theme-border)]/20 bg-ivory-dark/30 p-12 text-center">
+          <p className="text-sm store-muted">You don't have any notifications yet.</p>
         </div>
       ) : (
-        <div className="divide-y divide-charcoal/10 rounded-2xl border border-charcoal/10">
+        <div className="divide-y divide-[var(--theme-border)]/10 rounded-2xl border border-[var(--theme-border)]/10">
           {items.map((n) => (
             <div
               key={n.id}
-              className={`flex flex-col gap-2 p-5 sm:flex-row sm:items-center sm:justify-between ${n.isRead ? "" : "bg-terracotta/5"}`}
+              className={`flex flex-col gap-2 p-5 sm:flex-row sm:items-center sm:justify-between ${n.isRead ? "" : "store-bg-primary/5"}`}
             >
               <div>
-                <p className="font-medium text-charcoal">{n.title}</p>
-                <p className="text-xs text-charcoal-soft">{n.message}</p>
-                <p className="mt-1 text-xs text-charcoal-soft">{new Date(n.createdAt).toLocaleDateString("en-IN")}</p>
+                <p className="font-medium store-text">{n.title}</p>
+                <p className="text-xs store-muted">{n.message}</p>
+                <p className="mt-1 text-xs store-muted">{new Date(n.createdAt).toLocaleDateString("en-IN")}</p>
               </div>
               <div className="flex shrink-0 items-center gap-3">
                 {n.link && (
-                  <Link to={n.link} className="text-xs font-semibold uppercase tracking-wider text-terracotta">
+                  <Link to={n.link} className="text-xs font-semibold uppercase tracking-wider store-primary">
                     View
                   </Link>
                 )}

@@ -112,7 +112,7 @@ export default function Footer() {
             {/* Configured Social Links */}
             {footer?.socialLinksVisibility !== false && socialList.length > 0 && (
               <div className="pt-3">
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-terracotta-light mb-2">{socialHeading}</p>
+                <p className="text-[11px] font-semibold uppercase tracking-widest store-accent mb-2">{socialHeading}</p>
                 <div className="flex flex-wrap gap-3 text-xs text-[#FAF6F0]/80">
                   {socialList.map((s) => (
                     <a key={s.key} href={s.url} target="_blank" rel="noopener noreferrer" className="hover:text-white transition underline font-medium">
@@ -127,7 +127,7 @@ export default function Footer() {
           {/* Dynamic Footer Columns */}
           {columns.map((col) => (
             <div key={col.id || col.title}>
-              <h4 className="mb-4 text-xs font-semibold uppercase tracking-widest text-terracotta-light">
+              <h4 className="mb-4 text-xs font-semibold uppercase tracking-widest store-accent">
                 {col.title}
               </h4>
               <ul className="space-y-2.5 text-xs text-[#FAF6F0]/80">

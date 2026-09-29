@@ -53,28 +53,28 @@ export default function OrderConfirmation() {
         <Tag>Payment: {order.paymentStatus}</Tag>
       </div>
 
-      <div className="mt-8 rounded-2xl border border-charcoal/10 bg-white/50 p-6">
-        <h2 className="font-serif-display text-lg text-charcoal">Items</h2>
-        <ul className="mt-4 divide-y divide-charcoal/10">
+      <div className="mt-8 rounded-2xl border store-border store-surface p-6">
+        <h2 className="font-serif-display text-lg store-text">Items</h2>
+        <ul className="mt-4 divide-y divide-[var(--theme-border)]">
           {order.items.map((item) => (
             <li key={item.id} className="flex justify-between py-3 text-sm">
-              <span className="text-charcoal">
+              <span className="store-text">
                 {item.productNameSnapshot} × {item.quantity}
               </span>
-              <span className="text-charcoal-soft">{formatInr(item.lineTotal)}</span>
+              <span className="store-muted">{formatInr(item.lineTotal)}</span>
             </li>
           ))}
         </ul>
-        <div className="mt-4 space-y-1.5 border-t border-charcoal/10 pt-4 text-sm">
-          <div className="flex justify-between text-charcoal-soft">
+        <div className="mt-4 space-y-1.5 border-t store-border pt-4 text-sm">
+          <div className="flex justify-between store-muted">
             <span>Subtotal</span>
             <span>{formatInr(order.subtotal)}</span>
           </div>
-          <div className="flex justify-between text-charcoal-soft">
+          <div className="flex justify-between store-muted">
             <span>Shipping</span>
             <span>{Number(order.shippingAmount) === 0 ? "Free" : formatInr(order.shippingAmount)}</span>
           </div>
-          <div className="flex justify-between pt-2 font-serif-display text-base text-charcoal">
+          <div className="flex justify-between pt-2 font-serif-display text-base store-text">
             <span>Total</span>
             <span>{formatInr(order.totalAmount)}</span>
           </div>
@@ -82,9 +82,9 @@ export default function OrderConfirmation() {
       </div>
 
       {order.address && (
-        <div className="mt-6 rounded-2xl border border-charcoal/10 bg-white/50 p-6">
-          <h2 className="font-serif-display text-lg text-charcoal">Shipping Address</h2>
-          <p className="mt-2 text-sm leading-relaxed text-charcoal-soft">
+        <div className="mt-6 rounded-2xl border store-border store-surface p-6">
+          <h2 className="font-serif-display text-lg store-text">Shipping Address</h2>
+          <p className="mt-2 text-sm leading-relaxed store-muted">
             {order.address.fullName}
             <br />
             {order.address.addressLine1}
@@ -97,7 +97,7 @@ export default function OrderConfirmation() {
         </div>
       )}
 
-      <Link to="/shop" className="mt-8 inline-block text-sm text-charcoal-soft underline underline-offset-4 hover:text-charcoal">
+      <Link to="/shop" className="mt-8 inline-block text-sm store-muted underline underline-offset-4 hover:text-[var(--theme-text)]">
         ← Continue shopping
       </Link>
     </div>

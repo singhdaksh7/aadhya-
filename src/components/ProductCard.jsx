@@ -46,14 +46,14 @@ export default function ProductCard({ product }) {
 
   return (
     <div
-      className="group relative flex flex-col overflow-hidden rounded-2xl border border-charcoal/10 bg-white transition-all duration-300 hover:border-terracotta/30 hover:shadow-lg"
+      className="group relative flex flex-col overflow-hidden rounded-2xl border border-[var(--theme-border)] store-surface transition-all duration-300 hover:border-[var(--theme-primary)]/30 hover:shadow-lg"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Top Badges */}
       <div className="absolute left-3 top-3 z-10 flex flex-wrap gap-1.5">
         {onSale && (
-          <span className="rounded-full bg-terracotta px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-ivory shadow-sm">
+          <span className="rounded-full store-bg-primary px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white shadow-sm">
             {discountPercent}% OFF
           </span>
         )}
@@ -80,7 +80,7 @@ export default function ProductCard({ product }) {
         }}
         aria-label={wishlisted ? "Remove from Wishlist" : "Add to Wishlist"}
         className={`absolute right-3 top-3 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-white/80 backdrop-blur-sm transition-all hover:scale-110 shadow-xs ${
-          wishlisted ? "text-terracotta" : "text-charcoal-soft hover:text-terracotta"
+          wishlisted ? "store-primary" : "store-muted hover:text-[var(--theme-primary)]"
         }`}
       >
         <svg className="h-4 w-4" fill={wishlisted ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -89,7 +89,7 @@ export default function ProductCard({ product }) {
       </button>
 
       {/* Image Container with Hover Zoom & Dual Image */}
-      <Link to={`/shop/${product.slug}`} className="relative aspect-square w-full overflow-hidden bg-ivory-dark/40">
+      <Link to={`/shop/${product.slug}`} className="relative aspect-square w-full overflow-hidden store-surface">
         <img
           src={primaryImg}
           alt={product.name}
@@ -117,10 +117,10 @@ export default function ProductCard({ product }) {
             disabled={outOfStock || atStockLimit}
             className={`flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-semibold uppercase tracking-wider shadow-md transition ${
               addedNotice
-                ? "bg-sage text-ivory"
+                ? "bg-sage text-white"
                 : outOfStock || atStockLimit
-                ? "bg-charcoal/20 text-charcoal/50 cursor-not-allowed"
-                : "bg-terracotta text-ivory hover:bg-terracotta/90"
+                ? "bg-[var(--theme-border)] text-[var(--theme-muted)] cursor-not-allowed"
+                : "store-bg-primary text-white hover:brightness-95"
             }`}
           >
             {addedNotice ? (
@@ -142,17 +142,17 @@ export default function ProductCard({ product }) {
 
       {/* Product Content Details */}
       <div className="flex flex-1 flex-col p-4">
-        <div className="flex items-center justify-between text-xs text-charcoal-soft">
-          <Link to={`/shop/category/${categorySlug}`} className="hover:text-terracotta hover:underline">
+        <div className="flex items-center justify-between text-xs store-muted">
+          <Link to={`/shop/category/${categorySlug}`} className="hover:text-[var(--theme-primary)] hover:underline">
             {categoryName}
           </Link>
           {stockQty <= 5 && stockQty > 0 && (
-            <span className="text-[11px] font-medium text-terracotta">Only {stockQty} left</span>
+            <span className="text-[11px] font-medium store-primary">Only {stockQty} left</span>
           )}
         </div>
 
         <Link to={`/shop/${product.slug}`} className="mt-1.5 block">
-          <h3 className="font-serif-display text-base text-charcoal transition hover:text-terracotta line-clamp-1">
+          <h3 className="font-serif-display text-base store-text transition hover:text-[var(--theme-primary)] line-clamp-1">
             {product.name}
           </h3>
         </Link>
@@ -162,33 +162,33 @@ export default function ProductCard({ product }) {
           <div className="mt-1 flex items-center gap-1.5 text-xs">
             <div className="flex items-center text-amber-500">
               <span className="text-sm">★</span>
-              <span className="ml-0.5 font-semibold text-charcoal">
+              <span className="ml-0.5 font-semibold store-text">
                 {Number(product.averageRating || 0).toFixed(1)}
               </span>
             </div>
             {product.reviewCount > 0 && (
-              <span className="text-[11px] text-charcoal-soft">({product.reviewCount})</span>
+              <span className="text-[11px] store-muted">({product.reviewCount})</span>
             )}
           </div>
         )}
 
         {product.author && (
-          <p className="mt-0.5 text-xs text-charcoal-soft italic">By {product.author}</p>
+          <p className="mt-0.5 text-xs store-muted italic">By {product.author}</p>
         )}
 
         {product.shortDescription && (
-          <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-charcoal-soft">
+          <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed store-muted">
             {product.shortDescription}
           </p>
         )}
 
-        <div className="mt-auto pt-3 flex items-center justify-between border-t border-charcoal/5">
+        <div className="mt-auto pt-3 flex items-center justify-between border-t border-[var(--theme-border)]">
           <div className="flex items-baseline gap-2">
-            <span className="text-base font-semibold text-terracotta">
+            <span className="text-base font-semibold store-primary">
               {formatInr(salePrice ?? price)}
             </span>
             {onSale && (
-              <span className="text-xs text-charcoal-soft line-through">
+              <span className="text-xs store-muted line-through">
                 {formatInr(price)}
               </span>
             )}
@@ -202,10 +202,10 @@ export default function ProductCard({ product }) {
             aria-label="Add to cart"
             className={`flex h-9 w-9 items-center justify-center rounded-full transition sm:hidden ${
               addedNotice
-                ? "bg-sage text-ivory"
+                ? "bg-sage text-white"
                 : outOfStock || atStockLimit
-                ? "bg-charcoal/10 text-charcoal/40"
-                : "bg-terracotta/10 text-terracotta hover:bg-terracotta hover:text-ivory"
+                ? "bg-[var(--theme-border)] text-[var(--theme-muted)]"
+                : "bg-[var(--theme-primary-soft)] store-primary hover:bg-[var(--theme-primary)] hover:text-white"
             }`}
           >
             {addedNotice ? <IconCheck className="h-4 w-4" /> : <IconCart className="h-4 w-4" />}

@@ -90,22 +90,24 @@ export default function Navbar() {
 
       {/* Top Announcement Bar if enabled in site settings */}
       {announcementBar?.active && announcementBar?.text && (
-        <div className="bg-charcoal px-4 py-2 text-center text-xs font-medium tracking-wide text-white leading-normal">
+        <div className="store-bg-primary px-4 py-2 text-center text-xs font-medium tracking-wide text-white leading-normal">
           <span>{announcementBar.text}</span>
         </div>
       )}
 
-      {/* 2. Main Header (Bright White) */}
+      {/* 2. Main Header (Bright White). Sticky positioning follows the
+          admin-controlled header.stickyHeader setting (default: true) —
+          previously a dead setting that Navbar never consumed. */}
       <header
-        className={`sticky top-0 z-40 bg-white transition-all duration-300 ${
-          scrolled ? "border-b border-charcoal/10 shadow-sm" : "border-b border-charcoal/10"
+        className={`${header?.stickyHeader !== false ? "sticky top-0 z-40" : "relative"} store-bg transition-all duration-300 ${
+          scrolled ? "store-border border-b shadow-sm" : "store-border border-b"
         }`}
       >
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3.5 sm:px-8 gap-4">
           {/* Mobile Hamburger Button */}
           <button
             onClick={() => setMobileMenuOpen(true)}
-            className="rounded-full p-2 text-charcoal hover:bg-charcoal/5 lg:hidden shrink-0"
+            className="rounded-full p-2 store-text hover:bg-black/5 lg:hidden shrink-0"
             aria-label="Open menu"
           >
             <IconMenu className="h-6 w-6" />
@@ -131,7 +133,7 @@ export default function Navbar() {
                 fallbackText={general?.storeName || "Aadya"}
                 widthPx={branding?.logoWidthMobile || 110}
                 className="h-7 object-contain max-w-[180px]"
-                textClassName="font-serif-display text-xl tracking-tight text-charcoal font-bold"
+                textClassName="font-serif-display text-xl tracking-tight store-text font-bold"
               />
             </span>
           </Link>
@@ -141,12 +143,12 @@ export default function Navbar() {
             <div className="min-w-0 flex-1 max-w-xl hidden sm:block mx-4">
               <button
                 onClick={() => setSearchOpen(true)}
-                className="flex w-full items-center gap-3 rounded-full border border-charcoal/20 bg-[#FAF6F0] px-4 py-2 text-xs sm:text-sm text-charcoal-soft transition hover:border-terracotta hover:bg-white hover:shadow-xs"
+                className="flex w-full items-center gap-3 rounded-full store-border border bg-[var(--theme-surface)] px-4 py-2 text-xs sm:text-sm store-muted transition hover:border-[var(--theme-primary)] hover:store-bg hover:shadow-xs"
               >
-                <svg className="h-4 w-4 text-charcoal/50 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="h-4 w-4 store-muted shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
-                <span className="truncate text-charcoal/70">
+                <span className="truncate store-muted">
                   {header?.searchPlaceholder || "Search home decor, books, gifts and more..."}
                 </span>
               </button>
@@ -154,11 +156,11 @@ export default function Navbar() {
           )}
 
           {/* Right Action Icons: Account, Wishlist, Cart */}
-          <div className="flex items-center gap-3 sm:gap-5 shrink-0 text-charcoal">
+          <div className="flex items-center gap-3 sm:gap-5 shrink-0 store-text">
             {/* Mobile Search Toggle */}
             <button
               onClick={() => setSearchOpen(true)}
-              className="p-2 text-charcoal-soft hover:text-charcoal sm:hidden"
+              className="p-2 store-muted hover:store-text sm:hidden"
               aria-label="Search"
             >
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -169,10 +171,10 @@ export default function Navbar() {
             {/* Account Link */}
             <Link
               to={user ? "/account" : "/login"}
-              className="hidden sm:flex items-center gap-1.5 p-1.5 text-charcoal hover:text-terracotta transition"
+              className="hidden sm:flex items-center gap-1.5 p-1.5 store-text hover:store-primary transition"
               title={user ? "My Account" : "Sign In"}
             >
-              <svg className="h-5 w-5 text-charcoal/80" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="h-5 w-5 store-text" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
               <span className="text-xs font-semibold uppercase tracking-wider hidden md:inline">
@@ -182,10 +184,10 @@ export default function Navbar() {
 
             {/* Wishlist Placeholder */}
             <button
-              className="hidden sm:flex items-center gap-1.5 p-1.5 text-charcoal hover:text-terracotta transition"
+              className="hidden sm:flex items-center gap-1.5 p-1.5 store-text hover:store-primary transition"
               title="Wishlist (Coming Soon)"
             >
-              <svg className="h-5 w-5 text-charcoal/80" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="h-5 w-5 store-text" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
               </svg>
               <span className="text-xs font-semibold uppercase tracking-wider hidden md:inline">
@@ -196,13 +198,13 @@ export default function Navbar() {
             {/* Cart Icon + Badge */}
             <button
               onClick={() => setCartDrawerOpen(true)}
-              className="relative flex items-center gap-1.5 p-1.5 text-charcoal hover:text-terracotta transition"
+              className="relative flex items-center gap-1.5 p-1.5 store-text hover:store-primary transition"
               aria-label="Open cart"
             >
               <div className="relative">
                 <IconCart className="h-5 w-5" />
                 {count > 0 && (
-                  <span className="absolute -right-2 -top-2 flex h-4 w-4 items-center justify-center rounded-full bg-terracotta text-[10px] font-bold text-white shadow">
+                  <span className="absolute -right-2 -top-2 flex h-4 w-4 items-center justify-center rounded-full store-bg-primary text-[10px] font-bold text-white shadow">
                     {count}
                   </span>
                 )}
@@ -215,7 +217,7 @@ export default function Navbar() {
         </div>
 
         {/* Desktop Retail Sub-Navigation Bar */}
-        <div className="hidden lg:block border-t border-charcoal/5 bg-white py-2.5">
+        <div className="hidden lg:block border-t store-border store-bg py-2.5">
           <div className="mx-auto flex max-w-7xl items-center justify-center gap-8 px-8">
             {navItems.map((link) => (
               <NavLink
@@ -223,7 +225,7 @@ export default function Navbar() {
                 to={link.to}
                 className={({ isActive }) =>
                   `text-xs font-semibold uppercase tracking-wider transition-colors ${
-                    isActive ? "text-terracotta border-b-2 border-terracotta pb-0.5" : "text-charcoal-soft hover:text-terracotta"
+                    isActive ? "store-primary border-b-2 border-[var(--theme-primary)] pb-0.5" : "store-muted hover:store-primary"
                   }`
                 }
               >
@@ -237,17 +239,17 @@ export default function Navbar() {
         {mobileMenuOpen && (
           <div className="fixed inset-0 z-50 lg:hidden">
             <div
-              className="absolute inset-0 bg-charcoal/50 backdrop-blur-sm"
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
               onClick={() => setMobileMenuOpen(false)}
             />
-            <div className="absolute left-0 top-0 h-full w-full max-w-xs overflow-y-auto bg-white p-6 shadow-2xl">
-              <div className="flex items-center justify-between border-b border-charcoal/10 pb-4">
-                <Link to="/" className="font-serif-display text-2xl text-charcoal font-bold">
+            <div className="absolute left-0 top-0 h-full w-full max-w-xs overflow-y-auto store-bg p-6 shadow-2xl">
+              <div className="flex items-center justify-between border-b store-border pb-4">
+                <Link to="/" className="font-serif-display text-2xl store-text font-bold">
                   Aadya
                 </Link>
                 <button
                   onClick={() => setMobileMenuOpen(false)}
-                  className="rounded-full p-1.5 text-charcoal-soft hover:bg-charcoal/5"
+                  className="rounded-full p-1.5 store-muted hover:bg-black/5"
                   aria-label="Close menu"
                 >
                   <IconClose className="h-5 w-5" />
@@ -260,9 +262,9 @@ export default function Navbar() {
                     setMobileMenuOpen(false);
                     setSearchOpen(true);
                   }}
-                  className="flex w-full items-center gap-3 rounded-xl border border-charcoal/15 bg-[#FAF6F0] p-3 text-left text-sm text-charcoal-soft"
+                  className="flex w-full items-center gap-3 rounded-xl store-border border bg-[var(--theme-surface)] p-3 text-left text-sm store-muted"
                 >
-                  <svg className="h-4 w-4 text-charcoal/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="h-4 w-4 store-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
                   <span>Search objects...</span>
@@ -274,7 +276,7 @@ export default function Navbar() {
                     onClick={() => setMobileMenuOpen(false)}
                     className={({ isActive }) =>
                       `rounded-xl px-4 py-3 text-sm font-medium transition ${
-                        isActive ? "bg-terracotta/10 text-terracotta font-semibold" : "text-charcoal hover:bg-charcoal/5"
+                        isActive ? "store-bg-primary-soft store-primary font-semibold" : "store-text hover:bg-black/5"
                       }`
                     }
                   >
@@ -287,7 +289,7 @@ export default function Navbar() {
                       onClick={() => setMobileMenuOpen(false)}
                       className={({ isActive }) =>
                         `rounded-xl px-4 py-3 text-sm font-medium transition ${
-                          isActive ? "bg-terracotta/10 text-terracotta font-semibold" : "text-charcoal hover:bg-charcoal/5"
+                          isActive ? "store-bg-primary-soft store-primary font-semibold" : "store-text hover:bg-black/5"
                         }`
                       }
                     >
@@ -297,14 +299,14 @@ export default function Navbar() {
                   <NavLink
                     to={user ? "/account" : "/login"}
                     onClick={() => setMobileMenuOpen(false)}
-                    className="rounded-xl px-4 py-3 text-sm font-medium text-charcoal hover:bg-charcoal/5"
+                    className="rounded-xl px-4 py-3 text-sm font-medium store-text hover:bg-black/5"
                   >
                     {user ? "My Account" : "Customer Login"}
                   </NavLink>
                   <NavLink
                     to="/track-order"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="rounded-xl px-4 py-3 text-sm font-medium text-charcoal hover:bg-charcoal/5"
+                    className="rounded-xl px-4 py-3 text-sm font-medium store-text hover:bg-black/5"
                   >
                     Track Order
                   </NavLink>

@@ -59,9 +59,9 @@ export default function SearchResults() {
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           placeholder="Search products, categories, collections..."
-          className="w-full rounded-full border border-charcoal/15 bg-white px-5 py-3 text-sm focus:outline-none focus:border-terracotta"
+          className="w-full rounded-full border border-[var(--theme-border)] store-bg px-5 py-3 text-sm focus:outline-none focus:border-[var(--theme-primary)]"
         />
-        <button type="submit" className="rounded-full bg-terracotta px-6 py-3 text-xs font-semibold uppercase tracking-wider text-ivory">
+        <button type="submit" className="rounded-full store-bg-primary px-6 py-3 text-xs font-semibold uppercase tracking-wider text-white">
           Search
         </button>
       </form>
@@ -83,7 +83,7 @@ export default function SearchResults() {
                 <Link
                   key={`${s.type}-${s.slug}`}
                   to={s.type === "category" ? `/shop/category/${s.slug}` : `/collections/${s.slug}`}
-                  className="rounded-full border border-charcoal/15 bg-ivory-dark/40 px-3.5 py-1.5 text-xs text-charcoal hover:border-terracotta hover:text-terracotta"
+                  className="rounded-full border border-[var(--theme-border)] store-surface px-3.5 py-1.5 text-xs store-text hover:border-[var(--theme-primary)] hover:text-[var(--theme-primary)]"
                 >
                   {s.type === "category" ? "Category" : "Collection"}: {s.label}
                 </Link>
@@ -92,18 +92,18 @@ export default function SearchResults() {
           )}
 
           <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-            <p className="text-sm text-charcoal-soft">
+            <p className="text-sm store-muted">
               {isLoading ? "Searching..." : `${result?.totalResults ?? 0} result${result?.totalResults === 1 ? "" : "s"} for "${query}"`}
             </p>
             <div className="flex items-center gap-3">
-              <label className="flex items-center gap-2 text-xs text-charcoal-soft">
+              <label className="flex items-center gap-2 text-xs store-muted">
                 <input type="checkbox" checked={inStockOnly} onChange={(e) => setInStockOnly(e.target.checked)} />
                 In stock only
               </label>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="rounded-full border border-charcoal/15 bg-white px-3 py-1.5 text-xs"
+                className="rounded-full border border-[var(--theme-border)] store-bg px-3 py-1.5 text-xs"
               >
                 {SORT_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>

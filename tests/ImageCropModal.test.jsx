@@ -10,7 +10,7 @@ import ImageCropModal from "../src/components/admin/ImageCropModal";
 // state-setting callback unconditionally in the render body would trigger an
 // infinite render loop) so a "confirm" flow can be tested end to end.
 vi.mock("react-easy-crop", () => ({
-  default: ({ onCropComplete }) => {
+  default: function MockCropper({ onCropComplete }) {
     React.useEffect(() => {
       onCropComplete({}, { x: 0, y: 0, width: 100, height: 100 });
       // eslint-disable-next-line react-hooks/exhaustive-deps

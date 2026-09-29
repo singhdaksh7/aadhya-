@@ -90,7 +90,7 @@ function SiteLayout() {
       <WishlistProvider>
         <BrochureProvider>
           <ScrollToTop />
-          <div className="flex min-h-screen flex-col bg-white text-charcoal font-sans">
+          <div className="storefront-theme flex min-h-screen flex-col font-sans">
             <Navbar />
             <main className="flex-1">
               <Routes>

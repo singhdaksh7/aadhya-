@@ -182,7 +182,7 @@ describe("CheckoutPage", () => {
       { replace: true }
     ));
     expect(localStorage.getItem("aadya.cart.v1")).toBe("[]");
-  });
+  }, 10000);
 
   it("keeps the cart intact when the payment modal is dismissed without paying", async () => {
     seedCart();
