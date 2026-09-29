@@ -81,9 +81,12 @@ export default function CheckoutPage() {
   const [errors, setErrors] = useState({});
   const [preview, setPreview] = useState(null);
   const [previewStatus, setPreviewStatus] = useState("loading");
+  const [previewError, setPreviewError] = useState(null);
+  const [previewRetryToken, setPreviewRetryToken] = useState(0);
   const [stage, setStage] = useState("form"); // form | placing | paying | payment_unavailable | failed
   const [pendingOrder, setPendingOrder] = useState(null);
   const [serverError, setServerError] = useState(null);
+  const [validationSummary, setValidationSummary] = useState(null);
   const [savedAddresses, setSavedAddresses] = useState([]);
   const [selectedAddressId, setSelectedAddressId] = useState("");
   const [saveAddress, setSaveAddress] = useState(false);
@@ -155,6 +158,7 @@ export default function CheckoutPage() {
     if (cartLoading || items.length === 0) return;
     let cancelled = false;
     setPreviewStatus("loading");
+    setPreviewError(null);
     fetchCheckoutPreview({
       items: items.map((i) => ({ slug: i.product.slug, quantity: i.quantity, bookFormat: i.bookFormat || undefined })),
       couponCode: appliedCoupon?.code || undefined,
@@ -164,11 +168,40 @@ export default function CheckoutPage() {
         setPreview(res.data);
         setPreviewStatus("ready");
       })
-      .catch(() => !cancelled && setPreviewStatus("error"));
+      .catch((err) => {
+        if (cancelled) return;
+        // Keep a safe, server-provided message (never the raw error/stack) so
+        // the shopper sees *why* checkout is blocked instead of a dead button.
+        setPreviewError(
+          err instanceof ApiRequestError ? err.message : "Please check your connection and try again."
+        );
+        setPreviewStatus("error");
+      });
     return () => {
       cancelled = true;
     };
-  }, [cartKey, cartLoading, appliedCoupon]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cartKey, cartLoading, appliedCoupon, previewRetryToken]);
+
+  const retryPreview = () => setPreviewRetryToken((n) => n + 1);
+
+  // Single source of truth for "why is the CTA disabled right now" — every
+  // reason the submit button can be inert must be represented here so the
+  // UI never has to fall back to unexplained opacity.
+  const checkoutDisabledReason =
+    stage === "placing"
+      ? "Placing your order…"
+      : stage === "paying"
+      ? "Opening secure payment…"
+      : !razorpayEnabled && !codEnabled
+      ? "No payment methods are currently available."
+      : previewStatus === "loading"
+      ? "Checking your order…"
+      : previewStatus === "error"
+      ? previewError || "We couldn't prepare your checkout."
+      : preview?.hasBlockingIssues
+      ? "Please resolve the highlighted items before paying."
+      : null;
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
   const setShipping = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
@@ -197,7 +230,7 @@ export default function CheckoutPage() {
 
     const scriptLoaded = await loadRazorpayScript();
     if (!scriptLoaded || !window.Razorpay) {
-      setServerError("Could not load the payment window. Check your connection and try again.");
+      setServerError("Could not load Razorpay. Check your connection and retry.");
       setStage("payment_unavailable");
       return;
     }
@@ -244,7 +277,23 @@ export default function CheckoutPage() {
       if (!sameAsShipping) validateAddress(billingAddress, "billing.", validationErrors);
     }
     setErrors(validationErrors);
-    if (Object.keys(validationErrors).length > 0) return;
+    const invalidFields = Object.keys(validationErrors);
+    if (invalidFields.length > 0) {
+      setValidationSummary("Please complete the highlighted checkout fields.");
+      // Move focus (and scroll) to the first invalid field so the failure is
+      // impossible to miss — a red label alone is not enough feedback.
+      const firstField = invalidFields[0];
+      const el =
+        document.querySelector(`[data-testid="${firstField === "phone" ? "contact-phone" : firstField === "addressPhone" ? "address-phone" : ""}"]`) ||
+        document.getElementById(`field-${firstField}`) ||
+        document.querySelector(`[name="${firstField}"]`);
+      if (el && typeof el.focus === "function") {
+        el.focus();
+        el.scrollIntoView?.({ behavior: "smooth", block: "center" });
+      }
+      return;
+    }
+    setValidationSummary(null);
 
     setServerError(null);
     setStage("placing");
@@ -367,11 +416,11 @@ export default function CheckoutPage() {
               <fieldset className="space-y-4">
                 <legend className="mb-1 font-serif-display text-lg store-text font-bold">Contact Details</legend>
                 <Field label="Name" error={errors.name}>
-                  <input value={form.name} onChange={set("name")} className={inputCls("name")} />
+                  <input id="field-name" value={form.name} onChange={set("name")} className={inputCls("name")} />
                 </Field>
                 <div className="grid grid-cols-2 gap-4">
                   <Field label="Email" error={errors.email}>
-                    <input type="email" value={form.email} onChange={set("email")} className={inputCls("email")} />
+                    <input id="field-email" type="email" value={form.email} onChange={set("email")} className={inputCls("email")} />
                   </Field>
                   <Field label="Phone" error={errors.phone}>
                     <input
@@ -521,10 +570,40 @@ export default function CheckoutPage() {
                 )}
               </fieldset>
 
-              {serverError && <p className="text-sm font-semibold text-terracotta">{serverError}</p>}
+              {validationSummary && (
+                <p role="status" aria-live="assertive" className="text-sm font-semibold text-terracotta">
+                  {validationSummary}
+                </p>
+              )}
+
+              {serverError && stage !== "payment_unavailable" && stage !== "failed" && (
+                <p role="status" aria-live="assertive" className="text-sm font-semibold text-terracotta">
+                  {serverError}
+                </p>
+              )}
+
+              {previewStatus === "error" && (
+                <div role="status" aria-live="polite" className="rounded-xl bg-terracotta/10 px-4 py-3 text-sm text-terracotta">
+                  Could not prepare checkout: {previewError || "We couldn't prepare your checkout. Please retry."}
+                  <Button type="button" className="mt-3 w-full bg-terracotta text-white" onClick={retryPreview}>
+                    Retry Checkout
+                  </Button>
+                </div>
+              )}
+
+              {previewStatus === "ready" && preview?.hasBlockingIssues && (
+                <div role="status" aria-live="polite" className="rounded-xl bg-terracotta/10 px-4 py-3 text-sm text-terracotta space-y-1">
+                  <p className="font-semibold">Some items need attention before you can pay:</p>
+                  <ul className="list-disc pl-5 space-y-0.5">
+                    {preview.items.filter((i) => !i.ok).map((i, idx) => (
+                      <li key={`${i.slug}-${idx}`}>{i.message || `"${i.slug}" is unavailable.`}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
               {stage === "failed" && (
-                <div className="rounded-xl bg-terracotta/10 px-4 py-3 text-sm text-terracotta">
+                <div role="status" aria-live="polite" className="rounded-xl bg-terracotta/10 px-4 py-3 text-sm text-terracotta">
                   Payment didn't go through. Your order is saved and your cart is untouched — you can retry.
                   <Button type="button" className="mt-3 w-full bg-terracotta text-white" onClick={retryPayment}>
                     Retry Payment
@@ -533,32 +612,54 @@ export default function CheckoutPage() {
               )}
 
               {stage === "payment_unavailable" && (
-                <div className="rounded-xl bg-sage-light px-4 py-3 text-sm text-green-deep">
-                  Your order #{pendingOrder?.orderNumber} has been saved as pending. Online payment isn't available in
-                  this environment right now — we'll reach out to complete it, or you can retry shortly.
+                <div role="status" aria-live="polite" className="rounded-xl bg-sage-light px-4 py-3 text-sm text-green-deep space-y-2">
+                  <p>
+                    {serverError ||
+                      "Payment is unavailable right now."}
+                  </p>
+                  <p>
+                    Your order #{pendingOrder?.orderNumber} has been saved as pending — you can retry, or we'll reach
+                    out to complete it.
+                  </p>
+                  <Button type="button" className="w-full bg-terracotta text-white" onClick={retryPayment}>
+                    Retry Payment
+                  </Button>
                 </div>
               )}
 
               {stage !== "failed" && stage !== "payment_unavailable" && (
-                <button
-                  type="submit"
-                  disabled={
-                    stage === "placing" ||
-                    stage === "paying" ||
-                    previewStatus !== "ready" ||
-                    preview?.hasBlockingIssues ||
-                    (!razorpayEnabled && !codEnabled)
-                  }
-                  className="w-full rounded-full store-bg-primary py-4 text-xs font-semibold uppercase tracking-wider text-white shadow-xs transition store-primary-hover disabled:opacity-50"
-                >
-                  {stage === "placing"
-                    ? "Placing Order…"
-                    : stage === "paying"
-                    ? "Opening Payment Window…"
-                    : paymentMethod === "cod"
-                    ? "Place Order (Cash on Delivery)"
-                    : "Pay Securely via Razorpay"}
-                </button>
+                <>
+                  {checkoutDisabledReason && (
+                    <p role="status" aria-live="polite" className="text-xs font-medium store-muted">
+                      {checkoutDisabledReason}
+                    </p>
+                  )}
+                  <button
+                    type="submit"
+                    disabled={Boolean(checkoutDisabledReason)}
+                    aria-disabled={Boolean(checkoutDisabledReason)}
+                    aria-label={
+                      stage === "placing"
+                        ? "Placing order, please wait"
+                        : stage === "paying"
+                        ? "Opening secure payment window, please wait"
+                        : paymentMethod === "cod"
+                        ? "Place order, cash on delivery"
+                        : "Pay securely via Razorpay"
+                    }
+                    className="w-full rounded-full store-bg-primary py-4 text-xs font-semibold uppercase tracking-wider text-white shadow-xs transition store-primary-hover disabled:opacity-50"
+                  >
+                    {stage === "placing"
+                      ? "Placing Order…"
+                      : stage === "paying"
+                      ? "Opening Payment Window…"
+                      : previewStatus === "loading"
+                      ? "Checking Order…"
+                      : paymentMethod === "cod"
+                      ? "Place Order (Cash on Delivery)"
+                      : "Pay Securely via Razorpay"}
+                  </button>
+                </>
               )}
             </form>
 
@@ -708,15 +809,6 @@ function OrderSummary({ preview, status, appliedCoupon, couponError, applyCoupon
             </div>
           </div>
 
-          {preview.hasBlockingIssues && (
-            <p className="text-xs text-terracotta">
-              Some items need attention before you can pay. Please{" "}
-              <a href="/cart" className="underline font-semibold">
-                return to your cart
-              </a>{" "}
-              to fix them.
-            </p>
-          )}
         </>
       )}
     </div>
