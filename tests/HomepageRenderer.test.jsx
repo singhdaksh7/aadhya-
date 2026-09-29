@@ -2,6 +2,18 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import HomepageRenderer from "../src/components/HomepageRenderer";
+import { CartProvider } from "../src/context/CartContext";
+import { WishlistProvider } from "../src/context/WishlistContext";
+
+function withProviders(children) {
+  return (
+    <BrowserRouter>
+      <CartProvider>
+        <WishlistProvider>{children}</WishlistProvider>
+      </CartProvider>
+    </BrowserRouter>
+  );
+}
 
 // Mock child components that make API calls
 vi.mock("../src/components/CircularCategoryNav", () => ({
@@ -72,5 +84,46 @@ describe("HomepageRenderer Component", () => {
   it("passes the new 90-second slow setting through unchanged", () => {
     render(<BrowserRouter><HomepageRenderer sections={[{ id: "ticker", type: "PROMO_STRIP", isEnabled: true, settings: { speed: 90 } }]} /></BrowserRouter>);
     expect(screen.getByTestId("mock-promo-strip")).toHaveAttribute("data-speed", "90");
+  });
+
+  it("renders product cards from section.products (server-resolved) for New Arrivals", () => {
+    const products = [
+      { id: "p1", name: "Clay Vessel", slug: "clay-vessel", price: 999, images: ["/vessel.jpg"] },
+      { id: "p2", name: "Linen Runner", slug: "linen-runner", price: 1299, images: ["/runner.jpg"] },
+    ];
+    render(withProviders(
+      <HomepageRenderer sections={[{ id: "na", type: "NEW_ARRIVALS", isEnabled: true, settings: { limit: 4 }, products }]} />
+    ));
+    expect(screen.getByText("Clay Vessel")).toBeInTheDocument();
+    expect(screen.getByText("Linen Runner")).toBeInTheDocument();
+  });
+
+  it("hides the New Arrivals section entirely (no heading, no empty grid) when zero products match", () => {
+    render(
+      <BrowserRouter>
+        <HomepageRenderer sections={[{ id: "na", type: "NEW_ARRIVALS", isEnabled: true, settings: {}, products: [] }]} />
+      </BrowserRouter>
+    );
+    expect(screen.queryByText("New Arrivals")).not.toBeInTheDocument();
+  });
+
+  it("hides the Best Sellers section entirely when zero products match", () => {
+    render(
+      <BrowserRouter>
+        <HomepageRenderer sections={[{ id: "bs", type: "BEST_SELLERS", isEnabled: true, settings: {}, products: [] }]} />
+      </BrowserRouter>
+    );
+    expect(screen.queryByText("Best Sellers")).not.toBeInTheDocument();
+  });
+
+  it("falls back to legacy newArrivals/bestSellers props when section.products is absent", () => {
+    const legacyProducts = [{ id: "p3", name: "Legacy Prop Product", slug: "legacy", price: 500, images: ["/x.jpg"] }];
+    render(withProviders(
+      <HomepageRenderer
+        sections={[{ id: "na", type: "NEW_ARRIVALS", isEnabled: true, settings: {} }]}
+        newArrivals={legacyProducts}
+      />
+    ));
+    expect(screen.getByText("Legacy Prop Product")).toBeInTheDocument();
   });
 });
