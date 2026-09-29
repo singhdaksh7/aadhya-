@@ -23,6 +23,21 @@ const DEFAULTS = {
   defaultTaxPricingMode: "TAX_EXCLUSIVE",
   shippingTaxRate: 0,
   shippingHsnCode: null,
+  // Bank/payment details are printed on invoices only (not treated as
+  // secrets requiring encryption, unlike IntegrationCredential). Optional.
+  bankName: "",
+  bankAccountHolder: "",
+  bankAccountNumber: "",
+  bankIfsc: "",
+  bankBranch: "",
+  upiId: "",
+  // Branding used only by the PDF renderer: a logo URL, and the named
+  // authorized signatory shown above the signature line (with an optional
+  // signature image URL). Additive/optional; the PDF omits sections left
+  // blank.
+  logoUrl: null,
+  signatoryName: "",
+  signatureUrl: null,
 };
 const num = (value) => Number(value || 0);
 
@@ -42,9 +57,23 @@ export async function updateInvoiceSettings(settings) {
   });
   return safe;
 }
-function financialYear(date) {
+export function financialYear(date) {
   const year = date.getMonth() >= 3 ? date.getFullYear() : date.getFullYear() - 1;
   return `${year}-${String((year + 1) % 100).padStart(2, "0")}`;
+}
+
+// Shared, transactional numbering step. MUST be the only place that
+// increments InvoiceSequence, so automatic and manual invoices can never
+// collide or go out of order. Caller supplies the tx and settings; this
+// creates the sequence row if missing (race-safe) and returns the next
+// invoiceNumber/date pair. Does not create/update the Invoice row itself.
+export async function allocateInvoiceNumber(tx, settings) {
+  await tx.$executeRaw`INSERT INTO "InvoiceSequence" (id, "nextNumber", "updatedAt") VALUES ('default', ${Number(settings.nextInvoiceNumber || 1)}, now()) ON CONFLICT (id) DO NOTHING`;
+  const sequence = await tx.invoiceSequence.update({ where: { id: "default" }, data: { nextNumber: { increment: 1 } }, select: { nextNumber: true } });
+  const serial = sequence.nextNumber - 1;
+  const date = new Date();
+  const invoiceNumber = `${settings.prefix}/${financialYear(date)}/${String(serial).padStart(6, "0")}`;
+  return { invoiceNumber, date };
 }
 function addressSnapshot(address, fallback) { return address ? { ...address } : { fullName: fallback.customerName, phone: fallback.customerPhone, addressLine1: "", city: "", state: "", postalCode: "", country: "India" }; }
 
@@ -125,6 +154,20 @@ function resolveItemTax(item, settings) {
   return { hsnCode, gstRate, unit, taxPricingMode, complete: gstRate != null };
 }
 
+// Single source of truth for per-line GST math (TAX_INCLUSIVE/EXCLUSIVE,
+// CGST/SGST vs IGST split). Shared by the automatic per-item calculator
+// (calculatePerItem, below) and the manual/offline invoice flow
+// (manualInvoice.service.js) so the two paths can never diverge.
+export function computeItemTaxLine({ priceAfterDiscount, gstRate, taxPricingMode, interState }) {
+  const rate = num(gstRate);
+  const taxableValue = taxPricingMode === "TAX_INCLUSIVE" ? round2(priceAfterDiscount / (1 + rate / 100)) : round2(priceAfterDiscount);
+  const taxOnItem = round2((taxableValue * rate) / 100);
+  const cgstAmount = interState ? 0 : round2(taxOnItem / 2);
+  const sgstAmount = interState ? 0 : round2(taxOnItem / 2);
+  const igstAmount = interState ? taxOnItem : 0;
+  return { taxableValue, taxAmount: taxOnItem, cgstAmount, sgstAmount, igstAmount, lineTotal: round2(taxableValue + taxOnItem) };
+}
+
 // Full per-item GST calculation. Only used once every order item resolves a
 // concrete gstRate (via resolveItemTax) — otherwise calculateFlat is used so
 // behavior stays identical to the pre-existing simplified flow.
@@ -144,11 +187,7 @@ function calculatePerItem(order, settings, resolved) {
     const priceAfterDiscount = round2(lineTotal - discountForItem);
 
     const rate = r.gstRate;
-    const taxableValue = r.taxPricingMode === "TAX_INCLUSIVE" ? round2(priceAfterDiscount / (1 + rate / 100)) : priceAfterDiscount;
-    const taxOnItem = round2((taxableValue * rate) / 100);
-    const cgstAmount = interState ? 0 : round2(taxOnItem / 2);
-    const sgstAmount = interState ? 0 : round2(taxOnItem / 2);
-    const igstAmount = interState ? taxOnItem : 0;
+    const { taxableValue, taxAmount: taxOnItem, cgstAmount, sgstAmount, igstAmount, lineTotal: itemLineTotal } = computeItemTaxLine({ priceAfterDiscount, gstRate: rate, taxPricingMode: r.taxPricingMode, interState });
 
     return {
       productName: item.productNameSnapshot,
@@ -262,12 +301,8 @@ export async function ensureInvoiceForOrder(orderId, { forceCod = false } = {}) 
         // invoice creation for the order that lost the race. A raw
         // INSERT ... ON CONFLICT DO NOTHING sidesteps all of that: it never
         // errors, so the transaction stays healthy either way.
-        await tx.$executeRaw`INSERT INTO "InvoiceSequence" (id, "nextNumber", "updatedAt") VALUES ('default', ${Number(settings.nextInvoiceNumber || 1)}, now()) ON CONFLICT (id) DO NOTHING`;
-        const sequence = await tx.invoiceSequence.update({ where: { id: "default" }, data: { nextNumber: { increment: 1 } }, select: { nextNumber: true } });
-        const serial = sequence.nextNumber - 1;
-        const date = new Date();
-        const invoiceNumber = `${settings.prefix}/${financialYear(date)}/${String(serial).padStart(6, "0")}`;
-        const createdInvoice = await tx.invoice.create({ data: { orderId, invoiceNumber, invoiceDate: date, customerName: order.customerName, customerEmail: order.customerEmail, customerPhone: order.customerPhone || null, billingAddress: addressSnapshot(order.billingAddress || order.address, order), shippingAddress: order.address ? addressSnapshot(order.address, order) : undefined, subtotal: order.subtotal, discountAmount: order.discountAmount, shippingAmount: order.shippingAmount, taxAmount: calculated.tax.enabled ? round2(calculated.tax.cgstAmount + calculated.tax.sgstAmount + calculated.tax.igstAmount) : order.taxAmount, totalAmount: calculated.totalAmount, currency: order.currency, companySnapshot: { legalName: settings.legalName, address: settings.address, email: settings.email, phone: settings.phone, gstin: settings.gstin || null, pan: settings.pan || null, footer: settings.footer, terms: settings.terms }, taxSnapshot: calculated.tax, itemsSnapshot: calculated.items } });
+        const { invoiceNumber, date } = await allocateInvoiceNumber(tx, settings);
+        const createdInvoice = await tx.invoice.create({ data: { orderId, invoiceNumber, invoiceDate: date, customerName: order.customerName, customerEmail: order.customerEmail, customerPhone: order.customerPhone || null, billingAddress: addressSnapshot(order.billingAddress || order.address, order), shippingAddress: order.address ? addressSnapshot(order.address, order) : undefined, subtotal: order.subtotal, discountAmount: order.discountAmount, shippingAmount: order.shippingAmount, taxAmount: calculated.tax.enabled ? round2(calculated.tax.cgstAmount + calculated.tax.sgstAmount + calculated.tax.igstAmount) : order.taxAmount, totalAmount: calculated.totalAmount, currency: order.currency, companySnapshot: { legalName: settings.legalName, address: settings.address, email: settings.email, phone: settings.phone, gstin: settings.gstin || null, pan: settings.pan || null, footer: settings.footer, terms: settings.terms, logoUrl: settings.logoUrl || null, signatoryName: settings.signatoryName || "", signatureUrl: settings.signatureUrl || null, bank: { bankName: settings.bankName || "", accountHolder: settings.bankAccountHolder || "", accountNumber: settings.bankAccountNumber || "", ifsc: settings.bankIfsc || "", branch: settings.bankBranch || "", upiId: settings.upiId || "" } }, taxSnapshot: calculated.tax, itemsSnapshot: calculated.items } });
 
         // Mirror the per-item tax breakdown onto OrderItem itself, so the
         // order retains it even though Invoice is the immutable snapshot of
@@ -322,17 +357,30 @@ export async function getInvoiceFile(invoiceId) {
 }
 export async function listCustomerInvoices(customerId) { return prisma.invoice.findMany({ where: { order: { customerId } }, select: { id: true, invoiceNumber: true, invoiceDate: true, totalAmount: true, currency: true, order: { select: { orderNumber: true, paymentStatus: true } } }, orderBy: { createdAt: "desc" } }); }
 
-export async function listAdminInvoices({ page = 1, limit = 20, search } = {}) {
-  const where = search
-    ? {
-        OR: [
-          { invoiceNumber: { contains: search, mode: "insensitive" } },
-          { customerName: { contains: search, mode: "insensitive" } },
-          { customerEmail: { contains: search, mode: "insensitive" } },
-          { order: { orderNumber: { contains: search, mode: "insensitive" } } },
-        ],
-      }
-    : {};
+export async function listAdminInvoices({ page = 1, limit = 20, search, invoiceNumber, orderNumber, customer, dateFrom, dateTo, paymentMethod, status } = {}) {
+  const and = [];
+  if (search) {
+    and.push({
+      OR: [
+        { invoiceNumber: { contains: search, mode: "insensitive" } },
+        { customerName: { contains: search, mode: "insensitive" } },
+        { customerEmail: { contains: search, mode: "insensitive" } },
+        { order: { orderNumber: { contains: search, mode: "insensitive" } } },
+      ],
+    });
+  }
+  if (invoiceNumber) and.push({ invoiceNumber: { contains: invoiceNumber, mode: "insensitive" } });
+  if (orderNumber) and.push({ order: { orderNumber: { contains: orderNumber, mode: "insensitive" } } });
+  if (customer) and.push({ OR: [{ customerName: { contains: customer, mode: "insensitive" } }, { customerEmail: { contains: customer, mode: "insensitive" } }] });
+  if (paymentMethod) and.push({ order: { paymentMethod } });
+  if (status) and.push({ order: { paymentStatus: status } });
+  if (dateFrom || dateTo) {
+    const range = {};
+    if (dateFrom) range.gte = new Date(dateFrom);
+    if (dateTo) range.lte = new Date(new Date(dateTo).setHours(23, 59, 59, 999));
+    and.push({ invoiceDate: range });
+  }
+  const where = and.length ? { AND: and } : {};
   const skip = (page - 1) * limit;
   const [items, total] = await Promise.all([
     prisma.invoice.findMany({
@@ -341,13 +389,16 @@ export async function listAdminInvoices({ page = 1, limit = 20, search } = {}) {
         id: true,
         invoiceNumber: true,
         invoiceDate: true,
+        subtotal: true,
+        taxAmount: true,
         totalAmount: true,
         currency: true,
         customerName: true,
         customerEmail: true,
         emailedAt: true,
         createdAt: true,
-        order: { select: { id: true, orderNumber: true } },
+        taxSnapshot: true,
+        order: { select: { id: true, orderNumber: true, paymentMethod: true, paymentStatus: true } },
       },
       orderBy: { createdAt: "desc" },
       skip,
@@ -356,9 +407,41 @@ export async function listAdminInvoices({ page = 1, limit = 20, search } = {}) {
     prisma.invoice.count({ where }),
   ]);
   return {
-    items: items.map((inv) => ({ ...inv, totalAmount: Number(inv.totalAmount) })),
+    items: items.map((inv) => ({
+      ...inv,
+      subtotal: Number(inv.subtotal),
+      taxAmount: Number(inv.taxAmount),
+      totalAmount: Number(inv.totalAmount),
+      gstin: inv.taxSnapshot?.gstin || null,
+      // Model fields for MANUAL/ONLINE source and invoice-level status don't
+      // exist yet at the time this endpoint was extended (a sibling agent
+      // is adding them to the Invoice model in parallel) — default so the
+      // admin UI has something sensible either way, and the real values
+      // take over automatically once those columns land.
+      source: inv.source ?? "ONLINE",
+      status: inv.status ?? "ISSUED",
+    })),
     meta: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) },
   };
+}
+
+export async function getInvoiceDetail(invoiceId) {
+  const invoice = await prisma.invoice.findUnique({
+    where: { id: invoiceId },
+    include: { order: { select: { id: true, orderNumber: true, paymentMethod: true, paymentStatus: true, status: true, payments: { orderBy: { createdAt: "desc" }, take: 1, select: { id: true, provider: true, providerPaymentId: true, status: true } } } } },
+  });
+  if (!invoice) throw ApiError.notFound("Invoice not found");
+  const auditLogs = await prisma.adminAuditLog.findMany({
+    where: {
+      OR: [
+        { metadata: { path: ["invoiceId"], equals: invoice.id } },
+        { metadata: { path: ["orderId"], equals: invoice.orderId } },
+      ],
+    },
+    orderBy: { createdAt: "desc" },
+    take: 50,
+  });
+  return { ...invoice, auditLogs };
 }
 export async function assertCustomerInvoice(customerId, invoiceId) { const invoice = await prisma.invoice.findFirst({ where: { id: invoiceId, order: { customerId } } }); if (!invoice) throw ApiError.notFound("Invoice not found"); return invoice; }
 export async function assertGuestInvoice(orderNumber, token, invoiceId) { const { hashToken, safeCompareHex } = await import("../../utils/secureToken.js"); const order = await prisma.order.findUnique({ where: { orderNumber } }); if (!order || !safeCompareHex(hashToken(token), order.accessTokenHash)) throw ApiError.notFound("Invoice not found"); const invoice = await prisma.invoice.findFirst({ where: { id: invoiceId, orderId: order.id } }); if (!invoice) throw ApiError.notFound("Invoice not found"); return invoice; }

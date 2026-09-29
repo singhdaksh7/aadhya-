@@ -222,6 +222,37 @@ describe("invoice PDF generation", () => {
     const allInvoices = await prisma.invoice.findMany({ where: { orderId } });
     expect(allInvoices).toHaveLength(1);
   });
+
+  it("generates a non-trivial PDF (tabular GST layout) with a sane byte size", async () => {
+    const { orderId } = await placeOrder({ quantity: 2 });
+    await markOrderPaidDirect(orderId);
+    const invoice = await ensureInvoiceForOrder(orderId);
+    const file = await readInvoicePdf(invoice.pdfStorageKey);
+    expect(file.size).toBeGreaterThan(1000);
+  });
+
+  it("regenerates without throwing for an order with no GST/HSN data (gstEnabled off)", async () => {
+    const { orderId } = await placeOrder();
+    await markOrderPaidDirect(orderId);
+    const invoice = await ensureInvoiceForOrder(orderId);
+    expect(invoice.taxSnapshot.enabled).toBe(false);
+    await expect(regenerateInvoicePdf(invoice.id)).resolves.toBeTruthy();
+  });
+
+  it("regenerates without throwing from an old-shape snapshot lacking per-item HSN/GST fields", async () => {
+    const { orderId } = await placeOrder();
+    await markOrderPaidDirect(orderId);
+    const invoice = await ensureInvoiceForOrder(orderId);
+    // Simulate a pre-Phase-1 invoice: itemsSnapshot entries with none of the
+    // hsnCode/gstRate/unit/taxableValue/cgstAmount/sgstAmount/igstAmount
+    // fields the redesigned PDF reads.
+    const legacyItems = invoice.itemsSnapshot.map(({ hsnCode, gstRate, unit, taxableValue, cgstAmount, sgstAmount, igstAmount, ...rest }) => rest);
+    await prisma.invoice.update({ where: { id: invoice.id }, data: { itemsSnapshot: legacyItems, taxSnapshot: null } });
+    await expect(regenerateInvoicePdf(invoice.id)).resolves.toBeTruthy();
+    const reloaded = await prisma.invoice.findUnique({ where: { id: invoice.id } });
+    const file = await readInvoicePdf(reloaded.pdfStorageKey);
+    expect(file.size).toBeGreaterThan(0);
+  });
 });
 
 describe("invoice email idempotency and resend", () => {

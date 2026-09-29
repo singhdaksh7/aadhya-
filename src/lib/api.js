@@ -401,6 +401,7 @@ export function adminListInvoices(params = {}) {
 export async function adminDownloadInvoice(id) { const res = await fetch(`${API_URL}/admin/invoices/${id}/download`, { headers: { Authorization: `Bearer ${tokens.admin}` }, credentials: "include" }); if (!res.ok) throw new ApiRequestError("Could not download invoice", res.status); return res.blob(); }
 export function adminRegenerateInvoice(id) { return api.post(`/admin/invoices/${id}/regenerate`, {}, { auth: "admin" }); }
 export function adminResendInvoice(id) { return api.post(`/admin/invoices/${id}/resend`, {}, { auth: "admin" }); }
+export function adminGetInvoiceDetail(id) { return api.get(`/admin/invoices/${id}`, { auth: "admin" }); }
 
 export function adminListCustomers(params = {}) {
   const query = new URLSearchParams(
