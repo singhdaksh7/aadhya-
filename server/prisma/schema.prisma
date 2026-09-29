@@ -562,6 +562,7 @@ model Shipment {
   awb               String?
   labelStorageKey   String?
   status            String    @default("PENDING")
+  rawProviderStatus String?
   lastError         String?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt

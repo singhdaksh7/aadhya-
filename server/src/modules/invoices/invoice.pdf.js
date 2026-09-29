@@ -4,11 +4,15 @@
 // extended (rather than replaced with a library like pdfkit) to render a
 // proper A4 tabular GST invoice layout: a fixed-width monospace grid gives
 // us aligned columns without needing real table-drawing primitives, and
-// PDF's `re`/`f`/`S` operators draw the rule lines around it. Embedding a
-// raster logo/signature image (PDF image XObjects) was left out of this
-// pass to keep the writer small; `companySnapshot.logoUrl`/`signatureUrl`
-// are rendered as a text reference line instead until that's worth adding.
+// PDF's `re`/`f`/`S` operators draw the rule lines around it.
+//
+// Logo/signature images: rendered as real PDF Image XObjects (JPEG via
+// /DCTDecode, PNG via a hand-rolled decoder + /FlateDecode — see
+// invoice.image.js) when the stored branding URL resolves to a local,
+// decodable file; otherwise this falls back to the original text-only
+// rendering, so a missing/corrupt image can never break invoice creation.
 import { amountInWords } from "../../utils/amountInWords.js";
+import { loadEmbeddableImage } from "./invoice.image.js";
 
 function esc(value) {
   return String(value ?? "").replace(/([\\()])/g, "\\$1").replace(/[\r\n]+/g, " ");
@@ -20,14 +24,26 @@ const PAGE_H = 842;
 const MARGIN = 36;
 const CONTENT_W = PAGE_W - MARGIN * 2;
 
+// Computes a draw box (x, y-bottom, w, h) for an image at a given top-left
+// anchor, preserving aspect ratio and capped to maxH/maxW.
+function fitBox(imgWidth, imgHeight, maxW, maxH) {
+  const scale = Math.min(maxW / imgWidth, maxH / imgHeight, 1);
+  return { w: imgWidth * scale, h: imgHeight * scale };
+}
+
 // Builds the text/graphics content stream for a single page's worth of
 // invoice body. `ops` accumulates raw PDF content-stream operators.
-function buildContent(invoice) {
+// `images` maps a logical slot ("logo"/"signature") to a decoded image
+// (see invoice.image.js) or null. Returns the content stream text plus the
+// list of image slots that were actually placed (so the caller knows which
+// XObjects to embed and reference in Resources).
+function buildContent(invoice, images) {
   const company = invoice.companySnapshot || {};
   const tax = invoice.taxSnapshot || {};
   const items = invoice.itemsSnapshot || [];
   const currency = invoice.currency || "INR";
   const ops = [];
+  const placedImages = [];
   let y = PAGE_H - MARGIN;
 
   const rects = []; // border/fill rectangles, drawn first (behind text)
@@ -39,12 +55,26 @@ function buildContent(invoice) {
   function rule(x1, ty, x2, ty2) {
     lines.push(`${x1} ${ty} m ${x2} ${ty2} l S`);
   }
+  // Places an image XObject with its top-left corner at (x, topY), scaled
+  // to fit within maxW x maxH while preserving aspect ratio. PDF images are
+  // drawn in a unit square scaled by the `cm` matrix with origin at the
+  // bottom-left, so we translate down by the box height.
+  function image(slot, x, topY, maxW, maxH) {
+    const img = images[slot];
+    if (!img) return null;
+    const { w, h } = fitBox(img.width, img.height, maxW, maxH);
+    if (!w || !h) return null;
+    ops.push(`q ${w.toFixed(2)} 0 0 ${h.toFixed(2)} ${x.toFixed(2)} ${(topY - h).toFixed(2)} cm /${slot === "logo" ? "Im1" : "Im2"} Do Q`);
+    placedImages.push(slot);
+    return { w, h };
+  }
 
   // --- Header ---
-  if (company.logoUrl) text(MARGIN, y, `[Logo: ${company.logoUrl}]`, { size: 7 });
+  const logoBox = company.logoUrl ? image("logo", MARGIN, y + 6, 140, 60) : null;
+  if (company.logoUrl && !logoBox) text(MARGIN, y, `[Logo: ${company.logoUrl}]`, { size: 7 });
   text(PAGE_W - MARGIN - 120, y, "TAX INVOICE", { size: 16, font: "F2" });
   y -= 20;
-  text(MARGIN, y, company.legalName || "Aadya Society", { size: 13, font: "F2" });
+  text(MARGIN, y, company.legalName || "Registered Business", { size: 13, font: "F2" });
   y -= 14;
   if (company.address) { text(MARGIN, y, company.address, { size: 9 }); y -= 12; }
   const contactBits = [company.email, company.phone].filter(Boolean).join("  |  ");
@@ -55,6 +85,13 @@ function buildContent(invoice) {
   text(PAGE_W - MARGIN - 220, y + 46, `Invoice No: ${invoice.invoiceNumber}`, { size: 9 });
   text(PAGE_W - MARGIN - 220, y + 34, `Invoice Date: ${new Date(invoice.invoiceDate).toLocaleDateString("en-IN")}`, { size: 9 });
   text(PAGE_W - MARGIN - 220, y + 22, `Order No: ${invoice.order?.orderNumber || ""}`, { size: 9 });
+
+  // Supply type (intra-state vs inter-state), driven purely by the frozen
+  // taxSnapshot (never recomputed from live order/settings state).
+  const interState = Number(tax.igstAmount || 0) > 0;
+  if (tax.enabled) {
+    text(PAGE_W - MARGIN - 220, y + 10, interState ? "Inter-state supply" : "Intra-state supply", { size: 8, font: "F2" });
+  }
 
   y -= 8;
   rule(MARGIN, y, PAGE_W - MARGIN, y);
@@ -126,31 +163,60 @@ function buildContent(invoice) {
   rule(MARGIN, y + 4, PAGE_W - MARGIN, y + 4);
   y -= 10;
 
-  // --- Tax summary table ---
+  // --- Tax summary table, grouped by GST rate ---
+  // Multi-rate invoices (e.g. some items at 5%, others at 18%) print one
+  // row-group per distinct gstRate found in itemsSnapshot, rather than a
+  // single blended rate. Whether the invoice as a whole is intra- or
+  // inter-state is still taken from taxSnapshot (frozen at issue time), not
+  // recomputed here.
   text(MARGIN, y, "Tax Summary", { size: 9.5, font: "F2" });
   y -= 12;
-  const taxColX = [MARGIN, MARGIN + 150, MARGIN + 260, MARGIN + 340];
-  ["Tax Type", "Taxable Amount", "Rate", "Tax Amount"].forEach((h, i) => text(taxColX[i], y, h, { size: 7.5, font: "F2" }));
+  const taxColX = [MARGIN, MARGIN + 110, MARGIN + 210, MARGIN + 290, MARGIN + 380];
+  const headers = interState ? ["GST Rate", "Taxable Amount", "IGST", "", ""] : ["GST Rate", "Taxable Amount", "CGST", "SGST", ""];
+  headers.forEach((h, i) => { if (h) text(taxColX[i], y, h, { size: 7.5, font: "F2" }); });
   y -= 11;
-  const taxableTotal = round2sum(items.map((i) => Number(i.taxableValue ?? 0)));
-  const interState = Number(tax.igstAmount || 0) > 0;
-  if (interState) {
-    text(taxColX[0], y, "IGST", { size: 7.5 });
-    text(taxColX[1], y, taxableTotal.toFixed(2), { size: 7.5 });
-    text(taxColX[2], y, tax.rate != null ? `${tax.rate}%` : "varies", { size: 7.5 });
-    text(taxColX[3], y, money(tax.igstAmount, currency), { size: 7.5 });
-    y -= 11;
-  } else if (Number(tax.cgstAmount || 0) > 0 || Number(tax.sgstAmount || 0) > 0) {
-    text(taxColX[0], y, "CGST", { size: 7.5 });
-    text(taxColX[1], y, taxableTotal.toFixed(2), { size: 7.5 });
-    text(taxColX[2], y, tax.rate != null ? `${tax.rate / 2}%` : "varies", { size: 7.5 });
-    text(taxColX[3], y, money(tax.cgstAmount, currency), { size: 7.5 });
-    y -= 11;
-    text(taxColX[0], y, "SGST", { size: 7.5 });
-    text(taxColX[1], y, taxableTotal.toFixed(2), { size: 7.5 });
-    text(taxColX[2], y, tax.rate != null ? `${tax.rate / 2}%` : "varies", { size: 7.5 });
-    text(taxColX[3], y, money(tax.sgstAmount, currency), { size: 7.5 });
-    y -= 11;
+
+  const rateGroups = new Map();
+  for (const item of items) {
+    const rateKey = item.gstRate != null ? Number(item.gstRate) : "unrated";
+    if (!rateGroups.has(rateKey)) rateGroups.set(rateKey, { taxable: 0, cgst: 0, sgst: 0, igst: 0 });
+    const group = rateGroups.get(rateKey);
+    group.taxable += Number(item.taxableValue ?? 0);
+    group.cgst += Number(item.cgstAmount ?? 0);
+    group.sgst += Number(item.sgstAmount ?? 0);
+    group.igst += Number(item.igstAmount ?? 0);
+  }
+  const sortedRates = [...rateGroups.keys()].sort((a, b) => (a === "unrated" ? 1 : b === "unrated" ? -1 : a - b));
+  if (sortedRates.length) {
+    for (const rateKey of sortedRates) {
+      const group = rateGroups.get(rateKey);
+      const label = rateKey === "unrated" ? "-" : `${rateKey}%`;
+      text(taxColX[0], y, label, { size: 7.5 });
+      text(taxColX[1], y, round2sum([group.taxable]).toFixed(2), { size: 7.5 });
+      if (interState) {
+        text(taxColX[2], y, money(group.igst, currency), { size: 7.5 });
+      } else {
+        text(taxColX[2], y, money(group.cgst, currency), { size: 7.5 });
+        text(taxColX[3], y, money(group.sgst, currency), { size: 7.5 });
+      }
+      y -= 11;
+    }
+  } else {
+    // No per-item breakdown available (legacy/flat-rate snapshot) — fall
+    // back to the single blended-rate row this table originally rendered.
+    const taxableTotal = round2sum(items.map((i) => Number(i.taxableValue ?? 0)));
+    if (interState) {
+      text(taxColX[0], y, tax.rate != null ? `${tax.rate}%` : "varies", { size: 7.5 });
+      text(taxColX[1], y, taxableTotal.toFixed(2), { size: 7.5 });
+      text(taxColX[2], y, money(tax.igstAmount, currency), { size: 7.5 });
+      y -= 11;
+    } else if (Number(tax.cgstAmount || 0) > 0 || Number(tax.sgstAmount || 0) > 0) {
+      text(taxColX[0], y, tax.rate != null ? `${tax.rate}%` : "varies", { size: 7.5 });
+      text(taxColX[1], y, taxableTotal.toFixed(2), { size: 7.5 });
+      text(taxColX[2], y, money(tax.cgstAmount, currency), { size: 7.5 });
+      text(taxColX[3], y, money(tax.sgstAmount, currency), { size: 7.5 });
+      y -= 11;
+    }
   }
   y -= 6;
   rule(MARGIN, y, PAGE_W - MARGIN, y);
@@ -197,34 +263,126 @@ function buildContent(invoice) {
   text(MARGIN, y, (company.terms || "Thank you for shopping with Aadya.").slice(0, 130), { size: 8 });
   y -= 24;
   const sigX = PAGE_W - MARGIN - 160;
-  if (company.signatureUrl) text(sigX, y + 20, `[Signature: ${company.signatureUrl}]`, { size: 7 });
+  const sigBox = company.signatureUrl ? image("signature", sigX, y + 24, 120, 40) : null;
+  if (company.signatureUrl && !sigBox) text(sigX, y + 20, `[Signature: ${company.signatureUrl}]`, { size: 7 });
   rule(sigX, y, PAGE_W - MARGIN, y);
   text(sigX, y - 10, company.signatoryName || "Authorized Signatory", { size: 8 });
   y -= 24;
 
   text(MARGIN, MARGIN, company.footer || "This is a computer-generated invoice.", { size: 7 });
 
-  return { ops: [...rects, "0.5 w", ...(lines.length ? [lines.join(" ")] : []), ...ops].join("\n") };
+  return { ops: [...rects, "0.5 w", ...(lines.length ? [lines.join(" ")] : []), ...ops].join("\n"), placedImages };
 }
 
 function round2sum(nums) {
   return Math.round(nums.reduce((s, n) => s + n, 0) * 100) / 100;
 }
 
-export function renderInvoicePdf(invoice) {
-  const { ops } = buildContent(invoice);
-  const objects = [
+// Builds the PDF object body (a string or a Buffer) plus optional extra
+// binary stream bytes for one Image XObject (and, when the source had
+// alpha, its SMask XObject). obj() below assembles the full object list;
+// image objects are appended after the fixed base objects so their object
+// numbers are known before Resources is written.
+function imageXObjectStrings(img, smaskObjNum) {
+  const smaskEntry = smaskObjNum ? ` /SMask ${smaskObjNum} 0 R` : "";
+  const dictHead = `<< /Type /XObject /Subtype /Image /Width ${img.width} /Height ${img.height} /ColorSpace /${img.colorSpace} /BitsPerComponent ${img.bitsPerComponent} /Filter /${img.filter} /Length ${img.data.length}${smaskEntry} >>\nstream\n`;
+  return { head: Buffer.from(dictHead, "latin1"), data: img.data, tail: Buffer.from("\nendstream", "latin1") };
+}
+function smaskXObjectStrings(alphaDeflated, width, height) {
+  const dictHead = `<< /Type /XObject /Subtype /Image /Width ${width} /Height ${height} /ColorSpace /DeviceGray /BitsPerComponent 8 /Filter /FlateDecode /Length ${alphaDeflated.length} >>\nstream\n`;
+  return { head: Buffer.from(dictHead, "latin1"), data: alphaDeflated, tail: Buffer.from("\nendstream", "latin1") };
+}
+
+export async function renderInvoicePdf(invoice) {
+  const company = invoice.companySnapshot || {};
+
+  // Resolve + decode logo/signature up front. loadEmbeddableImage never
+  // throws (see invoice.image.js) — a null result here means "fall back to
+  // text", which buildContent already handles.
+  const [logoImg, signatureImg] = await Promise.all([
+    loadEmbeddableImage(company.logoUrl || null),
+    loadEmbeddableImage(company.signatureUrl || null),
+  ]);
+  const images = { logo: logoImg, signature: signatureImg };
+
+  const { ops, placedImages } = buildContent(invoice, images);
+
+  // --- Base (always-present) objects, as strings ---
+  const baseObjects = [
     "<< /Type /Catalog /Pages 2 0 R >>",
     "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R /F2 6 0 R >> >> /Contents 5 0 R >>",
+    null, // placeholder for Page, filled in below once Resources/XObject dict is known
     "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
     `<< /Length ${Buffer.byteLength(ops)} >>\nstream\n${ops}\nendstream`,
     "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>",
   ];
-  let output = "%PDF-1.4\n";
+
+  // --- Optional image XObjects (only for images actually placed) ---
+  // Each entry is either a plain string object or { head, data, tail } for
+  // a binary stream object; both are handled uniformly by the writer below.
+  const extraObjects = [];
+  const xobjectRefs = {}; // slot -> object number (1-indexed, filled once positions are known)
+  const usesLogo = placedImages.includes("logo") && logoImg;
+  const usesSignature = placedImages.includes("signature") && signatureImg;
+
+  // Object numbering: 1-6 are the base objects above (Page is #3). Extra
+  // objects start at 7. Each image may consume 1 or 2 object slots (image +
+  // optional smask), assigned in order: logo (+smask), then signature
+  // (+smask).
+  let nextObjNum = baseObjects.length + 1;
+  function pushImage(slot, img) {
+    let smaskObjNum = null;
+    if (img.smaskData) {
+      // Reserve the smask's object number first so the image dict can
+      // reference it, but the smask object itself is appended after the
+      // image object in the file (order in extraObjects doesn't need to
+      // match object numbers, only correctness of the numbers referenced).
+      smaskObjNum = nextObjNum + 1;
+    }
+    const imgObjNum = nextObjNum;
+    xobjectRefs[slot] = imgObjNum;
+    extraObjects.push(imageXObjectStrings(img, smaskObjNum));
+    nextObjNum += 1;
+    if (img.smaskData) {
+      extraObjects.push(smaskXObjectStrings(img.smaskData, img.width, img.height));
+      nextObjNum += 1;
+    }
+  }
+  if (usesLogo) pushImage("logo", logoImg);
+  if (usesSignature) pushImage("signature", signatureImg);
+
+  const xobjectDictEntries = [
+    usesLogo ? `/Im1 ${xobjectRefs.logo} 0 R` : null,
+    usesSignature ? `/Im2 ${xobjectRefs.signature} 0 R` : null,
+  ].filter(Boolean).join(" ");
+  const resources = `/Resources << /Font << /F1 4 0 R /F2 6 0 R >>${xobjectDictEntries ? ` /XObject << ${xobjectDictEntries} >>` : ""} >>`;
+  baseObjects[2] = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] ${resources} /Contents 5 0 R >>`;
+
+  const allObjects = [...baseObjects, ...extraObjects];
+
+  // --- Assemble the file as a single Buffer (mixed text/binary objects) ---
+  // Text objects are encoded as utf8 (matching the original writer's
+  // Buffer.byteLength(ops) /Length calculation, itself utf8-based); binary
+  // image stream bytes (head/tail dict strings aside) are copied through
+  // untouched.
+  const chunks = [Buffer.from("%PDF-1.4\n", "utf8")];
   const offsets = [0];
-  objects.forEach((object, i) => { offsets.push(Buffer.byteLength(output)); output += `${i + 1} 0 obj\n${object}\nendobj\n`; });
-  const start = Buffer.byteLength(output);
-  output += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n${offsets.slice(1).map((offset) => `${String(offset).padStart(10, "0")} 00000 n \n`).join("")}trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${start}\n%%EOF\n`;
-  return Buffer.from(output, "utf8");
+  let runningLength = chunks[0].length;
+  allObjects.forEach((object, i) => {
+    offsets.push(runningLength);
+    const head = Buffer.from(`${i + 1} 0 obj\n`, "utf8");
+    let body;
+    if (typeof object === "string") {
+      body = Buffer.concat([head, Buffer.from(object, "utf8"), Buffer.from("\nendobj\n", "utf8")]);
+    } else {
+      body = Buffer.concat([head, Buffer.from(object.head, "utf8" ), object.data, Buffer.from(object.tail, "utf8"), Buffer.from("\nendobj\n", "utf8")]);
+    }
+    chunks.push(body);
+    runningLength += body.length;
+  });
+  const xrefStart = runningLength;
+  const xrefLines = [`xref\n0 ${allObjects.length + 1}\n0000000000 65535 f \n${offsets.slice(1).map((offset) => `${String(offset).padStart(10, "0")} 00000 n \n`).join("")}trailer\n<< /Size ${allObjects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF\n`];
+  chunks.push(Buffer.from(xrefLines.join(""), "utf8"));
+
+  return Buffer.concat(chunks);
 }

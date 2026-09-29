@@ -374,6 +374,10 @@ export function adminUpsertShipment(id, payload) {
   return api.put(`/admin/orders/${id}/shipment`, payload, { auth: "admin" });
 }
 export function adminCreateShipment(id, payload) { return api.post(`/admin/orders/${id}/shipment/create`, payload, { auth: "admin" }); }
+export function adminGenerateShipmentAwb(id) { return api.post(`/admin/orders/${id}/shipment/awb`, {}, { auth: "admin" }); }
+export function adminScheduleShipmentPickup(id) { return api.post(`/admin/orders/${id}/shipment/pickup`, {}, { auth: "admin" }); }
+export function adminGetShipmentLabel(id) { return api.get(`/admin/orders/${id}/shipment/label`, { auth: "admin" }); }
+export function adminRefreshTracking(id) { return api.post(`/admin/orders/${id}/shipment/refresh-tracking`, {}, { auth: "admin" }); }
 export function accountInvoices() { return api.get("/account/invoices", { auth: true }); }
 export async function downloadAccountInvoice(id) { const res = await fetch(`${API_URL}/account/invoices/${id}/download`, { headers: { Authorization: `Bearer ${tokens.customer}` }, credentials: "include" }); if (!res.ok) throw new ApiRequestError("Could not download invoice", res.status); return res.blob(); }
 export function adminGetIntegrationStatus() { return api.get("/admin/integrations", { auth: "admin" }); }
@@ -402,6 +406,7 @@ export async function adminDownloadInvoice(id) { const res = await fetch(`${API_
 export function adminRegenerateInvoice(id) { return api.post(`/admin/invoices/${id}/regenerate`, {}, { auth: "admin" }); }
 export function adminResendInvoice(id) { return api.post(`/admin/invoices/${id}/resend`, {}, { auth: "admin" }); }
 export function adminGetInvoiceDetail(id) { return api.get(`/admin/invoices/${id}`, { auth: "admin" }); }
+export function adminPreviewManualInvoice(payload) { return api.post("/admin/invoices/manual/preview", payload, { auth: "admin" }); }
 export function adminCreateManualInvoiceDraft(payload) { return api.post("/admin/invoices/manual", payload, { auth: "admin" }); }
 export function adminEditManualInvoiceDraft(id, payload) { return api.patch(`/admin/invoices/manual/${id}`, payload, { auth: "admin" }); }
 export function adminIssueManualInvoice(id, { sendEmail = false } = {}) { return api.post(`/admin/invoices/manual/${id}/issue`, { sendEmail }, { auth: "admin" }); }
