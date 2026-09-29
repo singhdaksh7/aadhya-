@@ -126,4 +126,61 @@ describe("HomepageRenderer Component", () => {
     ));
     expect(screen.getByText("Legacy Prop Product")).toBeInTheDocument();
   });
+
+  it("renders the category nav from section.categories (server-resolved)", () => {
+    const categories = [{ id: "c1", name: "Ceramics", slug: "ceramics" }];
+    render(
+      <BrowserRouter>
+        <HomepageRenderer sections={[{ id: "cats", type: "CIRCULAR_CATEGORY_NAV", isEnabled: true, settings: {}, categories }]} />
+      </BrowserRouter>
+    );
+    expect(screen.getByTestId("mock-category-circles")).toBeInTheDocument();
+  });
+
+  it("hides the category nav entirely when zero categories are resolved", () => {
+    render(
+      <BrowserRouter>
+        <HomepageRenderer sections={[{ id: "cats", type: "CIRCULAR_CATEGORY_NAV", isEnabled: true, settings: {}, categories: [] }]} />
+      </BrowserRouter>
+    );
+    expect(screen.queryByTestId("mock-category-circles")).not.toBeInTheDocument();
+  });
+
+  it("renders the Featured Collection section from section.collection (server-resolved)", () => {
+    const collection = { id: "col1", title: "Earth Edit", slug: "earth-edit", heroImage: "/hero.jpg", description: "Warm neutrals" };
+    render(
+      <BrowserRouter>
+        <HomepageRenderer sections={[{ id: "fc", type: "FEATURED_COLLECTION", isEnabled: true, settings: {}, collection }]} />
+      </BrowserRouter>
+    );
+    expect(screen.getByText("Earth Edit")).toBeInTheDocument();
+  });
+
+  it("hides the Featured Collection section when section.collection is null (unconfigured/inactive)", () => {
+    render(
+      <BrowserRouter>
+        <HomepageRenderer sections={[{ id: "fc", type: "FEATURED_COLLECTION", isEnabled: true, settings: {}, collection: null }]} />
+      </BrowserRouter>
+    );
+    expect(screen.queryByText("Featured Editorial Collection")).not.toBeInTheDocument();
+  });
+
+  it("renders books from section.books (server-resolved)", () => {
+    const books = [{ id: "b1", name: "Slow Living", author: "A. Author", price: 599, shortDescription: "A book", images: ["/book.jpg"] }];
+    render(
+      <BrowserRouter>
+        <HomepageRenderer sections={[{ id: "books", type: "BOOKS_SHELF", isEnabled: true, settings: {}, books }]} />
+      </BrowserRouter>
+    );
+    expect(screen.getByText("Slow Living")).toBeInTheDocument();
+  });
+
+  it("hides the Books section entirely when zero books match", () => {
+    render(
+      <BrowserRouter>
+        <HomepageRenderer sections={[{ id: "books", type: "BOOKS_SHELF", isEnabled: true, settings: {}, books: [] }]} />
+      </BrowserRouter>
+    );
+    expect(screen.queryByText("From Our Bookshelf")).not.toBeInTheDocument();
+  });
 });

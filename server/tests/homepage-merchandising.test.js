@@ -161,3 +161,148 @@ describe("Homepage product merchandising (New Arrivals / Best Sellers)", () => {
     await updatePageSection(newArrivalsSectionId, { settings: { limit: 2, sourceMode: "AUTO" } });
   });
 });
+
+describe("Homepage Categories / Featured Collection / Books sections", () => {
+  let categorySectionId;
+  let collectionSectionId;
+  let booksSectionId;
+  let activeCategoryId;
+  let inactiveCategoryId;
+  let activeCollectionId;
+  let inactiveCollectionId;
+  let bookProductId;
+  let inactiveBookProductId;
+  let nonBookProductId;
+  const suffix = Date.now() + 1;
+
+  beforeAll(async () => {
+    await request.get("/api/pages/home");
+    const homePage = await prisma.page.findUnique({
+      where: { slug: "home" },
+      include: { sections: true },
+    });
+    categorySectionId = homePage.sections.find((s) => s.type === "CIRCULAR_CATEGORY_NAV").id;
+    collectionSectionId = homePage.sections.find((s) => s.type === "FEATURED_COLLECTION").id;
+    booksSectionId = homePage.sections.find((s) => s.type === "BOOKS_SHELF").id;
+
+    const baseCategory = await prisma.category.create({
+      data: { name: "Books Base Cat", slug: `books-base-cat-${suffix}`, sortOrder: 1 },
+    });
+
+    const activeCategory = await prisma.category.create({
+      data: { name: `Homepage Active Cat ${suffix}`, slug: `homepage-active-cat-${suffix}`, sortOrder: 1, isActive: true },
+    });
+    activeCategoryId = activeCategory.id;
+
+    const inactiveCategory = await prisma.category.create({
+      data: { name: `Homepage Inactive Cat ${suffix}`, slug: `homepage-inactive-cat-${suffix}`, sortOrder: 2, isActive: false },
+    });
+    inactiveCategoryId = inactiveCategory.id;
+
+    const activeCollection = await prisma.collection.create({
+      data: { title: `Homepage Active Collection ${suffix}`, slug: `homepage-active-collection-${suffix}`, isActive: true },
+    });
+    activeCollectionId = activeCollection.id;
+
+    const inactiveCollection = await prisma.collection.create({
+      data: { title: `Homepage Inactive Collection ${suffix}`, slug: `homepage-inactive-collection-${suffix}`, isActive: false },
+    });
+    inactiveCollectionId = inactiveCollection.id;
+
+    const book = await prisma.product.create({
+      data: {
+        name: `Homepage Book ${suffix}`,
+        slug: `homepage-book-${suffix}`,
+        productType: "BOOK",
+        categoryId: baseCategory.id,
+        price: 599,
+        stockQuantity: 5,
+        isActive: true,
+      },
+    });
+    bookProductId = book.id;
+
+    const inactiveBook = await prisma.product.create({
+      data: {
+        name: `Homepage Inactive Book ${suffix}`,
+        slug: `homepage-inactive-book-${suffix}`,
+        productType: "BOOK",
+        categoryId: baseCategory.id,
+        price: 599,
+        stockQuantity: 5,
+        isActive: false,
+      },
+    });
+    inactiveBookProductId = inactiveBook.id;
+
+    const nonBook = await prisma.product.create({
+      data: {
+        name: `Homepage Non-Book ${suffix}`,
+        slug: `homepage-non-book-${suffix}`,
+        productType: "PHYSICAL",
+        categoryId: baseCategory.id,
+        price: 599,
+        stockQuantity: 5,
+        isActive: true,
+      },
+    });
+    nonBookProductId = nonBook.id;
+  });
+
+  afterAll(async () => {
+    await updatePageSection(collectionSectionId, { settings: { collectionId: "" } });
+  });
+
+  it("Categories: excludes inactive categories and respects sortOrder", async () => {
+    const res = await request.get("/api/pages/home");
+    const section = res.body.data.sections.find((s) => s.id === categorySectionId);
+    expect(section).toBeDefined();
+    const ids = section.categories.map((c) => c.id);
+    expect(ids).toContain(activeCategoryId);
+    expect(ids).not.toContain(inactiveCategoryId);
+    const activeIdx = ids.indexOf(activeCategoryId);
+    const inactiveIdx = ids.indexOf(inactiveCategoryId);
+    expect(inactiveIdx).toBe(-1);
+    expect(activeIdx).toBeGreaterThanOrEqual(0);
+  });
+
+  it("Featured Collection: resolves the configured active collection", async () => {
+    await updatePageSection(collectionSectionId, { settings: { collectionId: activeCollectionId } });
+    const res = await request.get("/api/pages/home");
+    const section = res.body.data.sections.find((s) => s.id === collectionSectionId);
+    expect(section.collection).toBeDefined();
+    expect(section.collection.id).toBe(activeCollectionId);
+  });
+
+  it("Featured Collection: hides (null collection) when the configured collection is inactive", async () => {
+    await updatePageSection(collectionSectionId, { settings: { collectionId: inactiveCollectionId } });
+    const res = await request.get("/api/pages/home");
+    const section = res.body.data.sections.find((s) => s.id === collectionSectionId);
+    expect(section.collection).toBeNull();
+  });
+
+  it("Featured Collection: hides (null collection) when nothing is configured", async () => {
+    await updatePageSection(collectionSectionId, { settings: { collectionId: "" } });
+    const res = await request.get("/api/pages/home");
+    const section = res.body.data.sections.find((s) => s.id === collectionSectionId);
+    expect(section.collection).toBeNull();
+  });
+
+  it("Books: includes active BOOK-type products, excludes inactive books and non-book products", async () => {
+    const res = await request.get("/api/pages/home");
+    const section = res.body.data.sections.find((s) => s.id === booksSectionId);
+    expect(section).toBeDefined();
+    const ids = section.books.map((b) => b.id);
+    expect(ids).toContain(bookProductId);
+    expect(ids).not.toContain(inactiveBookProductId);
+    expect(ids).not.toContain(nonBookProductId);
+  });
+
+  it("Books: respects the configured limit", async () => {
+    await updatePageSection(booksSectionId, { settings: { limit: 1 } });
+    const res = await request.get("/api/pages/home");
+    const section = res.body.data.sections.find((s) => s.id === booksSectionId);
+    expect(section.books.length).toBeLessThanOrEqual(1);
+    await updatePageSection(booksSectionId, { settings: { limit: 3 } });
+  });
+});
