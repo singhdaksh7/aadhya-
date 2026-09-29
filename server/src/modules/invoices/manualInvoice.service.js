@@ -206,6 +206,28 @@ async function buildManualSnapshot(payload, settings) {
   return { totals, interState };
 }
 
+// Informational, non-persisting tax preview for the admin "create invoice"
+// UI (live preview while typing). Reuses buildManualSnapshot -> the exact
+// same resolveManualItem/computeItemTaxLine/isInterState path the real
+// draft/issue endpoints use, so the numbers shown here are guaranteed to be
+// byte-for-byte identical to what gets persisted on submit (this is the
+// "real endpoint" approach chosen for task 3/7's rounding parity, rather
+// than mirroring the rounding logic separately in frontend JS — see
+// AdminInvoiceCreate.jsx for the corresponding fetch). Nothing is written
+// to the database; no Order/Invoice/AdminAuditLog row is created.
+export async function previewManualInvoice(payload) {
+  const settings = await getInvoiceSettings();
+  const { totals, interState } = await buildManualSnapshot(payload, settings);
+  return {
+    items: totals.items,
+    subtotal: totals.subtotal,
+    taxAmount: totals.taxAmount,
+    totalAmount: totals.totalAmount,
+    tax: totals.tax,
+    interState,
+  };
+}
+
 export async function createManualInvoiceDraft(adminId, payload) {
   if (!payload?.customer?.name || !payload?.customer?.email) throw ApiError.badRequest("customer.name and customer.email are required");
   const settings = await getInvoiceSettings();

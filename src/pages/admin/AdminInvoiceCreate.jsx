@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   adminCreateManualInvoiceDraft,
   adminEditManualInvoiceDraft,
   adminIssueManualInvoice,
   adminListProducts,
+  adminPreviewManualInvoice,
 } from "../../lib/api";
 import { formatInr } from "../../lib/format";
 import { PageHeader, AdminCard } from "../../components/admin/ui";
@@ -30,6 +31,38 @@ export default function AdminInvoiceCreate() {
   const [draft, setDraft] = useState(null);
   const [status, setStatus] = useState("idle");
   const [error, setError] = useState("");
+
+  // Live, informational-only tax preview: debounce-calls the real backend
+  // preview endpoint (POST /admin/invoices/manual/preview), which runs the
+  // exact same computeItemTaxLine/isInterState logic the draft/issue
+  // endpoints use, so these numbers are guaranteed to match what gets
+  // persisted on submit (no separate frontend rounding logic to drift).
+  // The backend stays authoritative — this panel is never submitted itself.
+  const [preview, setPreview] = useState(null);
+  const [previewError, setPreviewError] = useState("");
+  const previewTimer = useRef(null);
+
+  useEffect(() => {
+    if (previewTimer.current) clearTimeout(previewTimer.current);
+    const payload = buildPayload();
+    if (!payload.items.length) {
+      setPreview(null);
+      setPreviewError("");
+      return undefined;
+    }
+    previewTimer.current = setTimeout(async () => {
+      try {
+        const res = await adminPreviewManualInvoice({ customer: payload.customer, items: payload.items });
+        setPreview(res.data);
+        setPreviewError("");
+      } catch (err) {
+        setPreview(null);
+        setPreviewError(err.message || "Could not compute preview");
+      }
+    }, 400);
+    return () => clearTimeout(previewTimer.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customer, items]);
 
   const updateItem = (idx, patch) => setItems((rows) => rows.map((row, i) => (i === idx ? { ...row, ...patch } : row)));
   const addRow = () => setItems((rows) => [...rows, emptyCustomProduct()]);
@@ -207,6 +240,72 @@ export default function AdminInvoiceCreate() {
           </button>
         )}
       </AdminCard>
+
+      {!isIssued && (
+        <AdminCard title="Tax Preview (estimate)" className="mb-4">
+          <p className="mb-3 text-xs text-charcoal-soft">
+            Computed live from the same tax engine used at issue time — informational only, the server recalculates
+            authoritatively when you save or issue.
+          </p>
+          {previewError && <p className="text-sm text-rose-600">{previewError}</p>}
+          {!previewError && !preview && <p className="text-sm text-charcoal-soft">Add at least one item to see a preview.</p>}
+          {preview && (
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className={`rounded-full px-3 py-1 text-xs font-semibold ${preview.interState ? "bg-amber-100 text-amber-800" : "bg-sage-light text-green-deep"}`}>
+                  {preview.interState ? "Inter-state supply (IGST)" : "Intra-state supply (CGST + SGST)"}
+                </span>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-sand-dark/40 text-charcoal-soft">
+                      <th className="py-1 pr-2">Item</th>
+                      <th className="py-1 pr-2">HSN</th>
+                      <th className="py-1 pr-2">Qty</th>
+                      <th className="py-1 pr-2">Rate</th>
+                      <th className="py-1 pr-2">Pricing</th>
+                      <th className="py-1 pr-2">Taxable</th>
+                      <th className="py-1 pr-2">GST%</th>
+                      <th className="py-1 pr-2">Tax</th>
+                      <th className="py-1 pr-2">Line Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {preview.items.map((it, i) => (
+                      <tr key={i} className="border-b border-sand-dark/20">
+                        <td className="py-1 pr-2">{it.productName}</td>
+                        <td className="py-1 pr-2">{it.hsnCode || "-"}</td>
+                        <td className="py-1 pr-2">{it.quantity}</td>
+                        <td className="py-1 pr-2">{formatInr(it.unitPrice)}</td>
+                        <td className="py-1 pr-2">
+                          <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${it.taxPricingMode === "TAX_INCLUSIVE" ? "bg-blue-100 text-blue-800" : "bg-stone-100 text-stone-700"}`}>
+                            {it.taxPricingMode === "TAX_INCLUSIVE" ? "Tax Inclusive" : "Tax Exclusive"}
+                          </span>
+                        </td>
+                        <td className="py-1 pr-2">{formatInr(it.taxableValue)}</td>
+                        <td className="py-1 pr-2">{it.gstRate != null ? `${it.gstRate}%` : "-"}</td>
+                        <td className="py-1 pr-2">{formatInr(it.taxAmount)}</td>
+                        <td className="py-1 pr-2">{formatInr(it.lineTotal)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
+                <div>Subtotal (taxable): {formatInr(preview.subtotal)}</div>
+                {Number(preview.tax.cgstAmount) > 0 && <div>CGST: {formatInr(preview.tax.cgstAmount)}</div>}
+                {Number(preview.tax.sgstAmount) > 0 && <div>SGST: {formatInr(preview.tax.sgstAmount)}</div>}
+                {Number(preview.tax.igstAmount) > 0 && <div>IGST: {formatInr(preview.tax.igstAmount)}</div>}
+                <div>Total Tax: {formatInr(preview.taxAmount)}</div>
+                <div className="font-semibold">Grand Total: {formatInr(preview.totalAmount)}</div>
+              </div>
+            </div>
+          )}
+        </AdminCard>
+      )}
 
       {draft && (
         <AdminCard title="Computed totals" className="mb-4">

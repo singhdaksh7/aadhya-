@@ -10,7 +10,7 @@ import crypto from "node:crypto";
 import { ensureInvoiceForOrder } from "../invoices/invoice.service.js";
 import { sendInvoiceEmail } from "../email/email.service.js";
 import { getShippingProvider } from "../shipping/provider.service.js";
-import { attemptAutomaticShipment } from "../shipping/fulfilment.service.js";
+import { attemptAutomaticShipment, assertPickupConfigured, generateAwbForShipment, schedulePickupForShipment, getLabelForShipment, refreshTrackingForShipment, sanitizeProviderError } from "../shipping/fulfilment.service.js";
 
 const ADMIN_INCLUDE = {
   items: true,
@@ -481,16 +481,43 @@ export async function upsertShipment(orderId, data) {
 }
 
 export async function createOrderShipment(orderId, data) {
-  const order = await prisma.order.findUnique({ where: { id: orderId }, include: { items: true, address: true } });
+  const order = await prisma.order.findUnique({ where: { id: orderId }, include: { items: true, address: true, shipment: true } });
   if (!order) throw ApiError.notFound("Order not found");
   if (!order.items.some((item) => item.bookFormatSnapshot !== "PDF")) throw ApiError.badRequest("Digital-only orders cannot have a shipment.");
   const setting = await prisma.siteSetting.findUnique({ where: { key: "shippingBusiness" } });
-  const providerName = setting?.value?.provider || "MANUAL";
+  const settings = setting?.value || {};
+  const providerName = settings.provider || "MANUAL";
+  assertPickupConfigured(settings);
   try {
-    const result = await getShippingProvider(providerName).createShipment({ order, input: data, settings: setting?.value || {} });
-    return await prisma.shipment.upsert({ where: { orderId }, create: { orderId, ...result, shippedDate: data.shippedDate || null }, update: { ...result, shippedDate: data.shippedDate || undefined, lastError: null } });
+    const result = await getShippingProvider(providerName).createShipment({ order, input: data, settings });
+    let shipment = await prisma.shipment.upsert({ where: { orderId }, create: { orderId, ...result, shippedDate: data.shippedDate || null }, update: { ...result, shippedDate: data.shippedDate || undefined, lastError: null } });
+    if (settings.autoGenerateAwb && shipment.providerShipmentId && !shipment.awb) shipment = await generateAwbForShipment(shipment.id, settings).catch(() => shipment);
+    if (settings.autoSchedulePickup && shipment.awb) shipment = await schedulePickupForShipment(shipment.id, settings).catch(() => shipment);
+    return shipment;
   } catch (error) {
-    await prisma.shipment.upsert({ where: { orderId }, create: { orderId, provider: providerName, status: "FAILED", lastError: "Shipment creation failed" }, update: { status: "FAILED", lastError: "Shipment creation failed" } });
+    await prisma.shipment.upsert({ where: { orderId }, create: { orderId, provider: providerName, status: "FAILED", lastError: sanitizeProviderError(error) }, update: { status: "FAILED", lastError: sanitizeProviderError(error) } });
     throw error;
   }
+}
+
+async function shipmentIdForOrder(orderId) {
+  const shipment = await prisma.shipment.findUnique({ where: { orderId } });
+  if (!shipment) throw ApiError.notFound("No shipment exists for this order yet.");
+  return shipment.id;
+}
+
+export async function generateOrderShipmentAwb(orderId) {
+  return generateAwbForShipment(await shipmentIdForOrder(orderId));
+}
+
+export async function scheduleOrderShipmentPickup(orderId) {
+  return schedulePickupForShipment(await shipmentIdForOrder(orderId));
+}
+
+export async function getOrderShipmentLabel(orderId) {
+  return getLabelForShipment(await shipmentIdForOrder(orderId));
+}
+
+export async function refreshOrderShipmentTracking(orderId) {
+  return refreshTrackingForShipment(await shipmentIdForOrder(orderId));
 }

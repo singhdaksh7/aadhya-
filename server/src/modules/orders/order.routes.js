@@ -12,6 +12,10 @@ import {
   updateAdminOrderStatus,
   upsertOrderShipment,
   createOrderShipment,
+  generateOrderShipmentAwb,
+  scheduleOrderShipmentPickup,
+  getOrderShipmentLabel,
+  refreshOrderShipmentTracking,
 } from "./order.controller.js";
 
 export const checkoutRouter = Router();
@@ -29,6 +33,10 @@ adminOrderRouter.get("/:id", getAdminOrder);
 adminOrderRouter.patch("/:id/status", updateAdminOrderStatus);
 adminOrderRouter.put("/:id/shipment", upsertOrderShipment);
 adminOrderRouter.post("/:id/shipment/create", createOrderShipment);
+adminOrderRouter.post("/:id/shipment/awb", generateOrderShipmentAwb);
+adminOrderRouter.post("/:id/shipment/pickup", scheduleOrderShipmentPickup);
+adminOrderRouter.get("/:id/shipment/label", getOrderShipmentLabel);
+adminOrderRouter.post("/:id/shipment/refresh-tracking", refreshOrderShipmentTracking);
 
 function requireCustomerOptional(req, res, next) {
   const header = req.headers.authorization || "";

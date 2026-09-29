@@ -12,6 +12,7 @@ const initialBusiness = {
   autoSchedulePickup: false,
   codAllowed: true,
   packageDefaults: { length: 20, width: 15, height: 10, weight: 0.5 },
+  pickup: { location: "", name: "", contact: "", phone: "", email: "", address: "", city: "", state: "", postalCode: "", country: "India" },
 };
 
 export default function AdminShipping() {
@@ -27,6 +28,7 @@ export default function AdminShipping() {
           ...v,
           ...r.data,
           packageDefaults: { ...v.packageDefaults, ...(r.data.packageDefaults || {}) },
+          pickup: { ...v.pickup, ...(r.data.pickup || {}) },
         }))
       )
       .catch(() => {});
@@ -183,6 +185,33 @@ export default function AdminShipping() {
               </label>
             ))}
           </div>
+          <div className="sm:col-span-2">
+            <h3 className="mb-2 mt-2 text-sm font-semibold text-charcoal">Pickup location</h3>
+            <p className="mb-2 text-xs text-charcoal-soft">
+              Required before a shipment can be created with a real provider (Shiprocket).
+            </p>
+          </div>
+          {[
+            ["location", "Pickup nickname (as registered with provider)"],
+            ["name", "Contact / warehouse name"],
+            ["contact", "Contact person"],
+            ["phone", "Phone"],
+            ["email", "Email"],
+            ["address", "Address"],
+            ["city", "City"],
+            ["state", "State"],
+            ["postalCode", "Postal code"],
+            ["country", "Country"],
+          ].map(([k, l]) => (
+            <label key={k} className="admin-label">
+              {l}
+              <input
+                className="admin-input"
+                value={business.pickup?.[k] || ""}
+                onChange={(e) => setBusiness({ ...business, pickup: { ...business.pickup, [k]: e.target.value } })}
+              />
+            </label>
+          ))}
           <div className="sm:col-span-2">
             <button type="submit" className="admin-btn admin-btn--primary">
               Save shipping settings

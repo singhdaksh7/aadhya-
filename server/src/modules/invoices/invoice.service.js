@@ -345,7 +345,7 @@ export async function regenerateInvoicePdf(invoiceId) {
   const invoice = await prisma.invoice.findUnique({ where: { id: invoiceId }, include: { order: { select: { orderNumber: true, paymentMethod: true, paymentStatus: true } } } });
   if (!invoice) throw ApiError.notFound("Invoice not found");
   const key = `invoice-${invoice.id}.pdf`;
-  await writeInvoicePdf(key, renderInvoicePdf(invoice));
+  await writeInvoicePdf(key, await renderInvoicePdf(invoice));
   return prisma.invoice.update({ where: { id: invoice.id }, data: { pdfStorageKey: key } });
 }
 export async function getInvoiceFile(invoiceId) {

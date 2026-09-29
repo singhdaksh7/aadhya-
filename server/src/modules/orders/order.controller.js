@@ -71,3 +71,19 @@ export const createOrderShipment = asyncHandler(async (req, res) => {
   const input = shipmentSchema.parse(req.body);
   ok(res, await orderService.createOrderShipment(req.params.id, input));
 });
+
+export const generateOrderShipmentAwb = asyncHandler(async (req, res) => {
+  ok(res, await orderService.generateOrderShipmentAwb(req.params.id));
+});
+
+export const scheduleOrderShipmentPickup = asyncHandler(async (req, res) => {
+  ok(res, await orderService.scheduleOrderShipmentPickup(req.params.id));
+});
+
+export const getOrderShipmentLabel = asyncHandler(async (req, res) => {
+  ok(res, await orderService.getOrderShipmentLabel(req.params.id));
+});
+
+export const refreshOrderShipmentTracking = asyncHandler(async (req, res) => {
+  ok(res, await orderService.refreshOrderShipmentTracking(req.params.id));
+});

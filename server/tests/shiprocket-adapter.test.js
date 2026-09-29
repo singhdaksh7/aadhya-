@@ -5,7 +5,8 @@ import { createApp } from "../src/app.js";
 import { resetDb, seedTestAdmin } from "./helpers.js";
 import { prisma } from "../src/lib/prisma.js";
 import { getShippingProvider } from "../src/modules/shipping/provider.service.js";
-import { buildShipmentPayload, attemptAutomaticShipment } from "../src/modules/shipping/fulfilment.service.js";
+import { buildShipmentPayload, attemptAutomaticShipment, generateAwbForShipment, applyTrackingUpdate } from "../src/modules/shipping/fulfilment.service.js";
+import { handleRtoDelivered } from "../src/modules/returns/returns.service.js";
 import { saveCredential } from "../src/modules/integrations/credential.service.js";
 import { env } from "../src/config/env.js";
 
@@ -494,8 +495,8 @@ describe("attemptAutomaticShipment: end-to-end with mocked Shiprocket HTTP", () 
     await saveShiprocketCreds();
     await prisma.siteSetting.upsert({
       where: { key: "shippingBusiness" },
-      create: { key: "shippingBusiness", value: { provider: "SHIPROCKET", environment: "LIVE", autoCreateShipment: true, pickup: { location: "Primary" }, packageDefaults: { weight: 1, length: 20, width: 15, height: 10 } } },
-      update: { value: { provider: "SHIPROCKET", environment: "LIVE", autoCreateShipment: true, pickup: { location: "Primary" }, packageDefaults: { weight: 1, length: 20, width: 15, height: 10 } } },
+      create: { key: "shippingBusiness", value: { provider: "SHIPROCKET", environment: "LIVE", autoCreateShipment: true, pickup: { location: "Primary", name: "Warehouse Manager", phone: "9990001111", address: "1 Depot Rd", city: "Mumbai", state: "Maharashtra", postalCode: "400001" }, packageDefaults: { weight: 1, length: 20, width: 15, height: 10 } } },
+      update: { value: { provider: "SHIPROCKET", environment: "LIVE", autoCreateShipment: true, pickup: { location: "Primary", name: "Warehouse Manager", phone: "9990001111", address: "1 Depot Rd", city: "Mumbai", state: "Maharashtra", postalCode: "400001" }, packageDefaults: { weight: 1, length: 20, width: 15, height: 10 } } },
     });
     const order = await seedPhysicalOrder();
 
@@ -513,8 +514,8 @@ describe("attemptAutomaticShipment: end-to-end with mocked Shiprocket HTTP", () 
     await saveShiprocketCreds();
     await prisma.siteSetting.upsert({
       where: { key: "shippingBusiness" },
-      create: { key: "shippingBusiness", value: { provider: "SHIPROCKET", environment: "LIVE", autoCreateShipment: true, pickup: { location: "Primary" }, packageDefaults: { weight: 1, length: 20, width: 15, height: 10 } } },
-      update: { value: { provider: "SHIPROCKET", environment: "LIVE", autoCreateShipment: true, pickup: { location: "Primary" }, packageDefaults: { weight: 1, length: 20, width: 15, height: 10 } } },
+      create: { key: "shippingBusiness", value: { provider: "SHIPROCKET", environment: "LIVE", autoCreateShipment: true, pickup: { location: "Primary", name: "Warehouse Manager", phone: "9990001111", address: "1 Depot Rd", city: "Mumbai", state: "Maharashtra", postalCode: "400001" }, packageDefaults: { weight: 1, length: 20, width: 15, height: 10 } } },
+      update: { value: { provider: "SHIPROCKET", environment: "LIVE", autoCreateShipment: true, pickup: { location: "Primary", name: "Warehouse Manager", phone: "9990001111", address: "1 Depot Rd", city: "Mumbai", state: "Maharashtra", postalCode: "400001" }, packageDefaults: { weight: 1, length: 20, width: 15, height: 10 } } },
     });
     const order = await seedPhysicalOrder();
 
@@ -525,5 +526,171 @@ describe("attemptAutomaticShipment: end-to-end with mocked Shiprocket HTTP", () 
     const shipment = await attemptAutomaticShipment(order.id);
     expect(shipment.status).toBe("CREATION_FAILED");
     expect(shipment.lastError).toBeTruthy();
+  });
+
+  it("chains auto-AWB-generation and auto-pickup-scheduling when those flags are enabled", async () => {
+    await saveShiprocketCreds();
+    await prisma.siteSetting.upsert({
+      where: { key: "shippingBusiness" },
+      create: {
+        key: "shippingBusiness",
+        value: { provider: "SHIPROCKET", environment: "LIVE", autoCreateShipment: true, autoGenerateAwb: true, autoSchedulePickup: true, courierCompanyId: "51", pickup: { location: "Primary", name: "Manager", phone: "9990001111", address: "1 Depot Rd", city: "Mumbai", state: "Maharashtra", postalCode: "400001" }, packageDefaults: { weight: 1, length: 20, width: 15, height: 10 } },
+      },
+      update: {
+        value: { provider: "SHIPROCKET", environment: "LIVE", autoCreateShipment: true, autoGenerateAwb: true, autoSchedulePickup: true, courierCompanyId: "51", pickup: { location: "Primary", name: "Manager", phone: "9990001111", address: "1 Depot Rd", city: "Mumbai", state: "Maharashtra", postalCode: "400001" }, packageDefaults: { weight: 1, length: 20, width: 15, height: 10 } },
+      },
+    });
+    const order = await seedPhysicalOrder();
+
+    // Shiprocket createShipment already assigns AWB inline whenever
+    // courierCompanyId is configured (see provider.service.js), so with a
+    // courier configured the create-order response's own AWB step covers
+    // it; the auto-pickup flag then chains a pickup-schedule call.
+    global.fetch = vi.fn()
+      .mockResolvedValueOnce(jsonResponse({ token: "tok" })) // login: create order
+      .mockResolvedValueOnce(jsonResponse({ order_id: 1, shipment_id: 2 })) // create order
+      .mockResolvedValueOnce(jsonResponse({ token: "tok" })) // login: inline awb assign
+      .mockResolvedValueOnce(jsonResponse({ response: { data: { awb_code: "AWB-AUTO", courier_name: "Delhivery" } } })) // inline awb
+      .mockResolvedValueOnce(jsonResponse({ token: "tok" })) // login: schedule pickup
+      .mockResolvedValueOnce(jsonResponse({ pickup_status: "PICKUP_SCHEDULED" })); // pickup
+
+    const shipment = await attemptAutomaticShipment(order.id);
+    expect(shipment.awb).toBe("AWB-AUTO");
+    expect(shipment.status).toBe("PICKUP_SCHEDULED");
+  });
+});
+
+describe("Shiprocket adapter: AWB generation idempotency", () => {
+  async function seedShipment(overrides = {}) {
+    const category = await prisma.category.create({ data: { name: "Cat", slug: `cat-${Math.random().toString(36).slice(2)}` } });
+    const product = await prisma.product.create({ data: { name: "Book", slug: `book-${Math.random().toString(36).slice(2)}`, productType: "BOOK", categoryId: category.id, price: 300, stockQuantity: 10 } });
+    const order = await prisma.order.create({
+      data: {
+        orderNumber: `ORD-${Math.random().toString(36).slice(2, 8)}`,
+        accessTokenHash: crypto.randomBytes(16).toString("hex"),
+        customerName: "Jane Doe", customerEmail: "jane@example.com", customerPhone: "9998887777",
+        status: "PROCESSING", paymentMethod: "prepaid", paymentStatus: "PAID",
+        subtotal: 300, shippingAmount: 0, totalAmount: 300,
+        items: { create: [{ productId: product.id, productNameSnapshot: "Book", productSlugSnapshot: product.slug, productTypeSnapshot: "BOOK", quantity: 1, unitPrice: 300, lineTotal: 300, bookFormatSnapshot: "PHYSICAL" }] },
+      },
+    });
+    return prisma.shipment.create({ data: { orderId: order.id, provider: "SHIPROCKET", providerShipmentId: "999", status: "CREATED", ...overrides } });
+  }
+
+  it("does not call the provider again when Generate AWB is clicked on an already-AWB'd shipment", async () => {
+    await saveShiprocketCreds();
+    const shipment = await seedShipment({ awb: "AWB-EXISTING" });
+    const fetchMock = vi.fn();
+    global.fetch = fetchMock;
+
+    const result = await generateAwbForShipment(shipment.id);
+    expect(result.awb).toBe("AWB-EXISTING");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("RTO handling: exactly-once restock and prepaid/COD split", () => {
+  async function seedOrderForRto(paymentMethod) {
+    const category = await prisma.category.create({ data: { name: "Cat", slug: `cat-${Math.random().toString(36).slice(2)}` } });
+    const product = await prisma.product.create({ data: { name: "Book", slug: `book-${Math.random().toString(36).slice(2)}`, productType: "BOOK", categoryId: category.id, price: 300, stockQuantity: 5, trackInventory: true } });
+    const order = await prisma.order.create({
+      data: {
+        orderNumber: `ORD-RTO-${Math.random().toString(36).slice(2, 8)}`,
+        accessTokenHash: crypto.randomBytes(16).toString("hex"),
+        customerName: "Jane Doe", customerEmail: "jane@example.com", customerPhone: "9998887777",
+        status: "SHIPPED", paymentMethod, paymentStatus: paymentMethod === "cod" ? "PENDING" : "PAID",
+        subtotal: 300, shippingAmount: 0, totalAmount: 300,
+        items: { create: [{ productId: product.id, productNameSnapshot: "Book", productSlugSnapshot: product.slug, productTypeSnapshot: "BOOK", quantity: 2, unitPrice: 300, lineTotal: 600, bookFormatSnapshot: "PHYSICAL" }] },
+        payments: paymentMethod === "cod"
+          ? undefined
+          : { create: [{ provider: "razorpay", providerPaymentId: "pay_1", amount: 300, status: "PAID" }] },
+      },
+    });
+    const shipment = await prisma.shipment.create({ data: { orderId: order.id, provider: "SHIPROCKET", providerShipmentId: "999", status: "IN_TRANSIT" } });
+    return { order, product, shipment };
+  }
+
+  it("restocks the order's items exactly once and does not double-restock on a repeated call", async () => {
+    const { order, product } = await seedOrderForRto("cod");
+    const before = await prisma.product.findUnique({ where: { id: product.id } });
+
+    await handleRtoDelivered(order.id);
+    await handleRtoDelivered(order.id); // second call must be a no-op
+
+    const after = await prisma.product.findUnique({ where: { id: product.id } });
+    expect(after.stockQuantity).toBe(before.stockQuantity + 2);
+
+    const movements = await prisma.inventoryMovement.count({ where: { orderId: order.id, type: "RETURN" } });
+    expect(movements).toBe(1);
+  });
+
+  it("sets a prepaid order's RTO return to REFUND_PENDING (no automatic gateway refund)", async () => {
+    const { order } = await seedOrderForRto("prepaid");
+    const returnRequest = await handleRtoDelivered(order.id);
+    expect(returnRequest.status).toBe("REFUND_PENDING");
+  });
+
+  it("closes a COD order's RTO return without any gateway refund call", async () => {
+    const { order } = await seedOrderForRto("cod");
+    const returnRequest = await handleRtoDelivered(order.id);
+    expect(returnRequest.status).toBe("CLOSED");
+  });
+
+  it("writes an AdminAuditLog entry for the RTO restock", async () => {
+    const { order } = await seedOrderForRto("cod");
+    await handleRtoDelivered(order.id);
+    const logs = await prisma.adminAuditLog.findMany({ where: { action: "RETURN_RTO_RESTOCKED" } });
+    expect(logs.length).toBeGreaterThan(0);
+  });
+
+  it("does not double-restock when the RTO_DELIVERED webhook is delivered twice for the same shipment", async () => {
+    await saveShiprocketCreds();
+    const { order, product, shipment } = await seedOrderForRto("cod");
+    const before = await prisma.product.findUnique({ where: { id: product.id } });
+
+    const payload = { eventId: "evt-rto-1", providerShipmentId: shipment.providerShipmentId, status: "rto_delivered" };
+    const raw = JSON.stringify(payload);
+    const signature = crypto.createHmac("sha256", CREDS.webhookSecret).update(raw).digest("hex");
+
+    const first = await request(app).post("/api/webhooks/shipping/SHIPROCKET").set("Content-Type", "application/json").set("x-shipping-signature", signature).send(raw);
+    expect(first.status).toBe(200);
+
+    const second = await request(app).post("/api/webhooks/shipping/SHIPROCKET").set("Content-Type", "application/json").set("x-shipping-signature", signature).send(raw);
+    expect(second.status).toBe(200);
+    expect(second.body.duplicate).toBe(true);
+
+    const after = await prisma.product.findUnique({ where: { id: product.id } });
+    expect(after.stockQuantity).toBe(before.stockQuantity + 2);
+
+    const movements = await prisma.inventoryMovement.count({ where: { orderId: order.id, type: "RETURN" } });
+    expect(movements).toBe(1);
+  });
+});
+
+describe("Pickup-location validation before provider shipment creation", () => {
+  it("rejects shipment creation with a clear 400 when pickup fields are incomplete", async () => {
+    await saveShiprocketCreds();
+    await prisma.siteSetting.upsert({
+      where: { key: "shippingBusiness" },
+      create: { key: "shippingBusiness", value: { provider: "SHIPROCKET", environment: "LIVE", autoCreateShipment: true, pickup: { location: "Primary" } } },
+      update: { value: { provider: "SHIPROCKET", environment: "LIVE", autoCreateShipment: true, pickup: { location: "Primary" } } },
+    });
+    const category = await prisma.category.create({ data: { name: "Cat", slug: `cat-${Math.random().toString(36).slice(2)}` } });
+    const product = await prisma.product.create({ data: { name: "Book", slug: `book-${Math.random().toString(36).slice(2)}`, productType: "BOOK", categoryId: category.id, price: 300, stockQuantity: 10 } });
+    const order = await prisma.order.create({
+      data: {
+        orderNumber: `ORD-PICK-${Math.random().toString(36).slice(2, 8)}`,
+        accessTokenHash: crypto.randomBytes(16).toString("hex"),
+        customerName: "Jane Doe", customerEmail: "jane@example.com", customerPhone: "9998887777",
+        status: "CONFIRMED", paymentMethod: "prepaid", paymentStatus: "PAID",
+        subtotal: 300, shippingAmount: 0, totalAmount: 300,
+        address: { create: { fullName: "Jane Doe", phone: "9998887777", addressLine1: "1 Park Ave", city: "Mumbai", state: "Maharashtra", postalCode: "400001", country: "India" } },
+        items: { create: [{ productId: product.id, productNameSnapshot: "Book", productSlugSnapshot: product.slug, productTypeSnapshot: "BOOK", quantity: 1, unitPrice: 300, lineTotal: 300, bookFormatSnapshot: "PHYSICAL" }] },
+      },
+    });
+
+    const shipment = await attemptAutomaticShipment(order.id);
+    expect(shipment.status).toBe("CREATION_FAILED");
+    expect(shipment.lastError).toMatch(/Pickup location is incomplete/);
   });
 });

@@ -5,7 +5,7 @@ import { requireCustomer } from "../../middleware/customerAuth.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
 import { ok } from "../../utils/apiResponse.js";
 import { getInvoiceSettings, updateInvoiceSettings, getInvoiceFile, listCustomerInvoices, listAdminInvoices, assertCustomerInvoice, assertGuestInvoice, regenerateInvoicePdf, getInvoiceDetail } from "./invoice.service.js";
-import { createManualInvoiceDraft, editManualInvoiceDraft, issueManualInvoice, uploadExternalInvoicePdf } from "./manualInvoice.service.js";
+import { createManualInvoiceDraft, editManualInvoiceDraft, issueManualInvoice, uploadExternalInvoicePdf, previewManualInvoice } from "./manualInvoice.service.js";
 import { sendInvoiceEmail } from "../email/email.service.js";
 import { bookPdfUpload, verifyPdfContent } from "../uploads/upload.middleware.js";
 import { writeInvoicePdf } from "./invoice.storage.js";
@@ -69,6 +69,21 @@ const manualItemSchema = z.union([
   z.object({ itemName: z.string().trim().min(1), description: z.string().trim().max(500).optional(), hsnCode: z.string().trim().optional(), unit: z.string().trim().optional(), quantity: z.coerce.number().int().min(1), unitPrice: z.coerce.number().min(0), gstRate: z.coerce.number().min(0).max(100).optional(), taxPricingMode: z.enum(["TAX_INCLUSIVE", "TAX_EXCLUSIVE"]).optional() }),
 ]);
 const manualInvoicePayloadSchema = z.object({ customer: manualCustomerSchema, invoice: manualInvoiceMetaSchema.optional(), items: z.array(manualItemSchema).min(1) });
+
+// Preview: same item shape, but customer name/email aren't required yet (the
+// admin may still be filling in items before customer details) — only
+// customer.state matters for the intra/inter-state computation shown here.
+const manualPreviewCustomerSchema = manualCustomerSchema.partial({ name: true, email: true });
+const manualInvoicePreviewSchema = z.object({ customer: manualPreviewCustomerSchema.optional().default({}), items: z.array(manualItemSchema).min(1) });
+
+// Informational-only live tax preview for the admin manual-invoice create
+// UI (task 3/4/5). Calls the exact same computeItemTaxLine/isInterState
+// path as the real draft/issue endpoints and persists nothing — see
+// previewManualInvoice's doc comment in manualInvoice.service.js.
+adminInvoiceRouter.post("/manual/preview", requireRole("SUPER_ADMIN", "ADMIN"), asyncHandler(async (req, res) => {
+  const payload = manualInvoicePreviewSchema.parse(req.body);
+  ok(res, await previewManualInvoice(payload));
+}));
 
 adminInvoiceRouter.post("/manual", requireRole("SUPER_ADMIN", "ADMIN"), asyncHandler(async (req, res) => {
   const payload = manualInvoicePayloadSchema.parse(req.body);
