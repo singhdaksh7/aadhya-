@@ -5,6 +5,10 @@ import {
   adminUpdateOrderStatus,
   adminUpsertShipment,
   adminCreateShipment,
+  adminGenerateShipmentAwb,
+  adminScheduleShipmentPickup,
+  adminGetShipmentLabel,
+  adminRefreshTracking,
   adminDownloadInvoice,
   adminRegenerateInvoice,
   adminResendInvoice,
@@ -31,6 +35,8 @@ export default function AdminOrderDetail() {
   const [shipment, setShipment] = useState({ carrier: "", trackingNumber: "", trackingUrl: "", estimatedDelivery: "" });
   const [shipmentSaving, setShipmentSaving] = useState(false);
   const [shipmentError, setShipmentError] = useState(null);
+  const [providerActionBusy, setProviderActionBusy] = useState(null);
+  const [providerActionError, setProviderActionError] = useState(null);
 
   const load = () => {
     setStatus("loading");
@@ -83,6 +89,42 @@ export default function AdminOrderDetail() {
       setShipmentError(err.message || "Could not save tracking info.");
     } finally {
       setShipmentSaving(false);
+    }
+  };
+
+  const PICKUP_DONE_STATUSES = ["PICKUP_SCHEDULED", "PICKED_UP", "IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED"];
+  const providerShipment = order?.shipment;
+  const canCreateShipment = !providerShipment || providerShipment.status === "CREATION_FAILED" || providerShipment.status === "FAILED";
+  const canGenerateAwb = !!providerShipment && !!providerShipment.providerShipmentId && !providerShipment.awb;
+  const canSchedulePickup = !!providerShipment && !!providerShipment.awb && !PICKUP_DONE_STATUSES.includes(providerShipment.status);
+  const canDownloadLabel = !!providerShipment && !!providerShipment.providerShipmentId;
+  const canRefreshTracking = !!providerShipment && !!providerShipment.providerShipmentId;
+
+  const runProviderAction = async (key, fn) => {
+    setProviderActionBusy(key);
+    setProviderActionError(null);
+    try {
+      const res = await fn();
+      setOrder((prev) => ({ ...prev, shipment: res.data }));
+    } catch (err) {
+      setProviderActionError(err.message || "Action failed.");
+    } finally {
+      setProviderActionBusy(null);
+    }
+  };
+
+  const downloadLabel = async () => {
+    setProviderActionBusy("label");
+    setProviderActionError(null);
+    try {
+      const res = await adminGetShipmentLabel(id);
+      const url = res.data?.label_url || res.data?.labelUrl;
+      if (url) window.open(url, "_blank", "noopener,noreferrer");
+      else setProviderActionError("No label URL returned by the provider yet.");
+    } catch (err) {
+      setProviderActionError(err.message || "Could not fetch label.");
+    } finally {
+      setProviderActionBusy(null);
     }
   };
 
@@ -250,6 +292,90 @@ export default function AdminOrderDetail() {
               </div>
             </form>
             {shipmentError && <p className="mt-3 text-sm text-terracotta">{shipmentError}</p>}
+          </AdminCard>
+
+          <AdminCard title="Provider Shipment">
+            {providerShipment ? (
+              <dl className="grid grid-cols-2 gap-2 text-sm">
+                <dt className="text-charcoal-soft">Provider</dt>
+                <dd>{providerShipment.provider || "—"}</dd>
+                <dt className="text-charcoal-soft">Shipment ID</dt>
+                <dd>{providerShipment.providerShipmentId || "—"}</dd>
+                <dt className="text-charcoal-soft">AWB</dt>
+                <dd>{providerShipment.awb || "—"}</dd>
+                <dt className="text-charcoal-soft">Courier</dt>
+                <dd>{providerShipment.carrier || "—"}</dd>
+                <dt className="text-charcoal-soft">Status</dt>
+                <dd><StatusBadge status={providerShipment.status} /></dd>
+                <dt className="text-charcoal-soft">Tracking</dt>
+                <dd>
+                  {providerShipment.trackingUrl ? (
+                    <a href={providerShipment.trackingUrl} target="_blank" rel="noreferrer" className="underline">
+                      {providerShipment.trackingNumber || "Track"}
+                    </a>
+                  ) : (
+                    providerShipment.trackingNumber || "—"
+                  )}
+                </dd>
+                {providerShipment.lastError && (
+                  <>
+                    <dt className="text-charcoal-soft">Last error</dt>
+                    <dd className="text-terracotta">{providerShipment.lastError}</dd>
+                  </>
+                )}
+              </dl>
+            ) : (
+              <p className="text-sm text-charcoal-soft">No provider shipment yet for this order.</p>
+            )}
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={!canCreateShipment || providerActionBusy === "create"}
+                onClick={() => runProviderAction("create", () => adminCreateShipment(id, {}))}
+                className="admin-btn admin-btn--primary"
+                title={!canCreateShipment ? "A shipment already exists for this order." : ""}
+              >
+                {providerActionBusy === "create" ? "Creating…" : providerShipment?.status === "CREATION_FAILED" ? "Retry Create Shipment" : "Create Shipment"}
+              </button>
+              <button
+                type="button"
+                disabled={!canGenerateAwb || providerActionBusy === "awb"}
+                onClick={() => runProviderAction("awb", () => adminGenerateShipmentAwb(id))}
+                className="admin-btn admin-btn--ghost"
+                title={!canGenerateAwb ? "Create the shipment first, or an AWB already exists." : ""}
+              >
+                {providerActionBusy === "awb" ? "Generating…" : "Generate AWB"}
+              </button>
+              <button
+                type="button"
+                disabled={!canSchedulePickup || providerActionBusy === "pickup"}
+                onClick={() => runProviderAction("pickup", () => adminScheduleShipmentPickup(id))}
+                className="admin-btn admin-btn--ghost"
+                title={!canSchedulePickup ? "Generate an AWB first, or pickup is already scheduled." : ""}
+              >
+                {providerActionBusy === "pickup" ? "Scheduling…" : "Schedule Pickup"}
+              </button>
+              <button
+                type="button"
+                disabled={!canDownloadLabel || providerActionBusy === "label"}
+                onClick={downloadLabel}
+                className="admin-btn admin-btn--ghost"
+                title={!canDownloadLabel ? "Create the shipment first." : ""}
+              >
+                {providerActionBusy === "label" ? "Fetching…" : "Download Label"}
+              </button>
+              <button
+                type="button"
+                disabled={!canRefreshTracking || providerActionBusy === "tracking"}
+                onClick={() => runProviderAction("tracking", () => adminRefreshTracking(id))}
+                className="admin-btn admin-btn--ghost"
+                title={!canRefreshTracking ? "Create the shipment first." : ""}
+              >
+                {providerActionBusy === "tracking" ? "Refreshing…" : "Refresh Tracking"}
+              </button>
+            </div>
+            {providerActionError && <p className="mt-3 text-sm text-terracotta">{providerActionError}</p>}
           </AdminCard>
 
           {order.statusHistory?.length > 0 && (
