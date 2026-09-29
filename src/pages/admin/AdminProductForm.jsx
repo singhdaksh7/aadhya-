@@ -10,6 +10,7 @@ import {
   adminSetPrimaryImage,
   adminReorderImages,
   resolveProductImageUrl,
+  adminGetInvoiceSettings,
 } from "../../lib/api";
 import BookFormatsTab from "./BookFormatsTab";
 import { Button } from "../../components/ui";
@@ -66,8 +67,17 @@ const emptyForm = {
   seoTitle: "",
   seoDescription: "",
   ogImage: "",
+  hsnCode: "",
+  gstRate: "",
+  unit: "PCS",
+  taxPricingMode: "",
+  invoiceName: "",
   bookDetail: { author: "", isbn: "", publisher: "", language: "", pageCount: "", edition: "", publicationYear: "" },
 };
+
+const HSN_PATTERN = /^[0-9]{4,8}$/;
+const GST_RATE_OPTIONS = [0, 5, 12, 18, 28];
+const UNIT_OPTIONS = ["PCS", "SET", "PAIR", "KG", "GM", "MTR", "BOX"];
 
 export default function AdminProductForm() {
   const { id } = useParams();
@@ -81,10 +91,16 @@ export default function AdminProductForm() {
   const [status, setStatus] = useState(isEdit ? "loading" : "ready");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [gstEnabled, setGstEnabled] = useState(false);
 
   useEffect(() => {
     adminListCategories().then((res) => setCategories(res.data.filter((c) => c.isActive)));
+    adminGetInvoiceSettings()
+      .then((res) => setGstEnabled(Boolean(res.data.gstEnabled)))
+      .catch(() => {});
   }, []);
+
+  const taxIncomplete = gstEnabled && form.productType === "PHYSICAL" && (!form.hsnCode.trim() || form.gstRate === "");
 
   useEffect(() => {
     if (!isEdit) return;
@@ -121,6 +137,11 @@ export default function AdminProductForm() {
           seoTitle: p.seoTitle || "",
           seoDescription: p.seoDescription || "",
           ogImage: p.ogImage || "",
+          hsnCode: p.hsnCode || "",
+          gstRate: p.gstRate != null ? String(p.gstRate) : "",
+          unit: p.unit || "PCS",
+          taxPricingMode: p.taxPricingMode || "",
+          invoiceName: p.invoiceName || "",
           bookDetail: {
             author: p.bookDetail?.author || "",
             isbn: p.bookDetail?.isbn || "",
@@ -171,6 +192,11 @@ export default function AdminProductForm() {
       seoTitle: form.seoTitle || null,
       seoDescription: form.seoDescription || null,
       ogImage: form.ogImage || null,
+      hsnCode: form.hsnCode ? form.hsnCode.trim() : null,
+      gstRate: form.gstRate === "" ? null : Number(form.gstRate),
+      unit: form.unit || "PCS",
+      ...(form.taxPricingMode ? { taxPricingMode: form.taxPricingMode } : {}),
+      invoiceName: form.invoiceName ? form.invoiceName.trim() : null,
     };
     if (form.productType === "BOOK") {
       payload.bookDetail = {
@@ -411,6 +437,66 @@ export default function AdminProductForm() {
           <Field label="Shipping Information">
             <input value={form.shippingInformation} onChange={(e) => set("shippingInformation", e.target.value)} placeholder="Dispatched in 2-3 business days" className={inputCls} />
           </Field>
+
+          <fieldset className="rounded-2xl border border-charcoal/10 p-4">
+            <legend className="px-2 text-xs font-medium uppercase tracking-wide text-charcoal-soft">Tax / GST Details</legend>
+            {taxIncomplete && (
+              <p className="mb-3 inline-block rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800">
+                Tax details incomplete
+              </p>
+            )}
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="HSN Code">
+                <input
+                  value={form.hsnCode}
+                  onChange={(e) => set("hsnCode", e.target.value)}
+                  placeholder="e.g. 6802"
+                  className={inputCls}
+                />
+                {form.hsnCode && !HSN_PATTERN.test(form.hsnCode.trim()) && (
+                  <p className="mt-1 text-xs text-terracotta">HSN code must be 4-8 digits.</p>
+                )}
+              </Field>
+              <Field label="GST Rate">
+                <select value={form.gstRate} onChange={(e) => set("gstRate", e.target.value)} className={inputCls}>
+                  <option value="">Not set</option>
+                  {GST_RATE_OPTIONS.map((r) => (
+                    <option key={r} value={r}>
+                      {r}%
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-4">
+              <Field label="Unit">
+                <select value={form.unit} onChange={(e) => set("unit", e.target.value)} className={inputCls}>
+                  {UNIT_OPTIONS.map((u) => (
+                    <option key={u} value={u}>
+                      {u}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Tax Pricing Mode (blank = use global default)">
+                <select value={form.taxPricingMode} onChange={(e) => set("taxPricingMode", e.target.value)} className={inputCls}>
+                  <option value="">Inherit global default</option>
+                  <option value="TAX_EXCLUSIVE">Tax Exclusive</option>
+                  <option value="TAX_INCLUSIVE">Tax Inclusive</option>
+                </select>
+              </Field>
+            </div>
+            <div className="mt-4">
+              <Field label="Invoice Product Name (optional override)">
+                <input
+                  value={form.invoiceName}
+                  onChange={(e) => set("invoiceName", e.target.value)}
+                  placeholder="Name printed on invoice, defaults to product name"
+                  className={inputCls}
+                />
+              </Field>
+            </div>
+          </fieldset>
 
           {form.productType === "BOOK" && (
             <fieldset className="rounded-2xl border border-charcoal/10 p-4">

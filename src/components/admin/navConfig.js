@@ -29,7 +29,15 @@ export const adminNavGroups = [
     items: [
       { to: "/admin/orders", label: "Orders" },
       { to: "/admin/returns", label: "Returns" },
-      { to: "/admin/invoices", label: "Invoices" },
+      {
+        to: "/admin/invoices",
+        label: "Invoices",
+        end: true,
+        children: [
+          { to: "/admin/invoices", label: "All Invoices", end: true },
+          { to: "/admin/invoices/settings", label: "Invoice Settings" },
+        ],
+      },
       { to: "/admin/coupons", label: "Coupons" },
       { to: "/admin/customers", label: "Customers" },
       { to: "/admin/reviews", label: "Reviews" },
@@ -80,6 +88,7 @@ export function pageTitleFromPath(pathname) {
     "/admin/orders": "Orders",
     "/admin/returns": "Returns",
     "/admin/invoices": "Invoices",
+    "/admin/invoices/settings": "Invoice Settings",
     "/admin/coupons": "Coupons",
     "/admin/customers": "Customers",
     "/admin/reviews": "Reviews",

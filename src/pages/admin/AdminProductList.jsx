@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { adminListProducts, adminUpdateProduct, adminDeleteProduct } from "../../lib/api";
+import { adminListProducts, adminUpdateProduct, adminDeleteProduct, adminGetInvoiceSettings } from "../../lib/api";
 import { LoadingNotice, ErrorNotice } from "../../components/StateNotice";
 import { formatInr } from "../../lib/format";
 import ProductImage from "../../components/ProductImage";
@@ -22,6 +22,13 @@ export default function AdminProductList() {
   const [result, setResult] = useState(null);
   const [status, setStatus] = useState("loading");
   const [reloadToken, setReloadToken] = useState(0);
+  const [gstEnabled, setGstEnabled] = useState(false);
+
+  useEffect(() => {
+    adminGetInvoiceSettings()
+      .then((res) => setGstEnabled(Boolean(res.data.gstEnabled)))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -111,7 +118,14 @@ export default function AdminProductList() {
                 <td>
                   <ProductImage product={product} className="h-11 w-11" ratio="aspect-square" rounded="rounded-lg" />
                 </td>
-                <td>{product.name}</td>
+                <td>
+                  {product.name}
+                  {gstEnabled && product.productType === "PHYSICAL" && (!product.hsnCode || product.gstRate == null) && (
+                    <span className="ml-2 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800">
+                      Tax details incomplete
+                    </span>
+                  )}
+                </td>
                 <td>{product.sku || "—"}</td>
                 <td>{product.category?.name || "—"}</td>
                 <td>{product.productType}</td>

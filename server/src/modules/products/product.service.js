@@ -305,6 +305,11 @@ export async function createProduct(input) {
     seoTitle: input.seoTitle ?? null,
     seoDescription: input.seoDescription ?? null,
     ogImage: input.ogImage ?? null,
+    hsnCode: input.hsnCode ?? null,
+    gstRate: input.gstRate ?? null,
+    ...(input.unit !== undefined ? { unit: input.unit } : {}),
+    ...(input.taxPricingMode !== undefined ? { taxPricingMode: input.taxPricingMode } : {}),
+    invoiceName: input.invoiceName ?? null,
   };
 
   if (input.specifications !== undefined && input.specifications !== null) {
@@ -384,6 +389,11 @@ export async function updateProduct(id, input) {
         ...(input.seoDescription !== undefined ? { seoDescription: input.seoDescription } : {}),
         ...(input.ogImage !== undefined ? { ogImage: input.ogImage } : {}),
         ...(input.attributes !== undefined ? { attributes: input.attributes } : {}),
+        ...(input.hsnCode !== undefined ? { hsnCode: input.hsnCode } : {}),
+        ...(input.gstRate !== undefined ? { gstRate: input.gstRate } : {}),
+        ...(input.unit !== undefined ? { unit: input.unit } : {}),
+        ...(input.taxPricingMode !== undefined ? { taxPricingMode: input.taxPricingMode } : {}),
+        ...(input.invoiceName !== undefined ? { invoiceName: input.invoiceName } : {}),
       },
     });
 

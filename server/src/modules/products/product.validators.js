@@ -47,6 +47,11 @@ export const createProductSchema = z.object({
   ogImage: z.string().trim().max(500).optional().nullable(),
   attributes: z.record(z.string().trim().max(80), z.string().trim().max(500)).optional().nullable(),
   bookDetail: bookDetailSchema,
+  hsnCode: z.string().trim().max(20).optional().nullable(),
+  gstRate: z.number().min(0).max(100).optional().nullable(),
+  unit: z.string().trim().min(1).max(20).optional(),
+  taxPricingMode: z.enum(["TAX_INCLUSIVE", "TAX_EXCLUSIVE"]).optional(),
+  invoiceName: z.string().trim().max(200).optional().nullable(),
 });
 
 export const updateProductSchema = createProductSchema.partial();
