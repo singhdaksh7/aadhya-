@@ -247,6 +247,11 @@ enum CouponTargetType {
   COLLECTION
 }
 
+enum TaxPricingMode {
+  TAX_INCLUSIVE
+  TAX_EXCLUSIVE
+}
+
 model Product {
   id                  String              @id @default(uuid())
   name                String
@@ -283,6 +288,13 @@ model Product {
   ogImage             String?
   attributes          Json?
   isDigital           Boolean             @default(false)
+  // GST / invoicing fields (Phase 1 foundation). Nullable where existing
+  // products have no data yet — never backfilled with a guessed value.
+  hsnCode             String?
+  gstRate             Decimal?            @db.Decimal(4, 2)
+  unit                String              @default("PCS")
+  taxPricingMode      TaxPricingMode      @default(TAX_EXCLUSIVE)
+  invoiceName         String?
   createdAt           DateTime            @default(now())
   updatedAt           DateTime            @updatedAt
 
@@ -318,6 +330,12 @@ model ProductVariant {
   lowStockNotifiedAt DateTime? // dedupe: set when a LOW_STOCK/OUT_OF_STOCK notification fires, cleared once stock recovers above threshold
   isActive      Boolean  @default(true)
   attributes    Json?
+  // Optional overrides — null means inherit from the parent Product.
+  // taxPricingMode is intentionally NOT overridden here; it always follows
+  // the parent Product.
+  hsnCode       String?
+  gstRate       Decimal? @db.Decimal(4, 2)
+  unit          String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -684,6 +702,16 @@ model OrderItem {
   bookFormatSkuSnapshot        String?
   bookFormatPriceSnapshot      Decimal?        @db.Decimal(10, 2)
   bookFormatPdfNameSnapshot    String?
+  // GST snapshot fields captured at invoice-creation time (Phase 1 foundation).
+  // Nullable: historical OrderItems predate this feature and never get one
+  // backfilled.
+  hsnCodeSnapshot             String?
+  gstRateSnapshot             Decimal?        @db.Decimal(4, 2)
+  unitSnapshot                String?
+  cgstAmount                  Decimal?        @db.Decimal(10, 2)
+  sgstAmount                  Decimal?        @db.Decimal(10, 2)
+  igstAmount                  Decimal?        @db.Decimal(10, 2)
+  taxableValueSnapshot        Decimal?        @db.Decimal(10, 2)
 
   order           Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product         Product?         @relation(fields: [productId], references: [id], onDelete: SetNull)
