@@ -11,6 +11,14 @@ export function resolveProductImageUrl(url) {
   return /^https?:\/\//.test(url) ? url : `${API_ORIGIN}${url}`;
 }
 
+// Single canonical media URL normalizer, reused everywhere an admin-uploaded
+// asset (logo, favicon, banner, category image, etc.) needs to be rendered.
+// Handles: a full https URL (S3/CDN/public storage — returned unchanged), a
+// server-relative "/uploads/..." path (resolved against the API origin), and
+// a falsy/empty value (returns null so callers can fall back cleanly). Never
+// double-prepends the API origin because the absolute-URL check runs first.
+export const resolveMediaUrl = resolveProductImageUrl;
+
 export class ApiRequestError extends Error {
   constructor(message, status, details) {
     super(message);
@@ -371,6 +379,15 @@ export async function downloadAccountInvoice(id) { const res = await fetch(`${AP
 export function adminGetIntegrationStatus() { return api.get("/admin/integrations", { auth: "admin" }); }
 export function adminSaveIntegration(data) { return api.put("/admin/integrations/credentials", data, { auth: "admin" }); }
 export function adminTestIntegration(provider, environment) { return api.post(`/admin/integrations/${provider}/${environment}/test`, {}, { auth: "admin" }); }
+
+export function adminGetEmailStatus() { return api.get("/admin/email/status", { auth: "admin" }); }
+export function adminSendTestEmail(recipient) { return api.post("/admin/email/test", { recipient }, { auth: "admin" }); }
+export function adminGetEmailHealth() { return api.get("/admin/email/health", { auth: "admin" }); }
+export function adminGetEmailLogs(params = {}) {
+  const query = new URLSearchParams(Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== ""))).toString();
+  return api.get(`/admin/email/logs${query ? `?${query}` : ""}`, { auth: "admin" });
+}
+export function adminRetryEmailLog(id) { return api.post(`/admin/email/logs/${id}/retry`, {}, { auth: "admin" }); }
 export function adminGetShippingBusiness() { return api.get("/admin/shipping/business", { auth: "admin" }); }
 export function adminSaveShippingBusiness(data) { return api.put("/admin/shipping/business", data, { auth: "admin" }); }
 export function adminGetInvoiceSettings() { return api.get("/admin/invoices/settings", { auth: "admin" }); }

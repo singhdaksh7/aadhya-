@@ -37,6 +37,11 @@ import { adminShippingRouter } from "../modules/shipping/shipping.routes.js";
 import { publicDownloadRouter, customerDownloadRouter, guestDownloadRouter } from "../modules/downloads/download.routes.js";
 import { customerInvoiceRouter, guestInvoiceRouter, adminInvoiceRouter } from "../modules/invoices/invoice.routes.js";
 import { adminIntegrationRouter } from "../modules/integrations/integration.routes.js";
+import { customerReturnRouter, adminReturnRouter } from "../modules/returns/returns.routes.js";
+import adminNotificationRouter from "../modules/admin-notifications/admin-notification.routes.js";
+import adminLowStockRouter from "../modules/inventory/low-stock.routes.js";
+import { adminEmailRouter } from "../modules/email/email.admin.routes.js";
+import { adminHealthRouter } from "../modules/health/health.routes.js";
 
 const router = Router();
 
@@ -91,6 +96,7 @@ router.use("/payments/razorpay", razorpayVerifyRouter);
 router.use("/downloads", publicDownloadRouter);
 router.use("/account/downloads", customerDownloadRouter);
 router.use("/orders/downloads", guestDownloadRouter);
+router.use("/account/returns", customerReturnRouter);
 router.use("/account/invoices", customerInvoiceRouter);
 router.use("/orders/invoices", guestInvoiceRouter);
 // POST /api/webhooks/razorpay is mounted directly on the app in app.js,
@@ -121,6 +127,11 @@ router.use("/admin/faqs", adminFaqRouter);
 router.use("/admin/media", adminMediaRouter);
 router.use("/admin/invoices", adminInvoiceRouter);
 router.use("/admin/integrations", adminIntegrationRouter);
+router.use("/admin/returns", adminReturnRouter);
+router.use("/admin/notifications", adminNotificationRouter);
+router.use("/admin/inventory/low-stock", adminLowStockRouter);
+router.use("/admin", adminHealthRouter);
+router.use("/admin/email", adminEmailRouter);
 
 router.get(
   "/admin/dashboard",

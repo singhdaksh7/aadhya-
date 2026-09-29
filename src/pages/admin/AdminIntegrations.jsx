@@ -7,6 +7,11 @@ import {
   adminTestIntegration,
   adminGetShippingBusiness,
   adminSaveShippingBusiness,
+  adminGetEmailStatus,
+  adminSendTestEmail,
+  adminGetEmailHealth,
+  adminGetEmailLogs,
+  adminRetryEmailLog,
 } from "../../lib/api";
 import { PageHeader, AdminCard, StatusBadge } from "../../components/admin/ui";
 
@@ -64,6 +69,19 @@ export default function AdminIntegrations() {
     webhookSecret: "",
     enabled: true,
   });
+  const [emailStatus, setEmailStatus] = useState(null);
+  const [emailHealth, setEmailHealth] = useState(null);
+  const [emailLogs, setEmailLogs] = useState([]);
+  const [testRecipient, setTestRecipient] = useState("");
+  const [emailMessage, setEmailMessage] = useState("");
+  const [sendingTest, setSendingTest] = useState(false);
+  const [retryingId, setRetryingId] = useState(null);
+
+  const loadEmail = () => {
+    adminGetEmailStatus().then((r) => setEmailStatus(r.data)).catch(() => {});
+    adminGetEmailHealth().then((r) => setEmailHealth(r.data)).catch(() => {});
+    adminGetEmailLogs({ pageSize: 15 }).then((r) => setEmailLogs(r.data.items)).catch(() => {});
+  };
 
   const load = () => {
     adminGetIntegrationStatus()
@@ -78,9 +96,39 @@ export default function AdminIntegrations() {
         }))
       )
       .catch(() => {});
+    loadEmail();
   };
 
   useEffect(load, []);
+
+  const sendTest = async (e) => {
+    e.preventDefault();
+    setSendingTest(true);
+    setEmailMessage("");
+    try {
+      const res = await adminSendTestEmail(testRecipient);
+      setEmailMessage(res.data.sent ? `Test email sent to ${testRecipient}.` : `Test email not sent (${res.data.reason || "unknown reason"}).`);
+      loadEmail();
+    } catch (err) {
+      setEmailMessage(err.message);
+    } finally {
+      setSendingTest(false);
+    }
+  };
+
+  const retryLog = async (id) => {
+    setRetryingId(id);
+    setEmailMessage("");
+    try {
+      const res = await adminRetryEmailLog(id);
+      setEmailMessage(res.data.sent ? "Email resent successfully." : `Retry did not send (${res.data.reason || "unknown reason"}).`);
+      loadEmail();
+    } catch (err) {
+      setEmailMessage(err.message);
+    } finally {
+      setRetryingId(null);
+    }
+  };
 
   if (admin?.role !== "SUPER_ADMIN") {
     return (
@@ -303,6 +351,120 @@ export default function AdminIntegrations() {
             <button className="admin-btn admin-btn--primary">Save shipping defaults</button>
           </div>
         </form>
+      </AdminCard>
+
+      <AdminCard
+        title="Email"
+        subtitle="SMTP transport status, test sending, and delivery logs"
+        actions={
+          <>
+            <StatusBadge
+              value={emailStatus?.configured ? "Configured" : "Not configured"}
+              tone={emailStatus?.configured ? "success" : "neutral"}
+            />
+            {emailHealth ? <StatusBadge value={`${emailHealth.failedCount} failed`} tone={emailHealth.failedCount ? "danger" : "neutral"} /> : null}
+          </>
+        }
+      >
+        {emailMessage && (
+          <p role="status" aria-live="polite" className="mb-3 rounded-xl bg-sage-light px-3 py-2 text-sm text-green-deep">
+            {emailMessage}
+          </p>
+        )}
+        {emailStatus && (
+          <dl className="mb-4 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-charcoal-soft sm:grid-cols-4">
+            <div>
+              <dt className="font-medium text-charcoal">Host</dt>
+              <dd>{emailStatus.host || "—"}</dd>
+            </div>
+            <div>
+              <dt className="font-medium text-charcoal">Port</dt>
+              <dd>{emailStatus.port}</dd>
+            </div>
+            <div>
+              <dt className="font-medium text-charcoal">Sender</dt>
+              <dd>{emailStatus.senderAddress}</dd>
+            </div>
+            <div>
+              <dt className="font-medium text-charcoal">Last test</dt>
+              <dd>
+                {emailStatus.lastTestStatus
+                  ? `${emailStatus.lastTestStatus}${emailStatus.lastTestAt ? ` · ${new Date(emailStatus.lastTestAt).toLocaleString("en-IN")}` : ""}`
+                  : "Never tested"}
+              </dd>
+            </div>
+          </dl>
+        )}
+
+        <form onSubmit={sendTest} className="admin-form-grid sm:grid-cols-3">
+          <Input
+            label="Send test email to"
+            type="email"
+            value={testRecipient}
+            required
+            onChange={(e) => setTestRecipient(e.target.value)}
+          />
+          <div className="flex items-end">
+            <button className="admin-btn admin-btn--primary" disabled={sendingTest}>
+              {sendingTest ? "Sending…" : "Send Test Email"}
+            </button>
+          </div>
+        </form>
+
+        <h3 className="mb-2 mt-6 text-sm font-semibold text-charcoal">Recent email log</h3>
+        <div className="overflow-x-auto">
+          <table className="admin-table w-full text-xs">
+            <thead>
+              <tr>
+                <th className="text-left">Type</th>
+                <th className="text-left">Recipient</th>
+                <th className="text-left">Status</th>
+                <th className="text-left">Sent / created</th>
+                <th className="text-left">Error</th>
+                <th className="text-left">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {emailLogs.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="py-3 text-charcoal-soft">
+                    No email activity yet.
+                  </td>
+                </tr>
+              )}
+              {emailLogs.map((log) => (
+                <tr key={log.id}>
+                  <td>{log.type}</td>
+                  <td>{log.recipient}</td>
+                  <td>
+                    <StatusBadge
+                      value={log.status}
+                      tone={log.status === "SENT" ? "success" : log.status === "FAILED" ? "danger" : "neutral"}
+                    />
+                  </td>
+                  <td>{new Date(log.sentAt || log.createdAt).toLocaleString("en-IN")}</td>
+                  <td className="max-w-[200px] truncate" title={log.failureMessage || ""}>
+                    {log.failureMessage || "—"}
+                  </td>
+                  <td>
+                    {["FAILED", "SKIPPED"].includes(log.status) && ["ORDER_CONFIRMATION", "INVOICE", "INVOICE_RESEND", "IN_TRANSIT_EMAIL", "OUT_FOR_DELIVERY_EMAIL", "DELIVERED_EMAIL"].includes(log.type) ? (
+                      <button
+                        type="button"
+                        className="admin-btn admin-btn--ghost"
+                        disabled={retryingId === log.id}
+                        onClick={() => retryLog(log.id)}
+                      >
+                        {retryingId === log.id ? "Retrying…" : "Retry"}
+                      </button>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </AdminCard>
     </div>
   );

@@ -2,6 +2,7 @@ import nodemailer from "nodemailer";
 import { env } from "../../config/env.js";
 import { prisma } from "../../lib/prisma.js";
 import { readInvoicePdf } from "../invoices/invoice.storage.js";
+import { ApiError } from "../../utils/ApiError.js";
 
 let transporter = null;
 function getTransporter() {
@@ -67,7 +68,7 @@ export async function sendPasswordResetEmail({ customer, token }) {
 // Fire-and-forget by design: called after a payment is finalized, and must
 // never throw back into that transaction/webhook path. If SMTP isn't
 // configured (e.g. local dev), it logs and returns instead of failing.
-export async function sendOrderConfirmationEmail(orderId) {
+export async function sendOrderConfirmationEmail(orderId, { resend = false, adminId = null } = {}) {
   const order = await prisma.order.findUnique({
     where: { id: orderId },
     include: { items: true, address: true, customer: true },
@@ -78,20 +79,36 @@ export async function sendOrderConfirmationEmail(orderId) {
   if (!mailer) {
     // eslint-disable-next-line no-console
     console.log(`[email] SMTP not configured — skipping confirmation email for ${order.orderNumber}`);
+    try {
+      await prisma.emailLog.create({ data: { type: "ORDER_CONFIRMATION", recipient: order.customerEmail, orderId, status: "SKIPPED", failureMessage: "SMTP not configured" } });
+    } catch (writeErr) {
+      if (!isMissingParentRow(writeErr)) throw writeErr;
+    }
     return { sent: false, reason: "smtp_not_configured" };
   }
 
   try {
-    await mailer.sendMail({
+    const info = await mailer.sendMail({
       from: env.smtp.from,
       to: order.customerEmail,
       subject: `Your Aadya Society order ${order.orderNumber} is confirmed`,
       html: `${renderOrderConfirmationHtml(order)}${order.customer ? `<p style="text-align:center"><a href="${env.frontendUrl.replace(/\/$/, "")}/account/orders/${encodeURIComponent(order.orderNumber)}">View your order</a></p>` : ""}`,
     });
+    try {
+      await prisma.emailLog.create({ data: { type: "ORDER_CONFIRMATION", recipient: order.customerEmail, orderId, status: "SENT", providerMessageId: info.messageId || null, sentAt: new Date() } });
+    } catch (writeErr) {
+      if (!isMissingParentRow(writeErr)) throw writeErr;
+    }
+    if (adminId && resend) await prisma.adminAuditLog.create({ data: { adminId, action: "ORDER_CONFIRMATION_RESEND", provider: "email", metadata: { orderId } } });
     return { sent: true };
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error(`[email] failed to send confirmation for ${order.orderNumber}:`, err.message);
+    try {
+      await prisma.emailLog.create({ data: { type: "ORDER_CONFIRMATION", recipient: order.customerEmail, orderId, status: "FAILED", failureMessage: String(err.message || "send failed").slice(0, 500) } });
+    } catch (writeErr) {
+      if (!isMissingParentRow(writeErr)) throw writeErr;
+    }
     return { sent: false, reason: "send_failed" };
   }
 }
@@ -153,14 +170,168 @@ export async function sendInvoiceEmail(invoiceId, { resend = false, adminId = nu
   }
 }
 
-export async function sendShippingStatusEmail(orderId, status) {
+export async function sendShippingStatusEmail(orderId, status, { resend = false, adminId = null } = {}) {
   const order = await prisma.order.findUnique({ where: { id: orderId }, include: { shipment: true, customer: true, items: true } });
   if (!order || !["IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED"].includes(status)) return { sent: false };
   const type = `${status}_EMAIL`;
-  const exists = await prisma.emailLog.findFirst({ where: { orderId, type, status: "SENT" } });
-  if (exists) return { sent: false, reason: "already_sent" };
+  if (!resend) {
+    const exists = await prisma.emailLog.findFirst({ where: { orderId, type, status: "SENT" } });
+    if (exists) return { sent: false, reason: "already_sent" };
+  }
   const subject = status === "DELIVERED" ? "Your Aadya order has been delivered" : status === "OUT_FOR_DELIVERY" ? "Your Aadya order is out for delivery" : "Your Aadya order has shipped";
   const mailer = getTransporter();
   if (!mailer) return { sent: false, reason: "smtp_not_configured" };
-  try { await mailer.sendMail({ from: env.smtp.from, to: order.customerEmail, subject, html: `<p>Hello ${escapeHtml(order.customerName)},</p><p>Your order <strong>${escapeHtml(order.orderNumber)}</strong> is ${escapeHtml(status.replaceAll("_", " ").toLowerCase())}.</p><p>Carrier: ${escapeHtml(order.shipment?.carrier || "")}${order.shipment?.trackingNumber ? `<br/>Tracking: ${escapeHtml(order.shipment.trackingNumber)}` : ""}</p><p><a href="${env.frontendUrl.replace(/\/$/, "")}/account/orders/${encodeURIComponent(order.orderNumber)}">View your order</a></p>` }); await prisma.emailLog.create({ data: { type, recipient: order.customerEmail, orderId, status: "SENT", sentAt: new Date() } }); if (order.customerId) await prisma.customerNotification.create({ data: { customerId: order.customerId, type: `ORDER_${status}`, title: status === "DELIVERED" ? "Delivered" : status === "OUT_FOR_DELIVERY" ? "Out for delivery" : "Shipped", message: `Your order ${order.orderNumber} is ${status.replaceAll("_", " ").toLowerCase()}.`, link: `/account/orders/${order.orderNumber}` } }); return { sent: true }; } catch (err) { await prisma.emailLog.create({ data: { type, recipient: order.customerEmail, orderId, status: "FAILED", failureMessage: String(err.message).slice(0, 500) } }); return { sent: false }; }
+  try {
+    await mailer.sendMail({ from: env.smtp.from, to: order.customerEmail, subject, html: `<p>Hello ${escapeHtml(order.customerName)},</p><p>Your order <strong>${escapeHtml(order.orderNumber)}</strong> is ${escapeHtml(status.replaceAll("_", " ").toLowerCase())}.</p><p>Carrier: ${escapeHtml(order.shipment?.carrier || "")}${order.shipment?.trackingNumber ? `<br/>Tracking: ${escapeHtml(order.shipment.trackingNumber)}` : ""}</p><p><a href="${env.frontendUrl.replace(/\/$/, "")}/account/orders/${encodeURIComponent(order.orderNumber)}">View your order</a></p>` });
+    await prisma.emailLog.create({ data: { type, recipient: order.customerEmail, orderId, status: "SENT", sentAt: new Date() } });
+    if (order.customerId && !resend) await prisma.customerNotification.create({ data: { customerId: order.customerId, type: `ORDER_${status}`, title: status === "DELIVERED" ? "Delivered" : status === "OUT_FOR_DELIVERY" ? "Out for delivery" : "Shipped", message: `Your order ${order.orderNumber} is ${status.replaceAll("_", " ").toLowerCase()}.`, link: `/account/orders/${order.orderNumber}` } });
+    if (adminId && resend) await prisma.adminAuditLog.create({ data: { adminId, action: "SHIPPING_EMAIL_RESEND", provider: "email", metadata: { orderId, status } } });
+    return { sent: true };
+  } catch (err) {
+    await prisma.emailLog.create({ data: { type, recipient: order.customerEmail, orderId, status: "FAILED", failureMessage: String(err.message).slice(0, 500) } });
+    return { sent: false };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Admin email operations: status/health surface, connection test, and manual
+// retry of a specific failed transactional email. None of these ever expose
+// SMTP credentials (host/port/from/user presence only — never the password).
+// ---------------------------------------------------------------------------
+
+/** Sanitized SMTP configuration + last test outcome. Never includes secrets. */
+export async function getEmailStatus() {
+  const lastTest = await prisma.emailLog.findFirst({
+    where: { type: "TEST_EMAIL" },
+    orderBy: { createdAt: "desc" },
+  });
+  return {
+    configured: env.smtp.isConfigured,
+    host: env.smtp.host || null,
+    port: env.smtp.port,
+    senderAddress: env.smtp.from,
+    hasAuthUser: Boolean(env.smtp.user),
+    lastTestAt: lastTest ? (lastTest.sentAt || lastTest.createdAt) : null,
+    lastTestStatus: lastTest ? lastTest.status : null,
+  };
+}
+
+/**
+ * Verifies the SMTP transport and sends a safe, generic test message to the
+ * given recipient. Returns a sanitized outcome — never the password, a full
+ * stack trace, or any provider secret. Every attempt is recorded as an
+ * EmailLog row of type TEST_EMAIL so status/health surfaces can read it back.
+ */
+export async function sendTestEmail(recipient, adminId) {
+  const mailer = getTransporter();
+  if (!mailer) {
+    await prisma.emailLog.create({ data: { type: "TEST_EMAIL", recipient, status: "SKIPPED", failureMessage: "SMTP not configured" } });
+    return { sent: false, reason: "smtp_not_configured" };
+  }
+  try {
+    await mailer.verify();
+  } catch {
+    await prisma.emailLog.create({ data: { type: "TEST_EMAIL", recipient, status: "FAILED", failureMessage: "SMTP connection could not be verified" } });
+    return { sent: false, reason: "connection_failed" };
+  }
+  try {
+    const info = await mailer.sendMail({
+      from: env.smtp.from,
+      to: recipient,
+      subject: "Aadya Society — test email",
+      html: `<div style="font-family:Georgia,serif;max-width:480px;margin:auto;color:#2b2723"><h1>SMTP test successful</h1><p>This is a test message sent from the Aadya Society admin panel to confirm outgoing email is working correctly.</p></div>`,
+    });
+    await prisma.emailLog.create({ data: { type: "TEST_EMAIL", recipient, status: "SENT", providerMessageId: info.messageId || null, sentAt: new Date() } });
+    if (adminId) await prisma.adminAuditLog.create({ data: { adminId, action: "EMAIL_TEST_SENT", provider: "email", metadata: { recipient } } });
+    return { sent: true };
+  } catch (err) {
+    await prisma.emailLog.create({ data: { type: "TEST_EMAIL", recipient, status: "FAILED", failureMessage: String(err.message || "send failed").slice(0, 300) } });
+    return { sent: false, reason: "send_failed" };
+  }
+}
+
+/** Failed-email count + most recent failures, for a dashboard widget. */
+export async function getEmailHealthSummary({ recentLimit = 10 } = {}) {
+  const [failedCount, recentFailures, status] = await Promise.all([
+    prisma.emailLog.count({ where: { status: "FAILED" } }),
+    prisma.emailLog.findMany({
+      where: { status: "FAILED" },
+      orderBy: { createdAt: "desc" },
+      take: recentLimit,
+      select: { id: true, type: true, recipient: true, orderId: true, invoiceId: true, failureMessage: true, createdAt: true },
+    }),
+    getEmailStatus(),
+  ]);
+  return { smtpConfigured: status.configured, lastTestAt: status.lastTestAt, lastTestStatus: status.lastTestStatus, failedCount, recentFailures };
+}
+
+const RESENDABLE_TYPES = new Set(["ORDER_CONFIRMATION", "INVOICE", "INVOICE_RESEND", "IN_TRANSIT_EMAIL", "OUT_FOR_DELIVERY_EMAIL", "DELIVERED_EMAIL"]);
+
+/**
+ * Explicit, admin-initiated retry of one failed/skipped transactional email
+ * identified by its EmailLog id. Never triggered automatically — this is the
+ * only path that resends a previously failed customer email.
+ */
+export async function retryEmailLog(emailLogId, adminId) {
+  const log = await prisma.emailLog.findUnique({ where: { id: emailLogId } });
+  if (!log) throw ApiError.notFound("Email log entry not found.");
+  if (!["FAILED", "SKIPPED"].includes(log.status)) throw ApiError.badRequest("Only a failed or skipped email can be retried.");
+  if (!RESENDABLE_TYPES.has(log.type)) throw ApiError.badRequest(`Emails of type ${log.type} cannot be retried from here.`);
+
+  if (log.type === "ORDER_CONFIRMATION") {
+    if (!log.orderId) throw ApiError.badRequest("This log entry has no associated order.");
+    return sendOrderConfirmationEmail(log.orderId, { resend: true, adminId });
+  }
+  if (log.type === "INVOICE" || log.type === "INVOICE_RESEND") {
+    if (!log.invoiceId) throw ApiError.badRequest("This log entry has no associated invoice.");
+    return sendInvoiceEmail(log.invoiceId, { resend: true, adminId });
+  }
+  const status = log.type.replace(/_EMAIL$/, "");
+  if (!log.orderId) throw ApiError.badRequest("This log entry has no associated order.");
+  return sendShippingStatusEmail(log.orderId, status, { resend: true, adminId });
+}
+
+// Fire-and-forget notification for a return/refund status change. Never
+// throws back into the caller's transaction — returns.service.js calls this
+// with .catch(...) the same way order/shipping status emails are dispatched.
+export async function sendReturnStatusEmail(orderId, returnRequest, statusLabel) {
+  const order = await prisma.order.findUnique({ where: { id: orderId } });
+  if (!order) return { sent: false, reason: "order_not_found" };
+
+  const mailer = getTransporter();
+  const subject = `Update on your return for order ${order.orderNumber}`;
+  const html = `<div style="font-family:Georgia,'Times New Roman',serif;max-width:560px;margin:0 auto;color:#2b2723;">
+    <h1 style="font-size:20px;">Return update</h1>
+    <p>Hello ${escapeHtml(order.customerName)},</p>
+    <p>Your return request for order <strong>${order.orderNumber}</strong> is now: <strong>${escapeHtml(statusLabel)}</strong>.</p>
+    ${returnRequest?.refundAmount ? `<p>Refund amount: ₹${Number(returnRequest.refundAmount).toLocaleString("en-IN")}</p>` : ""}
+    <p style="margin-top:24px;color:#4a443d;">You can check the latest status from your account.</p>
+  </div>`;
+
+  if (!mailer) {
+    try {
+      await prisma.emailLog.create({ data: { type: "RETURN_STATUS", recipient: order.customerEmail, orderId, status: "SKIPPED", failureMessage: "SMTP not configured" } });
+    } catch (writeErr) {
+      if (!isMissingParentRow(writeErr)) throw writeErr;
+    }
+    return { sent: false, reason: "smtp_not_configured" };
+  }
+
+  try {
+    const info = await mailer.sendMail({ from: env.smtp.from, to: order.customerEmail, subject, html });
+    try {
+      await prisma.emailLog.create({ data: { type: "RETURN_STATUS", recipient: order.customerEmail, orderId, status: "SENT", providerMessageId: info.messageId || null, sentAt: new Date() } });
+    } catch (writeErr) {
+      if (!isMissingParentRow(writeErr)) throw writeErr;
+    }
+    return { sent: true };
+  } catch (err) {
+    console.error(`[email] failed to send return status email for ${order.orderNumber}:`, err.message);
+    try {
+      await prisma.emailLog.create({ data: { type: "RETURN_STATUS", recipient: order.customerEmail, orderId, status: "FAILED", failureMessage: String(err.message || "send failed").slice(0, 500) } });
+    } catch (writeErr) {
+      if (!isMissingParentRow(writeErr)) throw writeErr;
+    }
+    return { sent: false, reason: "send_failed" };
+  }
 }
