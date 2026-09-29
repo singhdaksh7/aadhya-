@@ -64,6 +64,7 @@ import AdminFaq from "./pages/admin/AdminFaq";
 import AdminMedia from "./pages/admin/AdminMedia";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import AdminIntegrations from "./pages/admin/AdminIntegrations";
+import AdminSystemHealth from "./pages/admin/AdminSystemHealth";
 import AdminCustomers from "./pages/admin/AdminCustomers";
 import AdminInvoices from "./pages/admin/AdminInvoices";
 import AdminInventory from "./pages/admin/AdminInventory";
@@ -237,6 +238,7 @@ function AdminRoutes() {
           <Route path="analytics" element={<AdminAnalytics />} />
           <Route path="shipping" element={<AdminShipping />} />
           <Route path="integrations" element={<AdminIntegrations />} />
+          <Route path="system-health" element={<AdminSystemHealth />} />
         </Route>
       </Routes>
     </AdminAuthProvider>

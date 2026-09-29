@@ -1,6 +1,7 @@
 import { env } from "../config/env.js";
 import { ZodError } from "zod";
 import multer from "multer";
+import { recordServerError } from "../modules/health/health.service.js";
 
 export function notFoundHandler(req, res) {
   res.status(404).json({ success: false, error: { message: "Route not found" } });
@@ -28,6 +29,11 @@ export function errorHandler(err, req, res, next) {
   if (statusCode >= 500) {
     // eslint-disable-next-line no-console
     console.error(err);
+    try {
+      recordServerError();
+    } catch {
+      // monitoring must never break error responses
+    }
   }
 
   res.status(statusCode).json({

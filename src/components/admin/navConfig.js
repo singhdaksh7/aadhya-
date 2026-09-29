@@ -60,7 +60,10 @@ export const adminNavGroups = [
   },
   {
     title: "System",
-    items: [{ to: "/admin/settings", label: "Settings" }],
+    items: [
+      { to: "/admin/settings", label: "Settings" },
+      { to: "/admin/system-health", label: "System Health" },
+    ],
   },
 ];
 
@@ -89,6 +92,7 @@ export function pageTitleFromPath(pathname) {
     "/admin/integrations": "Integrations",
     "/admin/analytics": "Analytics",
     "/admin/settings": "Settings",
+    "/admin/system-health": "System Health",
   };
   if (map[pathname]) return map[pathname];
   if (pathname.startsWith("/admin/orders/")) return "Order Detail";
