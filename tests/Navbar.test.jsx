@@ -99,6 +99,61 @@ describe("Navbar logo rendering", () => {
     expect(widths).toContain("160px");
     expect(widths).toContain("90px");
   });
+
+  it("caps logo height with max-height (never a fixed height) so a very wide/tall/square source isn't squashed or clipped", () => {
+    mockSettings = {
+      general: { storeName: "Aadya" },
+      branding: {
+        desktopLogo: "/uploads/products/wide-logo.png",
+        mobileLogo: "/uploads/products/tall-logo.png",
+        logoAltText: "Aadya Logo",
+        logoMaxHeightDesktop: 60,
+        logoMaxHeightMobile: 44,
+      },
+      header: {},
+      announcementBar: {},
+    };
+    renderNavbar();
+    const images = screen.getAllByAltText("Aadya Logo");
+    const maxHeights = images.map((img) => img.style.maxHeight);
+    expect(maxHeights).toContain("60px");
+    expect(maxHeights).toContain("44px");
+    images.forEach((img) => {
+      expect(img.style.height).toBe(""); // never fixed — only capped via maxHeight
+      expect(img.className).toMatch(/object-contain/);
+      expect(img.className).toMatch(/object-center/);
+    });
+  });
+
+  it("falls back to sensible default max-heights (60px desktop / 44px mobile) when unset", () => {
+    mockSettings = {
+      general: { storeName: "Aadya" },
+      branding: { desktopLogo: "/uploads/products/logo.png", logoAltText: "Aadya Logo" },
+      header: {},
+      announcementBar: {},
+    };
+    renderNavbar();
+    const images = screen.getAllByAltText("Aadya Logo");
+    const maxHeights = images.map((img) => img.style.maxHeight);
+    expect(maxHeights).toContain("60px");
+    expect(maxHeights).toContain("44px");
+  });
+
+  it("renders a transparent-PNG logo the same way as any other (no background/clip added)", () => {
+    mockSettings = {
+      general: { storeName: "Aadya" },
+      branding: { desktopLogo: "/uploads/products/transparent-logo.png", logoAltText: "Aadya Logo" },
+      header: {},
+      announcementBar: {},
+    };
+    renderNavbar();
+    const images = screen.getAllByAltText("Aadya Logo");
+    expect(images.length).toBeGreaterThan(0);
+    images.forEach((img) => {
+      expect(img.getAttribute("src")).toMatch(/transparent-logo\.png$/);
+      expect(img.className).toMatch(/object-contain/);
+    });
+  });
 });
 
 describe("Navbar sticky header setting", () => {

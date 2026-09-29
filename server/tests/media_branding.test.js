@@ -116,6 +116,26 @@ describe("Media upload -> branding settings integration", () => {
     expect(res.status).toBe(400);
   });
 
+  it("saves and returns logo max-height settings, and rejects values outside the safe bounds", async () => {
+    const putRes = await request
+      .put("/api/admin/settings")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ branding: { logoMaxHeightDesktop: 64, logoMaxHeightMobile: 48 } });
+    expect(putRes.status).toBe(200);
+    expect(putRes.body.data.branding.logoMaxHeightDesktop).toBe(64);
+    expect(putRes.body.data.branding.logoMaxHeightMobile).toBe(48);
+
+    const getRes = await request.get("/api/settings");
+    expect(getRes.body.data.branding.logoMaxHeightDesktop).toBe(64);
+    expect(getRes.body.data.branding.logoMaxHeightMobile).toBe(48);
+
+    const tooTall = await request
+      .put("/api/admin/settings")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ branding: { logoMaxHeightDesktop: 500 } });
+    expect(tooTall.status).toBe(400);
+  });
+
   it("footer logo falls back to the primary logo when unset (contract for the storefront Footer)", async () => {
     const uploadRes = await request
       .post("/api/admin/media/upload")

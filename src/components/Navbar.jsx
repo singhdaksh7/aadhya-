@@ -114,8 +114,11 @@ export default function Navbar() {
           </button>
 
           {/* Left: Logo — desktop and mobile variants both fall back to the
-              store name text if unset or broken, and each has its own
-              admin-controlled width so neither can blow out the header. */}
+              store name text if unset or broken. Width comes from the
+              admin-controlled logo-width setting; height is only CAPPED
+              (max-height), never fixed, so a wide/tall/square logo keeps its
+              natural aspect ratio instead of being squashed into a box —
+              neither dimension can blow out the header either way. */}
           <Link to="/" className="flex items-center gap-2 shrink-0">
             <span className="hidden sm:inline-flex items-center">
               <BrandLogo
@@ -123,7 +126,8 @@ export default function Navbar() {
                 alt={branding?.logoAltText || `${general?.storeName || "Aadya"} Logo`}
                 fallbackText={general?.storeName || "Aadya"}
                 widthPx={branding?.logoWidthDesktop || 140}
-                className="h-8 object-contain max-w-[240px]"
+                maxHeightPx={branding?.logoMaxHeightDesktop || 60}
+                className="w-auto"
               />
             </span>
             <span className="inline-flex sm:hidden items-center">
@@ -132,7 +136,8 @@ export default function Navbar() {
                 alt={branding?.logoAltText || `${general?.storeName || "Aadya"} Logo`}
                 fallbackText={general?.storeName || "Aadya"}
                 widthPx={branding?.logoWidthMobile || 110}
-                className="h-7 object-contain max-w-[180px]"
+                maxHeightPx={branding?.logoMaxHeightMobile || 44}
+                className="w-auto"
                 textClassName="font-serif-display text-xl tracking-tight store-text font-bold"
               />
             </span>
