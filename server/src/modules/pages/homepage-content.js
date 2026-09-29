@@ -11,8 +11,8 @@ const item = z.object({ id: optionalText(100), enabled: z.boolean().optional(), 
 const schemas = {
   TRUST_STRIP: z.object({ items: z.array(item.extend({ title: text(120), description: text(300), icon: z.enum(SAFE_ICONS) })).min(1).max(8) }),
   SHOP_THE_LOOK: z.object({ eyebrow: optionalText(120), title: optionalText(160), ctaLabel: optionalText(80), items: z.array(item.extend({ title: text(120), tagline: optionalText(240), image: optionalUrl, imageAlt: optionalText(240), targetType: z.enum(["COLLECTION", "CATEGORY", "PAGE", "CUSTOM_URL"]).optional(), targetId: optionalText(100), url: optionalUrl })).max(12) }),
-  NEW_ARRIVALS: z.object({ eyebrow: optionalText(120), title: optionalText(160), ctaLabel: optionalText(80), ctaUrl: optionalUrl, limit: z.number().int().min(1).max(24).optional() }),
-  BEST_SELLERS: z.object({ eyebrow: optionalText(120), title: optionalText(160), ctaLabel: optionalText(80), ctaUrl: optionalUrl, limit: z.number().int().min(1).max(24).optional() }),
+  NEW_ARRIVALS: z.object({ eyebrow: optionalText(120), title: optionalText(160), ctaLabel: optionalText(80), ctaUrl: optionalUrl, limit: z.number().int().min(1).max(24).optional(), sourceMode: z.enum(["AUTO", "MANUAL"]).optional(), productIds: z.array(text(100)).max(24).optional() }),
+  BEST_SELLERS: z.object({ eyebrow: optionalText(120), title: optionalText(160), ctaLabel: optionalText(80), ctaUrl: optionalUrl, limit: z.number().int().min(1).max(24).optional(), sourceMode: z.enum(["AUTO", "MANUAL"]).optional(), productIds: z.array(text(100)).max(24).optional() }),
   BOOKS_SHELF: z.object({ eyebrow: optionalText(120), title: optionalText(160), ctaLabel: optionalText(80), ctaUrl: optionalUrl, limit: z.number().int().min(1).max(24).optional(), showAuthor: z.boolean().optional(), showPrice: z.boolean().optional(), showDescription: z.boolean().optional() }),
   FEATURED_COLLECTION: z.object({ eyebrow: optionalText(120), title: optionalText(160), description: optionalText(1000), ctaLabel: optionalText(80), ctaUrl: optionalUrl, collectionId: optionalText(100), backgroundStyle: z.enum(["IVORY", "WHITE"]).optional() }),
   EDITORIAL_BRAND: z.object({ eyebrow: optionalText(120), title: optionalText(200), body: optionalText(3000), image: optionalUrl, imageAlt: optionalText(240), features: z.array(item.extend({ title: text(120), description: optionalText(400), accent: z.enum(["PRIMARY", "SAGE"]).optional() })).max(6), productId: optionalText(100), ctaEnabled: z.boolean().optional(), ctaLabel: optionalText(80), ctaAction: z.enum(["VIEW_PRODUCT", "ADD_TO_CART", "BUY_NOW"]).optional() }),
@@ -72,5 +72,15 @@ export function validateHomepageSettings(type, settings) {
   if (!schema) return settings ?? {};
   const result = schema.safeParse(settings ?? {});
   if (!result.success) throw ApiError.badRequest(result.error.issues.map((issue) => issue.message).join(", "));
-  return result.data;
+  const data = result.data;
+  // Normalize productIds: de-duplicate while preserving order, drop empty entries.
+  if (Array.isArray(data.productIds)) {
+    const seen = new Set();
+    data.productIds = data.productIds.filter((id) => {
+      if (!id || seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
+  }
+  return data;
 }

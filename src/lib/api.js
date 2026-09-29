@@ -481,7 +481,22 @@ export function adminAddMenuItem(menuId, data) { return api.post(`/navigation/ad
 export function adminUpdateMenuItem(itemId, data) { return api.put(`/navigation/admin/items/${itemId}`, data, { auth: "admin" }); }
 export function adminDeleteMenuItem(itemId) { return api.delete(`/navigation/admin/items/${itemId}`, { auth: "admin" }); }
 
-export function fetchHomepage() { return api.get("/pages/home"); }
+// The homepage API embeds the server-resolved product list directly on
+// NEW_ARRIVALS / BEST_SELLERS sections (section.products) so the storefront
+// never has to make a separate per-section product request. Those products
+// come back in the raw backend shape (nested images, isNewArrival, etc.), so
+// they must go through the same normalizeProduct() boundary as every other
+// product list before reaching ProductCard.
+export async function fetchHomepage() {
+  const res = await api.get("/pages/home");
+  const sections = (res.sections || res.data?.sections || []).map((section) =>
+    Array.isArray(section.products)
+      ? { ...section, products: section.products.map(normalizeProduct) }
+      : section
+  );
+  if (res.data) return { ...res, data: { ...res.data, sections } };
+  return { ...res, sections };
+}
 export function adminFetchHomepage() { return api.get("/admin/pages/home", { auth: "admin" }); }
 export function adminCreatePageSection(data) { return api.post("/admin/pages/home/sections", data, { auth: "admin" }); }
 export function adminUpdatePageSection(sectionId, data) { return api.put(`/admin/pages/sections/${sectionId}`, data, { auth: "admin" }); }

@@ -1,6 +1,44 @@
 import { prisma } from "../../lib/prisma.js";
 import { ApiError } from "../../utils/ApiError.js";
 import { DEFAULT_HOMEPAGE_CONTENT, mergeMissingSettings, settingsEqual, validateHomepageSettings } from "./homepage-content.js";
+import { serializePublicProduct } from "../products/product.service.js";
+
+const PRODUCT_SECTION_INCLUDE = {
+  category: true,
+  images: { orderBy: { sortOrder: "asc" } },
+  bookDetail: true,
+  reviews: { where: { status: "APPROVED" }, select: { rating: true, status: true } },
+};
+
+// Resolves a NEW_ARRIVALS / BEST_SELLERS section's product list server-side so the
+// storefront never has to guess: AUTO mode queries active products by the relevant
+// flag; MANUAL mode fetches the configured productIds (in the stored order) and
+// silently skips any that are missing, inactive, or deleted.
+async function resolveProductSectionItems(section) {
+  const settings = section.settings || {};
+  const limit = Math.min(Math.max(Number(settings.limit) || 4, 1), 24);
+  const flagField = section.type === "NEW_ARRIVALS" ? "isNewArrival" : "isBestSeller";
+  const sourceMode = settings.sourceMode === "MANUAL" ? "MANUAL" : "AUTO";
+
+  if (sourceMode === "MANUAL") {
+    const ids = Array.isArray(settings.productIds) ? settings.productIds.filter(Boolean) : [];
+    if (!ids.length) return [];
+    const products = await prisma.product.findMany({
+      where: { id: { in: ids }, isActive: true },
+      include: PRODUCT_SECTION_INCLUDE,
+    });
+    const byId = new Map(products.map((p) => [p.id, p]));
+    return ids.map((id) => byId.get(id)).filter(Boolean).slice(0, limit).map(serializePublicProduct);
+  }
+
+  const products = await prisma.product.findMany({
+    where: { isActive: true, [flagField]: true },
+    include: PRODUCT_SECTION_INCLUDE,
+    orderBy: { createdAt: "desc" },
+    take: limit,
+  });
+  return products.map(serializePublicProduct);
+}
 
 // Default seed sections for Aadya Storefront in approved visual order
 const DEFAULT_HOMEPAGE_SECTIONS = [
@@ -70,8 +108,19 @@ export async function ensureDefaultHomepage() {
 
 export async function getPublicHomepage() {
   const homePage = await ensureDefaultHomepage();
-  
+
   const enabledSections = homePage.sections.filter((s) => s.isEnabled);
+
+  // Batch-resolve product-driven sections server-side (one query per section, not
+  // per card) so the storefront receives real, active, correctly-ordered products
+  // and never has to render an empty grid because nobody fetched the data.
+  const sections = await Promise.all(enabledSections.map(async (section) => {
+    if (section.type === "NEW_ARRIVALS" || section.type === "BEST_SELLERS") {
+      const items = await resolveProductSectionItems(section);
+      return { ...section, products: items };
+    }
+    return section;
+  }));
 
   return {
     page: {
@@ -81,7 +130,7 @@ export async function getPublicHomepage() {
       seoTitle: homePage.seoTitle,
       seoDescription: homePage.seoDescription,
     },
-    sections: enabledSections,
+    sections,
   };
 }
 
