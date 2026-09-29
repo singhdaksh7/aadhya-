@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { useSiteSettings } from "../hooks/useSiteSettings";
+import { resolveMediaUrl } from "../lib/api";
 
 export default function CircularCategoryNav({ categories = [] }) {
   const { header } = useSiteSettings();
@@ -22,7 +23,7 @@ export default function CircularCategoryNav({ categories = [] }) {
               <div className="relative h-16 w-16 sm:h-20 sm:w-20 rounded-full p-0.5 border border-[var(--theme-primary)]/30 group-hover:border-[var(--theme-primary)] transition-all duration-300 shadow-sm group-hover:shadow-md overflow-hidden store-surface">
                 {cat.image ? (
                   <img
-                    src={cat.image}
+                    src={resolveMediaUrl(cat.image)}
                     alt={cat.name}
                     className="h-full w-full rounded-full object-cover transition-transform duration-500 group-hover:scale-110"
                   />

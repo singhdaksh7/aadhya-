@@ -2,6 +2,7 @@ import { prisma } from "../../lib/prisma.js";
 import { ApiError } from "../../utils/ApiError.js";
 import { DEFAULT_HOMEPAGE_CONTENT, mergeMissingSettings, settingsEqual, validateHomepageSettings } from "./homepage-content.js";
 import { serializePublicProduct } from "../products/product.service.js";
+import { listCategories } from "../categories/category.service.js";
 
 const PRODUCT_SECTION_INCLUDE = {
   category: true,
@@ -33,6 +34,44 @@ async function resolveProductSectionItems(section) {
 
   const products = await prisma.product.findMany({
     where: { isActive: true, [flagField]: true },
+    include: PRODUCT_SECTION_INCLUDE,
+    orderBy: { createdAt: "desc" },
+    take: limit,
+  });
+  return products.map(serializePublicProduct);
+}
+
+// Resolves the CIRCULAR_CATEGORY_NAV section's category list server-side: active
+// categories only, in the admin-configured display order (sortOrder, then name),
+// optionally restricted to featured categories, capped at the configured limit.
+async function resolveCategorySectionItems(section) {
+  const settings = section.settings || {};
+  const limit = Math.min(Math.max(Number(settings.limit) || 10, 1), 50);
+  const categories = await listCategories({ includeInactive: false });
+  const filtered = settings.featuredOnly ? categories.filter((c) => c.isFeatured) : categories;
+  return filtered.slice(0, limit);
+}
+
+// Resolves the FEATURED_COLLECTION section's collection server-side. Returns null
+// (not a fake/default collection) when no collectionId is configured, or when the
+// configured collection is missing/inactive — the storefront hides the section
+// entirely rather than rendering a broken card.
+async function resolveFeaturedCollectionSection(section) {
+  const settings = section.settings || {};
+  if (!settings.collectionId) return null;
+  const collection = await prisma.collection.findUnique({ where: { id: settings.collectionId } });
+  if (!collection || !collection.isActive) return null;
+  return collection;
+}
+
+// Resolves the BOOKS_SHELF section's product list server-side: active BOOK-type
+// products only, newest first (same default ordering convention as AUTO-mode
+// New Arrivals/Best Sellers), capped at the configured limit.
+async function resolveBooksSectionItems(section) {
+  const settings = section.settings || {};
+  const limit = Math.min(Math.max(Number(settings.limit) || 3, 1), 24);
+  const products = await prisma.product.findMany({
+    where: { isActive: true, productType: "BOOK" },
     include: PRODUCT_SECTION_INCLUDE,
     orderBy: { createdAt: "desc" },
     take: limit,
@@ -118,6 +157,18 @@ export async function getPublicHomepage() {
     if (section.type === "NEW_ARRIVALS" || section.type === "BEST_SELLERS") {
       const items = await resolveProductSectionItems(section);
       return { ...section, products: items };
+    }
+    if (section.type === "CIRCULAR_CATEGORY_NAV" || section.type === "CATEGORY_CIRCLES") {
+      const items = await resolveCategorySectionItems(section);
+      return { ...section, categories: items };
+    }
+    if (section.type === "FEATURED_COLLECTION" || section.type === "COLLECTION") {
+      const collection = await resolveFeaturedCollectionSection(section);
+      return { ...section, collection };
+    }
+    if (section.type === "BOOKS_SHELF" || section.type === "BOOKS") {
+      const items = await resolveBooksSectionItems(section);
+      return { ...section, books: items };
     }
     return section;
   }));

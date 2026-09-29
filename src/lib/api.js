@@ -481,19 +481,20 @@ export function adminAddMenuItem(menuId, data) { return api.post(`/navigation/ad
 export function adminUpdateMenuItem(itemId, data) { return api.put(`/navigation/admin/items/${itemId}`, data, { auth: "admin" }); }
 export function adminDeleteMenuItem(itemId) { return api.delete(`/navigation/admin/items/${itemId}`, { auth: "admin" }); }
 
-// The homepage API embeds the server-resolved product list directly on
-// NEW_ARRIVALS / BEST_SELLERS sections (section.products) so the storefront
-// never has to make a separate per-section product request. Those products
-// come back in the raw backend shape (nested images, isNewArrival, etc.), so
-// they must go through the same normalizeProduct() boundary as every other
-// product list before reaching ProductCard.
+// The homepage API embeds server-resolved data directly on sections (section.products
+// for NEW_ARRIVALS/BEST_SELLERS, section.books for BOOKS_SHELF, section.categories for
+// CIRCULAR_CATEGORY_NAV, section.collection for FEATURED_COLLECTION) so the storefront
+// never has to make a separate per-section request. Products/books come back in the raw
+// backend shape (nested images, isNewArrival, etc.), so they must go through the same
+// normalizeProduct() boundary as every other product list before reaching ProductCard.
 export async function fetchHomepage() {
   const res = await api.get("/pages/home");
-  const sections = (res.sections || res.data?.sections || []).map((section) =>
-    Array.isArray(section.products)
-      ? { ...section, products: section.products.map(normalizeProduct) }
-      : section
-  );
+  const sections = (res.sections || res.data?.sections || []).map((section) => {
+    let next = section;
+    if (Array.isArray(next.products)) next = { ...next, products: next.products.map(normalizeProduct) };
+    if (Array.isArray(next.books)) next = { ...next, books: next.books.map(normalizeProduct) };
+    return next;
+  });
   if (res.data) return { ...res, data: { ...res.data, sections } };
   return { ...res, sections };
 }
