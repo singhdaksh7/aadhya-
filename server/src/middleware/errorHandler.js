@@ -10,11 +10,15 @@ export function notFoundHandler(req, res) {
 // eslint-disable-next-line no-unused-vars
 export function errorHandler(err, req, res, next) {
   if (err instanceof ZodError) {
+    const details = err.issues.map((i) => ({ path: i.path.join("."), message: i.message }));
     return res.status(400).json({
       success: false,
       error: {
-        message: "Validation failed",
-        details: err.issues.map((i) => ({ path: i.path.join("."), message: i.message })),
+        // Field-level messages live in `details` for the UI to show inline;
+        // this top-level message is only the fallback for a caller that
+        // doesn't render per-field errors.
+        message: details[0]?.message || "Please check the submitted details.",
+        details,
       },
     });
   }

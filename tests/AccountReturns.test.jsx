@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { CustomerAuthProvider } from "../src/context/CustomerAuthContext";
@@ -9,9 +9,10 @@ import { OrderDetail, AccountReturns, AccountReturnDetail } from "../src/pages/a
 const api = vi.hoisted(() => ({
   customerRegister: vi.fn(),
   ApiRequestError: class ApiRequestError extends Error {
-    constructor(message, status) {
+    constructor(message, status, details) {
       super(message);
       this.status = status;
+      this.details = details;
     }
   },
   customerLogin: vi.fn(),
@@ -93,6 +94,154 @@ describe("Request Return flow on order detail", () => {
       })
     );
     expect(await screen.findByText(/return request has been submitted/i)).toBeInTheDocument();
+  });
+});
+
+describe("Return request validation", () => {
+  async function openFormWithItemSelected(user) {
+    api.accountOrder.mockResolvedValue({ data: ORDER });
+    api.accountReturnEligibility.mockResolvedValue({ data: { eligible: true, reason: null, returnableItemIds: ["oi1"] } });
+    render(<AuthedRoutes initialEntries={["/account/orders/AAD-2026-000001"]} />);
+    await user.click(await screen.findByRole("button", { name: "Request Return" }));
+    await user.click(screen.getByLabelText(/Book A/));
+  }
+
+  it("rejects an empty reason and never calls the API", async () => {
+    const user = userEvent.setup();
+    await openFormWithItemSelected(user);
+    await user.click(screen.getByRole("button", { name: "Submit Return Request" }));
+    expect(await screen.findByText("Please provide a reason for the return.")).toBeInTheDocument();
+    expect(api.createAccountReturn).not.toHaveBeenCalled();
+  });
+
+  it("rejects a whitespace-only reason and never calls the API", async () => {
+    const user = userEvent.setup();
+    await openFormWithItemSelected(user);
+    await user.type(screen.getByPlaceholderText("Reason for return"), "   ");
+    await user.click(screen.getByRole("button", { name: "Submit Return Request" }));
+    expect(await screen.findByText("Please provide a reason for the return.")).toBeInTheDocument();
+    expect(api.createAccountReturn).not.toHaveBeenCalled();
+  });
+
+  it("rejects a 1-character reason", async () => {
+    const user = userEvent.setup();
+    await openFormWithItemSelected(user);
+    await user.type(screen.getByPlaceholderText("Reason for return"), "x");
+    await user.click(screen.getByRole("button", { name: "Submit Return Request" }));
+    expect(await screen.findByText("Please enter at least 3 characters for the return reason.")).toBeInTheDocument();
+    expect(api.createAccountReturn).not.toHaveBeenCalled();
+  });
+
+  it("rejects a 2-character reason", async () => {
+    const user = userEvent.setup();
+    await openFormWithItemSelected(user);
+    await user.type(screen.getByPlaceholderText("Reason for return"), "xy");
+    await user.click(screen.getByRole("button", { name: "Submit Return Request" }));
+    expect(await screen.findByText("Please enter at least 3 characters for the return reason.")).toBeInTheDocument();
+    expect(api.createAccountReturn).not.toHaveBeenCalled();
+  });
+
+  it("accepts a 3-character reason and submits", async () => {
+    api.createAccountReturn.mockResolvedValue({ data: { id: "r1" } });
+    const user = userEvent.setup();
+    await openFormWithItemSelected(user);
+    await user.type(screen.getByPlaceholderText("Reason for return"), "xyz");
+    await user.click(screen.getByRole("button", { name: "Submit Return Request" }));
+    await waitFor(() => expect(api.createAccountReturn).toHaveBeenCalledWith(
+      expect.objectContaining({ reason: "xyz" })
+    ));
+  });
+
+  it("trims the reason before validating and submitting", async () => {
+    api.createAccountReturn.mockResolvedValue({ data: { id: "r1" } });
+    const user = userEvent.setup();
+    await openFormWithItemSelected(user);
+    await user.type(screen.getByPlaceholderText("Reason for return"), "  Wrong size  ");
+    await user.click(screen.getByRole("button", { name: "Submit Return Request" }));
+    await waitFor(() => expect(api.createAccountReturn).toHaveBeenCalledWith(
+      expect.objectContaining({ reason: "Wrong size" })
+    ));
+  });
+
+  it("rejects a reason longer than 500 characters", async () => {
+    const user = userEvent.setup();
+    await openFormWithItemSelected(user);
+    fireEvent.change(screen.getByPlaceholderText("Reason for return"), { target: { value: "a".repeat(501) } });
+    await user.click(screen.getByRole("button", { name: "Submit Return Request" }));
+    expect(await screen.findByText("Return reason cannot exceed 500 characters.")).toBeInTheDocument();
+    expect(api.createAccountReturn).not.toHaveBeenCalled();
+  });
+
+  it("rejects additional details longer than 2000 characters", async () => {
+    const user = userEvent.setup();
+    await openFormWithItemSelected(user);
+    await user.type(screen.getByPlaceholderText("Reason for return"), "Wrong size");
+    fireEvent.change(screen.getByLabelText(/Additional details/i), { target: { value: "a".repeat(2001) } });
+    await user.click(screen.getByRole("button", { name: "Submit Return Request" }));
+    expect(await screen.findByText("Additional details cannot exceed 2000 characters.")).toBeInTheDocument();
+    expect(api.createAccountReturn).not.toHaveBeenCalled();
+  });
+
+  it("sends details as undefined rather than a whitespace-only string", async () => {
+    api.createAccountReturn.mockResolvedValue({ data: { id: "r1" } });
+    const user = userEvent.setup();
+    await openFormWithItemSelected(user);
+    await user.type(screen.getByPlaceholderText("Reason for return"), "Wrong size");
+    await user.type(screen.getByLabelText(/Additional details/i), "   ");
+    await user.click(screen.getByRole("button", { name: "Submit Return Request" }));
+    await waitFor(() => expect(api.createAccountReturn).toHaveBeenCalledWith(
+      expect.objectContaining({ details: undefined })
+    ));
+  });
+
+  it("requires at least one item to be selected", async () => {
+    api.accountOrder.mockResolvedValue({ data: ORDER });
+    api.accountReturnEligibility.mockResolvedValue({ data: { eligible: true, reason: null, returnableItemIds: ["oi1"] } });
+    const user = userEvent.setup();
+    render(<AuthedRoutes initialEntries={["/account/orders/AAD-2026-000001"]} />);
+    await user.click(await screen.findByRole("button", { name: "Request Return" }));
+    await user.type(screen.getByPlaceholderText("Reason for return"), "Wrong size");
+    await user.click(screen.getByRole("button", { name: "Submit Return Request" }));
+    expect(await screen.findByText("Select at least one item to return.")).toBeInTheDocument();
+    expect(api.createAccountReturn).not.toHaveBeenCalled();
+  });
+
+  it("clamps a quantity of 0 up to the minimum of 1", async () => {
+    const user = userEvent.setup();
+    await openFormWithItemSelected(user);
+    const qtyInput = screen.getByLabelText(/Quantity to return for Book A/);
+    fireEvent.change(qtyInput, { target: { value: "0" } });
+    expect(qtyInput).toHaveValue(1);
+  });
+
+  it("clamps a quantity above the eligible amount down to the max", async () => {
+    const user = userEvent.setup();
+    await openFormWithItemSelected(user);
+    const qtyInput = screen.getByLabelText(/Quantity to return for Book A/);
+    fireEvent.change(qtyInput, { target: { value: "99" } });
+    expect(qtyInput).toHaveValue(2); // ORDER's Book A line has quantity: 2
+  });
+
+  it("renders a field-level error returned by the backend next to the relevant field", async () => {
+    api.createAccountReturn.mockRejectedValue(
+      new api.ApiRequestError("Please check the submitted details.", 400, [
+        { path: "reason", message: "Return reason must be at least 3 characters." },
+      ])
+    );
+    const user = userEvent.setup();
+    await openFormWithItemSelected(user);
+    await user.type(screen.getByPlaceholderText("Reason for return"), "xyz");
+    await user.click(screen.getByRole("button", { name: "Submit Return Request" }));
+    expect(await screen.findByText("Return reason must be at least 3 characters.")).toBeInTheDocument();
+  });
+
+  it("falls back to the general error banner when the backend error has no field details", async () => {
+    api.createAccountReturn.mockRejectedValue(new api.ApiRequestError("Could not submit the return request.", 500));
+    const user = userEvent.setup();
+    await openFormWithItemSelected(user);
+    await user.type(screen.getByPlaceholderText("Reason for return"), "Wrong size");
+    await user.click(screen.getByRole("button", { name: "Submit Return Request" }));
+    expect(await screen.findByText("Could not submit the return request.")).toBeInTheDocument();
   });
 });
 

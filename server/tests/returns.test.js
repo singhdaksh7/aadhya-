@@ -179,6 +179,133 @@ describe("return eligibility", () => {
   });
 });
 
+describe("create return request validation", () => {
+  async function createRequest(customerAccessToken, order, body) {
+    return request(app)
+      .post("/api/account/returns")
+      .set("Authorization", `Bearer ${customerAccessToken}`)
+      .send({ orderNumber: order.orderNumber, items: [{ orderItemId: order.items[0].id, quantity: 1 }], ...body });
+  }
+
+  it("rejects a missing reason with a field-level error, not just a generic message", async () => {
+    const { accessToken, customer } = await customerAgent();
+    const order = await seedOrder({ customerId: customer.id, status: "DELIVERED" });
+    const res = await createRequest(accessToken, order, {});
+    expect(res.status).toBe(400);
+    expect(res.body.error.details).toEqual(expect.arrayContaining([
+      expect.objectContaining({ path: "reason" }),
+    ]));
+  });
+
+  it("rejects a 1-character reason with a human-readable message", async () => {
+    const { accessToken, customer } = await customerAgent();
+    const order = await seedOrder({ customerId: customer.id, status: "DELIVERED" });
+    const res = await createRequest(accessToken, order, { reason: "x" });
+    expect(res.status).toBe(400);
+    expect(res.body.error.details).toEqual(expect.arrayContaining([
+      expect.objectContaining({ path: "reason", message: "Return reason must be at least 3 characters." }),
+    ]));
+    expect(res.body.error.message).toBe("Return reason must be at least 3 characters.");
+  });
+
+  it("rejects a 2-character reason", async () => {
+    const { accessToken, customer } = await customerAgent();
+    const order = await seedOrder({ customerId: customer.id, status: "DELIVERED" });
+    const res = await createRequest(accessToken, order, { reason: "xy" });
+    expect(res.status).toBe(400);
+    expect(res.body.error.details).toEqual(expect.arrayContaining([
+      expect.objectContaining({ path: "reason", message: "Return reason must be at least 3 characters." }),
+    ]));
+  });
+
+  it("accepts a 3-character reason", async () => {
+    const { accessToken, customer } = await customerAgent();
+    const order = await seedOrder({ customerId: customer.id, status: "DELIVERED" });
+    const res = await createRequest(accessToken, order, { reason: "xyz" });
+    expect(res.status).toBe(201);
+  });
+
+  it("rejects a reason over 500 characters", async () => {
+    const { accessToken, customer } = await customerAgent();
+    const order = await seedOrder({ customerId: customer.id, status: "DELIVERED" });
+    const res = await createRequest(accessToken, order, { reason: "a".repeat(501) });
+    expect(res.status).toBe(400);
+    expect(res.body.error.details).toEqual(expect.arrayContaining([
+      expect.objectContaining({ path: "reason", message: "Return reason cannot exceed 500 characters." }),
+    ]));
+  });
+
+  it("rejects a whitespace-only reason (frontend trims, but the backend must not trust it)", async () => {
+    const { accessToken, customer } = await customerAgent();
+    const order = await seedOrder({ customerId: customer.id, status: "DELIVERED" });
+    const res = await createRequest(accessToken, order, { reason: "   " });
+    // Zod's min(3) counts the raw (untrimmed) string length here, so 3+
+    // spaces technically passes length — this is exactly why the service
+    // layer / frontend must trim before this point. Assert the schema at
+    // least doesn't silently accept an empty-after-trim value as valid by
+    // checking the request layer rejects a string that's empty after trim
+    // via the reason.trim() the route handler applies before validation.
+    expect(res.status).toBe(400);
+  });
+
+  it("rejects details over 2000 characters", async () => {
+    const { accessToken, customer } = await customerAgent();
+    const order = await seedOrder({ customerId: customer.id, status: "DELIVERED" });
+    const res = await createRequest(accessToken, order, { reason: "Wrong size", details: "a".repeat(2001) });
+    expect(res.status).toBe(400);
+    expect(res.body.error.details).toEqual(expect.arrayContaining([
+      expect.objectContaining({ path: "details", message: "Additional details cannot exceed 2000 characters." }),
+    ]));
+  });
+
+  it("rejects an empty items array", async () => {
+    const { accessToken, customer } = await customerAgent();
+    const order = await seedOrder({ customerId: customer.id, status: "DELIVERED" });
+    const res = await request(app)
+      .post("/api/account/returns")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .send({ orderNumber: order.orderNumber, reason: "Wrong size", items: [] });
+    expect(res.status).toBe(400);
+  });
+
+  it("rejects a quantity of 0", async () => {
+    const { accessToken, customer } = await customerAgent();
+    const order = await seedOrder({ customerId: customer.id, status: "DELIVERED" });
+    const res = await request(app)
+      .post("/api/account/returns")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .send({ orderNumber: order.orderNumber, reason: "Wrong size", items: [{ orderItemId: order.items[0].id, quantity: 0 }] });
+    expect(res.status).toBe(400);
+  });
+
+  it("rejects a quantity over the ordered/returnable quantity", async () => {
+    const { accessToken, customer } = await customerAgent();
+    const order = await seedOrder({ customerId: customer.id, status: "DELIVERED" });
+    const res = await request(app)
+      .post("/api/account/returns")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .send({ orderNumber: order.orderNumber, reason: "Wrong size", items: [{ orderItemId: order.items[0].id, quantity: 999 }] });
+    expect(res.status).toBe(400);
+    expect(res.body.error.message).toMatch(/exceeds the ordered quantity/i);
+  });
+
+  it("never returns the generic 'Validation failed' message for a Zod validation error", async () => {
+    const { accessToken, customer } = await customerAgent();
+    const order = await seedOrder({ customerId: customer.id, status: "DELIVERED" });
+    const res = await createRequest(accessToken, order, { reason: "x" });
+    expect(res.status).toBe(400);
+    expect(res.body.error.message).not.toBe("Validation failed");
+  });
+
+  it("still submits successfully with a valid reason, details, and quantity", async () => {
+    const { accessToken, customer } = await customerAgent();
+    const order = await seedOrder({ customerId: customer.id, status: "DELIVERED" });
+    const res = await createRequest(accessToken, order, { reason: "Wrong size, needed a larger one", details: "Ordered M, this is S." });
+    expect(res.status).toBe(201);
+    expect(res.body.data.reason).toBe("Wrong size, needed a larger one");
+  });
+});
+
 describe("cross-customer access block", () => {
   it("blocks eligibility check for another customer's order", async () => {
     const owner = await customerAgent();

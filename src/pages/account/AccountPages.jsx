@@ -477,6 +477,10 @@ export function Orders() {
   );
 }
 
+const RETURN_REASON_MIN = 3;
+const RETURN_REASON_MAX = 500;
+const RETURN_DETAILS_MAX = 2000;
+
 function ReturnRequestPanel({ orderNumber, order }) {
   const [eligibility, setEligibility] = useState(null);
   const [showForm, setShowForm] = useState(false);
@@ -485,6 +489,7 @@ function ReturnRequestPanel({ orderNumber, order }) {
   const [details, setDetails] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
@@ -523,16 +528,71 @@ function ReturnRequestPanel({ orderNumber, order }) {
   const submit = async (e) => {
     e.preventDefault();
     setError("");
-    const items = Object.entries(selected).map(([orderItemId, quantity]) => ({ orderItemId, quantity }));
-    if (!items.length) return setError("Select at least one item to return.");
-    if (!reason.trim()) return setError("Please provide a reason for the return.");
+    setFieldErrors({});
+
+    const trimmedReason = reason.trim();
+    const trimmedDetails = details.trim();
+    const items = Object.entries(selected).map(([orderItemId, quantity]) => ({ orderItemId, quantity: Number(quantity) }));
+
+    const nextFieldErrors = {};
+
+    if (!items.length) {
+      nextFieldErrors.items = "Select at least one item to return.";
+    } else {
+      for (const item of items) {
+        const eligibleItem = eligibleItems.find((i) => i.id === item.orderItemId);
+        const maxQty = eligibleItem?.quantity ?? 0;
+        if (!Number.isInteger(item.quantity) || item.quantity < 1) {
+          nextFieldErrors.items = "Quantity must be a whole number of at least 1.";
+          break;
+        }
+        if (item.quantity > maxQty) {
+          nextFieldErrors.items = `Quantity cannot exceed the eligible amount (${maxQty}).`;
+          break;
+        }
+      }
+    }
+
+    if (!trimmedReason) {
+      nextFieldErrors.reason = "Please provide a reason for the return.";
+    } else if (trimmedReason.length < RETURN_REASON_MIN) {
+      nextFieldErrors.reason = `Please enter at least ${RETURN_REASON_MIN} characters for the return reason.`;
+    } else if (trimmedReason.length > RETURN_REASON_MAX) {
+      nextFieldErrors.reason = `Return reason cannot exceed ${RETURN_REASON_MAX} characters.`;
+    }
+
+    if (trimmedDetails.length > RETURN_DETAILS_MAX) {
+      nextFieldErrors.details = `Additional details cannot exceed ${RETURN_DETAILS_MAX} characters.`;
+    }
+
+    if (Object.keys(nextFieldErrors).length) {
+      setFieldErrors(nextFieldErrors);
+      return;
+    }
+
     setSubmitting(true);
     try {
-      await createAccountReturn({ orderNumber, reason, details: details.trim() || undefined, items });
+      await createAccountReturn({
+        orderNumber,
+        reason: trimmedReason,
+        details: trimmedDetails || undefined,
+        items,
+      });
       setSuccess(true);
       setShowForm(false);
     } catch (err) {
-      setError(err.message || "Could not submit the return request.");
+      const backendFieldErrors = {};
+      if (err instanceof ApiRequestError && Array.isArray(err.details)) {
+        for (const issue of err.details) {
+          const key = String(issue.path || "").split(".")[0];
+          if (key && !backendFieldErrors[key]) backendFieldErrors[key] = issue.message;
+        }
+      }
+      if (Object.keys(backendFieldErrors).length) {
+        setFieldErrors(backendFieldErrors);
+      } else {
+        setError(err.message || "Could not submit the return request.");
+      }
     } finally {
       setSubmitting(false);
     }
@@ -579,14 +639,33 @@ function ReturnRequestPanel({ orderNumber, order }) {
               );
             })}
             {!eligibleItems.length && <p className="text-xs store-muted">No returnable items were found for this order.</p>}
+            {fieldErrors.items && <p className="text-xs font-medium store-primary">{fieldErrors.items}</p>}
           </div>
           <div>
             <label className="mb-1 block text-xs font-semibold uppercase tracking-wider store-muted" htmlFor="return-reason">Reason</label>
-            <input id="return-reason" required className={inputClass} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Reason for return" />
+            <input
+              id="return-reason"
+              maxLength={RETURN_REASON_MAX}
+              className={inputClass}
+              value={reason}
+              onChange={(e) => { setReason(e.target.value); setFieldErrors((prev) => ({ ...prev, reason: undefined })); }}
+              placeholder="Reason for return"
+              aria-invalid={fieldErrors.reason ? "true" : undefined}
+            />
+            {fieldErrors.reason && <p className="mt-1 text-xs font-medium store-primary">{fieldErrors.reason}</p>}
           </div>
           <div>
             <label className="mb-1 block text-xs font-semibold uppercase tracking-wider store-muted" htmlFor="return-details">Additional details (optional)</label>
-            <textarea id="return-details" rows={3} className={inputClass} value={details} onChange={(e) => setDetails(e.target.value)} />
+            <textarea
+              id="return-details"
+              rows={3}
+              maxLength={RETURN_DETAILS_MAX}
+              className={inputClass}
+              value={details}
+              onChange={(e) => { setDetails(e.target.value); setFieldErrors((prev) => ({ ...prev, details: undefined })); }}
+              aria-invalid={fieldErrors.details ? "true" : undefined}
+            />
+            {fieldErrors.details && <p className="mt-1 text-xs font-medium store-primary">{fieldErrors.details}</p>}
           </div>
           {error && <p className="text-xs font-medium store-primary store-bg-primary-soft p-3 rounded-xl">{error}</p>}
           <div className="flex gap-3">
