@@ -4,7 +4,7 @@ import { priceCartItemsOrThrow, computeTotals, isDigitalOnly } from "./checkout.
 import { generateToken, hashToken, safeCompareHex } from "../../utils/secureToken.js";
 import { assertTransition } from "./orderStatus.js";
 import { assertCodEligible } from "../shipping/shipping.service.js";
-import { decrementStockForOrder, restoreStockForOrder } from "./stock.js";
+import { decrementStockForOrder, restoreStockForOrder, runPendingLowStockChecks } from "./stock.js";
 import { round2 } from "../../utils/money.js";
 import crypto from "node:crypto";
 import { ensureInvoiceForOrder } from "../invoices/invoice.service.js";
@@ -155,6 +155,7 @@ export async function createOrder({
   const rawToken = generateToken();
   const accessTokenHash = hashToken(rawToken);
 
+  let pendingLowStockChecks = [];
   const order = await prisma.$transaction(async (tx) => {
     const created = await tx.order.create({
       data: {
@@ -279,12 +280,14 @@ export async function createOrder({
     if (paymentMethod === "cod") {
       const full = await tx.order.findUnique({ where: { id: updated.id }, include: { items: true } });
       if (!full.stockDecrementedAt) {
-        await decrementStockForOrder(tx, full);
+        pendingLowStockChecks = await decrementStockForOrder(tx, full);
       }
     }
 
     return updated;
   });
+
+  if (pendingLowStockChecks.length) await runPendingLowStockChecks(pendingLowStockChecks);
 
   if (paymentMethod === "cod") {
     try {
@@ -293,7 +296,9 @@ export async function createOrder({
     } catch (err) {
       console.error("Invoice generation failed:", err.message);
     }
-    attemptAutomaticShipment(order.id).catch((err) => console.error("Automatic shipment failed:", err.message));
+    // Awaited (not fire-and-forget) — see the matching call in
+    // payment.service.js for why a detached promise here is unsafe.
+    await attemptAutomaticShipment(order.id).catch((err) => console.error("Automatic shipment failed:", err.message));
   }
   return { order, accessToken: rawToken };
 }

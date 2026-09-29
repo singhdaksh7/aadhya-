@@ -10,13 +10,28 @@ async function notifyLowStockSafely(args) {
   }
 }
 
+// Runs the low-stock checks queued by decrementStockForOrder. Callers await
+// this AFTER their transaction has committed — checkAndNotifyLowStock reads
+// the just-decremented row via the global `prisma` client, not `tx`, so
+// running it before commit risks reading stale data (or blocking on the
+// still-open transaction's row lock). A `queueMicrotask`/fire-and-forget
+// version of this used to run detached from the caller entirely, which let
+// it race a *subsequent* caller's work (e.g. a test's next `resetDb()`)
+// after the awaiting function had already returned.
+export async function runPendingLowStockChecks(pending) {
+  for (const args of pending) await notifyLowStockSafely(args);
+}
+
 // Decrements stock for every item on an order, exactly once. Guarded two
 // ways: (1) the CAS `updateMany` with a `stockQuantity: { gte: quantity }`
 // filter never lets stock go negative even under concurrent callers, and
 // (2) the caller (payment finalize / COD order creation) must gate this
 // behind `order.stockDecrementedAt == null` inside the same transaction so a
 // retried webhook or duplicate call is a no-op instead of decrementing twice.
+// Returns the low-stock checks the caller should run (via
+// runPendingLowStockChecks) once its transaction has committed.
 export async function decrementStockForOrder(tx, order) {
+  const pendingLowStockChecks = [];
   for (const item of order.items) {
     if (item.variantId) {
       const changed = await tx.productVariant.updateMany({
@@ -24,7 +39,7 @@ export async function decrementStockForOrder(tx, order) {
         data: { stockQuantity: { decrement: item.quantity } },
       });
       if (!changed.count) throw ApiError.conflict("Variant stock changed before the order could be finalized.");
-      queueMicrotask(() => notifyLowStockSafely({ variantId: item.variantId }));
+      pendingLowStockChecks.push({ variantId: item.variantId });
     } else if (item.productId) {
       const product = await tx.product.findUnique({ where: { id: item.productId }, select: { trackInventory: true } });
       if (!product?.trackInventory) continue;
@@ -33,10 +48,11 @@ export async function decrementStockForOrder(tx, order) {
         data: { stockQuantity: { decrement: item.quantity } },
       });
       if (!changed.count) throw ApiError.conflict("Product stock changed before the order could be finalized.");
-      queueMicrotask(() => notifyLowStockSafely({ productId: item.productId }));
+      pendingLowStockChecks.push({ productId: item.productId });
     }
   }
   await tx.order.update({ where: { id: order.id }, data: { stockDecrementedAt: new Date() } });
+  return pendingLowStockChecks;
 }
 
 // Restores stock for a cancelled order, exactly once — guarded by

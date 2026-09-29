@@ -34,10 +34,15 @@ export async function applyTrackingUpdate({ provider, providerShipmentId, rawSta
   if (orderStatus && shipment.order.status !== "DELIVERED") await prisma.order.update({ where: { id: shipment.orderId }, data: { status: orderStatus } });
   if (["IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED"].includes(status)) await sendShippingStatusEmail(shipment.orderId, status);
   if (status === "RTO_DELIVERED") {
-    // Fire-and-forget: restocks the order's items and opens a refund-eligible
-    // return for prepaid orders. Never allowed to fail the webhook response.
+    // Restocks the order's items and opens a refund-eligible return for
+    // prepaid orders. Awaited (rather than fire-and-forget) so this
+    // completes before the webhook handler returns — a fire-and-forget
+    // version here left the promise running past the end of the request,
+    // racing subsequent DB writes (visible as cross-test pollution when
+    // this fires directly before another test's setup). Still never
+    // allowed to fail the webhook response.
     const { handleRtoDelivered } = await import("../returns/returns.service.js");
-    handleRtoDelivered(shipment.orderId).catch((err) => console.error("RTO restock failed:", err.message));
+    await handleRtoDelivered(shipment.orderId).catch((err) => console.error("RTO restock failed:", err.message));
   }
   return updated;
 }

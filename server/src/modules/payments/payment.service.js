@@ -5,7 +5,7 @@ import { rupeesToPaise } from "../../utils/money.js";
 import { getRazorpayClient, isRazorpayConfigured } from "./razorpay.client.js";
 import { sendOrderConfirmationEmail } from "../email/email.service.js";
 import { recordPurchaseEvent } from "../analytics/analytics.service.js";
-import { decrementStockForOrder } from "../orders/stock.js";
+import { decrementStockForOrder, runPendingLowStockChecks } from "../orders/stock.js";
 import { ensureDigitalDownloadForOrderItem } from "../downloads/download.service.js";
 import { ensureInvoiceForOrder } from "../invoices/invoice.service.js";
 import { sendInvoiceEmail } from "../email/email.service.js";
@@ -127,6 +127,7 @@ export async function finalizePaidPayment({ providerOrderId, providerPaymentId, 
     throw ApiError.badRequest("Paid amount does not match the order total.");
   }
 
+  let pendingLowStockChecks = [];
   const result = await prisma.$transaction(async (tx) => {
     const cas = await tx.payment.updateMany({
       where: { id: payment.id, status: { not: "PAID" } },
@@ -155,7 +156,7 @@ export async function finalizePaidPayment({ providerOrderId, providerPaymentId, 
     // call (both funnel through the payment-status CAS above, but this is a
     // second independent guard) never decrements twice.
     if (!order.stockDecrementedAt) {
-      await decrementStockForOrder(tx, order);
+      pendingLowStockChecks = await decrementStockForOrder(tx, order);
     }
 
     // Digital entitlements are created only here — inside the same
@@ -191,6 +192,8 @@ export async function finalizePaidPayment({ providerOrderId, providerPaymentId, 
     return { alreadyProcessed: false, order };
   });
 
+  if (pendingLowStockChecks.length) await runPendingLowStockChecks(pendingLowStockChecks);
+
   if (!result.alreadyProcessed) {
     // Email and analytics are best-effort and must never affect payment/order
     // state. This is the single, server-authoritative place a `purchase`
@@ -202,7 +205,12 @@ export async function finalizePaidPayment({ providerOrderId, providerPaymentId, 
     } catch (err) {
       console.error("Invoice generation failed:", err.message);
     }
-    attemptAutomaticShipment(result.order.id).catch((err) => console.error("Automatic shipment failed:", err.message));
+    // Awaited (not fire-and-forget): this call itself is internally
+    // idempotent, but leaving it undetached let a second caller (e.g. a
+    // manual/admin retry, or a test verifying shipment-creation-failure
+    // handling) race it after this function had already returned, since a
+    // pending promise here keeps running past this request's response.
+    await attemptAutomaticShipment(result.order.id).catch((err) => console.error("Automatic shipment failed:", err.message));
     recordPurchaseEvent(result.order).catch(() => {});
   }
 
