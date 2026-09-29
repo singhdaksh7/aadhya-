@@ -70,6 +70,7 @@ import AdminSystemHealth from "./pages/admin/AdminSystemHealth";
 import AdminNotifications from "./pages/admin/AdminNotifications";
 import AdminCustomers from "./pages/admin/AdminCustomers";
 import AdminInvoices from "./pages/admin/AdminInvoices";
+import AdminInvoiceCreate from "./pages/admin/AdminInvoiceCreate";
 import AdminInvoiceDetail from "./pages/admin/AdminInvoiceDetail";
 import AdminInvoiceSettings from "./pages/admin/AdminInvoiceSettings";
 import AdminInventory from "./pages/admin/AdminInventory";
@@ -235,6 +236,7 @@ function AdminRoutes() {
           <Route path="customers" element={<AdminCustomers />} />
           <Route path="customers/:id" element={<AdminCustomers />} />
           <Route path="invoices" element={<AdminInvoices />} />
+          <Route path="invoices/new" element={<AdminInvoiceCreate />} />
           <Route path="invoices/settings" element={<AdminInvoiceSettings />} />
           <Route path="invoices/:id" element={<AdminInvoiceDetail />} />
           <Route path="reviews" element={<AdminReviews />} />

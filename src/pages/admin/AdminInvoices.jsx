@@ -87,7 +87,16 @@ export default function AdminInvoices() {
 
   return (
     <div>
-      <PageHeader eyebrow="Sales" title="Invoices" description="Generated invoices linked to paid or confirmed orders." />
+      <PageHeader
+        eyebrow="Sales"
+        title="Invoices"
+        description="Generated invoices linked to paid or confirmed orders."
+        actions={
+          <Link to="/admin/invoices/new" className="admin-btn admin-btn--primary">
+            Create Invoice
+          </Link>
+        }
+      />
       {message && <p className="mb-3 rounded-xl bg-sage-light px-3 py-2 text-sm text-green-deep">{message}</p>}
       <FilterBar>
         <FilterInput

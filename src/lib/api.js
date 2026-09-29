@@ -402,6 +402,20 @@ export async function adminDownloadInvoice(id) { const res = await fetch(`${API_
 export function adminRegenerateInvoice(id) { return api.post(`/admin/invoices/${id}/regenerate`, {}, { auth: "admin" }); }
 export function adminResendInvoice(id) { return api.post(`/admin/invoices/${id}/resend`, {}, { auth: "admin" }); }
 export function adminGetInvoiceDetail(id) { return api.get(`/admin/invoices/${id}`, { auth: "admin" }); }
+export function adminCreateManualInvoiceDraft(payload) { return api.post("/admin/invoices/manual", payload, { auth: "admin" }); }
+export function adminEditManualInvoiceDraft(id, payload) { return api.patch(`/admin/invoices/manual/${id}`, payload, { auth: "admin" }); }
+export function adminIssueManualInvoice(id, { sendEmail = false } = {}) { return api.post(`/admin/invoices/manual/${id}/issue`, { sendEmail }, { auth: "admin" }); }
+export async function adminUploadExternalInvoicePdf(id, { file, externalInvoiceNumber, externalInvoiceDate, makeCanonical }) {
+  const form = new FormData();
+  form.append("file", file);
+  if (externalInvoiceNumber) form.append("externalInvoiceNumber", externalInvoiceNumber);
+  if (externalInvoiceDate) form.append("externalInvoiceDate", externalInvoiceDate);
+  if (makeCanonical) form.append("makeCanonical", "true");
+  const res = await fetch(`${API_URL}/admin/invoices/${id}/external-pdf`, { method: "POST", headers: { Authorization: `Bearer ${tokens.admin}` }, credentials: "include", body: form });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new ApiRequestError(json?.error?.message || "Could not upload PDF", res.status, json?.error?.details);
+  return json.data;
+}
 
 export function adminListCustomers(params = {}) {
   const query = new URLSearchParams(

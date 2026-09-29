@@ -48,6 +48,7 @@ model AdminUser {
   isActive     Boolean   @default(true)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+  manualInvoices Invoice[]
 
   @@index([email])
 }
@@ -575,7 +576,7 @@ model Shipment {
 model Invoice {
   id              String   @id @default(uuid())
   orderId         String   @unique
-  invoiceNumber   String   @unique
+  invoiceNumber   String?  @unique
   invoiceDate     DateTime @default(now())
   customerName    String
   customerEmail   String
@@ -598,8 +599,33 @@ model Invoice {
   order           Order    @relation(fields: [orderId], references: [id], onDelete: Restrict)
   emailLogs       EmailLog[]
 
+  // --- Manual/offline invoice support (Phase 2) ---
+  // source/status distinguish admin-created offline invoices from the
+  // existing auto-generated flow. Every pre-existing row (and every row
+  // created by ensureInvoiceForOrder) defaults to ONLINE/ISSUED so nothing
+  // about the automatic flow changes behavior.
+  source            String    @default("ONLINE") // "ONLINE" | "MANUAL"
+  status            String    @default("ISSUED") // "DRAFT" | "ISSUED"
+  createdByAdminId  String?
+  notes             String?
+  paymentMethod     String?
+  paymentReference  String?
+
+  // --- Optional externally-prepared PDF attachment ---
+  // Deliberately separate from pdfStorageKey (the canonical generated PDF)
+  // unless an admin explicitly designates it as canonical.
+  externalPdfStorageKey   String?
+  externalInvoiceNumber   String?
+  externalInvoiceDate     DateTime?
+  externalPdfUploadedAt   DateTime?
+  externalPdfIsCanonical  Boolean   @default(false)
+
+  createdByAdmin  AdminUser? @relation(fields: [createdByAdminId], references: [id], onDelete: SetNull)
+
   @@index([customerEmail])
   @@index([createdAt])
+  @@index([source])
+  @@index([status])
 }
 
 model InvoiceSequence {
