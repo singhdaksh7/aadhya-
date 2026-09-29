@@ -350,7 +350,12 @@ export async function listAdminOrders({ page, limit, status, paymentStatus, sear
   const [items, total] = await Promise.all([
     prisma.order.findMany({
       where,
-      include: { items: true, payments: { orderBy: { createdAt: "desc" }, take: 1 } },
+      include: {
+        items: true,
+        payments: { orderBy: { createdAt: "desc" }, take: 1 },
+        shipment: { select: { carrier: true, trackingNumber: true, status: true } },
+        invoice: { select: { id: true, invoiceNumber: true, emailedAt: true } },
+      },
       orderBy: { createdAt: "desc" },
       skip,
       take: limit,

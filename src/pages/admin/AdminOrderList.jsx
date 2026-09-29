@@ -1,11 +1,33 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { adminListOrders } from "../../lib/api";
-import { LoadingNotice, ErrorNotice, EmptyNotice } from "../../components/StateNotice";
+import { LoadingNotice, ErrorNotice } from "../../components/StateNotice";
 import { formatInr } from "../../lib/format";
+import {
+  PageHeader,
+  AdminCard,
+  FilterBar,
+  StatusBadge,
+  AdminTable,
+  AdminTablePagination,
+  AdminEmptyState,
+} from "../../components/admin/ui";
+import { FilterInput, FilterSelect } from "../../components/admin/ui/FilterBar";
 
 const ORDER_STATUSES = ["PENDING", "CONFIRMED", "PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED"];
 const PAYMENT_STATUSES = ["PENDING", "PAID", "FAILED", "REFUNDED", "PARTIALLY_REFUNDED"];
+
+function fulfilmentLabel(order) {
+  if (order.shipment?.trackingNumber || order.shipment?.carrier) {
+    return order.shipment.status || "Shipped";
+  }
+  if (["SHIPPED", "DELIVERED"].includes(order.status)) return order.status;
+  return "Unfulfilled";
+}
+
+export function StatusPill({ value }) {
+  return <StatusBadge value={value} />;
+}
 
 export default function AdminOrderList() {
   const [search, setSearch] = useState("");
@@ -19,7 +41,13 @@ export default function AdminOrderList() {
   useEffect(() => {
     let cancelled = false;
     setLoadStatus("loading");
-    adminListOrders({ search: search || undefined, status: status || undefined, paymentStatus: paymentStatus || undefined, page, limit: 20 })
+    adminListOrders({
+      search: search || undefined,
+      status: status || undefined,
+      paymentStatus: paymentStatus || undefined,
+      page,
+      limit: 20,
+    })
       .then((res) => {
         if (cancelled) return;
         setResult(res);
@@ -33,10 +61,14 @@ export default function AdminOrderList() {
 
   return (
     <div>
-      <h1 className="font-serif-display text-2xl text-charcoal">Orders</h1>
+      <PageHeader
+        eyebrow="Sales"
+        title="Orders"
+        description="Search and filter storefront orders by status and payment."
+      />
 
-      <div className="mt-4 flex flex-wrap gap-3">
-        <input
+      <FilterBar>
+        <FilterInput
           type="search"
           value={search}
           onChange={(e) => {
@@ -44,15 +76,14 @@ export default function AdminOrderList() {
             setSearch(e.target.value);
           }}
           placeholder="Search order #, email, phone…"
-          className="rounded-full border border-charcoal/15 px-4 py-2 text-sm focus:border-charcoal/40 focus:outline-none"
+          className="min-w-[220px] flex-1"
         />
-        <select
+        <FilterSelect
           value={status}
           onChange={(e) => {
             setPage(1);
             setStatus(e.target.value);
           }}
-          className="rounded-full border border-charcoal/15 px-4 py-2 text-sm focus:border-charcoal/40 focus:outline-none"
         >
           <option value="">All Statuses</option>
           {ORDER_STATUSES.map((s) => (
@@ -60,14 +91,13 @@ export default function AdminOrderList() {
               {s}
             </option>
           ))}
-        </select>
-        <select
+        </FilterSelect>
+        <FilterSelect
           value={paymentStatus}
           onChange={(e) => {
             setPage(1);
             setPaymentStatus(e.target.value);
           }}
-          className="rounded-full border border-charcoal/15 px-4 py-2 text-sm focus:border-charcoal/40 focus:outline-none"
         >
           <option value="">All Payment Statuses</option>
           {PAYMENT_STATUSES.map((s) => (
@@ -75,103 +105,63 @@ export default function AdminOrderList() {
               {s}
             </option>
           ))}
-        </select>
-      </div>
+        </FilterSelect>
+      </FilterBar>
 
-      <div className="mt-6 overflow-x-auto rounded-2xl border border-charcoal/10">
+      <AdminCard noPadding>
         {loadStatus === "loading" && <LoadingNotice />}
         {loadStatus === "error" && (
           <ErrorNotice message="Unable to load orders." onRetry={() => setReloadToken((t) => t + 1)} />
         )}
-        {loadStatus === "ready" && result.data.length === 0 && <EmptyNotice message="No orders found." />}
+        {loadStatus === "ready" && result.data.length === 0 && <AdminEmptyState title="No orders found" />}
         {loadStatus === "ready" && result.data.length > 0 && (
-          <table className="w-full min-w-[720px] text-left text-sm">
-            <thead className="bg-ivory-dark text-xs uppercase tracking-wide text-charcoal-soft">
-              <tr>
-                <th className="px-4 py-3">Order Number</th>
-                <th className="px-4 py-3">Customer</th>
-                <th className="px-4 py-3">Date</th>
-                <th className="px-4 py-3">Amount</th>
-                <th className="px-4 py-3">Payment</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Actions</th>
+          <AdminTable
+            columns={[
+              { key: "order", label: "Order" },
+              { key: "customer", label: "Customer" },
+              { key: "date", label: "Date" },
+              { key: "total", label: "Total" },
+              { key: "payment", label: "Payment" },
+              { key: "shipment", label: "Shipment" },
+              { key: "status", label: "Status" },
+              { key: "actions", label: "Actions" },
+            ]}
+            minWidth="920px"
+          >
+            {result.data.map((order) => (
+              <tr key={order.id}>
+                <td>{order.orderNumber}</td>
+                <td>
+                  <div className="leading-tight">
+                    <p className="font-medium text-charcoal">{order.customerName}</p>
+                    <p className="text-[11px]">{order.customerEmail}</p>
+                  </div>
+                </td>
+                <td>{new Date(order.createdAt).toLocaleDateString("en-IN")}</td>
+                <td>{formatInr(order.totalAmount)}</td>
+                <td>
+                  <StatusBadge value={order.paymentStatus} />
+                </td>
+                <td>
+                  <StatusBadge value={fulfilmentLabel(order)} tone={order.shipment ? "info" : "neutral"} />
+                </td>
+                <td>
+                  <StatusBadge value={order.status} />
+                </td>
+                <td>
+                  <Link to={`/admin/orders/${order.id}`} className="admin-btn admin-btn--ghost">
+                    View
+                  </Link>
+                </td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-charcoal/10">
-              {result.data.map((order) => (
-                <tr key={order.id}>
-                  <td className="px-4 py-3 font-medium text-charcoal">{order.orderNumber}</td>
-                  <td className="px-4 py-3 text-charcoal-soft">
-                    {order.customerName}
-                    <br />
-                    <span className="text-xs">{order.customerEmail}</span>
-                  </td>
-                  <td className="px-4 py-3 text-charcoal-soft">{new Date(order.createdAt).toLocaleDateString("en-IN")}</td>
-                  <td className="px-4 py-3 text-charcoal-soft">{formatInr(order.totalAmount)}</td>
-                  <td className="px-4 py-3">
-                    <StatusPill value={order.paymentStatus} />
-                  </td>
-                  <td className="px-4 py-3">
-                    <StatusPill value={order.status} />
-                  </td>
-                  <td className="px-4 py-3">
-                    <Link
-                      to={`/admin/orders/${order.id}`}
-                      className="inline-block rounded-full border border-charcoal/20 bg-white px-3 py-1 text-xs font-medium text-charcoal transition hover:border-terracotta hover:text-terracotta"
-                    >
-                      View
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+            ))}
+          </AdminTable>
         )}
-      </div>
+      </AdminCard>
 
-      {loadStatus === "ready" && result.meta.totalPages > 1 && (
-        <div className="mt-6 flex items-center justify-center gap-3">
-          <button
-            disabled={page <= 1}
-            onClick={() => setPage((p) => p - 1)}
-            className="rounded-full border border-charcoal/20 px-4 py-2 text-sm disabled:opacity-40"
-          >
-            Previous
-          </button>
-          <span className="text-sm text-charcoal-soft">
-            Page {result.meta.page} of {result.meta.totalPages}
-          </span>
-          <button
-            disabled={page >= result.meta.totalPages}
-            onClick={() => setPage((p) => p + 1)}
-            className="rounded-full border border-charcoal/20 px-4 py-2 text-sm disabled:opacity-40"
-          >
-            Next
-          </button>
-        </div>
+      {loadStatus === "ready" && (
+        <AdminTablePagination page={page} totalPages={result?.meta?.totalPages} onPageChange={setPage} />
       )}
     </div>
-  );
-}
-
-const STATUS_PILL_STYLE = {
-  PAID: "bg-sage-light/80 text-green-deep border-sage/40",
-  CONFIRMED: "bg-sage-light/80 text-green-deep border-sage/40",
-  DELIVERED: "bg-sage-light/80 text-green-deep border-sage/40",
-  PENDING: "bg-beige-light text-charcoal-soft border-charcoal/15",
-  PROCESSING: "bg-beige-light text-charcoal border-charcoal/20",
-  SHIPPED: "bg-sage-light/40 text-green-deep border-sage/30",
-  FAILED: "bg-terracotta/10 text-terracotta border-terracotta/20",
-  CANCELLED: "bg-terracotta/10 text-terracotta border-terracotta/20",
-  REFUNDED: "bg-terracotta/10 text-terracotta border-terracotta/20",
-  PARTIALLY_REFUNDED: "bg-terracotta/10 text-terracotta border-terracotta/20",
-};
-
-export function StatusPill({ value }) {
-  const cls = STATUS_PILL_STYLE[value] || "bg-ivory-dark text-charcoal-soft border-charcoal/10";
-  return (
-    <span className={`inline-block rounded-full border px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${cls}`}>
-      {value}
-    </span>
   );
 }

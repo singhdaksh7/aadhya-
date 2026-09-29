@@ -181,34 +181,23 @@ export default function AdminHomepageBuilder() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-charcoal/10 pb-4">
+    <div className="space-y-5">
+      <div className="admin-page-header">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="font-serif-display text-2xl text-charcoal font-bold">Homepage Builder</h1>
-            <span className="rounded-full bg-terracotta/10 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider text-terracotta">
-              {page?.status || "DRAFT"}
-            </span>
+          <p className="admin-page-header__eyebrow">Content</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="admin-page-header__title">Homepage Builder</h1>
+            <span className="admin-badge admin-badge--neutral">{page?.status || "DRAFT"}</span>
           </div>
-          <p className="text-xs text-charcoal-soft mt-1">
+          <p className="admin-page-header__desc">
             Reorder, enable/disable, and configure sections for the public storefront homepage.
           </p>
         </div>
-
-        <div className="flex items-center gap-3">
-          <a
-            href="/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-full border border-charcoal/20 px-5 py-2.5 text-xs font-semibold text-charcoal hover:bg-[#FAF6F0] transition"
-          >
-            Preview Storefront
+        <div className="admin-page-header__actions">
+          <a href="/" target="_blank" rel="noopener noreferrer" className="admin-btn admin-btn--ghost">
+            Preview
           </a>
-          <button
-            onClick={() => setIsAddModalOpen(true)}
-            className="rounded-full border border-terracotta text-terracotta hover:bg-terracotta hover:text-white px-5 py-2.5 text-xs font-semibold uppercase tracking-wider transition"
-          >
+          <button type="button" onClick={() => setIsAddModalOpen(true)} className="admin-btn admin-btn--ghost">
             + Add Section
           </button>
           <Button onClick={handlePublish}>Publish Homepage</Button>
@@ -220,14 +209,10 @@ export default function AdminHomepageBuilder() {
 
       {status === "ready" && (
         <div className="space-y-4">
-          <div className="rounded-2xl border border-charcoal/10 bg-white p-6 shadow-xs">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-serif-display text-lg text-charcoal font-bold">
-                Homepage Layout Flow ({sections.length} Sections)
-              </h2>
-              <span className="text-xs text-charcoal-soft italic">
-                Changes saved as draft until published.
-              </span>
+          <div className="admin-card p-5">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h2 className="admin-card__title">Homepage Layout ({sections.length} sections)</h2>
+              <span className="text-xs text-charcoal-soft">Draft until published</span>
             </div>
 
             {sections.length === 0 ? (
@@ -241,8 +226,8 @@ export default function AdminHomepageBuilder() {
                     key={sec.id}
                     className={`flex flex-wrap items-center justify-between gap-4 rounded-xl border p-4 transition ${
                       sec.isEnabled
-                        ? "border-charcoal/15 bg-white shadow-xs"
-                        : "border-charcoal/10 bg-gray-50 opacity-60"
+                        ? "border-charcoal/15 bg-white"
+                        : "border-charcoal/10 bg-[var(--admin-bg,#f5f3ef)] opacity-70"
                     }`}
                   >
                     {/* Left details */}

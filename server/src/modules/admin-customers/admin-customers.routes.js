@@ -8,7 +8,7 @@ import { ok } from "../../utils/apiResponse.js";
 
 const querySchema = z.object({ page: z.coerce.number().int().min(1).default(1), limit: z.coerce.number().int().min(1).max(100).default(20), search: z.string().trim().max(200).optional() });
 const statusSchema = z.object({ isActive: z.boolean() });
-const customerSelect = { id: true, name: true, email: true, phone: true, isActive: true, createdAt: true, _count: { select: { orders: true, reviews: true, wishlistItems: true } } };
+const customerSelect = { id: true, name: true, email: true, phone: true, isActive: true, createdAt: true, _count: { select: { orders: true, reviews: true, wishlistItems: true } }, orders: { select: { totalAmount: true }, where: { paymentStatus: "PAID" } } };
 const safeCustomer = (c) => ({ id: c.id, name: c.name, email: c.email, phone: c.phone, isActive: c.isActive, createdAt: c.createdAt, ordersCount: c._count?.orders ?? c.orders?.length ?? 0, reviewsCount: c._count?.reviews ?? 0, wishlistCount: c._count?.wishlistItems ?? 0, totalSpent: Number(c.orders?.reduce((sum, o) => sum + Number(o.totalAmount), 0) ?? 0) });
 
 const router = Router();

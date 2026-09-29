@@ -108,5 +108,44 @@ export async function getInvoiceFile(invoiceId) {
   return { ...file, filename: `${invoice.invoiceNumber.replace(/[^A-Za-z0-9._-]/g, "-")}.pdf` };
 }
 export async function listCustomerInvoices(customerId) { return prisma.invoice.findMany({ where: { order: { customerId } }, select: { id: true, invoiceNumber: true, invoiceDate: true, totalAmount: true, currency: true, order: { select: { orderNumber: true, paymentStatus: true } } }, orderBy: { createdAt: "desc" } }); }
+
+export async function listAdminInvoices({ page = 1, limit = 20, search } = {}) {
+  const where = search
+    ? {
+        OR: [
+          { invoiceNumber: { contains: search, mode: "insensitive" } },
+          { customerName: { contains: search, mode: "insensitive" } },
+          { customerEmail: { contains: search, mode: "insensitive" } },
+          { order: { orderNumber: { contains: search, mode: "insensitive" } } },
+        ],
+      }
+    : {};
+  const skip = (page - 1) * limit;
+  const [items, total] = await Promise.all([
+    prisma.invoice.findMany({
+      where,
+      select: {
+        id: true,
+        invoiceNumber: true,
+        invoiceDate: true,
+        totalAmount: true,
+        currency: true,
+        customerName: true,
+        customerEmail: true,
+        emailedAt: true,
+        createdAt: true,
+        order: { select: { id: true, orderNumber: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      skip,
+      take: limit,
+    }),
+    prisma.invoice.count({ where }),
+  ]);
+  return {
+    items: items.map((inv) => ({ ...inv, totalAmount: Number(inv.totalAmount) })),
+    meta: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) },
+  };
+}
 export async function assertCustomerInvoice(customerId, invoiceId) { const invoice = await prisma.invoice.findFirst({ where: { id: invoiceId, order: { customerId } } }); if (!invoice) throw ApiError.notFound("Invoice not found"); return invoice; }
 export async function assertGuestInvoice(orderNumber, token, invoiceId) { const { hashToken, safeCompareHex } = await import("../../utils/secureToken.js"); const order = await prisma.order.findUnique({ where: { orderNumber } }); if (!order || !safeCompareHex(hashToken(token), order.accessTokenHash)) throw ApiError.notFound("Invoice not found"); const invoice = await prisma.invoice.findFirst({ where: { id: invoiceId, orderId: order.id } }); if (!invoice) throw ApiError.notFound("Invoice not found"); return invoice; }

@@ -1,13 +1,18 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-import { adminGetOrder, adminUpdateOrderStatus, adminUpsertShipment, adminCreateShipment, adminDownloadInvoice, adminRegenerateInvoice, adminResendInvoice } from "../../lib/api";
+import { Link, useParams } from "react-router-dom";
+import {
+  adminGetOrder,
+  adminUpdateOrderStatus,
+  adminUpsertShipment,
+  adminCreateShipment,
+  adminDownloadInvoice,
+  adminRegenerateInvoice,
+  adminResendInvoice,
+} from "../../lib/api";
 import { LoadingNotice, ErrorNotice } from "../../components/StateNotice";
 import { formatInr } from "../../lib/format";
-import { StatusPill } from "./AdminOrderList";
+import { StatusBadge, AdminCard, PageHeader } from "../../components/admin/ui";
 
-// Mirrors server/src/modules/orders/orderStatus.js — only these moves are
-// legal from a given status, so the UI never even offers an invalid one
-// (the server rejects it either way, but this avoids a round-trip 409).
 const ALLOWED_TRANSITIONS = {
   PENDING: ["CONFIRMED", "CANCELLED"],
   CONFIRMED: ["PROCESSING", "CANCELLED"],
@@ -80,7 +85,16 @@ export default function AdminOrderDetail() {
       setShipmentSaving(false);
     }
   };
-  const downloadInvoice = async () => { const blob = await adminDownloadInvoice(order.invoice.id); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `${order.invoice.invoiceNumber}.pdf`; a.click(); URL.revokeObjectURL(url); };
+
+  const downloadInvoice = async () => {
+    const blob = await adminDownloadInvoice(order.invoice.id);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${order.invoice.invoiceNumber}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   if (status === "loading") return <LoadingNotice />;
   if (status === "error" || !order) return <ErrorNotice message="Unable to load this order." onRetry={load} />;
@@ -91,182 +105,247 @@ export default function AdminOrderDetail() {
 
   return (
     <div>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-serif-display text-2xl text-charcoal">{order.orderNumber}</h1>
-        <div className="flex gap-2 text-sm">
-          <StatusPill value={order.status} />
-          <span className="text-charcoal-soft">·</span>
-          <StatusPill value={order.paymentStatus} />
-        </div>
-      </div>
-      <p className="mt-1 text-xs text-charcoal-soft">Placed {new Date(order.createdAt).toLocaleString("en-IN")}</p>
+      <PageHeader
+        eyebrow="Sales"
+        title={order.orderNumber}
+        description={`Placed ${new Date(order.createdAt).toLocaleString("en-IN")}`}
+        actions={
+          <>
+            <StatusBadge value={order.status} />
+            <StatusBadge value={order.paymentStatus} />
+            <Link to="/admin/orders" className="admin-btn admin-btn--ghost">
+              Back
+            </Link>
+          </>
+        }
+      />
 
       {refundNeeded && (
-        <div className="mt-4 rounded-xl bg-terracotta/10 px-4 py-3 text-sm text-terracotta">
-          This order was paid before cancellation. Refund required — process it manually; no automatic refund has
-          been issued.
+        <div className="mb-4 rounded-xl bg-terracotta/10 px-4 py-3 text-sm text-terracotta">
+          This order was paid before cancellation. Refund required — process it manually; no automatic refund has been
+          issued.
         </div>
       )}
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <section className="rounded-2xl border border-charcoal/10 bg-white/50 p-5">
-          <h2 className="font-serif-display text-lg text-charcoal">Customer</h2>
-          <p className="mt-2 text-sm text-charcoal-soft">
-            {order.customerName}
-            <br />
-            {order.customerEmail}
-            <br />
-            {order.customerPhone}
-          </p>
-        </section>
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="space-y-4 min-w-0">
+          <AdminCard title="Items">
+            <ul className="divide-y divide-charcoal/10">
+              {order.items.map((item) => (
+                <li key={item.id} className="flex justify-between gap-3 py-2.5 text-sm">
+                  <span className="text-charcoal">
+                    {item.productNameSnapshot} ({item.productTypeSnapshot}) × {item.quantity}
+                  </span>
+                  <span className="text-charcoal-soft shrink-0">{formatInr(item.lineTotal)}</span>
+                </li>
+              ))}
+            </ul>
+          </AdminCard>
 
-        <section className="rounded-2xl border border-charcoal/10 bg-white/50 p-5">
-          <h2 className="font-serif-display text-lg text-charcoal">Shipping Address</h2>
-          {order.address ? (
-            <p className="mt-2 text-sm text-charcoal-soft">
-              {order.address.fullName}
-              <br />
-              {order.address.addressLine1}
-              {order.address.addressLine2 ? <>, {order.address.addressLine2}</> : null}
-              <br />
-              {order.address.city}, {order.address.state} {order.address.postalCode}
-              <br />
-              {order.address.country}
-            </p>
-          ) : (
-            <p className="mt-2 text-sm text-charcoal-soft">—</p>
+          <AdminCard title="Payment">
+            <ul className="space-y-2 text-sm text-charcoal-soft">
+              {order.payments.map((p) => (
+                <li key={p.id} className="flex flex-wrap items-center justify-between gap-2">
+                  <span>
+                    {p.provider} · {p.providerPaymentId || p.providerOrderId || "no provider reference yet"}
+                  </span>
+                  <StatusBadge value={p.status} />
+                </li>
+              ))}
+            </ul>
+          </AdminCard>
+
+          <AdminCard title="Invoice">
+            {order.invoice ? (
+              <div className="flex flex-wrap items-center gap-3 text-sm">
+                <span className="font-semibold text-charcoal">{order.invoice.invoiceNumber}</span>
+                <span className="text-charcoal-soft">
+                  Generated {new Date(order.invoice.createdAt).toLocaleDateString("en-IN")}
+                </span>
+                <StatusBadge value={order.invoice.emailedAt ? "Emailed" : "Not emailed"} tone={order.invoice.emailedAt ? "success" : "neutral"} />
+                <button type="button" onClick={downloadInvoice} className="admin-btn admin-btn--ghost">
+                  Download
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await adminRegenerateInvoice(order.invoice.id);
+                    load();
+                  }}
+                  className="admin-btn admin-btn--ghost"
+                >
+                  Regenerate
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await adminResendInvoice(order.invoice.id);
+                    load();
+                  }}
+                  className="admin-btn admin-btn--ghost"
+                >
+                  Resend
+                </button>
+              </div>
+            ) : (
+              <p className="text-sm text-charcoal-soft">
+                Invoice will be generated after the configured payment/confirmation event.
+              </p>
+            )}
+          </AdminCard>
+
+          <AdminCard title="Shipment / Tracking">
+            <form onSubmit={saveShipment} className="admin-form-grid sm:grid-cols-2">
+              <label className="admin-label">
+                Carrier
+                <input
+                  className="admin-input"
+                  value={shipment.carrier}
+                  onChange={(e) => setShipment((s) => ({ ...s, carrier: e.target.value }))}
+                />
+              </label>
+              <label className="admin-label">
+                Tracking number
+                <input
+                  className="admin-input"
+                  value={shipment.trackingNumber}
+                  onChange={(e) => setShipment((s) => ({ ...s, trackingNumber: e.target.value }))}
+                />
+              </label>
+              <label className="admin-label sm:col-span-2">
+                Tracking URL
+                <input
+                  className="admin-input"
+                  value={shipment.trackingUrl}
+                  onChange={(e) => setShipment((s) => ({ ...s, trackingUrl: e.target.value }))}
+                />
+              </label>
+              <label className="admin-label">
+                Estimated delivery
+                <input
+                  type="date"
+                  className="admin-input"
+                  value={shipment.estimatedDelivery}
+                  onChange={(e) => setShipment((s) => ({ ...s, estimatedDelivery: e.target.value }))}
+                />
+              </label>
+              <div className="flex flex-wrap items-end gap-2 sm:col-span-2">
+                <button type="submit" disabled={shipmentSaving} className="admin-btn admin-btn--primary">
+                  {shipmentSaving ? "Saving…" : "Save tracking"}
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const res = await adminCreateShipment(id, shipment);
+                      setOrder((prev) => ({ ...prev, shipment: res.data }));
+                    } catch (err) {
+                      setShipmentError(err.message);
+                    }
+                  }}
+                  className="admin-btn admin-btn--ghost"
+                >
+                  Create Shipment
+                </button>
+              </div>
+            </form>
+            {shipmentError && <p className="mt-3 text-sm text-terracotta">{shipmentError}</p>}
+          </AdminCard>
+
+          {order.statusHistory?.length > 0 && (
+            <AdminCard title="Communication / History">
+              <ul className="space-y-1.5 text-xs text-charcoal-soft">
+                {order.statusHistory.map((h) => (
+                  <li key={h.id}>
+                    {new Date(h.changedAt).toLocaleString("en-IN")} — {h.fromStatus || "created"} → {h.toStatus}
+                    {h.note ? ` (${h.note})` : ""}
+                  </li>
+                ))}
+              </ul>
+            </AdminCard>
           )}
-        </section>
-
-        <section className="rounded-2xl border border-charcoal/10 bg-white/50 p-5 lg:col-span-2">
-          <h2 className="font-serif-display text-lg text-charcoal">Items</h2>
-          <ul className="mt-3 divide-y divide-charcoal/10">
-            {order.items.map((item) => (
-              <li key={item.id} className="flex justify-between py-2.5 text-sm">
-                <span className="text-charcoal">
-                  {item.productNameSnapshot} ({item.productTypeSnapshot}) × {item.quantity}
-                </span>
-                <span className="text-charcoal-soft">{formatInr(item.lineTotal)}</span>
-              </li>
-            ))}
-          </ul>
-          <div className="mt-4 space-y-1.5 border-t border-charcoal/10 pt-4 text-sm">
-            <div className="flex justify-between text-charcoal-soft">
-              <span>Subtotal</span>
-              <span>{formatInr(order.subtotal)}</span>
-            </div>
-            <div className="flex justify-between text-charcoal-soft">
-              <span>Shipping</span>
-              <span>{formatInr(order.shippingAmount)}</span>
-            </div>
-            <div className="flex justify-between font-medium text-charcoal">
-              <span>Total</span>
-              <span>{formatInr(order.totalAmount)}</span>
-            </div>
-          </div>
-        </section>
-
-        <section className="rounded-2xl border border-charcoal/10 bg-white/50 p-5 lg:col-span-2">
-          <h2 className="font-serif-display text-lg text-charcoal">Payments</h2>
-          <ul className="mt-3 space-y-2 text-sm text-charcoal-soft">
-            {order.payments.map((p) => (
-              <li key={p.id} className="flex justify-between">
-                <span>
-                  {p.provider} · {p.providerPaymentId || p.providerOrderId || "no provider reference yet"}
-                </span>
-                <StatusPill value={p.status} />
-              </li>
-            ))}
-          </ul>
-        </section>
-      </div>
-
-      <section className="mt-6 rounded-2xl border border-charcoal/10 bg-white/50 p-5">
-        <h2 className="font-serif-display text-lg text-charcoal">Invoice</h2>
-        {order.invoice ? <div className="mt-3 flex flex-wrap items-center gap-3 text-sm"><span>{order.invoice.invoiceNumber}</span><span className="text-charcoal-soft">Generated {new Date(order.invoice.createdAt).toLocaleDateString("en-IN")}</span><span className="text-charcoal-soft">{order.invoice.emailedAt ? "Emailed" : "Not emailed"}</span><button onClick={downloadInvoice} className="text-xs font-semibold text-terracotta">Download</button><button onClick={async()=>{await adminRegenerateInvoice(order.invoice.id);load();}} className="text-xs font-semibold text-terracotta">Regenerate PDF</button><button onClick={async()=>{await adminResendInvoice(order.invoice.id);load();}} className="text-xs font-semibold text-terracotta">Resend email</button></div> : <p className="mt-2 text-sm text-charcoal-soft">Invoice will be generated after the configured payment/confirmation event.</p>}
-      </section>
-
-      <section className="mt-6 rounded-2xl border border-charcoal/10 bg-white/50 p-5">
-        <h2 className="font-serif-display text-lg text-charcoal">Update Status</h2>
-        <p className="mt-1 text-xs text-charcoal-soft">
-          Payment status is controlled by the payment workflow and cannot be set manually here.
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {isTerminal && <span className="text-xs text-charcoal-soft">This order is {order.status.toLowerCase()} and cannot be changed further.</span>}
-          {nextStatuses.map((s) => (
-            <button
-              key={s}
-              disabled={updating}
-              onClick={() => changeStatus(s)}
-              className="rounded-full border border-charcoal/20 px-4 py-2 text-xs font-medium text-charcoal hover:bg-charcoal/5 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              {s}
-            </button>
-          ))}
         </div>
-        {error && <p className="mt-3 text-sm text-terracotta">{error}</p>}
 
-        {order.statusHistory?.length > 0 && (
-          <ul className="mt-4 space-y-1.5 border-t border-charcoal/10 pt-4 text-xs text-charcoal-soft">
-            {order.statusHistory.map((h) => (
-              <li key={h.id}>
-                {new Date(h.changedAt).toLocaleString("en-IN")} — {h.fromStatus || "created"} → {h.toStatus}
-                {h.note ? ` (${h.note})` : ""}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+        <aside className="space-y-4">
+          <AdminCard title="Customer">
+            <p className="text-sm text-charcoal-soft leading-relaxed">
+              {order.customerName}
+              <br />
+              {order.customerEmail}
+              <br />
+              {order.customerPhone}
+            </p>
+          </AdminCard>
 
-      <section className="mt-6 rounded-2xl border border-charcoal/10 bg-white/50 p-5">
-        <h2 className="font-serif-display text-lg text-charcoal">Fulfilment / Tracking</h2>
-        <form onSubmit={saveShipment} className="mt-3 grid gap-3 sm:grid-cols-2">
-          <label className="text-xs text-charcoal-soft">
-            Carrier
-            <input
-              className="mt-1 w-full rounded-lg border border-charcoal/20 px-3 py-2 text-sm"
-              value={shipment.carrier}
-              onChange={(e) => setShipment((s) => ({ ...s, carrier: e.target.value }))}
-            />
-          </label>
-          <label className="text-xs text-charcoal-soft">
-            Tracking number
-            <input
-              className="mt-1 w-full rounded-lg border border-charcoal/20 px-3 py-2 text-sm"
-              value={shipment.trackingNumber}
-              onChange={(e) => setShipment((s) => ({ ...s, trackingNumber: e.target.value }))}
-            />
-          </label>
-          <label className="text-xs text-charcoal-soft sm:col-span-2">
-            Tracking URL
-            <input
-              className="mt-1 w-full rounded-lg border border-charcoal/20 px-3 py-2 text-sm"
-              value={shipment.trackingUrl}
-              onChange={(e) => setShipment((s) => ({ ...s, trackingUrl: e.target.value }))}
-            />
-          </label>
-          <label className="text-xs text-charcoal-soft">
-            Estimated delivery
-            <input
-              type="date"
-              className="mt-1 w-full rounded-lg border border-charcoal/20 px-3 py-2 text-sm"
-              value={shipment.estimatedDelivery}
-              onChange={(e) => setShipment((s) => ({ ...s, estimatedDelivery: e.target.value }))}
-            />
-          </label>
-          <div className="sm:col-span-2">
-            <button
-              type="submit"
-              disabled={shipmentSaving}
-              className="rounded-full bg-charcoal px-5 py-2 text-xs font-medium text-white disabled:opacity-40"
-            >
-              {shipmentSaving ? "Saving…" : "Save tracking info"}
-            </button>
-            <button type="button" onClick={async()=>{try { const res = await adminCreateShipment(id, shipment); setOrder((prev)=>({...prev,shipment:res.data})); } catch (err) { setShipmentError(err.message); }}} className="ml-2 rounded-full border border-charcoal/20 px-5 py-2 text-xs font-medium text-charcoal">Create Shipment</button>
-          </div>
-        </form>
-        {shipmentError && <p className="mt-3 text-sm text-terracotta">{shipmentError}</p>}
-      </section>
+          <AdminCard title="Billing address">
+            {order.billingAddress || order.address ? (
+              <AddressBlock address={order.billingAddress || order.address} />
+            ) : (
+              <p className="text-sm text-charcoal-soft">—</p>
+            )}
+          </AdminCard>
+
+          <AdminCard title="Shipping address">
+            {order.address ? <AddressBlock address={order.address} /> : <p className="text-sm text-charcoal-soft">—</p>}
+          </AdminCard>
+
+          <AdminCard title="Order summary">
+            <div className="space-y-1.5 text-sm">
+              <div className="flex justify-between text-charcoal-soft">
+                <span>Subtotal</span>
+                <span>{formatInr(order.subtotal)}</span>
+              </div>
+              <div className="flex justify-between text-charcoal-soft">
+                <span>Shipping</span>
+                <span>{formatInr(order.shippingAmount)}</span>
+              </div>
+              <div className="flex justify-between font-semibold text-charcoal border-t border-charcoal/10 pt-2">
+                <span>Total</span>
+                <span>{formatInr(order.totalAmount)}</span>
+              </div>
+            </div>
+          </AdminCard>
+
+          <AdminCard title="Status controls">
+            <p className="text-xs text-charcoal-soft">
+              Payment status is controlled by the payment workflow and cannot be set manually here.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {isTerminal && (
+                <span className="text-xs text-charcoal-soft">
+                  This order is {order.status.toLowerCase()} and cannot be changed further.
+                </span>
+              )}
+              {nextStatuses.map((s) => (
+                <button
+                  key={s}
+                  disabled={updating}
+                  onClick={() => changeStatus(s)}
+                  className="admin-btn admin-btn--ghost"
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+            {error && <p className="mt-3 text-sm text-terracotta">{error}</p>}
+          </AdminCard>
+        </aside>
+      </div>
     </div>
+  );
+}
+
+function AddressBlock({ address }) {
+  return (
+    <p className="text-sm text-charcoal-soft leading-relaxed">
+      {address.fullName}
+      <br />
+      {address.addressLine1}
+      {address.addressLine2 ? <>, {address.addressLine2}</> : null}
+      <br />
+      {address.city}, {address.state} {address.postalCode}
+      <br />
+      {address.country}
+    </p>
   );
 }

@@ -64,6 +64,10 @@ import AdminFaq from "./pages/admin/AdminFaq";
 import AdminMedia from "./pages/admin/AdminMedia";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import AdminIntegrations from "./pages/admin/AdminIntegrations";
+import AdminCustomers from "./pages/admin/AdminCustomers";
+import AdminInvoices from "./pages/admin/AdminInvoices";
+import AdminInventory from "./pages/admin/AdminInventory";
+import AdminShipping from "./pages/admin/AdminShipping";
 import SearchResults from "./pages/shop/SearchResults";
 import { captureUtmFromUrl } from "./lib/attribution";
 
@@ -214,9 +218,13 @@ function AdminRoutes() {
           <Route path="products" element={<AdminProductList />} />
           <Route path="products/new" element={<AdminProductForm />} />
           <Route path="products/:id" element={<AdminProductForm />} />
+          <Route path="inventory" element={<AdminInventory />} />
           <Route path="categories" element={<AdminCategories />} />
           <Route path="collections" element={<AdminCollections />} />
           <Route path="coupons" element={<AdminCoupons />} />
+          <Route path="customers" element={<AdminCustomers />} />
+          <Route path="customers/:id" element={<AdminCustomers />} />
+          <Route path="invoices" element={<AdminInvoices />} />
           <Route path="reviews" element={<AdminReviews />} />
           <Route path="navigation" element={<AdminNavigation />} />
           <Route path="pages" element={<AdminPages />} />
@@ -227,6 +235,7 @@ function AdminRoutes() {
           <Route path="orders" element={<AdminOrderList />} />
           <Route path="orders/:id" element={<AdminOrderDetail />} />
           <Route path="analytics" element={<AdminAnalytics />} />
+          <Route path="shipping" element={<AdminShipping />} />
           <Route path="integrations" element={<AdminIntegrations />} />
         </Route>
       </Routes>
