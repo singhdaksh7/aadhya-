@@ -15,6 +15,7 @@ export function createApp() {
   const app = express();
 
   app.disable("x-powered-by");
+  if (env.trustProxy > 0) app.set("trust proxy", env.trustProxy);
   app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
   app.use(
     cors({
