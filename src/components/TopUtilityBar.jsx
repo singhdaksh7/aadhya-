@@ -78,9 +78,9 @@ export default function TopUtilityBar() {
 
   return (
     <div className="bg-[#1C1917] border-b border-white/10 text-stone-300 text-[11px] sm:text-xs py-1.5 px-4 sm:px-8">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 sm:gap-4">
         {/* Left items */}
-        <div className="flex items-center gap-4 sm:gap-6 shrink-0">
+        <div className="flex min-w-0 flex-1 items-center gap-4 sm:flex-none sm:gap-6 sm:shrink-0">
           {leftItems.map((item, idx) => {
             const displayLabel = interpolateText(item.label || item.title || "", { freeShippingThreshold: threshold, storeName: general?.storeName });
             const itemUrl = item.url || item.link;
@@ -89,28 +89,28 @@ export default function TopUtilityBar() {
             return (
               <div
                 key={item.id || idx}
-                className={`flex items-center gap-1.5 shrink-0 ${
+                className={`flex min-w-0 items-center gap-1.5 sm:shrink-0 ${
                   item.showDesktop === false ? "lg:hidden" : ""
-                } ${item.showMobile === false ? "hidden sm:flex" : ""}`}
+                } ${idx > 0 ? "hidden sm:flex" : ""}`}
               >
-                <UtilityIcon name={item.icon} />
+                <UtilityIcon name={item.icon} className="h-3.5 w-3.5 shrink-0 text-stone-400" />
                 {itemUrl && item.linkType !== "none" ? (
                   isExternal ? (
                     <a
                       href={itemUrl}
                       target={item.openInNewTab ? "_blank" : "_self"}
                       rel={item.openInNewTab ? "noopener noreferrer" : undefined}
-                      className="font-medium hover:text-white transition"
+                      className="font-medium hover:text-white transition truncate"
                     >
                       {displayLabel}
                     </a>
                   ) : (
-                    <Link to={itemUrl} className="font-medium hover:text-white transition">
+                    <Link to={itemUrl} className="font-medium hover:text-white transition truncate">
                       {displayLabel}
                     </Link>
                   )
                 ) : (
-                  <span className="font-medium text-stone-300">{displayLabel}</span>
+                  <span className="font-medium text-stone-300 truncate">{displayLabel}</span>
                 )}
               </div>
             );
@@ -131,7 +131,7 @@ export default function TopUtilityBar() {
         )}
 
         {/* Right side links */}
-        <div className="flex items-center gap-3 sm:gap-4 shrink-0 text-stone-400">
+        <div className="flex items-center gap-3 sm:gap-4 shrink-0 whitespace-nowrap text-stone-400">
           {rightItems.length > 0 ? (
             rightItems.map((item, idx) => {
               const displayLabel = interpolateText(item.label || item.title || "", { freeShippingThreshold: threshold, storeName: general?.storeName });
@@ -140,18 +140,18 @@ export default function TopUtilityBar() {
 
               return (
                 <React.Fragment key={item.id || idx}>
-                  {idx > 0 && <span className="text-stone-600">|</span>}
+                  {idx > 0 && <span className="hidden text-stone-600 sm:inline">|</span>}
                   {isExternal ? (
                     <a
                       href={itemUrl}
                       target={item.openInNewTab ? "_blank" : "_self"}
                       rel={item.openInNewTab ? "noopener noreferrer" : undefined}
-                      className="hover:text-white transition font-medium"
+                      className={`hover:text-white transition font-medium ${idx > 0 ? "hidden sm:inline" : ""}`}
                     >
                       {displayLabel}
                     </a>
                   ) : (
-                    <Link to={itemUrl} className="hover:text-white transition font-medium">
+                    <Link to={itemUrl} className={`hover:text-white transition font-medium ${idx > 0 ? "hidden sm:inline" : ""}`}>
                       {displayLabel}
                     </Link>
                   )}
@@ -163,8 +163,8 @@ export default function TopUtilityBar() {
               <Link to="/track-order" className="hover:text-white transition font-medium">
                 Track Order
               </Link>
-              <span className="text-stone-600">|</span>
-              <Link to="/faq" className="hover:text-white transition font-medium">
+              <span className="hidden text-stone-600 sm:inline">|</span>
+              <Link to="/faq" className="hidden hover:text-white transition font-medium sm:inline">
                 Help &amp; FAQ
               </Link>
             </>
