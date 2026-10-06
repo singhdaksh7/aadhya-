@@ -127,23 +127,32 @@ describe("HomepageRenderer Component", () => {
     expect(screen.getByText("Legacy Prop Product")).toBeInTheDocument();
   });
 
-  it("renders the category nav from section.categories (server-resolved)", () => {
+  it("never renders the circular category strip on the storefront (hotfix)", () => {
     const categories = [{ id: "c1", name: "Ceramics", slug: "ceramics" }];
-    render(
-      <BrowserRouter>
-        <HomepageRenderer sections={[{ id: "cats", type: "CIRCULAR_CATEGORY_NAV", isEnabled: true, settings: {}, categories }]} />
-      </BrowserRouter>
-    );
-    expect(screen.getByTestId("mock-category-circles")).toBeInTheDocument();
+    for (const type of ["CIRCULAR_CATEGORY_NAV", "CATEGORY_CIRCLES"]) {
+      const { unmount } = render(
+        <BrowserRouter>
+          <HomepageRenderer sections={[{ id: "cats", type, isEnabled: true, settings: {}, categories }]} />
+        </BrowserRouter>
+      );
+      expect(screen.queryByTestId("mock-category-circles")).not.toBeInTheDocument();
+      unmount();
+    }
   });
 
-  it("hides the category nav entirely when zero categories are resolved", () => {
-    render(
+  it("hero is the first rendered element, with no circle strip before it", () => {
+    const { container } = render(
       <BrowserRouter>
-        <HomepageRenderer sections={[{ id: "cats", type: "CIRCULAR_CATEGORY_NAV", isEnabled: true, settings: {}, categories: [] }]} />
+        <HomepageRenderer
+          categories={[{ id: "c1", name: "Ceramics", slug: "ceramics" }]}
+          sections={[
+            { id: "cats", type: "CIRCULAR_CATEGORY_NAV", isEnabled: true, settings: {} },
+            { id: "hero", type: "HERO", isEnabled: true, settings: {} },
+          ]}
+        />
       </BrowserRouter>
     );
-    expect(screen.queryByTestId("mock-category-circles")).not.toBeInTheDocument();
+    expect(container.firstElementChild.firstElementChild).toBe(screen.getByTestId("mock-hero-carousel"));
   });
 
   it("renders the Featured Collection section from section.collection (server-resolved)", () => {

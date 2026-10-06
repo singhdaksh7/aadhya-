@@ -83,14 +83,16 @@ describe("Primary nav + mega menus", () => {
   it("1. circular category strip is absent by default", async () => {
     const { container } = renderNavbar();
     await waitFor(() => expect(screen.getByText("Lighting")).toBeInTheDocument());
-    expect(container.querySelector(".group\\/scroller")).toBeNull();
+    expect(container.querySelector("[class~=\"group/scroller\"]")).toBeNull();
     expect(screen.queryByLabelText("Scroll left")).not.toBeInTheDocument();
   });
 
-  it("1b. circular strip still renders when explicitly enabled", async () => {
-    mockSettings.header = { circularCategories: { enabled: true } };
+  it("1b. circular strip never renders on the storefront, even when saved as enabled (hotfix)", async () => {
+    mockSettings.header = { circularCategories: { enabled: true }, showCategoryCircles: true, stickyHeader: true };
     const { container } = renderNavbar();
-    await waitFor(() => expect(container.querySelector(".group\\/scroller")).not.toBeNull());
+    await waitFor(() => expect(screen.getByText("Lighting")).toBeInTheDocument());
+    expect(container.querySelector("[class~=\"group/scroller\"]")).toBeNull();
+    expect(screen.queryByLabelText("Scroll left")).not.toBeInTheDocument();
   });
 
   it("2. hero follows nav with nothing in between", async () => {
@@ -100,10 +102,10 @@ describe("Primary nav + mega menus", () => {
     expect(header.lastElementChild.contains(navRow())).toBe(true);
   });
 
-  it("3. default sticky mode is none, explicit saved choices are preserved", () => {
+  it("3. stickyMode is always none (hotfix); legacy flags are neutralized", () => {
     expect(normalizeHeaderSettings({}).stickyMode).toBe("none");
-    expect(normalizeHeaderSettings({ stickyMode: "always" }).stickyMode).toBe("always");
-    expect(normalizeHeaderSettings({ stickyHeader: true }).stickyMode).toBe("always");
+    expect(normalizeHeaderSettings({ stickyMode: "always" }).stickyMode).toBe("none");
+    expect(normalizeHeaderSettings({ stickyHeader: true }).stickyMode).toBe("none");
     expect(normalizeHeaderSettings({ stickyHeader: false }).stickyMode).toBe("none");
     expect(normalizeHeaderSettings({}).circularCategories.enabled).toBe(false);
     expect(normalizeHeaderSettings({ circularCategories: { enabled: true } }).circularCategories.enabled).toBe(true);
@@ -116,10 +118,10 @@ describe("Primary nav + mega menus", () => {
     expect(container.querySelector("header").className).not.toMatch(/top-0|z-40/);
   });
 
-  it("4b. sticky classes appear only when explicitly configured", async () => {
+  it("4b. sticky classes never appear, even when explicitly configured", async () => {
     mockSettings.header = { stickyMode: "always" };
     const { container } = renderNavbar();
-    expect(container.querySelector("header").className).toMatch(/sticky/);
+    expect(container.querySelector("header").className).not.toMatch(/sticky/);
   });
 
   it("5. renders admin-configured enabled items in order", async () => {

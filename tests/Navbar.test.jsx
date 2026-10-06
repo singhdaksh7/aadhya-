@@ -158,26 +158,41 @@ describe("Navbar logo rendering", () => {
   });
 });
 
-describe("Navbar sticky header setting", () => {
-  it("renders sticky classes when header.stickyHeader is true", () => {
+describe("Navbar hotfix: never sticky, never circles", () => {
+  const noStickyClasses = (header) => {
+    expect(header.className).not.toMatch(/sticky|fixed|top-0|z-40/);
+  };
+
+  it("legacy header.stickyHeader:true does not make the header sticky", () => {
     mockSettings = { general: { storeName: "Aadya" }, branding: {}, header: { stickyHeader: true }, announcementBar: {} };
     const { container } = renderNavbar();
-    const header = container.querySelector("header");
-    expect(header.className).toMatch(/sticky/);
-    expect(header.className).toMatch(/top-0/);
+    noStickyClasses(container.querySelector("header"));
   });
 
-  it("renders static (non-sticky) layout by default when header.stickyHeader is unset", () => {
-    mockSettings = { general: { storeName: "Aadya" }, branding: {}, header: {}, announcementBar: {} };
-    const { container } = renderNavbar();
-    const header = container.querySelector("header");
-    expect(header.className).not.toMatch(/sticky/);
+  it("saved stickyMode always/scroll is ignored on the storefront", () => {
+    for (const stickyMode of ["always", "scroll"]) {
+      mockSettings = { general: { storeName: "Aadya" }, branding: {}, header: { stickyMode }, announcementBar: {} };
+      const { container, unmount } = renderNavbar();
+      noStickyClasses(container.querySelector("header"));
+      unmount();
+    }
   });
 
-  it("renders static (non-sticky) layout when header.stickyHeader is false", () => {
-    mockSettings = { general: { storeName: "Aadya" }, branding: {}, header: { stickyHeader: false }, announcementBar: {} };
+  it("legacy showCategoryCircles:true and circularCategories.enabled:true render no circles", () => {
+    mockSettings = {
+      general: { storeName: "Aadya" }, branding: {}, announcementBar: {},
+      header: { showCategoryCircles: true, circularCategories: { enabled: true } },
+    };
     const { container } = renderNavbar();
-    const header = container.querySelector("header");
-    expect(header.className).not.toMatch(/sticky/);
+    expect(container.querySelector("[class~=\"group/scroller\"]")).toBeNull();
+    expect(screen.queryByLabelText("Scroll left")).not.toBeInTheDocument();
+  });
+
+  it("does not attach a scroll listener", () => {
+    const spy = vi.spyOn(window, "addEventListener");
+    mockSettings = { general: { storeName: "Aadya" }, branding: {}, header: { stickyHeader: true }, announcementBar: {} };
+    renderNavbar();
+    expect(spy.mock.calls.some(([evt]) => evt === "scroll")).toBe(false);
+    spy.mockRestore();
   });
 });

@@ -10,7 +10,6 @@ import SearchModal from "./SearchModal";
 import BrandLogo from "./BrandLogo";
 import PrimaryNav from "./PrimaryNav";
 import NavAnchor from "./NavAnchor";
-import CircularCategoryNav from "./CircularCategoryNav";
 import { fetchNavigation, fetchCategories, resolveMediaUrl } from "../lib/api";
 import { normalizeHeaderSettings } from "../lib/headerCmsHelpers";
 import { buildNavModel } from "../lib/navModel";
@@ -18,7 +17,6 @@ import { buildNavModel } from "../lib/navModel";
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
   const [categories, setCategories] = useState([]);
   const [navigation, setNavigation] = useState([]);
   const [expandedMobileItems, setExpandedMobileItems] = useState({});
@@ -33,18 +31,6 @@ export default function Navbar() {
   const mainHeaderConfig = cms.mainHeader || {};
   const mobileConfig = cms.mobile || {};
   const megaConfig = cms.megaMenu || {};
-
-  // Scroll listener is only needed for the opt-in "scroll" sticky mode.
-  useEffect(() => {
-    if (cms.stickyMode !== "scroll") {
-      setScrolled(false);
-      return undefined;
-    }
-    const onScroll = () => setScrolled(window.scrollY > 12);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, [cms.stickyMode]);
 
   // Single data fetch feeding desktop nav, mega menu and mobile drawer.
   useEffect(() => {
@@ -107,14 +93,6 @@ export default function Navbar() {
     setExpandedMobileItems((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
-  // Header scrolls away with the page by default ("none"). Sticky is opt-in via the CMS.
-  let stickyHeaderClass = "relative";
-  if (cms.stickyMode === "always") {
-    stickyHeaderClass = "sticky top-0 z-40";
-  } else if (cms.stickyMode === "scroll") {
-    stickyHeaderClass = scrolled ? "sticky top-0 z-40 shadow-md" : "relative";
-  }
-
   const logoAlignmentClass = mainHeaderConfig.logoAlignment === "left" ? "justify-start" : "justify-center";
 
   return (
@@ -127,7 +105,7 @@ export default function Navbar() {
 
       {/* 3. Main Header */}
       <header
-        className={`${stickyHeaderClass} store-bg store-border border-b`}
+        className="relative store-bg store-border border-b"
       >
         {/* Desktop Header Layout */}
         <div className="hidden lg:grid grid-cols-3 items-center justify-between px-8 py-3.5 max-w-7xl mx-auto gap-4">
@@ -283,9 +261,6 @@ export default function Navbar() {
             />
           </div>
         )}
-
-        {/* Circular category strip: opt-in only (CMS default is off) */}
-        {cms.circularCategories?.enabled === true && <CircularCategoryNav categories={categories} />}
 
         {/* Mobile Navigation Drawer */}
         {mobileMenuOpen && (
