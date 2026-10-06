@@ -22,13 +22,17 @@ export default function HomepageRenderer({ sections = [], categories = [], newAr
     const s = section.settings || {};
     switch (section.type) {
       case "CIRCULAR_CATEGORY_NAV": case "CATEGORY_CIRCLES": {
+        if (typeof window !== "undefined" && window.__AADYA_HEADER_RENDERED__) return null;
         // Prefer categories resolved server-side on the section itself; fall back to
         // the legacy prop path for callers/tests that still supply categories directly.
         const categoryItems = Array.isArray(section.categories) ? section.categories : categories;
         if (!isLoading && categoryItems.length === 0) return null; // never render an empty nav strip
         return <CircularCategoryNav key={section.id} categories={categoryItems} />;
       }
-      case "PROMO_STRIP": case "PROMO_TICKER": return <PromoStrip key={section.id} promoConfig={s} />;
+      case "PROMO_STRIP": case "PROMO_TICKER": {
+        if (typeof window !== "undefined" && window.__AADYA_HEADER_RENDERED__) return null;
+        return <PromoStrip key={section.id} promoConfig={s} />;
+      }
       case "HERO_CAROUSEL": case "HERO": return <HeroBannerCarousel key={section.id} />;
       case "TRUST_STRIP": case "TRUST_BADGES": return <TrustServiceStrip key={section.id} items={s.items} />;
       case "PROMO_BANNERS_2UP": case "MULTI_BANNER": return <PromoBanners2Up key={section.id} promoCards={s.items} />;

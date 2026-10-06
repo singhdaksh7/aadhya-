@@ -15,7 +15,9 @@ vi.mock("../src/hooks/useSiteSettings", () => ({
   useSiteSettings: () => mockSettings,
 }));
 vi.mock("../src/lib/api", () => ({
+  fetchCategories: vi.fn(() => Promise.resolve({ data: [] })),
   fetchNavigation: vi.fn(() => Promise.resolve({ data: { items: [] } })),
+  fetchPromos: vi.fn(() => Promise.resolve({ data: [] })),
   resolveMediaUrl: (url) => {
     if (!url) return null;
     return /^https?:\/\//.test(url) ? url : `http://api.test${url}`;
