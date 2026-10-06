@@ -12,6 +12,9 @@ import { DEFAULT_HEADER_CMS_SETTINGS, normalizeHeaderSettings } from "../../lib/
 import TopUtilityBar from "../../components/TopUtilityBar";
 import PromoStrip from "../../components/PromoStrip";
 import CircularCategoryNav from "../../components/CircularCategoryNav";
+import PrimaryNav from "../../components/PrimaryNav";
+import NavItemEditor from "../../components/admin/NavItemEditor";
+import { buildNavModel } from "../../lib/navModel";
 import BrandLogo from "../../components/BrandLogo";
 
 export default function AdminHeaderSettings() {
@@ -25,6 +28,7 @@ export default function AdminHeaderSettings() {
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [previewViewport, setPreviewViewport] = useState("desktop"); // "desktop" | "mobile"
+  const [previewMenuId, setPreviewMenuId] = useState("");
 
   useEffect(() => {
     Promise.all([
@@ -170,8 +174,13 @@ export default function AdminHeaderSettings() {
       id: `nav-manual-${Date.now()}`,
       label: "New Collection",
       enabled: true,
-      destinationType: "category",
+      destinationType: "CATEGORY",
       destination: "/shop",
+      categoryId: "",
+      categorySlug: "",
+      megaMenuMode: "AUTO_FROM_CATEGORY",
+      manualColumns: [],
+      promoCard: { enabled: false },
       sortOrder: (headerCms.primaryNav.items?.length || 0) + 1,
       showDesktop: true,
       showMobile: true,
@@ -225,6 +234,9 @@ export default function AdminHeaderSettings() {
       };
     });
   };
+
+  const previewNavItems = buildNavModel({ cms: headerCms, categories }).filter((i) => i.showDesktop !== false);
+  const previewMenuItems = previewNavItems.filter((i) => i.hasMenu);
 
   const tabs = [
     { id: "general", label: "General Header" },
@@ -813,7 +825,7 @@ export default function AdminHeaderSettings() {
                 className="w-full rounded-xl border border-charcoal/20 p-2.5 text-xs font-bold"
               >
                 <option value="AUTO">AUTO (Category Hierarchy Driven)</option>
-                <option value="MANUAL">MANUAL (Admin Custom Menu Builder)</option>
+                <option value="MANUAL">MANUAL (Admin-configured items &amp; mega menus)</option>
               </select>
             </div>
 
@@ -856,88 +868,22 @@ export default function AdminHeaderSettings() {
               <div className="flex items-center justify-between">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-charcoal">Manual Nav Items ({headerCms.primaryNav.items?.length || 0})</h4>
                 <Button onClick={handleAddNavItem} className="bg-charcoal text-white text-xs py-1 px-3">
-                  + Add Menu Link
+                  + Add Navigation Item
                 </Button>
               </div>
 
               <div className="space-y-3">
                 {(headerCms.primaryNav.items || []).map((item, idx) => (
-                  <div key={item.id || idx} className="rounded-xl border border-charcoal/15 bg-white p-4 space-y-3">
-                    <div className="flex items-center justify-between gap-2 border-b border-charcoal/10 pb-2">
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={item.enabled !== false}
-                          onChange={(e) => handleUpdateNavItem(idx, { enabled: e.target.checked })}
-                          className="h-4 w-4 rounded text-terracotta"
-                        />
-                        <span className="text-xs font-bold text-charcoal">Nav Item #{idx + 1}: {item.label || "Untitled"}</span>
-                      </div>
-
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => handleMoveNavItem(idx, -1)}
-                          disabled={idx === 0}
-                          className="rounded p-1 text-xs text-stone-500 hover:bg-stone-100 disabled:opacity-30"
-                          title="Move Up"
-                        >
-                          ↑
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleMoveNavItem(idx, 1)}
-                          disabled={idx === (headerCms.primaryNav.items?.length || 0) - 1}
-                          className="rounded p-1 text-xs text-stone-500 hover:bg-stone-100 disabled:opacity-30"
-                          title="Move Down"
-                        >
-                          ↓
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteNavItem(idx)}
-                          className="rounded p-1 text-xs text-red-600 hover:bg-red-50 ml-2"
-                          title="Delete Item"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <div>
-                        <label className="text-[11px] font-semibold text-charcoal block mb-1">Label</label>
-                        <input
-                          type="text"
-                          value={item.label || ""}
-                          onChange={(e) => handleUpdateNavItem(idx, { label: e.target.value })}
-                          className="w-full rounded-lg border border-charcoal/20 p-1.5 text-xs"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="text-[11px] font-semibold text-charcoal block mb-1">Destination URL</label>
-                        <input
-                          type="text"
-                          value={item.destination || ""}
-                          onChange={(e) => handleUpdateNavItem(idx, { destination: e.target.value })}
-                          placeholder="/shop/category/ceramics"
-                          className="w-full rounded-lg border border-charcoal/20 p-1.5 text-xs"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="text-[11px] font-semibold text-charcoal block mb-1">Optional Badge Text</label>
-                        <input
-                          type="text"
-                          value={item.badge || ""}
-                          onChange={(e) => handleUpdateNavItem(idx, { badge: e.target.value })}
-                          placeholder="NEW or SALE"
-                          className="w-full rounded-lg border border-charcoal/20 p-1.5 text-xs"
-                        />
-                      </div>
-                    </div>
-                  </div>
+                  <NavItemEditor
+                    key={item.id || idx}
+                    item={item}
+                    index={idx}
+                    total={headerCms.primaryNav.items?.length || 0}
+                    categories={categories}
+                    onChange={(updates) => handleUpdateNavItem(idx, updates)}
+                    onMove={(dir) => handleMoveNavItem(idx, dir)}
+                    onDelete={() => handleDeleteNavItem(idx)}
+                  />
                 ))}
               </div>
             </div>
@@ -1366,6 +1312,16 @@ export default function AdminHeaderSettings() {
             </div>
           </div>
 
+          {previewMenuItems.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2" data-testid="preview-menu-picker">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-charcoal">Preview mega menu:</span>
+              <button type="button" onClick={() => setPreviewMenuId("")} className={`rounded-full border px-3 py-1 text-xs font-semibold ${!previewMenuId ? "bg-charcoal text-white" : "bg-white text-stone-600"}`}>None</button>
+              {previewMenuItems.map((i) => (
+                <button key={i.id} type="button" onClick={() => setPreviewMenuId(i.id)} className={`rounded-full border px-3 py-1 text-xs font-semibold ${previewMenuId === i.id ? "bg-charcoal text-white" : "bg-white text-stone-600"}`}>{i.label}</button>
+              ))}
+            </div>
+          )}
+
           <div
             className={`mx-auto overflow-hidden rounded-xl border border-stone-300 bg-white shadow-lg transition-all duration-300 ${
               previewViewport === "mobile" ? "max-w-[390px]" : "w-full max-w-6xl"
@@ -1394,9 +1350,25 @@ export default function AdminHeaderSettings() {
                 </div>
               </div>
 
-              {headerCms.circularCategories.enabled !== false && (
+              {headerCms.primaryNav.enabled !== false && previewViewport === "desktop" && previewNavItems.length > 0 && (
+                <div className="border-t border-stone-200 bg-white min-h-[44px]">
+                  <PrimaryNav
+                    items={previewNavItems}
+                    maxColumns={headerCms.megaMenu.columns || 4}
+                    menuWidth={headerCms.megaMenu.dropdownWidth}
+                    showBadges={headerCms.primaryNav.showNewBadge !== false}
+                    forcedOpenId={previewMenuId || null}
+                  />
+                </div>
+              )}
+
+              {headerCms.circularCategories.enabled === true && (
                 <CircularCategoryNav categories={categories} />
               )}
+
+              <div className="flex h-24 items-center justify-center bg-stone-200 text-[11px] font-semibold uppercase tracking-widest text-stone-500">
+                Hero starts here
+              </div>
             </div>
           </div>
         </div>

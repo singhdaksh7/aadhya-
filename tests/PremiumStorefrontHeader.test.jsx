@@ -9,7 +9,7 @@ import CircularCategoryNav from "../src/components/CircularCategoryNav";
 let mockSettings = {
   general: { storeName: "Aadya" },
   branding: {},
-  header: { stickyHeader: true, showUtilityBar: true, showSearch: true, showCategoryCircles: true },
+  header: { showUtilityBar: true, showSearch: true },
   announcementBar: { active: true, text: "Special Offer" },
   shipping: { freeShippingThreshold: 2499 },
 };
@@ -93,7 +93,9 @@ describe("Premium Storefront Header & Navigation", () => {
     });
   });
 
-  it("renders circular category strip with image resolution and neutral text fallbacks", async () => {
+  it("renders circular category strip with image resolution and neutral text fallbacks (explicitly enabled)", async () => {
+    const original = mockSettings.header;
+    mockSettings.header = { circularCategories: { enabled: true } };
     render(
       <BrowserRouter>
         <CircularCategoryNav categories={mockCategories.filter((c) => c.isActive)} />
@@ -105,26 +107,26 @@ describe("Premium Storefront Header & Navigation", () => {
 
     // Category without image shows fallback letter "C"
     expect(screen.getByText("C")).toBeInTheDocument();
+    mockSettings.header = original;
   });
 
-  it("opens mega menu on hover and renders subcategories", async () => {
-    const parentCategory = {
+  it("renders a normalized mega menu item with columns and promo", async () => {
+    const item = {
       id: "cat-1",
-      name: "Home Decor",
-      slug: "home-decor",
-      image: "/uploads/decor.jpg",
-      children: [
-        { id: "sub-1", name: "Vessels", slug: "vessels" },
-        { id: "sub-2", name: "Wall Art", slug: "wall-art" },
+      label: "Home Decor",
+      columns: [
+        { id: "c1", title: "Home Decor", to: "/shop/category/home-decor", links: [
+          { id: "sub-1", label: "Vessels", to: "/shop/category/vessels" },
+          { id: "sub-2", label: "Wall Art", to: "/shop/category/wall-art" },
+        ] },
       ],
+      promo: { image: "/uploads/decor.jpg", eyebrow: "Curated Edit", title: "Artisan", description: "", ctaLabel: "Shop", ctaUrl: "/shop", altText: "Promo" },
     };
-
     render(
       <BrowserRouter>
-        <MegaMenu item={parentCategory} isOpen={true} onClose={vi.fn()} />
+        <MegaMenu item={item} isOpen={true} onClose={vi.fn()} />
       </BrowserRouter>
     );
-
     expect(screen.getByText("Vessels")).toBeInTheDocument();
     expect(screen.getByText("Wall Art")).toBeInTheDocument();
     expect(screen.getByText("Curated Edit")).toBeInTheDocument();
@@ -132,19 +134,12 @@ describe("Premium Storefront Header & Navigation", () => {
 
   it("closes mega menu on Escape key press", async () => {
     const handleClose = vi.fn();
-    const parentCategory = {
-      id: "cat-1",
-      name: "Home Decor",
-      slug: "home-decor",
-      children: [{ id: "sub-1", name: "Vessels", slug: "vessels" }],
-    };
-
+    const item = { id: "cat-1", label: "Home Decor", columns: [{ id: "c1", title: "", links: [{ id: "s", label: "Vessels", to: "/x" }] }], promo: null };
     render(
       <BrowserRouter>
-        <MegaMenu item={parentCategory} isOpen={true} onClose={handleClose} />
+        <MegaMenu item={item} isOpen={true} onClose={handleClose} />
       </BrowserRouter>
     );
-
     fireEvent.keyDown(window, { key: "Escape" });
     expect(handleClose).toHaveBeenCalledTimes(1);
   });

@@ -48,13 +48,13 @@ export const DEFAULT_SETTINGS = {
       { id: "ub-2", enabled: true, title: "Easy 7-Day Returns", icon: "refresh", link: "/returns" },
       { id: "ub-3", enabled: true, title: "100% Secure Checkout", icon: "shield", link: "/faq" },
     ],
-    stickyHeader: true,
+    stickyHeader: false,
     showSearch: true,
     searchPlaceholder: "Search brass lamps, ceramics, linen...",
     showAccount: true,
     showWishlist: true,
     showCart: true,
-    showCategoryCircles: true,
+    showCategoryCircles: false,
     showMainNavigation: true,
     headerStyle: "WHITE",
     logoAlignment: "LEFT",
@@ -209,7 +209,44 @@ export const DEFAULT_SETTINGS = {
   standardShippingAmount: 150,
 };
 
-const settingsValidationSchema = z.object({
+// Rejects script-capable schemes. Control chars/whitespace are stripped first because
+// browsers ignore them inside a scheme (e.g. a tab inside "javascript:").
+function isSafeUrlString(value) {
+  // eslint-disable-next-line no-control-regex
+  const compact = String(value).replace(/[\u0000-\u0020\u007f-\u009f]/g, "").toLowerCase();
+  return !/^(javascript|data|vbscript|file):/.test(compact);
+}
+const safeUrl = (max = 500) => z.string().max(max).refine(isSafeUrlString, { message: "Unsafe URL" });
+
+const navPromoCardSchema = z.object({
+  enabled: z.boolean().optional(),
+  image: safeUrl().optional(),
+  eyebrow: z.string().max(100).optional(),
+  title: z.string().max(200).optional(),
+  description: z.string().max(500).optional(),
+  ctaLabel: z.string().max(100).optional(),
+  ctaUrl: safeUrl().optional(),
+  altText: z.string().max(200).optional(),
+});
+
+const navMegaLinkSchema = z.object({
+  id: z.string().max(80).optional(),
+  label: z.string().max(100),
+  destination: safeUrl(),
+  enabled: z.boolean().optional(),
+  openInNewTab: z.boolean().optional(),
+});
+
+const navMegaColumnSchema = z.object({
+  id: z.string().max(80).optional(),
+  heading: z.string().max(100).optional(),
+  enabled: z.boolean().optional(),
+  links: z.array(navMegaLinkSchema).max(12),
+});
+
+const NAV_DESTINATION_TYPES = ["CATEGORY", "COLLECTION", "PAGE", "BOOKS", "NEW_ARRIVALS", "CUSTOM_URL"];
+
+export const settingsValidationSchema = z.object({
   general: z.object({
     storeName: z.string().max(100).optional(),
     legalName: z.string().max(150).optional(),
@@ -344,8 +381,14 @@ const settingsValidationSchema = z.object({
         id: z.string(),
         label: z.string().max(100),
         enabled: z.boolean(),
-        destinationType: z.enum(["category", "collection", "page", "custom", "external", "new", "books", "search"]).optional(),
-        destination: z.string().max(500).optional(),
+        // Upper-case values are canonical; lower-case/legacy values are still accepted.
+        destinationType: z.enum([
+          ...NAV_DESTINATION_TYPES,
+          "category", "collection", "page", "custom", "external", "new", "books", "search",
+        ]).optional(),
+        destination: safeUrl().optional(),
+        categoryId: z.string().max(100).nullable().optional(),
+        categorySlug: z.string().max(200).nullable().optional(),
         sortOrder: z.number().optional(),
         showDesktop: z.boolean().optional(),
         showMobile: z.boolean().optional(),
@@ -353,6 +396,9 @@ const settingsValidationSchema = z.object({
         badgeStyle: z.enum(["primary", "subtle"]).optional(),
         openInNewTab: z.boolean().optional(),
         enableMegaMenu: z.boolean().optional(),
+        megaMenuMode: z.enum(["DISABLED", "AUTO_FROM_CATEGORY", "MANUAL"]).optional(),
+        manualColumns: z.array(navMegaColumnSchema).max(6).optional(),
+        promoCard: navPromoCardSchema.optional(),
         icon: z.string().max(50).optional(),
         highlight: z.boolean().optional(),
       })).max(30).optional(),
@@ -365,13 +411,13 @@ const settingsValidationSchema = z.object({
       mode: z.enum(["AUTO_FROM_CATEGORY", "MANUAL", "DISABLED"]).optional(),
       promoCard: z.object({
         enabled: z.boolean().optional(),
-        image: z.string().max(500).optional(),
-        mobileImage: z.string().max(500).optional(),
+        image: safeUrl().optional(),
+        mobileImage: safeUrl().optional(),
         eyebrow: z.string().max(100).optional(),
         title: z.string().max(200).optional(),
         description: z.string().max(500).optional(),
         ctaLabel: z.string().max(100).optional(),
-        ctaUrl: z.string().max(500).optional(),
+        ctaUrl: safeUrl().optional(),
         altText: z.string().max(200).optional(),
         promoSource: z.enum(["category", "collection", "custom", "none"]).optional(),
       }).optional(),

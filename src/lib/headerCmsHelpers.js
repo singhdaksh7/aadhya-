@@ -2,7 +2,7 @@ import { formatInr } from "./format";
 
 export const DEFAULT_HEADER_CMS_SETTINGS = {
   enabled: true,
-  stickyMode: "always", // "always" | "scroll" | "none"
+  stickyMode: "none", // "none" (default, scrolls away) | "scroll" | "always"
   showDivider: true,
   backgroundMode: "surface", // "surface" | "transparent"
   spacingMode: "comfortable", // "compact" | "comfortable"
@@ -140,7 +140,7 @@ export const DEFAULT_HEADER_CMS_SETTINGS = {
   },
 
   circularCategories: {
-    enabled: true,
+    enabled: false, // off by default; primary nav + mega menus drive category discovery
     mode: "AUTO", // "AUTO" | "MANUAL"
     maxItems: 12,
     desktopSize: "medium", // "small" | "medium" | "large"
@@ -158,7 +158,7 @@ export const DEFAULT_HEADER_CMS_SETTINGS = {
   mobile: {
     showUtilityBar: false,
     showTicker: true,
-    showCategoryStrip: true,
+    showCategoryStrip: false,
     showSearch: true,
     showCart: true,
     showAccount: true,
@@ -172,11 +172,14 @@ export const DEFAULT_HEADER_CMS_SETTINGS = {
 
 export function isSafeUrl(url) {
   if (!url || typeof url !== "string") return true;
-  const trimmed = url.trim().toLowerCase();
+  // Browsers ignore control chars/whitespace inside the scheme (e.g. "java\tscript:")
+  // oxlint-disable-next-line no-control-regex
+  const trimmed = url.replace(/[\u0000-\u0020\u007f-\u009f]/g, "").toLowerCase();
   if (
     trimmed.startsWith("javascript:") ||
     trimmed.startsWith("data:") ||
-    trimmed.startsWith("vbscript:")
+    trimmed.startsWith("vbscript:") ||
+    trimmed.startsWith("file:")
   ) {
     return false;
   }
@@ -260,7 +263,7 @@ export function normalizeHeaderSettings(rawHeader, rawShipping, rawGeneral) {
   const rawCircular = h.circularCategories || {};
   const circularEnabled = rawCircular.enabled !== undefined
     ? rawCircular.enabled
-    : (h.showCircularCategories !== undefined ? h.showCircularCategories : (h.showCategoryCircles !== undefined ? h.showCategoryCircles : true));
+    : (h.showCircularCategories !== undefined ? h.showCircularCategories : (h.showCategoryCircles !== undefined ? h.showCategoryCircles : false));
   const circularLimit = Math.min(24, Math.max(1, Number(rawCircular.maxItems ?? h.circularCategoryLimit ?? 12)));
   const circularArrows = rawCircular.showArrows !== undefined
     ? rawCircular.showArrows
@@ -273,7 +276,10 @@ export function normalizeHeaderSettings(rawHeader, rawShipping, rawGeneral) {
   const logoAlignment = rawMainHeader.logoAlignment || h.logoAlignment || "center";
 
   // Sticky mode normalization
-  let stickyMode = h.stickyMode || (h.stickyHeader === false ? "none" : "always");
+  // Explicit saved choices win; legacy flat `stickyHeader: true` still maps to "always".
+  const stickyMode = ["always", "scroll", "none"].includes(h.stickyMode)
+    ? h.stickyMode
+    : (h.stickyHeader === true ? "always" : "none");
 
   return {
     ...DEFAULT_HEADER_CMS_SETTINGS,
