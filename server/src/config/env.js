@@ -12,6 +12,10 @@ export const env = {
   nodeEnv: process.env.NODE_ENV || "development",
   isProduction: process.env.NODE_ENV === "production",
   isTest: process.env.NODE_ENV === "test",
+  // Number of reverse-proxy hops in front of the API (production: Traefik = 1).
+  // Without this, every client shares the proxy's IP and the rate limiters
+  // collapse into a single global bucket.
+  trustProxy: Number.isInteger(Number(process.env.TRUST_PROXY)) && process.env.TRUST_PROXY !== "" ? Number(process.env.TRUST_PROXY) : process.env.NODE_ENV === "production" ? 1 : 0,
   port: Number(process.env.PORT || 4000),
   frontendUrl: process.env.FRONTEND_URL || "http://localhost:5173",
   databaseUrl: required("DATABASE_URL"),
