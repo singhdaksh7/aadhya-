@@ -110,6 +110,7 @@ export default function AdminSettings() {
 
   const tabs = [
     { id: "general", label: "General" },
+    { id: "header-cms", label: "Header & Nav CMS ➔" },
     { id: "social", label: "Contact & Social" },
     { id: "header", label: "Header / Footer" },
     { id: "footer", label: "Footer Details" },

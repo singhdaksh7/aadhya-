@@ -11,6 +11,7 @@ import BrandLogo from "./BrandLogo";
 import MegaMenu from "./MegaMenu";
 import CircularCategoryNav from "./CircularCategoryNav";
 import { fetchNavigation, fetchCategories, resolveMediaUrl } from "../lib/api";
+import { normalizeHeaderSettings } from "../lib/headerCmsHelpers";
 
 const DEFAULT_NAV_LINKS = [
   { id: "nav-new", to: "/new-arrivals", label: "New", isNewBadge: true },
@@ -35,7 +36,12 @@ export default function Navbar() {
   const { count, setIsOpen: setCartDrawerOpen } = useCart();
   const location = useLocation();
   const { user } = useCustomerAuth();
-  const { branding, header, general } = useSiteSettings();
+  const { branding, header, shipping, general } = useSiteSettings();
+
+  const cms = normalizeHeaderSettings(header, shipping, general);
+  const primaryNavConfig = cms.primaryNav || {};
+  const mainHeaderConfig = cms.mainHeader || {};
+  const mobileConfig = cms.mobile || {};
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -54,7 +60,26 @@ export default function Navbar() {
       const activeCats = rawCats.filter((c) => c.isActive !== false);
       setCategories(activeCats);
 
-      // Build hierarchy map from active categories
+      // Manual nav items configured in Header CMS take precedence if primaryNav.mode === "MANUAL"
+      if (primaryNavConfig.mode === "MANUAL" && Array.isArray(primaryNavConfig.items) && primaryNavConfig.items.length > 0) {
+        const mappedManual = primaryNavConfig.items
+          .filter((i) => i.enabled !== false)
+          .map((item, idx) => ({
+            id: item.id || `manual-nav-${idx}`,
+            to: item.destination || "#",
+            label: item.label,
+            name: item.label,
+            badge: item.badge,
+            badgeStyle: item.badgeStyle,
+            openInNewTab: item.openInNewTab,
+            enableMegaMenu: item.enableMegaMenu !== false,
+            children: [],
+          }));
+        setNavItems(mappedManual);
+        return;
+      }
+
+      // Build hierarchy map from active categories for AUTO mode
       const categoryMap = new Map();
       activeCats.forEach((cat) => {
         categoryMap.set(cat.id, {
@@ -114,7 +139,7 @@ export default function Navbar() {
     });
 
     return () => { active = false; };
-  }, []);
+  }, [primaryNavConfig.mode, JSON.stringify(primaryNavConfig.items)]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -149,6 +174,7 @@ export default function Navbar() {
   }, [branding?.favicon]);
 
   const handleMouseEnter = (link) => {
+    if (primaryNavConfig.enableMegaMenu === false) return;
     if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
     if (link.children && link.children.length > 0) {
       setActiveMegaMenu(link);
@@ -168,6 +194,16 @@ export default function Navbar() {
     setExpandedMobileItems((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
+  // Sticky class calculations
+  let stickyHeaderClass = "relative";
+  if (cms.stickyMode === "always") {
+    stickyHeaderClass = "sticky top-0 z-40";
+  } else if (cms.stickyMode === "scroll") {
+    stickyHeaderClass = scrolled ? "sticky top-0 z-40 shadow-md" : "relative";
+  }
+
+  const logoAlignmentClass = mainHeaderConfig.logoAlignment === "left" ? "justify-start" : "justify-center";
+
   return (
     <>
       {/* 1. Slim Dark Top Utility Bar */}
@@ -176,17 +212,17 @@ export default function Navbar() {
       {/* 2. Warm Terracotta Announcement / Promo Strip */}
       <PromoStrip />
 
-      {/* 3. Main Header (CSS 3-column Grid layout on Desktop) */}
+      {/* 3. Main Header */}
       <header
-        className={`${header?.stickyHeader !== false ? "sticky top-0 z-40" : "relative"} store-bg transition-all duration-300 ${
+        className={`${stickyHeaderClass} store-bg transition-all duration-300 ${
           scrolled ? "store-border border-b shadow-sm" : "store-border border-b"
         }`}
       >
-        {/* Desktop 3-Column Grid Header */}
+        {/* Desktop Header Layout */}
         <div className="hidden lg:grid grid-cols-3 items-center justify-between px-8 py-3.5 max-w-7xl mx-auto gap-4">
           {/* Left Column: Minimalist Search UI */}
           <div className="flex items-center justify-start">
-            {header?.showSearch !== false && (
+            {mainHeaderConfig.showSearch !== false && (
               <button
                 onClick={() => setSearchOpen(true)}
                 className="group flex items-center gap-2.5 border-b border-charcoal/20 hover:border-[var(--theme-primary)] focus:border-[var(--theme-primary)] bg-transparent py-1.5 px-0.5 text-xs store-muted transition max-w-[300px] w-full text-left cursor-pointer"
@@ -196,14 +232,14 @@ export default function Navbar() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
                 <span className="truncate store-muted group-hover:store-text transition">
-                  {header?.searchPlaceholder || "Search products..."}
+                  {mainHeaderConfig.searchPlaceholder || "Search products..."}
                 </span>
               </button>
             )}
           </div>
 
           {/* Center Column: Visually Centered BrandLogo */}
-          <div className="flex items-center justify-center">
+          <div className={`flex items-center ${logoAlignmentClass}`}>
             <Link to="/" className="inline-flex items-center justify-center shrink-0">
               <BrandLogo
                 src={branding?.desktopLogo}
@@ -219,55 +255,61 @@ export default function Navbar() {
           {/* Right Column: Account / Wishlist / Cart */}
           <div className="flex items-center justify-end gap-6 store-text">
             {/* Customer Account */}
-            <Link
-              to={user ? "/account" : "/login"}
-              className="flex items-center gap-1.5 p-1 store-text hover:store-primary transition group"
-              title={user ? "My Account" : "Sign In"}
-            >
-              <svg className="h-5 w-5 store-text group-hover:store-primary transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-              <span className="text-[11px] font-semibold uppercase tracking-wider">
-                {user ? "Account" : "Login"}
-              </span>
-            </Link>
+            {mainHeaderConfig.showAccount !== false && (
+              <Link
+                to={user ? "/account" : "/login"}
+                className="flex items-center gap-1.5 p-1 store-text hover:store-primary transition group"
+                title={user ? "My Account" : "Sign In"}
+              >
+                <svg className="h-5 w-5 store-text group-hover:store-primary transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                <span className="text-[11px] font-semibold uppercase tracking-wider">
+                  {user ? "Account" : mainHeaderConfig.accountLabel || "Login"}
+                </span>
+              </Link>
+            )}
 
             {/* Wishlist */}
-            <Link
-              to="/account/wishlist"
-              className="flex items-center gap-1.5 p-1 store-text hover:store-primary transition group"
-              title="Wishlist"
-            >
-              <svg className="h-5 w-5 store-text group-hover:store-primary transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-              </svg>
-              <span className="text-[11px] font-semibold uppercase tracking-wider">
-                Wishlist
-              </span>
-            </Link>
+            {mainHeaderConfig.showWishlist !== false && (
+              <Link
+                to="/account/wishlist"
+                className="flex items-center gap-1.5 p-1 store-text hover:store-primary transition group"
+                title="Wishlist"
+              >
+                <svg className="h-5 w-5 store-text group-hover:store-primary transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                </svg>
+                <span className="text-[11px] font-semibold uppercase tracking-wider">
+                  Wishlist
+                </span>
+              </Link>
+            )}
 
             {/* Cart Icon + Badge */}
-            <button
-              onClick={() => setCartDrawerOpen(true)}
-              className="relative flex items-center gap-1.5 p-1 store-text hover:store-primary transition group cursor-pointer"
-              aria-label="Open cart"
-            >
-              <div className="relative">
-                <IconCart className="h-5 w-5 group-hover:store-primary transition" />
-                {count > 0 && (
-                  <span className="absolute -right-2 -top-2 flex h-4 w-4 items-center justify-center rounded-full store-bg-primary text-[10px] font-bold text-white shadow-xs">
-                    {count}
-                  </span>
-                )}
-              </div>
-              <span className="text-[11px] font-semibold uppercase tracking-wider">
-                Cart
-              </span>
-            </button>
+            {mainHeaderConfig.showCart !== false && (
+              <button
+                onClick={() => setCartDrawerOpen(true)}
+                className="relative flex items-center gap-1.5 p-1 store-text hover:store-primary transition group cursor-pointer"
+                aria-label="Open cart"
+              >
+                <div className="relative">
+                  <IconCart className="h-5 w-5 group-hover:store-primary transition" />
+                  {mainHeaderConfig.showCartCount !== false && count > 0 && (
+                    <span className="absolute -right-2 -top-2 flex h-4 w-4 items-center justify-center rounded-full store-bg-primary text-[10px] font-bold text-white shadow-xs">
+                      {count}
+                    </span>
+                  )}
+                </div>
+                <span className="text-[11px] font-semibold uppercase tracking-wider">
+                  Cart
+                </span>
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Mobile Header (Phones & Small Tablets) */}
+        {/* Mobile Header */}
         <div className="flex lg:hidden items-center justify-between px-4 py-3 border-b store-border">
           <button
             onClick={() => setMobileMenuOpen(true)}
@@ -290,89 +332,97 @@ export default function Navbar() {
           </Link>
 
           <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={() => setSearchOpen(true)}
-              className="p-2 store-muted hover:store-text"
-              aria-label="Search"
-            >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </button>
-            <button
-              onClick={() => setCartDrawerOpen(true)}
-              className="relative p-2 store-text hover:store-primary"
-              aria-label="Open cart"
-            >
-              <IconCart className="h-5 w-5" />
-              {count > 0 && (
-                <span className="absolute right-0 top-0 flex h-4 w-4 items-center justify-center rounded-full store-bg-primary text-[10px] font-bold text-white shadow">
-                  {count}
-                </span>
-              )}
-            </button>
+            {mobileConfig.showSearch !== false && (
+              <button
+                onClick={() => setSearchOpen(true)}
+                className="p-2 store-muted hover:store-text"
+                aria-label="Search"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </button>
+            )}
+            {mobileConfig.showCart !== false && (
+              <button
+                onClick={() => setCartDrawerOpen(true)}
+                className="relative p-2 store-text hover:store-primary"
+                aria-label="Open cart"
+              >
+                <IconCart className="h-5 w-5" />
+                {count > 0 && (
+                  <span className="absolute right-0 top-0 flex h-4 w-4 items-center justify-center rounded-full store-bg-primary text-[10px] font-bold text-white shadow">
+                    {count}
+                  </span>
+                )}
+              </button>
+            )}
           </div>
         </div>
 
         {/* 6. Primary Navigation Row (Desktop) */}
-        <div className="hidden lg:block border-t store-border store-bg relative">
-          <div
-            className="mx-auto flex max-w-7xl items-center justify-center gap-8 px-8 py-2.5"
-            onMouseLeave={handleMouseLeave}
-          >
-            {navItems.map((link, idx) => {
-              const hasSub = link.children && link.children.length > 0;
-              const isNew = link.isNewBadge || idx === 0;
-
-              return (
-                <div
-                  key={link.id || link.to || idx}
-                  className="relative group py-1"
-                  onMouseEnter={() => handleMouseEnter(link)}
-                >
-                  <NavLink
-                    to={link.to}
-                    className={({ isActive }) =>
-                      `inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.14em] transition-colors ${
-                        isActive || (activeMegaMenu?.id === link.id)
-                          ? "store-primary border-b-2 border-[var(--theme-primary)] pb-0.5"
-                          : "store-muted hover:store-primary"
-                      }`
-                    }
-                  >
-                    <span>{link.label}</span>
-                    {isNew && (
-                      <span className="store-bg-primary text-white text-[8px] font-bold px-1.5 py-0.2 rounded-full uppercase tracking-wider">
-                        NEW
-                      </span>
-                    )}
-                    {hasSub && (
-                      <svg className="h-3 w-3 opacity-60 group-hover:opacity-100 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    )}
-                  </NavLink>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* 7. Dynamic Mega Menu Component */}
-          {activeMegaMenu && (
+        {primaryNavConfig.enabled !== false && (
+          <div className="hidden lg:block border-t store-border store-bg relative">
             <div
-              onMouseEnter={() => {
-                if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
-              }}
+              className="mx-auto flex max-w-7xl items-center justify-center gap-8 px-8 py-2.5"
               onMouseLeave={handleMouseLeave}
             >
-              <MegaMenu
-                item={activeMegaMenu}
-                isOpen={!!activeMegaMenu}
-                onClose={() => setActiveMegaMenu(null)}
-              />
+              {navItems.map((link, idx) => {
+                const hasSub = link.children && link.children.length > 0;
+                const isNew = (primaryNavConfig.showNewBadge !== false && (link.isNewBadge || link.badge === "NEW" || idx === 0));
+
+                return (
+                  <div
+                    key={link.id || link.to || idx}
+                    className="relative group py-1"
+                    onMouseEnter={() => handleMouseEnter(link)}
+                  >
+                    <NavLink
+                      to={link.to}
+                      target={link.openInNewTab ? "_blank" : undefined}
+                      rel={link.openInNewTab ? "noopener noreferrer" : undefined}
+                      className={({ isActive }) =>
+                        `inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.14em] transition-colors ${
+                          isActive || (activeMegaMenu?.id === link.id)
+                            ? "store-primary border-b-2 border-[var(--theme-primary)] pb-0.5"
+                            : "store-muted hover:store-primary"
+                        }`
+                      }
+                    >
+                      <span>{link.label}</span>
+                      {isNew && (
+                        <span className="store-bg-primary text-white text-[8px] font-bold px-1.5 py-0.2 rounded-full uppercase tracking-wider">
+                          {link.badge || "NEW"}
+                        </span>
+                      )}
+                      {hasSub && primaryNavConfig.enableMegaMenu !== false && (
+                        <svg className="h-3 w-3 opacity-60 group-hover:opacity-100 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      )}
+                    </NavLink>
+                  </div>
+                );
+              })}
             </div>
-          )}
-        </div>
+
+            {/* 7. Dynamic Mega Menu Component */}
+            {activeMegaMenu && primaryNavConfig.enableMegaMenu !== false && (
+              <div
+                onMouseEnter={() => {
+                  if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+                }}
+                onMouseLeave={handleMouseLeave}
+              >
+                <MegaMenu
+                  item={activeMegaMenu}
+                  isOpen={!!activeMegaMenu}
+                  onClose={() => setActiveMegaMenu(null)}
+                />
+              </div>
+            )}
+          </div>
+        )}
 
         {/* 8. Circular Category Navigation Scroller */}
         <CircularCategoryNav categories={categories} />
@@ -387,7 +437,7 @@ export default function Navbar() {
             <div className="absolute left-0 top-0 h-full w-full max-w-xs overflow-y-auto store-bg p-6 shadow-2xl">
               <div className="flex items-center justify-between border-b store-border pb-4">
                 <Link to="/" className="font-serif-display text-2xl store-text font-bold">
-                  {general?.storeName || "Aadya"}
+                  {mobileConfig.drawerTitle || general?.storeName || "Aadya"}
                 </Link>
                 <button
                   onClick={() => setMobileMenuOpen(false)}
@@ -409,7 +459,7 @@ export default function Navbar() {
                   <svg className="h-4 w-4 store-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
-                  <span>Search objects...</span>
+                  <span>{mainHeaderConfig.searchPlaceholder || "Search objects..."}</span>
                 </button>
 
                 <nav className="flex flex-col space-y-1">
@@ -463,7 +513,7 @@ export default function Navbar() {
                         </div>
 
                         {/* Mobile Accordion Submenu */}
-                        {hasSub && isExpanded && (
+                        {hasSub && (mobileConfig.showAccordionChildren !== false) && isExpanded && (
                           <div className="pl-6 space-y-1 border-l-2 border-[var(--theme-primary)]/20 ml-4 py-1">
                             {link.children.map((sub, sIdx) => {
                               const subUrl = sub.url || (sub.slug ? `/shop/category/${sub.slug}` : sub.to || "#");
@@ -484,13 +534,15 @@ export default function Navbar() {
                     );
                   })}
 
-                  <NavLink
-                    to={user ? "/account" : "/login"}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="rounded-xl px-4 py-2.5 text-sm font-medium store-text hover:bg-black/5"
-                  >
-                    {user ? "My Account" : "Customer Login"}
-                  </NavLink>
+                  {mobileConfig.showAccount !== false && (
+                    <NavLink
+                      to={user ? "/account" : "/login"}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="rounded-xl px-4 py-2.5 text-sm font-medium store-text hover:bg-black/5"
+                    >
+                      {user ? "My Account" : "Customer Login"}
+                    </NavLink>
+                  )}
                   <NavLink
                     to="/track-order"
                     onClick={() => setMobileMenuOpen(false)}

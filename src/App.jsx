@@ -76,6 +76,7 @@ import AdminInvoiceSettings from "./pages/admin/AdminInvoiceSettings";
 import AdminInventory from "./pages/admin/AdminInventory";
 import AdminLowStock from "./pages/admin/AdminLowStock";
 import AdminShipping from "./pages/admin/AdminShipping";
+import AdminHeaderSettings from "./pages/admin/AdminHeaderSettings";
 import SearchResults from "./pages/shop/SearchResults";
 import { captureUtmFromUrl } from "./lib/attribution";
 
@@ -223,6 +224,8 @@ function AdminRoutes() {
         >
           <Route index element={<AdminDashboard />} />
           <Route path="homepage-builder" element={<AdminHomepageBuilder />} />
+          <Route path="header-settings" element={<AdminHeaderSettings />} />
+          <Route path="storefront/header" element={<AdminHeaderSettings />} />
           <Route path="banners" element={<AdminBanners />} />
           <Route path="promos" element={<AdminPromos />} />
           <Route path="products" element={<AdminProductList />} />
