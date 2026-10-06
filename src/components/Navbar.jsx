@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { NavLink, Link, useLocation } from "react-router-dom";
 import { IconMenu, IconClose, IconCart } from "./icons";
 import { useCart } from "../context/CartContext";
@@ -8,31 +8,21 @@ import TopUtilityBar from "./TopUtilityBar";
 import PromoStrip from "./PromoStrip";
 import SearchModal from "./SearchModal";
 import BrandLogo from "./BrandLogo";
-import MegaMenu from "./MegaMenu";
+import PrimaryNav from "./PrimaryNav";
+import NavAnchor from "./NavAnchor";
 import CircularCategoryNav from "./CircularCategoryNav";
 import { fetchNavigation, fetchCategories, resolveMediaUrl } from "../lib/api";
 import { normalizeHeaderSettings } from "../lib/headerCmsHelpers";
-
-const DEFAULT_NAV_LINKS = [
-  { id: "nav-new", to: "/new-arrivals", label: "New", isNewBadge: true },
-  { id: "nav-home-decor", to: "/shop/category/home-decor", label: "Home Decor" },
-  { id: "nav-ceramics", to: "/shop/category/ceramics", label: "Ceramics" },
-  { id: "nav-textiles", to: "/shop/category/textiles", label: "Linen & Textiles" },
-  { id: "nav-lighting", to: "/shop/category/lighting", label: "Lamps & Lighting" },
-  { id: "nav-books", to: "/books", label: "Books" },
-  { id: "nav-gifts", to: "/collections/gifts", label: "Gifts" },
-];
+import { buildNavModel } from "../lib/navModel";
 
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [navItems, setNavItems] = useState(DEFAULT_NAV_LINKS);
   const [categories, setCategories] = useState([]);
-  const [activeMegaMenu, setActiveMegaMenu] = useState(null);
+  const [navigation, setNavigation] = useState([]);
   const [expandedMobileItems, setExpandedMobileItems] = useState({});
 
-  const hoverTimeoutRef = useRef(null);
   const { count, setIsOpen: setCartDrawerOpen } = useCart();
   const location = useLocation();
   const { user } = useCustomerAuth();
@@ -42,13 +32,21 @@ export default function Navbar() {
   const primaryNavConfig = cms.primaryNav || {};
   const mainHeaderConfig = cms.mainHeader || {};
   const mobileConfig = cms.mobile || {};
+  const megaConfig = cms.megaMenu || {};
 
+  // Scroll listener is only needed for the opt-in "scroll" sticky mode.
   useEffect(() => {
+    if (cms.stickyMode !== "scroll") {
+      setScrolled(false);
+      return undefined;
+    }
     const onScroll = () => setScrolled(window.scrollY > 12);
-    window.addEventListener("scroll", onScroll);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+  }, [cms.stickyMode]);
 
+  // Single data fetch feeding desktop nav, mega menu and mobile drawer.
   useEffect(() => {
     let active = true;
     Promise.all([
@@ -56,90 +54,23 @@ export default function Navbar() {
       fetchNavigation("HEADER_MAIN").catch(() => ({ data: { items: [] } })),
     ]).then(([catRes, navRes]) => {
       if (!active) return;
-      const rawCats = Array.isArray(catRes?.data) ? catRes.data : (Array.isArray(catRes) ? catRes : []);
-      const activeCats = rawCats.filter((c) => c.isActive !== false);
-      setCategories(activeCats);
-
-      // Manual nav items configured in Header CMS take precedence if primaryNav.mode === "MANUAL"
-      if (primaryNavConfig.mode === "MANUAL" && Array.isArray(primaryNavConfig.items) && primaryNavConfig.items.length > 0) {
-        const mappedManual = primaryNavConfig.items
-          .filter((i) => i.enabled !== false)
-          .map((item, idx) => ({
-            id: item.id || `manual-nav-${idx}`,
-            to: item.destination || "#",
-            label: item.label,
-            name: item.label,
-            badge: item.badge,
-            badgeStyle: item.badgeStyle,
-            openInNewTab: item.openInNewTab,
-            enableMegaMenu: item.enableMegaMenu !== false,
-            children: [],
-          }));
-        setNavItems(mappedManual);
-        return;
-      }
-
-      // Build hierarchy map from active categories for AUTO mode
-      const categoryMap = new Map();
-      activeCats.forEach((cat) => {
-        categoryMap.set(cat.id, {
-          id: cat.id,
-          to: `/shop/category/${cat.slug}`,
-          label: cat.name,
-          name: cat.name,
-          slug: cat.slug,
-          image: cat.image || cat.desktopBanner,
-          description: cat.description,
-          children: [],
-        });
-      });
-
-      const rootCategories = [];
-      activeCats.forEach((cat) => {
-        if (cat.parentId && categoryMap.has(cat.parentId)) {
-          categoryMap.get(cat.parentId).children.push(categoryMap.get(cat.id));
-        } else if (!cat.parentId) {
-          rootCategories.push(categoryMap.get(cat.id));
-        }
-      });
-
-      const navItemsList = Array.isArray(navRes?.data?.items) ? navRes.data.items : (Array.isArray(navRes?.items) ? navRes.items : []);
-      if (navItemsList.length > 0) {
-        const mappedNav = navItemsList.map((item) => {
-          const catMatch = activeCats.find((c) => c.id === item.targetId || c.slug === item.targetId);
-          return {
-            id: item.id,
-            to: item.url || (item.type === "CATEGORY" ? `/shop/category/${item.targetId}` : item.type === "COLLECTION" ? `/collections/${item.targetId}` : "#"),
-            label: item.title,
-            name: item.title,
-            image: catMatch?.image || catMatch?.desktopBanner,
-            description: catMatch?.description,
-            children: item.children?.length > 0 ? item.children : (catMatch ? categoryMap.get(catMatch.id)?.children || [] : []),
-          };
-        });
-        setNavItems(mappedNav);
-      } else if (rootCategories.length > 0) {
-        const navList = [
-          { id: "nav-new-top", to: "/new-arrivals", label: "New", isNewBadge: true },
-          ...rootCategories.map((c) => ({
-            id: c.id,
-            to: `/shop/category/${c.slug}`,
-            label: c.name,
-            name: c.name,
-            slug: c.slug,
-            image: c.image,
-            description: c.description,
-            children: c.children,
-          })),
-          { id: "nav-books-top", to: "/books", label: "Books" },
-          { id: "nav-gifts-top", to: "/collections/gifts", label: "Gifts" },
-        ];
-        setNavItems(navList);
-      }
+      const rawCats = Array.isArray(catRes?.data) ? catRes.data : Array.isArray(catRes) ? catRes : [];
+      setCategories(rawCats.filter((c) => c.isActive !== false));
+      const navItemsList = Array.isArray(navRes?.data?.items) ? navRes.data.items : Array.isArray(navRes?.items) ? navRes.items : [];
+      setNavigation(navItemsList);
     });
+    return () => {
+      active = false;
+    };
+  }, []);
 
-    return () => { active = false; };
-  }, [primaryNavConfig.mode, JSON.stringify(primaryNavConfig.items)]);
+  const navItems = useMemo(
+    () => buildNavModel({ cms, categories, navigation }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [header, shipping, general, categories, navigation]
+  );
+  const desktopNavItems = navItems.filter((i) => i.showDesktop !== false);
+  const mobileNavItems = navItems.filter((i) => i.showMobile !== false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -154,7 +85,6 @@ export default function Navbar() {
 
   useEffect(() => {
     setMobileMenuOpen(false);
-    setActiveMegaMenu(null);
   }, [location.pathname]);
 
   useEffect(() => {
@@ -173,28 +103,11 @@ export default function Navbar() {
     testImg.src = favicon;
   }, [branding?.favicon]);
 
-  const handleMouseEnter = (link) => {
-    if (primaryNavConfig.enableMegaMenu === false) return;
-    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
-    if (link.children && link.children.length > 0) {
-      setActiveMegaMenu(link);
-    } else {
-      setActiveMegaMenu(null);
-    }
-  };
-
-  const handleMouseLeave = () => {
-    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
-    hoverTimeoutRef.current = setTimeout(() => {
-      setActiveMegaMenu(null);
-    }, 150);
-  };
-
   const toggleMobileSubmenu = (id) => {
     setExpandedMobileItems((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
-  // Sticky class calculations
+  // Header scrolls away with the page by default ("none"). Sticky is opt-in via the CMS.
   let stickyHeaderClass = "relative";
   if (cms.stickyMode === "always") {
     stickyHeaderClass = "sticky top-0 z-40";
@@ -214,9 +127,7 @@ export default function Navbar() {
 
       {/* 3. Main Header */}
       <header
-        className={`${stickyHeaderClass} store-bg transition-all duration-300 ${
-          scrolled ? "store-border border-b shadow-sm" : "store-border border-b"
-        }`}
+        className={`${stickyHeaderClass} store-bg store-border border-b`}
       >
         {/* Desktop Header Layout */}
         <div className="hidden lg:grid grid-cols-3 items-center justify-between px-8 py-3.5 max-w-7xl mx-auto gap-4">
@@ -360,72 +271,21 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* 6. Primary Navigation Row (Desktop) */}
-        {primaryNavConfig.enabled !== false && (
-          <div className="hidden lg:block border-t store-border store-bg relative">
-            <div
-              className="mx-auto flex max-w-7xl items-center justify-center gap-8 px-8 py-2.5"
-              onMouseLeave={handleMouseLeave}
-            >
-              {navItems.map((link, idx) => {
-                const hasSub = link.children && link.children.length > 0;
-                const isNew = (primaryNavConfig.showNewBadge !== false && (link.isNewBadge || link.badge === "NEW" || idx === 0));
-
-                return (
-                  <div
-                    key={link.id || link.to || idx}
-                    className="relative group py-1"
-                    onMouseEnter={() => handleMouseEnter(link)}
-                  >
-                    <NavLink
-                      to={link.to}
-                      target={link.openInNewTab ? "_blank" : undefined}
-                      rel={link.openInNewTab ? "noopener noreferrer" : undefined}
-                      className={({ isActive }) =>
-                        `inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.14em] transition-colors ${
-                          isActive || (activeMegaMenu?.id === link.id)
-                            ? "store-primary border-b-2 border-[var(--theme-primary)] pb-0.5"
-                            : "store-muted hover:store-primary"
-                        }`
-                      }
-                    >
-                      <span>{link.label}</span>
-                      {isNew && (
-                        <span className="store-bg-primary text-white text-[8px] font-bold px-1.5 py-0.2 rounded-full uppercase tracking-wider">
-                          {link.badge || "NEW"}
-                        </span>
-                      )}
-                      {hasSub && primaryNavConfig.enableMegaMenu !== false && (
-                        <svg className="h-3 w-3 opacity-60 group-hover:opacity-100 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                      )}
-                    </NavLink>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* 7. Dynamic Mega Menu Component */}
-            {activeMegaMenu && primaryNavConfig.enableMegaMenu !== false && (
-              <div
-                onMouseEnter={() => {
-                  if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
-                }}
-                onMouseLeave={handleMouseLeave}
-              >
-                <MegaMenu
-                  item={activeMegaMenu}
-                  isOpen={!!activeMegaMenu}
-                  onClose={() => setActiveMegaMenu(null)}
-                />
-              </div>
-            )}
+        {/* Primary navigation + hover mega menus (desktop). Hero starts directly below. */}
+        {primaryNavConfig.enabled !== false && desktopNavItems.length > 0 && (
+          <div className="hidden lg:block border-t store-border store-bg">
+            <PrimaryNav
+              items={desktopNavItems}
+              maxColumns={megaConfig.columns || 4}
+              menuWidth={megaConfig.dropdownWidth}
+              showBadges={primaryNavConfig.showNewBadge !== false}
+              resetKey={location.pathname}
+            />
           </div>
         )}
 
-        {/* 8. Circular Category Navigation Scroller */}
-        <CircularCategoryNav categories={categories} />
+        {/* Circular category strip: opt-in only (CMS default is off) */}
+        {cms.circularCategories?.enabled === true && <CircularCategoryNav categories={categories} />}
 
         {/* Mobile Navigation Drawer */}
         {mobileMenuOpen && (
@@ -475,36 +335,43 @@ export default function Navbar() {
                     Home
                   </NavLink>
 
-                  {navItems.map((link) => {
-                    const hasSub = link.children && link.children.length > 0;
-                    const isExpanded = !!expandedMobileItems[link.id];
+                  {mobileNavItems.map((link) => {
+                    const hasSub = link.hasMenu && mobileConfig.showAccordionChildren !== false;
+                    const isExpanded = !!expandedMobileItems[link.id] || (hasSub && mobileConfig.expandCategoriesByDefault === true && expandedMobileItems[link.id] === undefined);
+                    const panelId = `mobile-submenu-${link.id}`;
 
                     return (
-                      <div key={link.id || link.to} className="space-y-1">
+                      <div key={link.id} className="space-y-1">
                         <div className="flex items-center justify-between">
-                          <NavLink
+                          <NavAnchor
                             to={link.to}
+                            external={link.external}
+                            openInNewTab={link.openInNewTab}
                             onClick={() => setMobileMenuOpen(false)}
-                            className={({ isActive }) =>
+                            className={({ isActive } = {}) =>
                               `flex-1 rounded-xl px-4 py-2.5 text-sm font-medium transition ${
                                 isActive ? "store-bg-primary-soft store-primary font-semibold" : "store-text hover:bg-black/5"
                               }`
                             }
                           >
                             {link.label}
-                          </NavLink>
+                          </NavAnchor>
 
                           {hasSub && (
                             <button
+                              type="button"
                               onClick={() => toggleMobileSubmenu(link.id)}
                               className="p-2 store-muted hover:store-text"
-                              aria-label="Toggle subcategories"
+                              aria-label={`Toggle ${link.label} menu`}
+                              aria-expanded={isExpanded}
+                              aria-controls={panelId}
                             >
                               <svg
                                 className={`h-4 w-4 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}
                                 fill="none"
                                 viewBox="0 0 24 24"
                                 stroke="currentColor"
+                                aria-hidden="true"
                               >
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                               </svg>
@@ -512,22 +379,30 @@ export default function Navbar() {
                           )}
                         </div>
 
-                        {/* Mobile Accordion Submenu */}
-                        {hasSub && (mobileConfig.showAccordionChildren !== false) && isExpanded && (
-                          <div className="pl-6 space-y-1 border-l-2 border-[var(--theme-primary)]/20 ml-4 py-1">
-                            {link.children.map((sub, sIdx) => {
-                              const subUrl = sub.url || (sub.slug ? `/shop/category/${sub.slug}` : sub.to || "#");
-                              return (
-                                <NavLink
-                                  key={sub.id || sIdx}
-                                  to={subUrl}
-                                  onClick={() => setMobileMenuOpen(false)}
-                                  className="block py-1.5 px-3 text-xs store-muted hover:store-primary transition font-medium"
-                                >
-                                  {sub.name || sub.title || sub.label}
-                                </NavLink>
-                              );
-                            })}
+                        {/* Mobile accordion submenu (same normalized data as desktop mega menu) */}
+                        {hasSub && isExpanded && (
+                          <div id={panelId} className="pl-6 space-y-2 border-l-2 border-[var(--theme-primary)]/20 ml-4 py-1">
+                            {link.columns.map((col) => (
+                              <div key={col.id} className="space-y-1">
+                                {col.title && (
+                                  <p className="px-3 pt-1 text-[10px] font-bold uppercase tracking-widest store-primary">
+                                    {col.title}
+                                  </p>
+                                )}
+                                {col.links.map((sub) => (
+                                  <NavAnchor
+                                    key={sub.id}
+                                    to={sub.to}
+                                    external={sub.external}
+                                    openInNewTab={sub.openInNewTab}
+                                    onClick={() => setMobileMenuOpen(false)}
+                                    className="block py-1.5 px-3 text-xs store-muted hover:store-primary transition font-medium"
+                                  >
+                                    {sub.label}
+                                  </NavAnchor>
+                                ))}
+                              </div>
+                            ))}
                           </div>
                         )}
                       </div>

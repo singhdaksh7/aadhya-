@@ -167,11 +167,11 @@ describe("Navbar sticky header setting", () => {
     expect(header.className).toMatch(/top-0/);
   });
 
-  it("renders sticky classes by default when header.stickyHeader is unset", () => {
+  it("renders static (non-sticky) layout by default when header.stickyHeader is unset", () => {
     mockSettings = { general: { storeName: "Aadya" }, branding: {}, header: {}, announcementBar: {} };
     const { container } = renderNavbar();
     const header = container.querySelector("header");
-    expect(header.className).toMatch(/sticky/);
+    expect(header.className).not.toMatch(/sticky/);
   });
 
   it("renders static (non-sticky) layout when header.stickyHeader is false", () => {
