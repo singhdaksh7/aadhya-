@@ -47,6 +47,7 @@ export const adminNavGroups = [
     title: "Content",
     items: [
       { to: "/admin/homepage-builder", label: "Homepage Builder" },
+      { to: "/admin/header-settings", label: "Header & Navigation" },
       { to: "/admin/banners", label: "Banners" },
       { to: "/admin/promos", label: "Promos" },
       { to: "/admin/pages", label: "CMS Pages" },
@@ -93,6 +94,8 @@ export function pageTitleFromPath(pathname) {
     "/admin/customers": "Customers",
     "/admin/reviews": "Reviews",
     "/admin/homepage-builder": "Homepage Builder",
+    "/admin/header-settings": "Header & Navigation",
+    "/admin/storefront/header": "Header & Navigation",
     "/admin/banners": "Banners",
     "/admin/promos": "Promos",
     "/admin/pages": "CMS Pages",

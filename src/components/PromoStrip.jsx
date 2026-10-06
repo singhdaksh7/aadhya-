@@ -2,24 +2,37 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useSiteSettings } from "../hooks/useSiteSettings";
 import { fetchPromos } from "../lib/api";
-
-const DEFAULT_TICKER_DURATION_SECONDS = 90;
+import { normalizeHeaderSettings } from "../lib/headerCmsHelpers";
 
 export default function PromoStrip({ promoConfig }) {
-  const { promoStrip: settingsPromo } = useSiteSettings();
+  const { header, promoStrip: settingsPromo, shipping, general } = useSiteSettings();
   const [promos, setPromos] = useState([]);
   const [copiedCode, setCopiedCode] = useState(null);
+
+  const cms = normalizeHeaderSettings(header, shipping, general);
+  const tickerConfig = cms.promoTicker || {};
 
   useEffect(() => {
     let active = true;
     fetchPromos()
       .then((res) => {
         if (active && res.data?.length > 0) {
-          setPromos(res.data);
+          const now = new Date();
+          const valid = res.data
+            .filter((p) => p.isActive !== false)
+            .filter((p) => {
+              if (p.startDate && new Date(p.startDate) > now) return false;
+              if (p.endDate && new Date(p.endDate) < now) return false;
+              return true;
+            })
+            .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+          setPromos(valid);
         }
       })
       .catch(() => {});
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, []);
 
   const promo = promoConfig || settingsPromo || {
@@ -29,11 +42,19 @@ export default function PromoStrip({ promoConfig }) {
     ctaLabel: "Shop Now",
     ctaUrl: "/shop",
   };
-  const configuredSpeed = Number(promoConfig?.speed);
-  const tickerDuration = Number.isFinite(configuredSpeed) && configuredSpeed > 0
+
+  const isEnabled = promoConfig?.enabled ?? tickerConfig.enabled ?? true;
+  if (!isEnabled) return null;
+
+  const configuredSpeed = Number(promoConfig?.speed ?? tickerConfig.speed);
+  const tickerDuration = Number.isFinite(configuredSpeed) && configuredSpeed >= 10
     ? configuredSpeed
-    : DEFAULT_TICKER_DURATION_SECONDS;
-  const pauseOnHover = promoConfig?.pauseOnHover ?? true;
+    : 90;
+
+  const pauseOnHover = promoConfig?.pauseOnHover ?? tickerConfig.pauseOnHover ?? true;
+  const separatorStyle = promoConfig?.separator ?? tickerConfig.separator ?? "dot";
+  const showCouponCode = promoConfig?.showCouponCode ?? tickerConfig.showCouponCode ?? true;
+  const showCta = promoConfig?.showCta ?? tickerConfig.showCta ?? true;
 
   const handleCopyCode = (e, code) => {
     e.preventDefault();
@@ -45,50 +66,51 @@ export default function PromoStrip({ promoConfig }) {
     }
   };
 
-  const renderTickerContent = () => {
-    const listToRender = promos.length > 0 ? promos : [
-      {
-        id: "default-1",
-        message: "CRAFTED BY INDIAN ARTISANS",
-        couponCode: null,
-        ctaLabel: null,
-        ctaUrl: null,
-      },
-      {
-        id: "default-2",
-        message: promo.description || "GET ₹500 OFF ON FIRST PURCHASE",
-        couponCode: promo.couponCode || "AADYA500",
-        ctaLabel: promo.ctaLabel || "Shop Now",
-        ctaUrl: promo.ctaUrl || "/shop",
-      },
-      {
-        id: "default-3",
-        message: "NEW SEASON COLLECTION",
-        couponCode: null,
-        ctaLabel: "Explore Drop",
-        ctaUrl: "/new-arrivals",
-      },
-      {
-        id: "default-4",
-        message: "FREE DELIVERY ABOVE ₹2,499",
-        couponCode: null,
-        ctaLabel: null,
-        ctaUrl: null,
-      },
-    ];
+  const renderSeparator = () => {
+    switch (separatorStyle) {
+      case "diamond":
+        return <span className="text-white/60 font-bold">◆</span>;
+      case "line":
+        return <span className="text-white/40 font-light">|</span>;
+      case "none":
+        return null;
+      case "dot":
+      default:
+        return <span className="text-white/60 font-bold">•</span>;
+    }
+  };
 
+  const fallbackMsg = tickerConfig.fallbackMessage || "Crafted by Master Indian Artisans • Free Delivery Above ₹2,499";
+
+  const listToRender = promos.length > 0
+    ? promos
+    : (tickerConfig.hideWhenEmpty && !tickerConfig.fallbackMessage ? [] : [
+        {
+          id: "default-1",
+          message: fallbackMsg,
+          couponCode: promo.couponCode || "AADYA500",
+          ctaLabel: promo.ctaLabel || "Shop Now",
+          ctaUrl: promo.ctaUrl || "/shop",
+        },
+      ]);
+
+  if (listToRender.length === 0) {
+    return null;
+  }
+
+  const renderTickerContent = () => {
     return (
       <div className="flex items-center gap-6 sm:gap-8 shrink-0 px-4">
         {listToRender.map((p, idx) => (
           <React.Fragment key={p.id || idx}>
-            {idx > 0 && <span className="text-white/60 font-bold">•</span>}
+            {idx > 0 && renderSeparator()}
             <div className="flex items-center gap-2">
               <span className="font-semibold uppercase tracking-widest text-[11px] sm:text-xs text-white">
-                {p.message}
+                {p.message || p.title || p.description}
               </span>
             </div>
 
-            {p.couponCode && (
+            {showCouponCode && p.couponCode && (
               <div className="flex items-center gap-1.5">
                 <span className="text-white/80 font-medium text-[11px]">Code:</span>
                 <button
@@ -109,7 +131,7 @@ export default function PromoStrip({ promoConfig }) {
               </div>
             )}
 
-            {p.ctaUrl && (
+            {showCta && p.ctaUrl && (
               <Link
                 to={p.ctaUrl}
                 className="inline-flex items-center gap-1 font-bold text-[11px] uppercase tracking-wider text-amber-200 hover:text-white transition hover:underline"
@@ -140,4 +162,3 @@ export default function PromoStrip({ promoConfig }) {
     </div>
   );
 }
-
