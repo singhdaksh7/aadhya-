@@ -339,8 +339,9 @@ export function createOrder(payload, authenticated = false) {
   return api.post("/orders", { ...utm, ...payload }, { auth: authenticated ? "customer" : false });
 }
 
-export function createRazorpayOrder(orderId) {
-  return api.post(`/orders/${orderId}/payment`);
+export async function createRazorpayOrder(orderId) {
+  const res = await api.post(`/orders/${orderId}/payment`);
+  return res.data;
 }
 
 export function verifyRazorpayPayment(payload) {
