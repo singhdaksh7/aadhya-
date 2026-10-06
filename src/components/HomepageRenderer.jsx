@@ -1,6 +1,5 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import CircularCategoryNav from "./CircularCategoryNav";
 import PromoStrip from "./PromoStrip";
 import HeroBannerCarousel from "./HeroBannerCarousel";
 import TrustServiceStrip from "./TrustServiceStrip";
@@ -15,20 +14,14 @@ const route = (value, fallback = "/shop") => typeof value === "string" && (value
 function SafeLink({ to, children, ...props }) { const url = route(to); return url.startsWith("/") ? <Link to={url} {...props}>{children}</Link> : <a href={url} {...props}>{children}</a>; }
 const enabled = (items = []) => items.filter((item) => item.enabled !== false).sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
 
-export default function HomepageRenderer({ sections = [], categories = [], newArrivals = [], bestSellers = [], featuredCollection = null, booksList = [], isLoading = false, subscribed = false, newsletterEmail = "", setNewsletterEmail = () => {}, handleNewsletterSubmit = () => {}, newsletterStatus = "idle", newsletterError = "" }) {
+export default function HomepageRenderer({ sections = [], newArrivals = [], bestSellers = [], featuredCollection = null, booksList = [], isLoading = false, subscribed = false, newsletterEmail = "", setNewsletterEmail = () => {}, handleNewsletterSubmit = () => {}, newsletterStatus = "idle", newsletterError = "" }) {
   if (!sections?.length) return null;
   const renderProducts = (products, limit) => isLoading ? <ProductGridSkeleton count={limit || 4} /> : <div className="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-4">{products.slice(0, limit || 4).map((product) => <ProductCard key={product.id} product={product} />)}</div>;
   const renderSection = (section) => {
     const s = section.settings || {};
     switch (section.type) {
-      case "CIRCULAR_CATEGORY_NAV": case "CATEGORY_CIRCLES": {
-        if (typeof window !== "undefined" && window.__AADYA_HEADER_RENDERED__) return null;
-        // Prefer categories resolved server-side on the section itself; fall back to
-        // the legacy prop path for callers/tests that still supply categories directly.
-        const categoryItems = Array.isArray(section.categories) ? section.categories : categories;
-        if (!isLoading && categoryItems.length === 0) return null; // never render an empty nav strip
-        return <CircularCategoryNav key={section.id} categories={categoryItems} />;
-      }
+      // HOTFIX: circular category strip is never rendered on the customer storefront.
+      case "CIRCULAR_CATEGORY_NAV": case "CATEGORY_CIRCLES": return null;
       case "PROMO_STRIP": case "PROMO_TICKER": {
         if (typeof window !== "undefined" && window.__AADYA_HEADER_RENDERED__) return null;
         return <PromoStrip key={section.id} promoConfig={s} />;

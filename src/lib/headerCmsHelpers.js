@@ -275,11 +275,9 @@ export function normalizeHeaderSettings(rawHeader, rawShipping, rawGeneral) {
   const searchPlaceholder = rawMainHeader.searchPlaceholder || h.searchPlaceholder || "Search products...";
   const logoAlignment = rawMainHeader.logoAlignment || h.logoAlignment || "center";
 
-  // Sticky mode normalization
-  // Explicit saved choices win; legacy flat `stickyHeader: true` still maps to "always".
-  const stickyMode = ["always", "scroll", "none"].includes(h.stickyMode)
-    ? h.stickyMode
-    : (h.stickyHeader === true ? "always" : "none");
+  // HOTFIX: the customer storefront header is never sticky. Legacy `stickyHeader: true`
+  // and any saved `stickyMode` are ignored for live rendering.
+  const stickyMode = "none";
 
   return {
     ...DEFAULT_HEADER_CMS_SETTINGS,
