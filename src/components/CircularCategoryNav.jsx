@@ -79,12 +79,12 @@ export default function CircularCategoryNav({ categories: initialCategories = []
                       className="h-full w-full rounded-full object-cover transition-transform duration-500 group-hover:scale-108"
                     />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center rounded-full store-surface store-primary font-serif-display font-semibold text-lg sm:text-xl bg-[#FAF6F0]">
+                    <div className="flex h-full w-full items-center justify-center rounded-full store-surface store-primary font-serif-display font-semibold text-lg sm:text-xl">
                       {cat.name?.charAt(0) || "A"}
                     </div>
                   )}
                   {isFirst && (
-                    <span className="absolute top-0 right-0 bg-[var(--theme-primary,#B8674A)] text-white text-[8px] font-bold px-1.5 py-0.2 rounded-full uppercase tracking-wider shadow-xs">
+                    <span className="absolute top-0 right-0 store-bg-primary text-white text-[8px] font-bold px-1.5 py-0.2 rounded-full uppercase tracking-wider shadow-xs">
                       NEW
                     </span>
                   )}

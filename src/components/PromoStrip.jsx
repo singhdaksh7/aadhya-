@@ -94,7 +94,7 @@ export default function PromoStrip({ promoConfig }) {
                 <button
                   onClick={(e) => handleCopyCode(e, p.couponCode)}
                   type="button"
-                  className="inline-flex items-center gap-1.5 rounded border border-dashed border-white/60 bg-white/10 px-2 py-0.5 text-[11px] font-bold text-white transition hover:bg-white hover:text-[#B8674A] focus:outline-none cursor-pointer"
+                  className="inline-flex items-center gap-1.5 rounded border border-dashed border-white/60 bg-white/10 px-2 py-0.5 text-[11px] font-bold text-white transition hover:bg-white hover:store-primary focus:outline-none cursor-pointer"
                   aria-label={`Copy coupon code ${p.couponCode}`}
                   title="Click to copy coupon code"
                 >
@@ -103,7 +103,7 @@ export default function PromoStrip({ promoConfig }) {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                   </svg>
                   {copiedCode === p.couponCode && (
-                    <span className="text-[10px] text-[#B8674A] font-semibold bg-white px-1 rounded shadow-xs">✓ Copied</span>
+                    <span className="text-[10px] store-primary font-semibold bg-white px-1 rounded shadow-xs">✓ Copied</span>
                   )}
                 </button>
               </div>
@@ -127,7 +127,7 @@ export default function PromoStrip({ promoConfig }) {
   };
 
   return (
-    <div className="relative w-full overflow-hidden bg-[var(--theme-primary,#B8674A)] py-2 text-xs text-white border-b border-black/10">
+    <div className="relative w-full overflow-hidden store-bg-primary py-2 text-xs text-white border-b border-black/10">
       <div
         className={`animate-marquee-ticker${pauseOnHover ? " marquee-ticker-pauseable" : ""}`}
         style={{ "--ticker-duration": `${tickerDuration}s` }}

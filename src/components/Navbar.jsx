@@ -342,7 +342,7 @@ export default function Navbar() {
                   >
                     <span>{link.label}</span>
                     {isNew && (
-                      <span className="bg-[var(--theme-primary,#B8674A)] text-white text-[8px] font-bold px-1.5 py-0.2 rounded-full uppercase tracking-wider">
+                      <span className="store-bg-primary text-white text-[8px] font-bold px-1.5 py-0.2 rounded-full uppercase tracking-wider">
                         NEW
                       </span>
                     )}

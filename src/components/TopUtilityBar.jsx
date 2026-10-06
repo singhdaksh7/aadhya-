@@ -17,6 +17,7 @@ export default function TopUtilityBar() {
 
   const centerText = header?.utilityBarCenterText || promoStrip?.description || "Get ₹500 off on your first purchase above ₹2,999";
 
+  /* Intentionally static dark background (#1C1917) for top utility bar per visual specification */
   return (
     <div className="bg-[#1C1917] border-b border-white/10 text-stone-300 text-[11px] sm:text-xs py-1.5 px-4 sm:px-8">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
