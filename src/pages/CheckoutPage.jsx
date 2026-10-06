@@ -217,13 +217,29 @@ export default function CheckoutPage() {
 
   const startPayment = async (orderId, orderNumber, accessToken) => {
     setStage("paying");
-    let options;
+    let rawOptions;
     try {
-      options = await createRazorpayOrder(orderId);
+      rawOptions = await createRazorpayOrder(orderId);
     } catch (err) {
       if (err instanceof ApiRequestError) {
         setServerError(err.message);
       }
+      setStage("payment_unavailable");
+      return;
+    }
+
+    const options = rawOptions?.data ? rawOptions.data : rawOptions;
+    const isValidOptions =
+      options &&
+      typeof options === "object" &&
+      Boolean(options.keyId || options.key) &&
+      Boolean(options.razorpayOrderId || options.order_id || options.id) &&
+      options.amount !== undefined &&
+      options.amount !== null &&
+      Boolean(options.currency);
+
+    if (!isValidOptions) {
+      setServerError("Payment setup returned an invalid response. Please retry.");
       setStage("payment_unavailable");
       return;
     }
@@ -235,13 +251,16 @@ export default function CheckoutPage() {
       return;
     }
 
+    const key = options.keyId || options.key;
+    const order_id = options.razorpayOrderId || options.order_id || options.id;
+
     const razorpay = new window.Razorpay({
-      key: options.keyId,
+      key,
       amount: options.amount,
       currency: options.currency,
       name: options.name,
       description: options.description,
-      order_id: options.razorpayOrderId,
+      order_id,
       prefill: options.prefill,
       handler: async (response) => {
         try {
