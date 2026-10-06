@@ -152,7 +152,7 @@ export default function Footer() {
           
           {/* Payment Icons */}
           {footer?.paymentIcons?.length > 0 && (
-            <div className="flex items-center gap-2 text-[10px] text-white/70 font-semibold tracking-wider uppercase">
+            <div className="flex flex-wrap items-center gap-2 text-[10px] text-white/70 font-semibold tracking-wider uppercase">
               {footer.paymentIcons.map((icon) => (
                 <span key={icon} className="rounded border border-white/15 bg-white/5 px-2 py-0.5">
                   {icon}
