@@ -1,22 +1,25 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { NavLink, Link, useLocation } from "react-router-dom";
 import { IconMenu, IconClose, IconCart } from "./icons";
 import { useCart } from "../context/CartContext";
 import { useCustomerAuth } from "../context/CustomerAuthContext";
 import { useSiteSettings } from "../hooks/useSiteSettings";
 import TopUtilityBar from "./TopUtilityBar";
+import PromoStrip from "./PromoStrip";
 import SearchModal from "./SearchModal";
-
-import { fetchNavigation, resolveMediaUrl } from "../lib/api";
 import BrandLogo from "./BrandLogo";
+import MegaMenu from "./MegaMenu";
+import CircularCategoryNav from "./CircularCategoryNav";
+import { fetchNavigation, fetchCategories, resolveMediaUrl } from "../lib/api";
 
 const DEFAULT_NAV_LINKS = [
-  { to: "/shop", label: "Home Decor" },
-  { to: "/collections", label: "Collections" },
-  { to: "/books", label: "Books" },
-  { to: "/new-arrivals", label: "New Arrivals" },
-  { to: "/best-sellers", label: "Best Sellers" },
-  { to: "/collections/gifts", label: "Gifts" },
+  { id: "nav-new", to: "/new-arrivals", label: "New", isNewBadge: true },
+  { id: "nav-home-decor", to: "/shop/category/home-decor", label: "Home Decor" },
+  { id: "nav-ceramics", to: "/shop/category/ceramics", label: "Ceramics" },
+  { id: "nav-textiles", to: "/shop/category/textiles", label: "Linen & Textiles" },
+  { id: "nav-lighting", to: "/shop/category/lighting", label: "Lamps & Lighting" },
+  { id: "nav-books", to: "/books", label: "Books" },
+  { id: "nav-gifts", to: "/collections/gifts", label: "Gifts" },
 ];
 
 export default function Navbar() {
@@ -24,10 +27,15 @@ export default function Navbar() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [navItems, setNavItems] = useState(DEFAULT_NAV_LINKS);
+  const [categories, setCategories] = useState([]);
+  const [activeMegaMenu, setActiveMegaMenu] = useState(null);
+  const [expandedMobileItems, setExpandedMobileItems] = useState({});
+
+  const hoverTimeoutRef = useRef(null);
   const { count, setIsOpen: setCartDrawerOpen } = useCart();
   const location = useLocation();
   const { user } = useCustomerAuth();
-  const { announcementBar, branding, header, general } = useSiteSettings();
+  const { branding, header, general } = useSiteSettings();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -37,30 +45,93 @@ export default function Navbar() {
 
   useEffect(() => {
     let active = true;
-    fetchNavigation("HEADER_MAIN")
-      .then((res) => {
-        if (!active) return;
-        if (res.data?.items?.length > 0) {
-          const mapped = res.data.items.map((item) => ({
+    Promise.all([
+      fetchCategories().catch(() => ({ data: [] })),
+      fetchNavigation("HEADER_MAIN").catch(() => ({ data: { items: [] } })),
+    ]).then(([catRes, navRes]) => {
+      if (!active) return;
+      const rawCats = Array.isArray(catRes?.data) ? catRes.data : (Array.isArray(catRes) ? catRes : []);
+      const activeCats = rawCats.filter((c) => c.isActive !== false);
+      setCategories(activeCats);
+
+      // Build hierarchy map from active categories
+      const categoryMap = new Map();
+      activeCats.forEach((cat) => {
+        categoryMap.set(cat.id, {
+          id: cat.id,
+          to: `/shop/category/${cat.slug}`,
+          label: cat.name,
+          name: cat.name,
+          slug: cat.slug,
+          image: cat.image || cat.desktopBanner,
+          description: cat.description,
+          children: [],
+        });
+      });
+
+      const rootCategories = [];
+      activeCats.forEach((cat) => {
+        if (cat.parentId && categoryMap.has(cat.parentId)) {
+          categoryMap.get(cat.parentId).children.push(categoryMap.get(cat.id));
+        } else if (!cat.parentId) {
+          rootCategories.push(categoryMap.get(cat.id));
+        }
+      });
+
+      const navItemsList = Array.isArray(navRes?.data?.items) ? navRes.data.items : (Array.isArray(navRes?.items) ? navRes.items : []);
+      if (navItemsList.length > 0) {
+        const mappedNav = navItemsList.map((item) => {
+          const catMatch = activeCats.find((c) => c.id === item.targetId || c.slug === item.targetId);
+          return {
             id: item.id,
             to: item.url || (item.type === "CATEGORY" ? `/shop/category/${item.targetId}` : item.type === "COLLECTION" ? `/collections/${item.targetId}` : "#"),
             label: item.title,
-            children: item.children || [],
-          }));
-          setNavItems(mapped);
-        }
-      })
-      .catch(() => {});
+            name: item.title,
+            image: catMatch?.image || catMatch?.desktopBanner,
+            description: catMatch?.description,
+            children: item.children?.length > 0 ? item.children : (catMatch ? categoryMap.get(catMatch.id)?.children || [] : []),
+          };
+        });
+        setNavItems(mappedNav);
+      } else if (rootCategories.length > 0) {
+        const navList = [
+          { id: "nav-new-top", to: "/new-arrivals", label: "New", isNewBadge: true },
+          ...rootCategories.map((c) => ({
+            id: c.id,
+            to: `/shop/category/${c.slug}`,
+            label: c.name,
+            name: c.name,
+            slug: c.slug,
+            image: c.image,
+            description: c.description,
+            children: c.children,
+          })),
+          { id: "nav-books-top", to: "/books", label: "Books" },
+          { id: "nav-gifts-top", to: "/collections/gifts", label: "Gifts" },
+        ];
+        setNavItems(navList);
+      }
+    });
+
     return () => { active = false; };
   }, []);
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.__AADYA_HEADER_RENDERED__ = true;
+    }
+    return () => {
+      if (typeof window !== "undefined") {
+        delete window.__AADYA_HEADER_RENDERED__;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     setMobileMenuOpen(false);
+    setActiveMegaMenu(null);
   }, [location.pathname]);
 
-  // Keep the browser tab favicon in sync with the admin-configured branding
-  // favicon, falling back to the static /favicon.svg shipped with the app if
-  // none is set or the configured one fails to load.
   useEffect(() => {
     const favicon = resolveMediaUrl(branding?.favicon);
     if (!favicon) return;
@@ -73,54 +144,67 @@ export default function Navbar() {
     const previousHref = link.href;
     const testImg = new Image();
     testImg.onload = () => { link.href = favicon; };
-    testImg.onerror = () => {
-      if (import.meta.env.DEV) {
-        // eslint-disable-next-line no-console
-        console.warn("[Navbar] configured favicon failed to load, keeping previous favicon.");
-      }
-      link.href = previousHref;
-    };
+    testImg.onerror = () => { link.href = previousHref; };
     testImg.src = favicon;
   }, [branding?.favicon]);
 
+  const handleMouseEnter = (link) => {
+    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+    if (link.children && link.children.length > 0) {
+      setActiveMegaMenu(link);
+    } else {
+      setActiveMegaMenu(null);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+    hoverTimeoutRef.current = setTimeout(() => {
+      setActiveMegaMenu(null);
+    }, 150);
+  };
+
+  const toggleMobileSubmenu = (id) => {
+    setExpandedMobileItems((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
   return (
     <>
-      {/* 1. Slim Top Utility Bar */}
+      {/* 1. Slim Dark Top Utility Bar */}
       <TopUtilityBar />
 
-      {/* Top Announcement Bar if enabled in site settings */}
-      {announcementBar?.active && announcementBar?.text && (
-        <div className="store-bg-primary px-4 py-2 text-center text-xs font-medium tracking-wide text-white leading-normal">
-          <span>{announcementBar.text}</span>
-        </div>
-      )}
+      {/* 2. Warm Terracotta Announcement / Promo Strip */}
+      <PromoStrip />
 
-      {/* 2. Main Header (Bright White). Sticky positioning follows the
-          admin-controlled header.stickyHeader setting (default: true) —
-          previously a dead setting that Navbar never consumed. */}
+      {/* 3. Main Header (CSS 3-column Grid layout on Desktop) */}
       <header
         className={`${header?.stickyHeader !== false ? "sticky top-0 z-40" : "relative"} store-bg transition-all duration-300 ${
           scrolled ? "store-border border-b shadow-sm" : "store-border border-b"
         }`}
       >
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3.5 sm:px-8 gap-4">
-          {/* Mobile Hamburger Button */}
-          <button
-            onClick={() => setMobileMenuOpen(true)}
-            className="rounded-full p-2 store-text hover:bg-black/5 lg:hidden shrink-0"
-            aria-label="Open menu"
-          >
-            <IconMenu className="h-6 w-6" />
-          </button>
+        {/* Desktop 3-Column Grid Header */}
+        <div className="hidden lg:grid grid-cols-3 items-center justify-between px-8 py-3.5 max-w-7xl mx-auto gap-4">
+          {/* Left Column: Minimalist Search UI */}
+          <div className="flex items-center justify-start">
+            {header?.showSearch !== false && (
+              <button
+                onClick={() => setSearchOpen(true)}
+                className="group flex items-center gap-2.5 border-b border-charcoal/20 hover:border-[var(--theme-primary)] focus:border-[var(--theme-primary)] bg-transparent py-1.5 px-0.5 text-xs store-muted transition max-w-[300px] w-full text-left cursor-pointer"
+                aria-label="Search products"
+              >
+                <svg className="h-4 w-4 store-muted group-hover:store-primary transition shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <span className="truncate store-muted group-hover:store-text transition">
+                  {header?.searchPlaceholder || "Search products..."}
+                </span>
+              </button>
+            )}
+          </div>
 
-          {/* Left: Logo — desktop and mobile variants both fall back to the
-              store name text if unset or broken. Width comes from the
-              admin-controlled logo-width setting; height is only CAPPED
-              (max-height), never fixed, so a wide/tall/square logo keeps its
-              natural aspect ratio instead of being squashed into a box —
-              neither dimension can blow out the header either way. */}
-          <Link to="/" className="flex items-center gap-2 shrink-0">
-            <span className="hidden sm:inline-flex items-center">
+          {/* Center Column: Visually Centered BrandLogo */}
+          <div className="flex items-center justify-center">
+            <Link to="/" className="inline-flex items-center justify-center shrink-0">
               <BrandLogo
                 src={branding?.desktopLogo}
                 alt={branding?.logoAltText || `${general?.storeName || "Aadya"} Logo`}
@@ -129,116 +213,169 @@ export default function Navbar() {
                 maxHeightPx={branding?.logoMaxHeightDesktop || 60}
                 className="w-auto"
               />
-            </span>
-            <span className="inline-flex sm:hidden items-center">
-              <BrandLogo
-                src={branding?.mobileLogo || branding?.desktopLogo}
-                alt={branding?.logoAltText || `${general?.storeName || "Aadya"} Logo`}
-                fallbackText={general?.storeName || "Aadya"}
-                widthPx={branding?.logoWidthMobile || 110}
-                maxHeightPx={branding?.logoMaxHeightMobile || 44}
-                className="w-auto"
-                textClassName="font-serif-display text-xl tracking-tight store-text font-bold"
-              />
-            </span>
-          </Link>
+            </Link>
+          </div>
 
-          {/* Center: Large Search Bar */}
-          {header?.showSearch !== false && (
-            <div className="min-w-0 flex-1 max-w-xl hidden sm:block mx-4">
-              <button
-                onClick={() => setSearchOpen(true)}
-                className="flex w-full items-center gap-3 rounded-full store-border border bg-[var(--theme-surface)] px-4 py-2 text-xs sm:text-sm store-muted transition hover:border-[var(--theme-primary)] hover:store-bg hover:shadow-xs"
-              >
-                <svg className="h-4 w-4 store-muted shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-                <span className="truncate store-muted">
-                  {header?.searchPlaceholder || "Search home decor, books, gifts and more..."}
-                </span>
-              </button>
-            </div>
-          )}
-
-          {/* Right Action Icons: Account, Wishlist, Cart */}
-          <div className="flex items-center gap-3 sm:gap-5 shrink-0 store-text">
-            {/* Mobile Search Toggle */}
-            <button
-              onClick={() => setSearchOpen(true)}
-              className="p-2 store-muted hover:store-text sm:hidden"
-              aria-label="Search"
-            >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </button>
-
-            {/* Account Link */}
+          {/* Right Column: Account / Wishlist / Cart */}
+          <div className="flex items-center justify-end gap-6 store-text">
+            {/* Customer Account */}
             <Link
               to={user ? "/account" : "/login"}
-              className="hidden sm:flex items-center gap-1.5 p-1.5 store-text hover:store-primary transition"
+              className="flex items-center gap-1.5 p-1 store-text hover:store-primary transition group"
               title={user ? "My Account" : "Sign In"}
             >
-              <svg className="h-5 w-5 store-text" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="h-5 w-5 store-text group-hover:store-primary transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
-              <span className="text-xs font-semibold uppercase tracking-wider hidden md:inline">
+              <span className="text-[11px] font-semibold uppercase tracking-wider">
                 {user ? "Account" : "Login"}
               </span>
             </Link>
 
-            {/* Wishlist Placeholder */}
-            <button
-              className="hidden sm:flex items-center gap-1.5 p-1.5 store-text hover:store-primary transition"
-              title="Wishlist (Coming Soon)"
+            {/* Wishlist */}
+            <Link
+              to="/account/wishlist"
+              className="flex items-center gap-1.5 p-1 store-text hover:store-primary transition group"
+              title="Wishlist"
             >
-              <svg className="h-5 w-5 store-text" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="h-5 w-5 store-text group-hover:store-primary transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
               </svg>
-              <span className="text-xs font-semibold uppercase tracking-wider hidden md:inline">
+              <span className="text-[11px] font-semibold uppercase tracking-wider">
                 Wishlist
               </span>
-            </button>
+            </Link>
 
             {/* Cart Icon + Badge */}
             <button
               onClick={() => setCartDrawerOpen(true)}
-              className="relative flex items-center gap-1.5 p-1.5 store-text hover:store-primary transition"
+              className="relative flex items-center gap-1.5 p-1 store-text hover:store-primary transition group cursor-pointer"
               aria-label="Open cart"
             >
               <div className="relative">
-                <IconCart className="h-5 w-5" />
+                <IconCart className="h-5 w-5 group-hover:store-primary transition" />
                 {count > 0 && (
-                  <span className="absolute -right-2 -top-2 flex h-4 w-4 items-center justify-center rounded-full store-bg-primary text-[10px] font-bold text-white shadow">
+                  <span className="absolute -right-2 -top-2 flex h-4 w-4 items-center justify-center rounded-full store-bg-primary text-[10px] font-bold text-white shadow-xs">
                     {count}
                   </span>
                 )}
               </div>
-              <span className="text-xs font-semibold uppercase tracking-wider hidden md:inline">
+              <span className="text-[11px] font-semibold uppercase tracking-wider">
                 Cart
               </span>
             </button>
           </div>
         </div>
 
-        {/* Desktop Retail Sub-Navigation Bar */}
-        <div className="hidden lg:block border-t store-border store-bg py-2.5">
-          <div className="mx-auto flex max-w-7xl items-center justify-center gap-8 px-8">
-            {navItems.map((link) => (
-              <NavLink
-                key={link.id || link.to}
-                to={link.to}
-                className={({ isActive }) =>
-                  `text-xs font-semibold uppercase tracking-wider transition-colors ${
-                    isActive ? "store-primary border-b-2 border-[var(--theme-primary)] pb-0.5" : "store-muted hover:store-primary"
-                  }`
-                }
-              >
-                {link.label}
-              </NavLink>
-            ))}
+        {/* Mobile Header (Phones & Small Tablets) */}
+        <div className="flex lg:hidden items-center justify-between px-4 py-3 border-b store-border">
+          <button
+            onClick={() => setMobileMenuOpen(true)}
+            className="rounded-full p-2 store-text hover:bg-black/5 shrink-0"
+            aria-label="Open menu"
+          >
+            <IconMenu className="h-6 w-6" />
+          </button>
+
+          <Link to="/" className="flex items-center shrink-0">
+            <BrandLogo
+              src={branding?.mobileLogo || branding?.desktopLogo}
+              alt={branding?.logoAltText || `${general?.storeName || "Aadya"} Logo`}
+              fallbackText={general?.storeName || "Aadya"}
+              widthPx={branding?.logoWidthMobile || 110}
+              maxHeightPx={branding?.logoMaxHeightMobile || 44}
+              className="w-auto"
+              textClassName="font-serif-display text-xl tracking-tight store-text font-bold"
+            />
+          </Link>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => setSearchOpen(true)}
+              className="p-2 store-muted hover:store-text"
+              aria-label="Search"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </button>
+            <button
+              onClick={() => setCartDrawerOpen(true)}
+              className="relative p-2 store-text hover:store-primary"
+              aria-label="Open cart"
+            >
+              <IconCart className="h-5 w-5" />
+              {count > 0 && (
+                <span className="absolute right-0 top-0 flex h-4 w-4 items-center justify-center rounded-full store-bg-primary text-[10px] font-bold text-white shadow">
+                  {count}
+                </span>
+              )}
+            </button>
           </div>
         </div>
+
+        {/* 6. Primary Navigation Row (Desktop) */}
+        <div className="hidden lg:block border-t store-border store-bg relative">
+          <div
+            className="mx-auto flex max-w-7xl items-center justify-center gap-8 px-8 py-2.5"
+            onMouseLeave={handleMouseLeave}
+          >
+            {navItems.map((link, idx) => {
+              const hasSub = link.children && link.children.length > 0;
+              const isNew = link.isNewBadge || idx === 0;
+
+              return (
+                <div
+                  key={link.id || link.to || idx}
+                  className="relative group py-1"
+                  onMouseEnter={() => handleMouseEnter(link)}
+                >
+                  <NavLink
+                    to={link.to}
+                    className={({ isActive }) =>
+                      `inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.14em] transition-colors ${
+                        isActive || (activeMegaMenu?.id === link.id)
+                          ? "store-primary border-b-2 border-[var(--theme-primary)] pb-0.5"
+                          : "store-muted hover:store-primary"
+                      }`
+                    }
+                  >
+                    <span>{link.label}</span>
+                    {isNew && (
+                      <span className="store-bg-primary text-white text-[8px] font-bold px-1.5 py-0.2 rounded-full uppercase tracking-wider">
+                        NEW
+                      </span>
+                    )}
+                    {hasSub && (
+                      <svg className="h-3 w-3 opacity-60 group-hover:opacity-100 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    )}
+                  </NavLink>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* 7. Dynamic Mega Menu Component */}
+          {activeMegaMenu && (
+            <div
+              onMouseEnter={() => {
+                if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+              }}
+              onMouseLeave={handleMouseLeave}
+            >
+              <MegaMenu
+                item={activeMegaMenu}
+                isOpen={!!activeMegaMenu}
+                onClose={() => setActiveMegaMenu(null)}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* 8. Circular Category Navigation Scroller */}
+        <CircularCategoryNav categories={categories} />
 
         {/* Mobile Navigation Drawer */}
         {mobileMenuOpen && (
@@ -250,7 +387,7 @@ export default function Navbar() {
             <div className="absolute left-0 top-0 h-full w-full max-w-xs overflow-y-auto store-bg p-6 shadow-2xl">
               <div className="flex items-center justify-between border-b store-border pb-4">
                 <Link to="/" className="font-serif-display text-2xl store-text font-bold">
-                  Aadya
+                  {general?.storeName || "Aadya"}
                 </Link>
                 <button
                   onClick={() => setMobileMenuOpen(false)}
@@ -280,38 +417,84 @@ export default function Navbar() {
                     to="/"
                     onClick={() => setMobileMenuOpen(false)}
                     className={({ isActive }) =>
-                      `rounded-xl px-4 py-3 text-sm font-medium transition ${
+                      `rounded-xl px-4 py-2.5 text-sm font-medium transition ${
                         isActive ? "store-bg-primary-soft store-primary font-semibold" : "store-text hover:bg-black/5"
                       }`
                     }
                   >
                     Home
                   </NavLink>
-                  {navItems.map((link) => (
-                    <NavLink
-                      key={link.id || link.to}
-                      to={link.to}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={({ isActive }) =>
-                        `rounded-xl px-4 py-3 text-sm font-medium transition ${
-                          isActive ? "store-bg-primary-soft store-primary font-semibold" : "store-text hover:bg-black/5"
-                        }`
-                      }
-                    >
-                      {link.label}
-                    </NavLink>
-                  ))}
+
+                  {navItems.map((link) => {
+                    const hasSub = link.children && link.children.length > 0;
+                    const isExpanded = !!expandedMobileItems[link.id];
+
+                    return (
+                      <div key={link.id || link.to} className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <NavLink
+                            to={link.to}
+                            onClick={() => setMobileMenuOpen(false)}
+                            className={({ isActive }) =>
+                              `flex-1 rounded-xl px-4 py-2.5 text-sm font-medium transition ${
+                                isActive ? "store-bg-primary-soft store-primary font-semibold" : "store-text hover:bg-black/5"
+                              }`
+                            }
+                          >
+                            {link.label}
+                          </NavLink>
+
+                          {hasSub && (
+                            <button
+                              onClick={() => toggleMobileSubmenu(link.id)}
+                              className="p-2 store-muted hover:store-text"
+                              aria-label="Toggle subcategories"
+                            >
+                              <svg
+                                className={`h-4 w-4 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Mobile Accordion Submenu */}
+                        {hasSub && isExpanded && (
+                          <div className="pl-6 space-y-1 border-l-2 border-[var(--theme-primary)]/20 ml-4 py-1">
+                            {link.children.map((sub, sIdx) => {
+                              const subUrl = sub.url || (sub.slug ? `/shop/category/${sub.slug}` : sub.to || "#");
+                              return (
+                                <NavLink
+                                  key={sub.id || sIdx}
+                                  to={subUrl}
+                                  onClick={() => setMobileMenuOpen(false)}
+                                  className="block py-1.5 px-3 text-xs store-muted hover:store-primary transition font-medium"
+                                >
+                                  {sub.name || sub.title || sub.label}
+                                </NavLink>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+
                   <NavLink
                     to={user ? "/account" : "/login"}
                     onClick={() => setMobileMenuOpen(false)}
-                    className="rounded-xl px-4 py-3 text-sm font-medium store-text hover:bg-black/5"
+                    className="rounded-xl px-4 py-2.5 text-sm font-medium store-text hover:bg-black/5"
                   >
                     {user ? "My Account" : "Customer Login"}
                   </NavLink>
                   <NavLink
                     to="/track-order"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="rounded-xl px-4 py-3 text-sm font-medium store-text hover:bg-black/5"
+                    className="rounded-xl px-4 py-2.5 text-sm font-medium store-text hover:bg-black/5"
                   >
                     Track Order
                   </NavLink>
