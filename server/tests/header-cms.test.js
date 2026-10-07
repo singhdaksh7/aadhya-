@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach } from "vitest";
 import supertest from "supertest";
 import { createApp } from "../src/app.js";
 import { resetDb, seedTestAdmin } from "./helpers.js";
+import { prisma } from "../src/lib/prisma.js";
+import { DEFAULT_HEADER_CMS_SETTINGS } from "../../src/lib/headerCmsHelpers.js";
 
 const app = createApp();
 const request = supertest(app);
@@ -266,5 +268,66 @@ describe("Header CMS: nav mega menu config", () => {
     const res = await put({ showUtilityBar: true, stickyHeader: true, showCategoryCircles: true });
     expect(res.status).toBe(200);
     expect(res.body.data.header.stickyHeader).toBe(true);
+  });
+});
+
+describe("Header CMS: partial settings update + contract", () => {
+  let adminToken;
+  const auth = () => ({ Authorization: `Bearer ${adminToken}` });
+
+  beforeEach(async () => {
+    await resetDb();
+    await seedTestAdmin({ email: "admin@test.local", password: "TestPassword123!" });
+    const loginRes = await request.post("/api/admin/auth/login").send({
+      email: "admin@test.local",
+      password: "TestPassword123!",
+    });
+    adminToken = loginRes.body.data.accessToken;
+  });
+
+  it("PUT { header } updates ONLY header and leaves other stored settings untouched", async () => {
+    const seed = {
+      appearance: { colors: { primary: "#112233" } },
+      shipping: { freeShippingThreshold: 4321, standardShippingAmount: 99 },
+      footer: { brandDescription: "Custom footer copy" },
+      header: { stickyMode: "none", mainHeader: { searchPlaceholder: "Old placeholder" } },
+    };
+    expect((await request.put("/api/admin/settings").set(auth()).send(seed)).status).toBe(200);
+
+    const before = await prisma.siteSetting.findMany({ orderBy: { key: "asc" } });
+    const byKey = (rows) => Object.fromEntries(rows.map((r) => [r.key, r.value]));
+
+    const res = await request
+      .put("/api/admin/settings")
+      .set(auth())
+      .send({ header: { stickyMode: "none", mainHeader: { searchPlaceholder: "New placeholder" } } });
+    expect(res.status).toBe(200);
+
+    const after = byKey(await prisma.siteSetting.findMany());
+    const beforeMap = byKey(before);
+    expect(after.header.mainHeader.searchPlaceholder).toBe("New placeholder");
+    expect(after.appearance).toEqual(beforeMap.appearance);
+    expect(after.shipping).toEqual(beforeMap.shipping);
+    expect(after.footer).toEqual(beforeMap.footer);
+    expect(Object.keys(after).sort()).toEqual(Object.keys(beforeMap).sort());
+    expect(res.body.data.shipping.freeShippingThreshold).toBe(4321);
+    expect(res.body.data.footer.brandDescription).toBe("Custom footer copy");
+  });
+
+  it("the full frontend default header (incl. spacingMode) is accepted and survives unchanged", async () => {
+    const res = await request.put("/api/admin/settings").set(auth()).send({ header: DEFAULT_HEADER_CMS_SETTINGS });
+    expect(res.status).toBe(200);
+    expect(res.body.data.header).toMatchObject(JSON.parse(JSON.stringify(DEFAULT_HEADER_CMS_SETTINGS)));
+  });
+
+  it("returns the field path and a details array on validation failure", async () => {
+    const res = await request
+      .put("/api/admin/settings")
+      .set(auth())
+      .send({ header: { utilityBar: { items: [{ id: "x", enabled: true }] } } });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("header.utilityBar.items.0.label: Required");
+    expect(res.body.details[0].path).toEqual(["header", "utilityBar", "items", 0, "label"]);
+    expect(JSON.stringify(res.body)).not.toMatch(/stack/i);
   });
 });

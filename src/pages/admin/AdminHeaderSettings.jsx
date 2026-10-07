@@ -7,11 +7,10 @@ import {
 import { Button } from "../../components/ui";
 import { LoadingNotice, ErrorNotice } from "../../components/StateNotice";
 import ImagePickerInput from "../../components/admin/ImagePickerInput";
-import { applyThemeVariables, refreshSiteSettings } from "../../hooks/useSiteSettings";
-import { DEFAULT_HEADER_CMS_SETTINGS, normalizeHeaderSettings } from "../../lib/headerCmsHelpers";
+import { refreshSiteSettings } from "../../hooks/useSiteSettings";
+import { DEFAULT_HEADER_CMS_SETTINGS, buildHeaderSavePayload, normalizeHeaderSettings } from "../../lib/headerCmsHelpers";
 import TopUtilityBar from "../../components/TopUtilityBar";
 import PromoStrip from "../../components/PromoStrip";
-import CircularCategoryNav from "../../components/CircularCategoryNav";
 import PrimaryNav from "../../components/PrimaryNav";
 import NavItemEditor from "../../components/admin/NavItemEditor";
 import { buildNavModel } from "../../lib/navModel";
@@ -66,25 +65,16 @@ export default function AdminHeaderSettings() {
     setSaving(true);
 
     try {
-      const payload = {
-        ...fullSettings,
-        header: headerCms,
-      };
-
-      const res = await adminUpdateSiteSettings(payload);
-      if (res.data) {
-        setFullSettings(res.data);
-        const freshNormalized = normalizeHeaderSettings(
-          res.data.header,
-          res.data.shipping,
-          res.data.general
-        );
-        setHeaderCms(freshNormalized);
-        setInitialHeaderCms(JSON.parse(JSON.stringify(freshNormalized)));
-        if (res.data.appearance) {
-          applyThemeVariables(res.data.appearance);
-        }
-      }
+      // Send ONLY the setting this editor owns. The backend upserts per top-level key, so
+      // unrelated settings (appearance, shipping, footer, ...) are never touched and a
+      // legacy value elsewhere can no longer fail validation of a header-only save.
+      const res = await adminUpdateSiteSettings({ header: buildHeaderSavePayload(headerCms) });
+      const returned = res?.data || {};
+      const merged = { ...fullSettings, ...returned };
+      setFullSettings(merged);
+      const freshNormalized = normalizeHeaderSettings(merged.header, merged.shipping, merged.general);
+      setHeaderCms(freshNormalized);
+      setInitialHeaderCms(JSON.parse(JSON.stringify(freshNormalized)));
       await refreshSiteSettings();
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
@@ -245,7 +235,7 @@ export default function AdminHeaderSettings() {
     { id: "mainHeader", label: "Main Header" },
     { id: "primaryNav", label: "Primary Navigation" },
     { id: "megaMenu", label: "Mega Menu" },
-    { id: "circularCategories", label: "Circular Categories" },
+    { id: "circularCategories", label: "Circular Categories (Disabled)" },
     { id: "mobile", label: "Mobile Navigation" },
     { id: "preview", label: "Live Preview" },
   ];
@@ -316,42 +306,40 @@ export default function AdminHeaderSettings() {
           </h3>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
+            <div className="space-y-2" data-testid="sticky-readonly">
               <label className="text-xs font-bold text-charcoal">Header Sticky Behavior</label>
-              <select
-                value={headerCms.stickyMode}
-                onChange={(e) => setHeaderCms({ ...headerCms, stickyMode: e.target.value })}
-                className="w-full rounded-xl border border-charcoal/20 p-2.5 text-xs focus:border-terracotta focus:outline-none"
-              >
-                <option value="always">Always Sticky (Stays fixed at top)</option>
-                <option value="scroll">Sticky after scrolling down</option>
-                <option value="none">Not Sticky (Normal document flow)</option>
-              </select>
-              <p className="text-[11px] text-charcoal-soft">Controls whether header sticks on scroll.</p>
+              <p className="w-full rounded-xl border border-charcoal/10 bg-stone-50 p-2.5 text-xs font-semibold text-charcoal-soft">
+                Header is configured as non-sticky for the storefront
+              </p>
+              <p className="text-[11px] text-charcoal-soft">
+                The live header always scrolls away with the page. This is not an editable setting.
+              </p>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-charcoal font-sans">Header Background Mode</label>
+            <div className="space-y-2" data-testid="background-mode-readonly">
+              <label className="text-xs font-bold text-charcoal font-sans" htmlFor="backgroundMode">Header Background Mode</label>
               <select
+                id="backgroundMode"
                 value={headerCms.backgroundMode}
-                onChange={(e) => setHeaderCms({ ...headerCms, backgroundMode: e.target.value })}
-                className="w-full rounded-xl border border-charcoal/20 p-2.5 text-xs focus:border-terracotta focus:outline-none"
+                disabled
+                className="w-full rounded-xl border border-charcoal/20 bg-stone-50 p-2.5 text-xs opacity-60"
               >
                 <option value="surface">Theme Surface / Solid White</option>
                 <option value="transparent">Transparent (Hero Overlay)</option>
               </select>
+              <p className="text-[11px] text-charcoal-soft">Not active: the storefront header always uses the theme surface.</p>
             </div>
 
-            <div className="flex items-center gap-3 pt-2">
+            <div className="flex items-center gap-3 pt-2" data-testid="divider-readonly">
               <input
                 type="checkbox"
                 id="showDivider"
                 checked={headerCms.showDivider !== false}
-                onChange={(e) => setHeaderCms({ ...headerCms, showDivider: e.target.checked })}
-                className="h-4 w-4 rounded border-charcoal/20 text-terracotta focus:ring-terracotta"
+                disabled
+                className="h-4 w-4 rounded border-charcoal/20 opacity-60"
               />
-              <label htmlFor="showDivider" className="text-xs font-semibold text-charcoal cursor-pointer">
-                Show bottom border / divider line under header
+              <label htmlFor="showDivider" className="text-xs font-semibold text-charcoal-soft">
+                Bottom divider line under header (not active: always shown on the storefront)
               </label>
             </div>
           </div>
@@ -1080,29 +1068,29 @@ export default function AdminHeaderSettings() {
           <div className="flex items-center justify-between border-b border-charcoal/10 pb-3">
             <div>
               <h3 className="text-sm font-bold text-charcoal uppercase tracking-wider">
-                7. Circular Category Scroller Strip CMS
+                7. Circular Category Scroller Strip (Disabled)
               </h3>
               <p className="text-xs text-charcoal-soft mt-0.5">
-                Configure visibility, maximum display count, desktop scroll arrows, and circle sizing.
+                Not shown on the live storefront.
               </p>
             </div>
-            <label className="flex items-center gap-2 text-xs font-bold text-charcoal cursor-pointer">
+            <label className="flex items-center gap-2 text-xs font-bold text-charcoal-soft">
               <input
                 type="checkbox"
-                checked={headerCms.circularCategories.enabled !== false}
-                onChange={(e) =>
-                  setHeaderCms({
-                    ...headerCms,
-                    circularCategories: { ...headerCms.circularCategories, enabled: e.target.checked },
-                  })
-                }
-                className="h-4 w-4 rounded text-terracotta"
+                checked={headerCms.circularCategories.enabled === true}
+                disabled
+                className="h-4 w-4 rounded text-terracotta opacity-60"
               />
-              Enable Category Strip
+              Category Strip (disabled on storefront)
             </label>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-xs font-medium text-amber-900" data-testid="circular-disabled-notice">
+            Disabled for the live storefront. The circular category strip is not rendered on the customer site, so these settings
+            are kept for future use and cannot be edited here. Category discovery is handled by Primary Navigation and Mega Menus.
+          </div>
+
+          <fieldset disabled className="grid grid-cols-1 md:grid-cols-3 gap-6 opacity-60">
             <div className="space-y-2">
               <label className="text-xs font-bold text-charcoal">Category Source Mode</label>
               <select
@@ -1198,7 +1186,7 @@ export default function AdminHeaderSettings() {
                 Show Category Name Labels Under Circles
               </label>
             </div>
-          </div>
+          </fieldset>
         </div>
       )}
 
@@ -1360,10 +1348,6 @@ export default function AdminHeaderSettings() {
                     forcedOpenId={previewMenuId || null}
                   />
                 </div>
-              )}
-
-              {headerCms.circularCategories.enabled === true && (
-                <CircularCategoryNav categories={categories} />
               )}
 
               <div className="flex h-24 items-center justify-center bg-stone-200 text-[11px] font-semibold uppercase tracking-widest text-stone-500">
