@@ -9,6 +9,7 @@ import PromoStrip from "./PromoStrip";
 import SearchModal from "./SearchModal";
 import BrandLogo from "./BrandLogo";
 import PrimaryNav from "./PrimaryNav";
+import CategoryStrip from "./CircularCategoryNav";
 import NavAnchor from "./NavAnchor";
 import { fetchNavigation, fetchCategories, resolveMediaUrl } from "../lib/api";
 import { normalizeHeaderSettings } from "../lib/headerCmsHelpers";
@@ -26,7 +27,7 @@ export default function Navbar() {
   const { user } = useCustomerAuth();
   const { branding, header, shipping, general } = useSiteSettings();
 
-  const cms = normalizeHeaderSettings(header, shipping, general);
+  const cms = useMemo(() => normalizeHeaderSettings(header, shipping, general), [header, shipping, general]);
   const primaryNavConfig = cms.primaryNav || {};
   const mainHeaderConfig = cms.mainHeader || {};
   const mobileConfig = cms.mobile || {};
@@ -261,6 +262,9 @@ export default function Navbar() {
             />
           </div>
         )}
+
+        {/* Optional admin-controlled category strip (normal flow, never sticky). Renders nothing when off. */}
+        <CategoryStrip categories={categories} cms={cms} />
 
         {/* Mobile Navigation Drawer */}
         {mobileMenuOpen && (
