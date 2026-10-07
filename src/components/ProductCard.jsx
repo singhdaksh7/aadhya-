@@ -176,12 +176,6 @@ export default function ProductCard({ product }) {
           <p className="mt-0.5 text-xs store-muted italic">By {product.author}</p>
         )}
 
-        {product.shortDescription && (
-          <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed store-muted">
-            {product.shortDescription}
-          </p>
-        )}
-
         <div className="mt-auto pt-3 flex items-center justify-between border-t border-[var(--theme-border)]">
           <div className="flex items-baseline gap-2">
             <span className="text-base font-semibold store-primary">
