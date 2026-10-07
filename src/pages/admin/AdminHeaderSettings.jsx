@@ -13,6 +13,8 @@ import TopUtilityBar from "../../components/TopUtilityBar";
 import PromoStrip from "../../components/PromoStrip";
 import PrimaryNav from "../../components/PrimaryNav";
 import NavItemEditor from "../../components/admin/NavItemEditor";
+import CategoryStripSettings from "../../components/admin/CategoryStripSettings";
+import CircularCategoryNav from "../../components/CircularCategoryNav";
 import { buildNavModel } from "../../lib/navModel";
 import BrandLogo from "../../components/BrandLogo";
 
@@ -225,6 +227,9 @@ export default function AdminHeaderSettings() {
     });
   };
 
+  const setStrip = (updates) =>
+    setHeaderCms((prev) => ({ ...prev, circularCategories: { ...prev.circularCategories, ...updates } }));
+
   const previewNavItems = buildNavModel({ cms: headerCms, categories }).filter((i) => i.showDesktop !== false);
   const previewMenuItems = previewNavItems.filter((i) => i.hasMenu);
 
@@ -235,7 +240,7 @@ export default function AdminHeaderSettings() {
     { id: "mainHeader", label: "Main Header" },
     { id: "primaryNav", label: "Primary Navigation" },
     { id: "megaMenu", label: "Mega Menu" },
-    { id: "circularCategories", label: "Circular Categories (Disabled)" },
+    { id: "circularCategories", label: "Category Scroller Strip" },
     { id: "mobile", label: "Mobile Navigation" },
     { id: "preview", label: "Live Preview" },
   ];
@@ -833,20 +838,9 @@ export default function AdminHeaderSettings() {
                 Show "NEW" Badge on First/New Arrivals Item
               </label>
 
-              <label className="flex items-center gap-2 text-xs font-semibold text-charcoal cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={headerCms.primaryNav.enableMegaMenu !== false}
-                  onChange={(e) =>
-                    setHeaderCms({
-                      ...headerCms,
-                      primaryNav: { ...headerCms.primaryNav, enableMegaMenu: e.target.checked },
-                    })
-                  }
-                  className="h-4 w-4 rounded text-terracotta"
-                />
-                Enable Mega Menu Dropdown on Hover
-              </label>
+              <p className="text-[11px] text-charcoal-soft">
+                Hover menus are switched on/off globally in the Mega Menu tab and per item below.
+              </p>
             </div>
           </div>
 
@@ -894,16 +888,17 @@ export default function AdminHeaderSettings() {
             <label className="flex items-center gap-2 text-xs font-bold text-charcoal cursor-pointer">
               <input
                 type="checkbox"
-                checked={headerCms.megaMenu.enabled !== false}
+                checked={headerCms.megaMenu.enabled !== false && headerCms.primaryNav.enableMegaMenu !== false}
                 onChange={(e) =>
                   setHeaderCms({
                     ...headerCms,
+                    primaryNav: { ...headerCms.primaryNav, enableMegaMenu: e.target.checked },
                     megaMenu: { ...headerCms.megaMenu, enabled: e.target.checked },
                   })
                 }
                 className="h-4 w-4 rounded text-terracotta"
               />
-              Enable Mega Menu
+              Enable Mega Menus
             </label>
           </div>
 
@@ -1062,132 +1057,9 @@ export default function AdminHeaderSettings() {
         </div>
       )}
 
-      {/* TAB 7: Circular Category Strip */}
+      {/* TAB 7: Category Scroller Strip */}
       {activeTab === "circularCategories" && (
-        <div className="space-y-6 rounded-2xl border border-charcoal/10 bg-white p-6 shadow-xs">
-          <div className="flex items-center justify-between border-b border-charcoal/10 pb-3">
-            <div>
-              <h3 className="text-sm font-bold text-charcoal uppercase tracking-wider">
-                7. Circular Category Scroller Strip (Disabled)
-              </h3>
-              <p className="text-xs text-charcoal-soft mt-0.5">
-                Not shown on the live storefront.
-              </p>
-            </div>
-            <label className="flex items-center gap-2 text-xs font-bold text-charcoal-soft">
-              <input
-                type="checkbox"
-                checked={headerCms.circularCategories.enabled === true}
-                disabled
-                className="h-4 w-4 rounded text-terracotta opacity-60"
-              />
-              Category Strip (disabled on storefront)
-            </label>
-          </div>
-
-          <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-xs font-medium text-amber-900" data-testid="circular-disabled-notice">
-            Disabled for the live storefront. The circular category strip is not rendered on the customer site, so these settings
-            are kept for future use and cannot be edited here. Category discovery is handled by Primary Navigation and Mega Menus.
-          </div>
-
-          <fieldset disabled className="grid grid-cols-1 md:grid-cols-3 gap-6 opacity-60">
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-charcoal">Category Source Mode</label>
-              <select
-                value={headerCms.circularCategories.mode || "AUTO"}
-                onChange={(e) =>
-                  setHeaderCms({
-                    ...headerCms,
-                    circularCategories: { ...headerCms.circularCategories, mode: e.target.value },
-                  })
-                }
-                className="w-full rounded-xl border border-charcoal/20 p-2.5 text-xs font-bold"
-              >
-                <option value="AUTO">AUTO (All Active Store Categories)</option>
-                <option value="MANUAL">MANUAL (Custom Selected Categories)</option>
-              </select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-charcoal">Maximum Categories Count (1 to 24)</label>
-              <input
-                type="number"
-                min={1}
-                max={24}
-                value={headerCms.circularCategories.maxItems || 12}
-                onChange={(e) =>
-                  setHeaderCms({
-                    ...headerCms,
-                    circularCategories: {
-                      ...headerCms.circularCategories,
-                      maxItems: Number(e.target.value),
-                    },
-                  })
-                }
-                className="w-full rounded-xl border border-charcoal/20 p-2.5 text-xs font-bold"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-charcoal">Desktop Circle Size</label>
-              <select
-                value={headerCms.circularCategories.desktopSize || "medium"}
-                onChange={(e) =>
-                  setHeaderCms({
-                    ...headerCms,
-                    circularCategories: {
-                      ...headerCms.circularCategories,
-                      desktopSize: e.target.value,
-                    },
-                  })
-                }
-                className="w-full rounded-xl border border-charcoal/20 p-2.5 text-xs"
-              >
-                <option value="small">Small (14-18px circles)</option>
-                <option value="medium">Medium (18-22px circles - Standard)</option>
-                <option value="large">Large (20-26px circles)</option>
-              </select>
-            </div>
-
-            <div className="flex items-center gap-6 col-span-3 pt-2">
-              <label className="flex items-center gap-2 text-xs font-semibold text-charcoal cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={headerCms.circularCategories.showArrows !== false}
-                  onChange={(e) =>
-                    setHeaderCms({
-                      ...headerCms,
-                      circularCategories: {
-                        ...headerCms.circularCategories,
-                        showArrows: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4 rounded text-terracotta"
-                />
-                Show Desktop Left/Right Scroll Arrows
-              </label>
-
-              <label className="flex items-center gap-2 text-xs font-semibold text-charcoal cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={headerCms.circularCategories.showLabels !== false}
-                  onChange={(e) =>
-                    setHeaderCms({
-                      ...headerCms,
-                      circularCategories: {
-                        ...headerCms.circularCategories,
-                        showLabels: e.target.checked,
-                      },
-                    })
-                  }
-                  className="h-4 w-4 rounded text-terracotta"
-                />
-                Show Category Name Labels Under Circles
-              </label>
-            </div>
-          </fieldset>
-        </div>
+        <CategoryStripSettings strip={headerCms.circularCategories} setStrip={setStrip} categories={categories} />
       )}
 
       {/* TAB 8: Mobile Navigation */}
@@ -1349,6 +1221,8 @@ export default function AdminHeaderSettings() {
                   />
                 </div>
               )}
+
+              <CircularCategoryNav categories={categories} cms={headerCms} forceViewport={previewViewport} />
 
               <div className="flex h-24 items-center justify-center bg-stone-200 text-[11px] font-semibold uppercase tracking-widest text-stone-500">
                 Hero starts here

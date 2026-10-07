@@ -229,12 +229,17 @@ describe("Admin Header CMS save flow", () => {
     expect(lastHeaderPayload().stickyMode).toBe("none");
   });
 
-  it("15. circular categories tab is clearly disabled for the live storefront", async () => {
+  it("15. category strip tab: off by default, toggle and shape are editable and save", async () => {
     renderPage();
-    await openTab("Circular Categories (Disabled)");
-    expect(screen.getByTestId("circular-disabled-notice")).toHaveTextContent(/Disabled for the live storefront/);
-    expect(screen.getByLabelText(/Category Strip \(disabled on storefront\)/)).toBeDisabled();
-    expect(screen.getByDisplayValue("12")).toBeDisabled();
+    await openTab("Category Scroller Strip");
+    expect(screen.getByTestId("strip-off-notice")).toBeInTheDocument();
+    expect(screen.getByLabelText("Enable Category Strip")).not.toBeChecked();
+    fireEvent.click(screen.getByLabelText("Enable Category Strip"));
+    fireEvent.change(screen.getByLabelText("Item Shape"), { target: { value: "RECTANGLE" } });
+    save();
+    await waitFor(() => expect(mocks.updateSettings).toHaveBeenCalled());
+    expect(lastHeaderPayload().circularCategories).toMatchObject({ enabled: true, shape: "RECTANGLE" });
+    expect(Object.keys(mocks.updateSettings.mock.calls[0][0])).toEqual(["header"]);
   });
 
   it("16. normalization keeps stickyMode none and maps legacy utility items", () => {

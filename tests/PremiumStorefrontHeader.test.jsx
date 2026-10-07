@@ -95,14 +95,14 @@ describe("Premium Storefront Header & Navigation", () => {
 
   it("renders circular category strip with image resolution and neutral text fallbacks (explicitly enabled)", async () => {
     const original = mockSettings.header;
-    mockSettings.header = { circularCategories: { enabled: true } };
+    mockSettings.header = { circularCategories: { enabled: true, rootOnly: false } };
     render(
       <BrowserRouter>
         <CircularCategoryNav categories={mockCategories.filter((c) => c.isActive)} />
       </BrowserRouter>
     );
 
-    const decorImg = screen.getByAltText("Home Decor");
+    const decorImg = document.querySelector("img");
     expect(decorImg.getAttribute("src")).toBe("http://api.test/uploads/decor.jpg");
 
     // Category without image shows fallback letter "C"

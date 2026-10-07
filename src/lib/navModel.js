@@ -13,7 +13,8 @@ import { isSafeUrl } from "./headerCmsHelpers";
  */
 
 export const DESTINATION_TYPES = ["CATEGORY", "COLLECTION", "PAGE", "BOOKS", "NEW_ARRIVALS", "CUSTOM_URL"];
-export const MEGA_MODES = ["DISABLED", "AUTO_FROM_CATEGORY", "MANUAL"];
+export const MEGA_MODES = ["DISABLED", "AUTO_FROM_CATEGORY", "ALL_CATEGORIES", "MANUAL"];
+export const CATEGORY_SCOPES = ["ROOT", "ALL", "PARENTS"];
 
 const LEGACY_TYPE_MAP = {
   NEW: "NEW_ARRIVALS",
@@ -78,6 +79,7 @@ export function buildCategoryTree(categories = []) {
   active.forEach((cat) => {
     byId.set(cat.id, {
       id: cat.id,
+      parentId: cat.parentId || null,
       name: cat.name,
       slug: cat.slug,
       image: cat.image || cat.desktopBanner || null,
@@ -127,6 +129,66 @@ export function columnsFromCategory(cat, maxColumns = 4) {
     });
   }
   return columns;
+}
+
+function chunkLinks(links, maxColumns, title = "", to = "", idPrefix = "all") {
+  if (links.length === 0) return [];
+  const numCols = Math.max(1, Math.min(maxColumns, Math.ceil(links.length / 4)));
+  const size = Math.ceil(links.length / numCols);
+  const cols = [];
+  for (let i = 0; i < links.length; i += size) {
+    cols.push({ id: `${idPrefix}-col-${cols.length}`, title: i === 0 ? title : "", to: i === 0 ? to : "", links: links.slice(i, i + size) });
+  }
+  return cols;
+}
+
+/**
+ * ALL_CATEGORIES mega menu. Independent of the nav item's own destination.
+ *  scope ROOT    -> active root categories
+ *  scope ALL     -> active roots, each with its active children (leaf roots grouped together)
+ *  scope PARENTS -> one column per selected parent with its active children
+ * `excludedIds` hides a category (and its subtree) from this menu only; the category stays active globally.
+ */
+export function columnsFromAllCategories(tree, { scope = "ROOT", parentIds = [], excludedIds = [], maxColumns = 4, maxCategories = 24 } = {}) {
+  const excluded = new Set(Array.isArray(excludedIds) ? excludedIds : []);
+  const visible = (cat) => cat && !excluded.has(cat.id);
+  let budget = Math.max(1, Number(maxCategories) || 24);
+  const take = (cats) => {
+    const out = cats.filter(visible).slice(0, budget);
+    budget -= out.length;
+    return out;
+  };
+
+  if (scope === "PARENTS") {
+    const parents = (Array.isArray(parentIds) ? parentIds : []).map((id) => tree.byId.get(id)).filter(visible);
+    const columns = [];
+    const loose = [];
+    parents.forEach((parent) => {
+      const kids = take(parent.children);
+      if (kids.length > 0) columns.push({ id: `${parent.id}-col`, title: parent.name, to: parent.to, links: kids.map(categoryLink) });
+      else loose.push(parent);
+    });
+    return [...columns, ...chunkLinks(take(loose).map(categoryLink), maxColumns, "", "", "parents")];
+  }
+
+  if (scope === "ALL") {
+    const roots = tree.roots.filter(visible);
+    const columns = [];
+    const leaves = [];
+    roots.forEach((root) => {
+      const kids = root.children.filter(visible);
+      if (kids.length > 0) {
+        if (budget <= 0) return;
+        const picked = take(kids);
+        columns.push({ id: `${root.id}-col`, title: root.name, to: root.to, links: picked.map(categoryLink) });
+      } else {
+        leaves.push(root);
+      }
+    });
+    return [...columns, ...chunkLinks(take(leaves).map(categoryLink), maxColumns, "", "", "roots")];
+  }
+
+  return chunkLinks(take(tree.roots).map(categoryLink), maxColumns, "", "", "roots");
 }
 
 export function columnsFromManual(manualColumns = []) {
@@ -205,6 +267,14 @@ function buildManualItems({ configItems, tree, cms }) {
       if (megaMode === "AUTO_FROM_CATEGORY") {
         const source = category || (item.categoryId && tree.byId.get(item.categoryId)) || (slug && tree.bySlug.get(slug)) || null;
         columns = columnsFromCategory(source, columnsCount);
+      } else if (megaMode === "ALL_CATEGORIES") {
+        columns = columnsFromAllCategories(tree, {
+          scope: CATEGORY_SCOPES.includes(item.megaCategoryScope) ? item.megaCategoryScope : "ROOT",
+          parentIds: item.megaParentIds,
+          excludedIds: item.megaExcludedCategoryIds,
+          maxColumns: columnsCount,
+          maxCategories: item.megaMaxCategories,
+        });
       } else if (megaMode === "MANUAL") {
         columns = columnsFromManual(item.manualColumns);
       }
@@ -309,4 +379,72 @@ export function buildNavModel({ cms, categories = [], navigation = [] }) {
     items = items.map((i) => ({ ...i, columns: [], promo: null, hasMenu: false }));
   }
   return items;
+}
+
+const slugOf = (cat) => cat?.slug || "";
+
+/**
+ * Category scroller strip model (admin: Header & Navigation -> Category Scroller Strip).
+ * Returns null when the strip must not render at all (no wrapper, no spacing).
+ *
+ * Image priority: item.imageOverride -> (mobile) item.mobileImageOverride -> category.image ->
+ * category.desktopBanner -> none (the component draws a neutral initial placeholder).
+ */
+export function buildCategoryStripModel({ cms, categories = [] }) {
+  const cfg = cms?.circularCategories || {};
+  if (cms?.enabled === false || cfg.enabled !== true) return null;
+  if (cfg.showDesktop === false && cfg.showMobile === false) return null;
+
+  const tree = buildCategoryTree(categories);
+  const max = Math.min(24, Math.max(1, Number(cfg.maxItems) || 12));
+  let items = [];
+
+  if (cfg.mode === "MANUAL") {
+    items = (Array.isArray(cfg.items) ? cfg.items : [])
+      .filter((item) => item && item.enabled !== false)
+      .map((item, idx) => {
+        const ref = item.categoryId || item.slug;
+        const node = (item.categoryId && tree.byId.get(item.categoryId)) || (item.slug && tree.bySlug.get(item.slug)) || null;
+        if (ref && !node) return null; // inactive / deleted category
+        const override = typeof item.destinationOverride === "string" ? item.destinationOverride.trim() : "";
+        const to = override && isSafeUrl(override) ? override : node?.to;
+        const name = (item.displayLabelOverride || "").trim() || node?.name;
+        if (!to || !name) return null;
+        const image = item.imageOverride && isSafeUrl(item.imageOverride) ? item.imageOverride : node?.image || null;
+        const mobileImage = item.mobileImageOverride && isSafeUrl(item.mobileImageOverride) ? item.mobileImageOverride : null;
+        return {
+          id: item.id || node?.id || `manual-${idx}`,
+          name,
+          slug: slugOf(node),
+          image,
+          mobileImage: mobileImage || (item.imageOverride && isSafeUrl(item.imageOverride) ? item.imageOverride : node?.image || null),
+          badge: (item.badgeText || "").trim(),
+          to,
+          external: isExternalUrl(to),
+        };
+      })
+      .filter(Boolean);
+  } else {
+    let list = tree.roots;
+    if (cfg.rootOnly === false) {
+      list = [];
+      const walk = (nodes) => nodes.forEach((n) => { list.push(n); walk(n.children); });
+      walk(tree.roots);
+    }
+    if (cfg.sortBy === "NAME") list = [...list].sort((a, b) => a.name.localeCompare(b.name));
+    items = list.map((node) => ({
+      id: node.id,
+      name: node.name,
+      slug: node.slug,
+      image: node.image,
+      mobileImage: node.image,
+      badge: "",
+      to: node.to,
+      external: false,
+    }));
+  }
+
+  items = items.slice(0, max);
+  if (items.length === 0) return null;
+  return { config: cfg, items };
 }

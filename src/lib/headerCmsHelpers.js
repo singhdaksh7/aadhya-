@@ -143,19 +143,26 @@ export const DEFAULT_HEADER_CMS_SETTINGS = {
     },
   },
 
+  // Category scroller strip (key kept as `circularCategories` for backward compatibility).
+  // Only `enabled === true` turns it on; legacy flags (showCategoryCircles, ...) never do.
   circularCategories: {
-    enabled: false, // off by default; primary nav + mega menus drive category discovery
+    enabled: false,
+    shape: "CIRCLE", // "CIRCLE" | "SQUARE" | "ROUNDED_SQUARE" | "RECTANGLE"
     mode: "AUTO", // "AUTO" | "MANUAL"
+    sortBy: "CATEGORY_ORDER", // AUTO only: "CATEGORY_ORDER" | "NAME"
+    rootOnly: true, // AUTO only: root categories vs. include subcategories
     maxItems: 12,
+    showDesktop: true,
+    showMobile: true,
     desktopSize: "medium", // "small" | "medium" | "large"
     mobileSize: "medium",
+    imageFit: "cover", // "cover" | "contain"
     showLabels: true,
-    maxLabelLines: 2,
     showArrows: true,
     showPartialNextMobile: true,
-    spacingDensity: "comfortable",
+    spacingDensity: "comfortable", // "compact" | "comfortable"
+    backgroundMode: "surface", // "surface" | "soft"
     showDividers: true,
-    backgroundMode: "surface",
     items: [],
   },
 
@@ -201,6 +208,41 @@ export function interpolateText(template, context = {}) {
     result = result.replace(/\{\{\s*storeName\s*\}\}/g, context.storeName);
   }
   return result;
+}
+
+export const STRIP_SHAPES = ["CIRCLE", "SQUARE", "ROUNDED_SQUARE", "RECTANGLE"];
+const oneOf = (value, allowed, fallback) => (allowed.includes(value) ? value : fallback);
+
+export function normalizeCategoryStrip(raw, overrides = {}) {
+  const r = raw || {};
+  const d = DEFAULT_HEADER_CMS_SETTINGS.circularCategories;
+  const bool = (key) => (r[key] !== undefined ? r[key] !== false : d[key]);
+  return {
+    ...d,
+    ...r,
+    enabled: r.enabled === true,
+    shape: oneOf(r.shape, STRIP_SHAPES, d.shape),
+    mode: r.mode === "MANUAL" ? "MANUAL" : "AUTO",
+    sortBy: oneOf(r.sortBy, ["CATEGORY_ORDER", "NAME"], d.sortBy),
+    rootOnly: bool("rootOnly"),
+    maxItems: overrides.maxItems ?? d.maxItems,
+    showDesktop: bool("showDesktop"),
+    showMobile: bool("showMobile"),
+    desktopSize: oneOf(r.desktopSize, ["small", "medium", "large"], d.desktopSize),
+    mobileSize: oneOf(r.mobileSize, ["small", "medium", "large"], d.mobileSize),
+    imageFit: oneOf(r.imageFit, ["cover", "contain"], d.imageFit),
+    showLabels: bool("showLabels"),
+    showArrows: overrides.showArrows ?? d.showArrows,
+    showPartialNextMobile: bool("showPartialNextMobile"),
+    spacingDensity: oneOf(r.spacingDensity, ["compact", "comfortable"], d.spacingDensity),
+    backgroundMode: oneOf(r.backgroundMode, ["surface", "soft"], d.backgroundMode),
+    showDividers: bool("showDividers"),
+    items: (Array.isArray(r.items) ? r.items : []).map((item, i) => ({
+      ...item,
+      id: item.id || `strip-${i + 1}`,
+      enabled: item.enabled !== false,
+    })),
+  };
 }
 
 export function normalizeHeaderSettings(rawHeader, rawShipping, rawGeneral) {
@@ -276,9 +318,8 @@ export function normalizeHeaderSettings(rawHeader, rawShipping, rawGeneral) {
 
   // Circular Categories normalization
   const rawCircular = h.circularCategories || {};
-  const circularEnabled = rawCircular.enabled !== undefined
-    ? rawCircular.enabled
-    : (h.showCircularCategories !== undefined ? h.showCircularCategories : (h.showCategoryCircles !== undefined ? h.showCategoryCircles : false));
+  // Legacy flags (showCategoryCircles / showCircularCategories) are intentionally ignored:
+  // only the canonical `circularCategories.enabled === true` turns the strip on.
   const circularLimit = Math.min(24, Math.max(1, Number(rawCircular.maxItems ?? h.circularCategoryLimit ?? 12)));
   const circularArrows = rawCircular.showArrows !== undefined
     ? rawCircular.showArrows
@@ -343,7 +384,8 @@ export function normalizeHeaderSettings(rawHeader, rawShipping, rawGeneral) {
     megaMenu: {
       ...DEFAULT_HEADER_CMS_SETTINGS.megaMenu,
       ...h.megaMenu,
-      enabled: h.megaMenu?.enabled !== undefined ? h.megaMenu.enabled : enableMegaMenu,
+      // One master switch: off if either the new or the legacy primaryNav flag is off.
+      enabled: (h.megaMenu?.enabled !== undefined ? h.megaMenu.enabled : true) && enableMegaMenu,
       columns: Math.min(5, Math.max(2, Number(h.megaMenu?.columns ?? 4))),
       promoCard: {
         ...DEFAULT_HEADER_CMS_SETTINGS.megaMenu.promoCard,
@@ -351,15 +393,7 @@ export function normalizeHeaderSettings(rawHeader, rawShipping, rawGeneral) {
       },
     },
 
-    circularCategories: {
-      ...DEFAULT_HEADER_CMS_SETTINGS.circularCategories,
-      ...rawCircular,
-      enabled: circularEnabled,
-      maxItems: circularLimit,
-      showArrows: circularArrows,
-      mode: rawCircular.mode === "MANUAL" ? "MANUAL" : "AUTO",
-      items: Array.isArray(rawCircular.items) ? rawCircular.items : [],
-    },
+    circularCategories: normalizeCategoryStrip(rawCircular, { maxItems: circularLimit, showArrows: circularArrows }),
 
     mobile: {
       ...DEFAULT_HEADER_CMS_SETTINGS.mobile,

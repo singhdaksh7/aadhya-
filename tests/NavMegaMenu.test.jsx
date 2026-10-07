@@ -87,11 +87,11 @@ describe("Primary nav + mega menus", () => {
     expect(screen.queryByLabelText("Scroll left")).not.toBeInTheDocument();
   });
 
-  it("1b. circular strip never renders on the storefront, even when saved as enabled (hotfix)", async () => {
-    mockSettings.header = { circularCategories: { enabled: true }, showCategoryCircles: true, stickyHeader: true };
+  it("1b. legacy flags never enable the category strip; only circularCategories.enabled does", async () => {
+    mockSettings.header = { showCategoryCircles: true, showCircularCategories: true, stickyHeader: true };
     const { container } = renderNavbar();
     await waitFor(() => expect(screen.getByText("Lighting")).toBeInTheDocument());
-    expect(container.querySelector("[class~=\"group/scroller\"]")).toBeNull();
+    expect(container.querySelector("[data-testid=\"category-strip\"]")).toBeNull();
     expect(screen.queryByLabelText("Scroll left")).not.toBeInTheDocument();
   });
 
@@ -245,7 +245,7 @@ describe("Admin Header CMS: nav mega menu mapping", () => {
     fireEvent.click(screen.getByText("+ Add Navigation Item"));
 
     fireEvent.change(screen.getByLabelText("Category"), { target: { value: "c-light" } });
-    expect(screen.getByLabelText("Mega Menu")).toHaveValue("AUTO_FROM_CATEGORY");
+    expect(screen.getByLabelText("Mega Menu Mode")).toHaveValue("AUTO_FROM_CATEGORY");
 
     fireEvent.click(screen.getByText("Save Changes"));
     await waitFor(() => expect(adminUpdateSiteSettings).toHaveBeenCalled());

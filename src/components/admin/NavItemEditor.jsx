@@ -46,6 +46,11 @@ export default function NavItemEditor({ item, index, total, categories, onChange
   const columns = Array.isArray(item.manualColumns) ? item.manualColumns : [];
   const promo = item.promoCard || {};
 
+  const scope = ["ROOT", "ALL", "PARENTS"].includes(item.megaCategoryScope) ? item.megaCategoryScope : "ROOT";
+  const parentIds = Array.isArray(item.megaParentIds) ? item.megaParentIds : [];
+  const excludedIds = Array.isArray(item.megaExcludedCategoryIds) ? item.megaExcludedCategoryIds : [];
+  const toggleId = (list, id) => (list.includes(id) ? list.filter((x) => x !== id) : [...list, id]);
+
   const setPromo = (updates) => onChange({ promoCard: { ...promo, ...updates } });
 
   const setColumns = (next) => onChange({ manualColumns: next });
@@ -103,6 +108,9 @@ export default function NavItemEditor({ item, index, total, categories, onChange
           />
           <span className="text-xs font-bold text-charcoal">
             Nav Item #{index + 1}: {item.label || "Untitled"}
+          </span>
+          <span className="text-[11px] font-medium text-charcoal-soft">
+            {item.enabled !== false ? "Show this menu item on storefront" : "Hidden on storefront (configuration kept)"}
           </span>
         </div>
         <div className="flex items-center gap-1">
@@ -165,9 +173,25 @@ export default function NavItemEditor({ item, index, total, categories, onChange
 
       {/* Mega menu */}
       <div className="space-y-3 rounded-lg border border-charcoal/10 bg-ivory-dark/20 p-3">
+        <label className="flex items-center gap-1.5 text-xs font-semibold text-charcoal cursor-pointer">
+          <input
+            type="checkbox"
+            aria-label={`Enable mega menu for ${item.label || "item"}`}
+            checked={megaMode !== "DISABLED"}
+            onChange={(e) =>
+              onChange(
+                e.target.checked
+                  ? { megaMenuMode: item.categoryId ? "AUTO_FROM_CATEGORY" : "ALL_CATEGORIES", enableMegaMenu: true }
+                  : { megaMenuMode: "DISABLED", enableMegaMenu: false }
+              )
+            }
+            className="h-4 w-4 rounded text-terracotta"
+          />
+          Enable mega menu on hover for this item
+        </label>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label className={labelCls} htmlFor={`nav-mega-${item.id}`}>Mega Menu</label>
+            <label className={labelCls} htmlFor={`nav-mega-${item.id}`}>Mega Menu Mode</label>
             <select
               id={`nav-mega-${item.id}`}
               value={megaMode}
@@ -176,6 +200,7 @@ export default function NavItemEditor({ item, index, total, categories, onChange
             >
               <option value="DISABLED">Disabled (click navigation only)</option>
               <option value="AUTO_FROM_CATEGORY">Auto from Category</option>
+              <option value="ALL_CATEGORIES">All Active Categories</option>
               <option value="MANUAL">Manual</option>
             </select>
           </div>
@@ -195,6 +220,64 @@ export default function NavItemEditor({ item, index, total, categories, onChange
             </div>
           )}
         </div>
+
+        {megaMode === "ALL_CATEGORIES" && (
+          <div className="space-y-3" data-testid={`nav-all-categories-${item.id}`}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className={labelCls} htmlFor={`nav-scope-${item.id}`}>Category Scope</label>
+                <select id={`nav-scope-${item.id}`} value={scope} onChange={(e) => onChange({ megaCategoryScope: e.target.value })} className={inputCls}>
+                  <option value="ROOT">Root Categories Only</option>
+                  <option value="ALL">All Categories (roots with their subcategories)</option>
+                  <option value="PARENTS">Selected Parent Categories</option>
+                </select>
+              </div>
+              <div>
+                <label className={labelCls} htmlFor={`nav-maxcat-${item.id}`}>Maximum Categories Shown</label>
+                <input id={`nav-maxcat-${item.id}`} type="number" min={1} max={60} value={item.megaMaxCategories || 24} onChange={(e) => onChange({ megaMaxCategories: Math.min(60, Math.max(1, Number(e.target.value) || 24)) })} className={inputCls} />
+              </div>
+            </div>
+
+            {scope === "PARENTS" && (
+              <fieldset className="rounded-lg border border-charcoal/10 bg-white p-2">
+                <legend className="px-1 text-[11px] font-semibold text-charcoal">Parent categories to show</legend>
+                <div className="max-h-40 overflow-y-auto space-y-1">
+                  {flatCategories.map((c) => (
+                    <label key={c.id} className="flex items-center gap-2 text-xs text-charcoal cursor-pointer">
+                      <input
+                        type="checkbox"
+                        aria-label={`Parent ${c.name}`}
+                        checked={parentIds.includes(c.id)}
+                        onChange={() => onChange({ megaParentIds: toggleId(parentIds, c.id) })}
+                        className="h-3.5 w-3.5 rounded text-terracotta"
+                      />
+                      {`${"— ".repeat(c.depth)}${c.name}`}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+            )}
+
+            <fieldset className="rounded-lg border border-charcoal/10 bg-white p-2">
+              <legend className="px-1 text-[11px] font-semibold text-charcoal">Show in this menu (uncheck to hide from this menu only)</legend>
+              <div className="max-h-40 overflow-y-auto space-y-1">
+                {flatCategories.map((c) => (
+                  <label key={c.id} className="flex items-center gap-2 text-xs text-charcoal cursor-pointer">
+                    <input
+                      type="checkbox"
+                      aria-label={`Include ${c.name}`}
+                      checked={!excludedIds.includes(c.id)}
+                      onChange={() => onChange({ megaExcludedCategoryIds: toggleId(excludedIds, c.id) })}
+                      className="h-3.5 w-3.5 rounded text-terracotta"
+                    />
+                    {`${"— ".repeat(c.depth)}${c.name}`}
+                  </label>
+                ))}
+              </div>
+              <p className="mt-1 text-[10px] text-charcoal-soft">Categories stay active in the store; only inactive categories are hidden everywhere.</p>
+            </fieldset>
+          </div>
+        )}
 
         {megaMode === "MANUAL" && (
           <div className="space-y-3">
