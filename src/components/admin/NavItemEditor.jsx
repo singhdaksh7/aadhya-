@@ -333,7 +333,10 @@ export default function NavItemEditor({ item, index, total, categories, onChange
             </label>
             {promo.enabled === true && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <ImagePickerInput label="Promo Image" value={promo.image || ""} onChange={(url) => setPromo({ image: url })} placeholder="Upload or choose promo image" />
+                <div className="space-y-3">
+                  <ImagePickerInput label="Promo Image" value={promo.image || ""} onChange={(url) => setPromo({ image: url })} placeholder="Upload or choose promo image" />
+                  <ImagePickerInput label="Promo Mobile Image (optional)" value={promo.mobileImage || ""} onChange={(url) => setPromo({ mobileImage: url })} placeholder="Upload or choose mobile promo image" />
+                </div>
                 <div className="space-y-2">
                   <input type="text" aria-label="Promo Eyebrow" placeholder="Eyebrow" value={promo.eyebrow || ""} onChange={(e) => setPromo({ eyebrow: e.target.value })} className={inputCls} />
                   <input type="text" aria-label="Promo Title" placeholder="Title" value={promo.title || ""} onChange={(e) => setPromo({ title: e.target.value })} className={inputCls} />

@@ -1,5 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { resolveMediaUrl } from "../lib/api";
+import { BANNER_ALIGN_CLASSES, BANNER_OVERLAY_CLASSES } from "../lib/homepageConfig";
 
 const DEFAULT_PROMO_CARDS = [
   {
@@ -19,7 +21,10 @@ const DEFAULT_PROMO_CARDS = [
 ];
 
 export default function PromoBanners2Up({ promoCards }) {
-  const cards = (Array.isArray(promoCards) && promoCards.length ? promoCards : DEFAULT_PROMO_CARDS).filter((card) => card.enabled !== false);
+  const cards = (Array.isArray(promoCards) && promoCards.length ? promoCards : DEFAULT_PROMO_CARDS)
+    .filter((card) => card.enabled !== false)
+    .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+  if (cards.length === 0) return null;
   return (
     <section className="mx-auto max-w-7xl px-4 sm:px-8 py-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -30,13 +35,16 @@ export default function PromoBanners2Up({ promoCards }) {
             className="group relative overflow-hidden rounded-2xl border store-border aspect-[16/9] sm:aspect-[2/1] store-surface block shadow-sm hover:shadow-lg transition-all duration-300"
           >
             {/* Background Image */}
-            <img
-              src={card.image}
-              alt={card.title}
-              className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-            />
-            {/* Subtle Gradient Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-charcoal/80 via-charcoal/30 to-transparent p-6 sm:p-8 flex flex-col justify-end text-white">
+            <picture>
+              {card.mobileImage && <source media="(max-width: 767px)" srcSet={resolveMediaUrl(card.mobileImage)} />}
+              <img
+                src={resolveMediaUrl(card.image)}
+                alt={card.imageAlt || card.title}
+                className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+              />
+            </picture>
+            {/* Overlay (strength + text alignment are admin-configurable) */}
+            <div data-testid="promo-banner-overlay" className={`absolute inset-0 bg-gradient-to-t ${BANNER_OVERLAY_CLASSES[card.overlayStrength] || BANNER_OVERLAY_CLASSES.MEDIUM} p-6 sm:p-8 flex flex-col justify-end ${BANNER_ALIGN_CLASSES[card.textAlign] || BANNER_ALIGN_CLASSES.LEFT} text-white`}>
               <span className="text-xs font-semibold uppercase tracking-widest store-accent">
                 {card.eyebrow || "Curated Edit"}
               </span>

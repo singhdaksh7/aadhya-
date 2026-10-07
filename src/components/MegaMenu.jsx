@@ -3,6 +3,40 @@ import { resolveMediaUrl } from "../lib/api";
 import NavAnchor from "./NavAnchor";
 
 /**
+ * Editorial promo card shown on the right side of a mega menu.
+ * `viewport="mobile"` (admin preview) uses the mobile image directly instead of the media query.
+ */
+export function MegaPromoCard({ promo, onClose = () => {}, viewport = null }) {
+  const mobile = viewport === "mobile";
+  const src = resolveMediaUrl(mobile ? promo.mobileImage || promo.image : promo.image);
+  return (
+    <div className="col-span-4 pl-6 border-l store-border" data-testid="mega-promo" data-viewport={viewport || undefined}>
+      <NavAnchor
+        to={promo.ctaUrl}
+        external={/^(https?:)?\/\//i.test(promo.ctaUrl)}
+        onClick={onClose}
+        className="group block overflow-hidden rounded-xl store-surface border store-border p-3.5 transition hover:shadow-md"
+      >
+        {promo.image && (
+          <div className="aspect-[4/3] w-full overflow-hidden rounded-lg bg-stone-100 mb-3">
+            <picture>
+              {!mobile && promo.mobileImage && <source media="(max-width: 767px)" srcSet={resolveMediaUrl(promo.mobileImage)} />}
+              <img src={src} alt={promo.altText} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+            </picture>
+          </div>
+        )}
+        {promo.eyebrow && <span className="text-[10px] font-bold uppercase tracking-widest store-secondary block">{promo.eyebrow}</span>}
+        {promo.title && <h5 className="font-serif-display text-sm font-bold store-text group-hover:store-primary transition mt-0.5">{promo.title}</h5>}
+        {promo.description && <p className="text-[11px] store-muted line-clamp-2 mt-1 leading-relaxed">{promo.description}</p>}
+        {promo.ctaLabel && (
+          <span className="mt-3 inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider store-primary group-hover:underline">{promo.ctaLabel}</span>
+        )}
+      </NavAnchor>
+    </div>
+  );
+}
+
+/**
  * Presentational mega menu. Receives a normalized nav item (see lib/navModel.js):
  * `item.columns` and optional `item.promo`. Contains no data fetching.
  */
@@ -68,44 +102,7 @@ export default function MegaMenu({ item, isOpen, onClose, id, maxColumns = 4, wi
             ))}
           </div>
 
-          {promo && (
-            <div className="col-span-4 pl-6 border-l store-border" data-testid="mega-promo">
-              <NavAnchor
-                to={promo.ctaUrl}
-                external={/^(https?:)?\/\//i.test(promo.ctaUrl)}
-                onClick={onClose}
-                className="group block overflow-hidden rounded-xl store-surface border store-border p-3.5 transition hover:shadow-md"
-              >
-                {promo.image && (
-                  <div className="aspect-[4/3] w-full overflow-hidden rounded-lg bg-stone-100 mb-3">
-                    <img
-                      src={resolveMediaUrl(promo.image)}
-                      alt={promo.altText}
-                      className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
-                    />
-                  </div>
-                )}
-                {promo.eyebrow && (
-                  <span className="text-[10px] font-bold uppercase tracking-widest store-secondary block">
-                    {promo.eyebrow}
-                  </span>
-                )}
-                {promo.title && (
-                  <h5 className="font-serif-display text-sm font-bold store-text group-hover:store-primary transition mt-0.5">
-                    {promo.title}
-                  </h5>
-                )}
-                {promo.description && (
-                  <p className="text-[11px] store-muted line-clamp-2 mt-1 leading-relaxed">{promo.description}</p>
-                )}
-                {promo.ctaLabel && (
-                  <span className="mt-3 inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider store-primary group-hover:underline">
-                    {promo.ctaLabel}
-                  </span>
-                )}
-              </NavAnchor>
-            </div>
-          )}
+          {promo && <MegaPromoCard promo={promo} onClose={onClose} />}
         </div>
       </div>
     </div>

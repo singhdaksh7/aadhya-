@@ -32,7 +32,8 @@ const SECTION_TYPE_LABELS = {
   RICH_TEXT: "Rich Text Banner",
   CTA: "Call-to-Action Block",
   FAQ_PREVIEW: "FAQ Preview",
-  BLOG_PREVIEW: "Blog Spotlights",
+  BLOG_PREVIEW: "Blog / Stories",
+  TESTIMONIALS: "Reviews / Testimonials",
 };
 
 export default function AdminHomepageBuilder() {

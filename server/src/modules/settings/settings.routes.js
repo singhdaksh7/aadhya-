@@ -221,6 +221,7 @@ const safeUrl = (max = 500) => z.string().max(max).refine(isSafeUrlString, { mes
 const navPromoCardSchema = z.object({
   enabled: z.boolean().optional(),
   image: safeUrl().optional(),
+  mobileImage: safeUrl().optional(),
   eyebrow: z.string().max(100).optional(),
   title: z.string().max(200).optional(),
   description: z.string().max(500).optional(),
@@ -404,6 +405,7 @@ export const headerSettingsSchema = z.object({
     mode: z.enum(["AUTO", "MANUAL"]).optional(),
     sortBy: z.enum(["CATEGORY_ORDER", "NAME"]).optional(),
     rootOnly: z.boolean().optional(),
+    categoryDepth: z.enum(["ROOT", "ALL"]).optional(),
     maxItems: z.number().int().min(1).max(24).optional(),
     showDesktop: z.boolean().optional(),
     showMobile: z.boolean().optional(),
@@ -416,7 +418,11 @@ export const headerSettingsSchema = z.object({
     showPartialNextMobile: z.boolean().optional(),
     spacingDensity: z.enum(["compact", "comfortable"]).optional(),
     backgroundMode: z.enum(["surface", "soft"]).optional(),
-    showDividers: z.boolean().optional(),
+    showTopSeparator: z.boolean().optional(),
+    showBottomSeparator: z.boolean().optional(),
+    showDividers: z.boolean().optional(), // legacy alias of showBottomDivider
+    showTopDivider: z.boolean().optional(),
+    showBottomDivider: z.boolean().optional(),
     items: z.array(z.object({
       id: z.string().max(80).optional(),
       categoryId: z.string().max(100).nullable().optional(),
