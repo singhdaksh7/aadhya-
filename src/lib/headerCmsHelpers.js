@@ -1,8 +1,13 @@
 import { formatInr } from "./format";
 
+// The customer storefront header is never sticky. `stickyMode` stays in the stored
+// contract for backward compatibility but is always normalized to this value, and the
+// admin UI presents it as read-only rather than as an editable control.
+export const STOREFRONT_STICKY_MODE = "none";
+
 export const DEFAULT_HEADER_CMS_SETTINGS = {
   enabled: true,
-  stickyMode: "none", // "none" (default, scrolls away) | "scroll" | "always"
+  stickyMode: STOREFRONT_STICKY_MODE,
   showDivider: true,
   backgroundMode: "surface", // "surface" | "transparent"
   spacingMode: "comfortable", // "compact" | "comfortable"
@@ -136,7 +141,6 @@ export const DEFAULT_HEADER_CMS_SETTINGS = {
       altText: "Promo card",
       promoSource: "custom", // "category" | "collection" | "custom" | "none"
     },
-    manualColumns: [],
   },
 
   circularCategories: {
@@ -241,6 +245,17 @@ export function normalizeHeaderSettings(rawHeader, rawShipping, rawGeneral) {
     });
   }
 
+  // Legacy items (`utilityBarItems`) used `title`/`link` and an icon named "refresh";
+  // the current contract requires `label`, so map them before they are ever re-saved.
+  utilityItems = utilityItems.map((item, index) => ({
+    ...item,
+    id: item.id || `ub-${index + 1}`,
+    enabled: item.enabled !== false,
+    label: item.label || item.title || "",
+    url: item.url ?? item.link ?? "",
+    icon: item.icon === "refresh" ? "returns" : item.icon,
+  }));
+
   // Ticker normalization
   const rawTicker = h.promoTicker || {};
   const tickerEnabled = rawTicker.enabled !== undefined
@@ -275,9 +290,9 @@ export function normalizeHeaderSettings(rawHeader, rawShipping, rawGeneral) {
   const searchPlaceholder = rawMainHeader.searchPlaceholder || h.searchPlaceholder || "Search products...";
   const logoAlignment = rawMainHeader.logoAlignment || h.logoAlignment || "center";
 
-  // HOTFIX: the customer storefront header is never sticky. Legacy `stickyHeader: true`
+  // The customer storefront header is never sticky. Legacy `stickyHeader: true`
   // and any saved `stickyMode` are ignored for live rendering.
-  const stickyMode = "none";
+  const stickyMode = STOREFRONT_STICKY_MODE;
 
   return {
     ...DEFAULT_HEADER_CMS_SETTINGS,
@@ -285,7 +300,8 @@ export function normalizeHeaderSettings(rawHeader, rawShipping, rawGeneral) {
     enabled: h.enabled !== false,
     stickyMode,
     showDivider: h.showDivider !== false,
-    backgroundMode: h.backgroundMode || "surface",
+    backgroundMode: h.backgroundMode === "transparent" ? "transparent" : "surface",
+    spacingMode: h.spacingMode === "compact" ? "compact" : "comfortable",
 
     utilityBar: {
       ...DEFAULT_HEADER_CMS_SETTINGS.utilityBar,
@@ -348,6 +364,28 @@ export function normalizeHeaderSettings(rawHeader, rawShipping, rawGeneral) {
     mobile: {
       ...DEFAULT_HEADER_CMS_SETTINGS.mobile,
       ...(h.mobile || {}),
+    },
+  };
+}
+
+const clampNumber = (value, min, max, fallback) => {
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
+};
+
+// Builds the exact `header` value submitted by the Header CMS: numeric inputs are clamped
+// to the ranges the backend validates (a cleared/partial number input must not cause a 400)
+// and the storefront-enforced sticky mode is written back explicitly.
+export function buildHeaderSavePayload(headerCms) {
+  const h = headerCms || {};
+  return {
+    ...h,
+    stickyMode: STOREFRONT_STICKY_MODE,
+    promoTicker: { ...h.promoTicker, speed: clampNumber(h.promoTicker?.speed, 10, 300, 90) },
+    megaMenu: { ...h.megaMenu, columns: Math.round(clampNumber(h.megaMenu?.columns, 2, 5, 4)) },
+    circularCategories: {
+      ...h.circularCategories,
+      maxItems: Math.round(clampNumber(h.circularCategories?.maxItems, 1, 24, 12)),
     },
   };
 }

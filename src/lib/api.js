@@ -39,6 +39,22 @@ export function getAccessToken(kind = "customer") {
   return tokens[kind];
 }
 
+// Backend error bodies come in two shapes: the global handler's
+// `{ error: { message, details } }` and routes that answer directly with
+// `{ error: "path: message", details: [zod issues] }` (e.g. PUT /admin/settings).
+// Surface the field-level message instead of a bare "Request failed".
+function extractErrorMessage(payload, status) {
+  const err = payload?.error;
+  const details = Array.isArray(err?.details) ? err.details : Array.isArray(payload?.details) ? payload.details : [];
+  const first = details[0];
+  const firstText = first?.message
+    ? `${Array.isArray(first.path) ? first.path.join(".") : first.path || ""}${first.path?.length ? ": " : ""}${first.message}`
+    : null;
+  if (typeof err === "string" && err) return err;
+  if (typeof err?.message === "string" && err.message) return err.message;
+  return firstText || `Request failed with status ${status}`;
+}
+
 async function request(path, { method = "GET", body, headers, isForm = false, auth = false } = {}) {
   const tokenKind = auth === true ? "customer" : auth || null;
   const token = tokenKind ? tokens[tokenKind] : null;
@@ -62,9 +78,9 @@ async function request(path, { method = "GET", body, headers, isForm = false, au
 
   if (!res.ok) {
     throw new ApiRequestError(
-      payload?.error?.message || `Request failed with status ${res.status}`,
+      extractErrorMessage(payload, res.status),
       res.status,
-      payload?.error?.details
+      payload?.error?.details ?? payload?.details
     );
   }
 
