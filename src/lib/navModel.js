@@ -226,6 +226,7 @@ function buildPromo({ itemPromo, globalPromo, categoryImage, fallbackTo }) {
   if (!image && !source.title) return null;
   return {
     image,
+    mobileImage: source.mobileImage || null,
     eyebrow: source.eyebrow || "",
     title: source.title || "",
     description: source.description || "",
@@ -426,7 +427,7 @@ export function buildCategoryStripModel({ cms, categories = [] }) {
       .filter(Boolean);
   } else {
     let list = tree.roots;
-    if (cfg.rootOnly === false) {
+    if (cfg.categoryDepth === "ALL") {
       list = [];
       const walk = (nodes) => nodes.forEach((n) => { list.push(n); walk(n.children); });
       walk(tree.roots);

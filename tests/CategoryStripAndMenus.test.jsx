@@ -193,6 +193,26 @@ describe("Category strip", () => {
     expect(normalizeHeaderSettings({ circularCategories: { enabled: "yes" } }).circularCategories.enabled).toBe(false);
   });
 
+  it("uses canonical categoryDepth without dropping legacy rootOnly compatibility", () => {
+    expect(normalizeHeaderSettings({ circularCategories: { categoryDepth: "ALL" } }).circularCategories).toMatchObject({ categoryDepth: "ALL" });
+    const legacy = normalizeHeaderSettings({ circularCategories: { rootOnly: false, showDividers: false, showTopDivider: false } }).circularCategories;
+    expect(legacy).toMatchObject({ categoryDepth: "ALL", showTopSeparator: false, showBottomSeparator: false });
+    for (const key of ["rootOnly", "showDividers", "showTopDivider", "showBottomDivider"]) expect(legacy).not.toHaveProperty(key);
+    expect(buildCategoryStripModel({ cms: strip({ categoryDepth: "ALL", maxItems: 24 }), categories }).items.map((item) => item.name)).toContain("Fiction");
+  });
+
+  it.each([
+    [false, false, "false", "false"],
+    [true, false, "true", "false"],
+    [false, true, "false", "true"],
+  ])("separator contract top=%s bottom=%s", (showTopSeparator, showBottomSeparator, top, bottom) => {
+    renderStrip({ showTopSeparator, showBottomSeparator });
+    expect(stripEl()).toHaveAttribute("data-top-divider", top);
+    expect(stripEl()).toHaveAttribute("data-bottom-divider", bottom);
+    expect(stripEl().className.includes("border-t")).toBe(showTopSeparator);
+    expect(stripEl().className.includes("border-b")).toBe(showBottomSeparator);
+  });
+
   it("scrolls inside its own container and never positions itself sticky/fixed", () => {
     renderStrip({});
     const list = stripEl().querySelector("ul");

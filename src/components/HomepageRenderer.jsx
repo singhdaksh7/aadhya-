@@ -9,6 +9,10 @@ import { ProductGridSkeleton } from "./ui/Skeleton";
 import { formatInr } from "../lib/format";
 import { IconArrowRight } from "./icons";
 import EditorialProductSection from "./EditorialProductSection";
+import ReviewsSection from "./ReviewsSection";
+import BlogPreviewSection from "./BlogPreviewSection";
+import ProductScroller from "./ProductScroller";
+import { spacingClass } from "../lib/homepageConfig";
 
 const route = (value, fallback = "/shop") => typeof value === "string" && (value.startsWith("/") || /^https?:\/\//i.test(value)) ? value : fallback;
 function SafeLink({ to, children, ...props }) { const url = route(to); return url.startsWith("/") ? <Link to={url} {...props}>{children}</Link> : <a href={url} {...props}>{children}</a>; }
@@ -16,7 +20,11 @@ const enabled = (items = []) => items.filter((item) => item.enabled !== false).s
 
 export default function HomepageRenderer({ sections = [], newArrivals = [], bestSellers = [], featuredCollection = null, booksList = [], isLoading = false, subscribed = false, newsletterEmail = "", setNewsletterEmail = () => {}, handleNewsletterSubmit = () => {}, newsletterStatus = "idle", newsletterError = "" }) {
   if (!sections?.length) return null;
-  const renderProducts = (products, limit) => isLoading ? <ProductGridSkeleton count={limit || 4} /> : <div className="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-4">{products.slice(0, limit || 4).map((product) => <ProductCard key={product.id} product={product} />)}</div>;
+  const renderProducts = (products, limit, arrows = false) => {
+    if (isLoading) return <ProductGridSkeleton count={limit || 4} />;
+    const cards = products.slice(0, limit || 4).map((product) => <ProductCard key={product.id} product={product} />);
+    return arrows ? <ProductScroller>{cards}</ProductScroller> : <div className="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-4">{cards}</div>;
+  };
   const renderSection = (section) => {
     const s = section.settings || {};
     switch (section.type) {
@@ -27,7 +35,7 @@ export default function HomepageRenderer({ sections = [], newArrivals = [], best
         return <PromoStrip key={section.id} promoConfig={s} />;
       }
       case "HERO_CAROUSEL": case "HERO": return <HeroBannerCarousel key={section.id} />;
-      case "TRUST_STRIP": case "TRUST_BADGES": return <TrustServiceStrip key={section.id} items={s.items} />;
+      case "TRUST_STRIP": case "TRUST_BADGES": return <TrustServiceStrip key={section.id} items={s.items} config={s} />;
       case "PROMO_BANNERS_2UP": case "MULTI_BANNER": return <PromoBanners2Up key={section.id} promoCards={s.items} />;
       case "NEW_ARRIVALS": case "BEST_SELLERS": {
         const isNew = section.type === "NEW_ARRIVALS"; const defaults = isNew ? ["Fresh Drops", "New Arrivals", "View All New Arrivals", "/new-arrivals"] : ["Most Cherished", "Best Sellers", "View All Best Sellers", "/best-sellers"];
@@ -36,7 +44,7 @@ export default function HomepageRenderer({ sections = [], newArrivals = [], best
         // still supply newArrivals/bestSellers directly.
         const products = Array.isArray(section.products) ? section.products : (isNew ? newArrivals : bestSellers);
         if (!isLoading && products.length === 0) return null; // never render heading + empty grid
-        return <section key={section.id} className="mx-auto max-w-7xl px-4 sm:px-8"><div className="mb-8 flex flex-wrap items-end justify-between gap-4 border-b store-border pb-4"><div><span className="text-xs font-semibold uppercase tracking-widest store-primary">{s.eyebrow || defaults[0]}</span><h2 className="mt-1 font-serif-display text-3xl font-bold store-text sm:text-4xl">{s.title || defaults[1]}</h2></div><SafeLink to={s.ctaUrl || defaults[3]} className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider store-primary hover:underline">{s.ctaLabel || defaults[2]} <IconArrowRight className="h-4 w-4" /></SafeLink></div>{renderProducts(products, s.limit)}</section>;
+        return <section key={section.id} className="mx-auto max-w-7xl px-4 sm:px-8"><div className="mb-8 flex flex-wrap items-end justify-between gap-4 border-b store-border pb-4"><div><span className="text-xs font-semibold uppercase tracking-widest store-primary">{s.eyebrow || defaults[0]}</span><h2 className="mt-1 font-serif-display text-3xl font-bold store-text sm:text-4xl">{s.title || defaults[1]}</h2>{s.subtitle && <p className="mt-2 max-w-xl text-sm store-muted">{s.subtitle}</p>}</div>{s.showCta !== false && <SafeLink to={s.ctaUrl || defaults[3]} className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider store-primary hover:underline">{s.ctaLabel || defaults[2]} <IconArrowRight className="h-4 w-4" /></SafeLink>}</div>{renderProducts(products, s.limit, s.showArrows === true)}</section>;
       }
       case "FEATURED_COLLECTION": case "COLLECTION": {
         // Prefer the collection resolved server-side on the section itself; fall back
@@ -57,10 +65,18 @@ export default function HomepageRenderer({ sections = [], newArrivals = [], best
       }
       case "EDITORIAL_BRAND": case "IMAGE_TEXT": return <EditorialProductSection key={section.id} section={section} />;
       case "NEWSLETTER": return <section key={section.id} className="mx-auto max-w-4xl px-4 pt-4 text-center sm:px-8"><div className="space-y-4 rounded-2xl border store-border store-surface p-8 sm:p-12"><span className="text-xs font-semibold uppercase tracking-widest store-primary">{s.eyebrow || "Join Our Circle"}</span><h2 className="font-serif-display text-3xl font-bold store-text sm:text-4xl">{s.title || "Stories of Craft & New Arrivals"}</h2><p className="mx-auto max-w-md text-xs leading-relaxed store-muted sm:text-sm">{s.description}</p>{subscribed ? <div className="rounded-xl store-bg-secondary-soft p-4 text-xs font-medium store-secondary sm:text-sm">{s.successMessage || "Thank you for subscribing to Aadya!"}</div> : <form onSubmit={handleNewsletterSubmit} className="mx-auto mt-6 flex max-w-md flex-col gap-3 sm:flex-row"><input type="email" value={newsletterEmail} onChange={(e) => setNewsletterEmail(e.target.value)} placeholder={s.placeholder || "Enter your email address"} required className="flex-1 rounded-full border store-border store-bg px-5 py-3 text-xs store-text" /><button type="submit" disabled={newsletterStatus === "loading"} className="rounded-full store-bg-primary px-7 py-3 text-xs font-semibold uppercase tracking-wider text-white disabled:opacity-60">{newsletterStatus === "loading" ? (s.loadingLabel || "Subscribing…") : (s.buttonLabel || "Subscribe")}</button></form>}{newsletterStatus === "error" && <p className="text-xs font-medium store-primary">{s.errorPrefix ? `${s.errorPrefix} ${newsletterError}` : newsletterError}</p>}</div></section>;
+      case "TESTIMONIALS": return <ReviewsSection key={section.id} section={section} />;
+      case "BLOG_PREVIEW": return <BlogPreviewSection key={section.id} section={section} />;
       default: return null;
     }
   };
+  // Per-section spacing (COMPACT / NORMAL / SPACIOUS). NORMAL adds no wrapper.
+  const spaced = (section) => {
+    const node = renderSection(section);
+    const cls = spacingClass(section.settings?.spacing);
+    return node && cls ? <div key={section.id} data-spacing={section.settings.spacing} className={cls}>{node}</div> : node;
+  };
   const topTypes = new Set(["CIRCULAR_CATEGORY_NAV", "CATEGORY_CIRCLES", "PROMO_STRIP", "PROMO_TICKER", "HERO_CAROUSEL", "HERO", "TRUST_STRIP", "TRUST_BADGES"]);
   const top = sections.filter((s) => topTypes.has(s.type)); const body = sections.filter((s) => !topTypes.has(s.type));
-  return <div className="w-full">{top.map(renderSection)}<div className="mt-12 space-y-12 sm:mt-16 sm:space-y-16">{body.map(renderSection)}</div></div>;
+  return <div className="w-full">{top.map(spaced)}<div className="mt-12 space-y-12 sm:mt-16 sm:space-y-16">{body.map(spaced)}</div></div>;
 }

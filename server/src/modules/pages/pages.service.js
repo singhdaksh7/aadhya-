@@ -79,6 +79,55 @@ async function resolveBooksSectionItems(section) {
   return products.map(serializePublicProduct);
 }
 
+// "Priya Sharma" -> "Priya S." so the public homepage never exposes a full customer name.
+function publicReviewerName(name) {
+  const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return "Customer";
+  return parts.length === 1 ? parts[0] : `${parts[0]} ${parts[parts.length - 1][0].toUpperCase()}.`;
+}
+
+// Resolves the TESTIMONIALS section from real, approved product reviews. The aggregate
+// (average + count) is always computed from the same approved set; admin-entered
+// averageRating / reviewCount are overrides applied by the storefront, never stored here.
+async function resolveReviewsSection(section) {
+  const settings = section.settings || {};
+  const limit = Math.min(Math.max(Number(settings.limit) || 6, 1), 24);
+  const where = { status: "APPROVED" };
+  const [rows, aggregate] = await Promise.all([
+    prisma.productReview.findMany({
+      where: { ...where, comment: { not: "" } },
+      orderBy: [{ rating: "desc" }, { createdAt: "desc" }],
+      take: limit,
+      select: { id: true, rating: true, title: true, comment: true, isVerifiedPurchase: true, createdAt: true, customer: { select: { name: true } } },
+    }),
+    prisma.productReview.aggregate({ where, _avg: { rating: true }, _count: { _all: true } }),
+  ]);
+  return {
+    reviews: rows.map((r) => ({ id: r.id, rating: r.rating, title: r.title, comment: r.comment, isVerifiedPurchase: r.isVerifiedPurchase, createdAt: r.createdAt, customerName: publicReviewerName(r.customer?.name) })),
+    reviewSummary: { averageRating: aggregate._avg.rating ? Math.round(aggregate._avg.rating * 10) / 10 : 0, reviewCount: aggregate._count._all },
+  };
+}
+
+// Reading time from the stored article body (~200 wpm, HTML tags stripped); minimum 1 minute.
+export function estimateReadingMinutes(content) {
+  const words = String(content || "").replace(/<[^>]*>/g, " ").split(/\s+/).filter(Boolean).length;
+  return Math.max(1, Math.ceil(words / 200));
+}
+
+// Resolves the BLOG_PREVIEW section from the existing blog system: published posts
+// whose publish date has passed, newest first.
+async function resolveBlogSection(section) {
+  const settings = section.settings || {};
+  const limit = Math.min(Math.max(Number(settings.limit) || 3, 1), 12);
+  const posts = await prisma.blogPost.findMany({
+    where: { status: "PUBLISHED", publishDate: { lte: new Date() } },
+    orderBy: { publishDate: "desc" },
+    take: limit,
+    select: { id: true, title: true, slug: true, excerpt: true, featuredImage: true, author: true, publishDate: true, content: true },
+  });
+  return posts.map(({ content, ...post }) => ({ ...post, readingMinutes: estimateReadingMinutes(content) }));
+}
+
 // Default seed sections for Aadya Storefront in approved visual order
 const DEFAULT_HOMEPAGE_SECTIONS = [
   { type: "CIRCULAR_CATEGORY_NAV", name: "Circular Category Navigation", sortOrder: 1, settings: { featuredOnly: false, limit: 10 } },
@@ -170,6 +219,12 @@ export async function getPublicHomepage() {
       const items = await resolveBooksSectionItems(section);
       return { ...section, books: items };
     }
+    if (section.type === "TESTIMONIALS") {
+      return { ...section, ...(await resolveReviewsSection(section)) };
+    }
+    if (section.type === "BLOG_PREVIEW") {
+      return { ...section, posts: await resolveBlogSection(section) };
+    }
     return section;
   }));
 
@@ -204,7 +259,8 @@ export async function createPageSection(pageIdOrSlug, input) {
       pageId: page.id,
       type: input.type,
       name: input.name || input.type,
-      settings: validateHomepageSettings(input.type, input.settings ?? {}),
+      // New sections start from the type's defaults so a fresh section is never blank.
+      settings: validateHomepageSettings(input.type, mergeMissingSettings(input.type, input.settings ?? {})),
       content: input.content ?? {},
       isEnabled: input.isEnabled ?? true,
       sortOrder: input.sortOrder ?? count + 1,

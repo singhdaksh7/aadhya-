@@ -150,7 +150,7 @@ export const DEFAULT_HEADER_CMS_SETTINGS = {
     shape: "CIRCLE", // "CIRCLE" | "SQUARE" | "ROUNDED_SQUARE" | "RECTANGLE"
     mode: "AUTO", // "AUTO" | "MANUAL"
     sortBy: "CATEGORY_ORDER", // AUTO only: "CATEGORY_ORDER" | "NAME"
-    rootOnly: true, // AUTO only: root categories vs. include subcategories
+    categoryDepth: "ROOT", // AUTO only: "ROOT" (root categories) | "ALL" (include subcategories)
     maxItems: 12,
     showDesktop: true,
     showMobile: true,
@@ -162,7 +162,8 @@ export const DEFAULT_HEADER_CMS_SETTINGS = {
     showPartialNextMobile: true,
     spacingDensity: "comfortable", // "compact" | "comfortable"
     backgroundMode: "surface", // "surface" | "soft"
-    showDividers: true,
+    showTopSeparator: true, // 1px line between the Primary Navigation and the strip
+    showBottomSeparator: true, // 1px line between the strip and the content below
     items: [],
   },
 
@@ -216,15 +217,22 @@ const oneOf = (value, allowed, fallback) => (allowed.includes(value) ? value : f
 export function normalizeCategoryStrip(raw, overrides = {}) {
   const r = raw || {};
   const d = DEFAULT_HEADER_CMS_SETTINGS.circularCategories;
+  // Legacy keys (rootOnly, showDividers, showTopDivider, showBottomDivider) are read below
+  // for old saved data but are never part of the canonical output.
   const bool = (key) => (r[key] !== undefined ? r[key] !== false : d[key]);
+  // `showDividers` is the legacy bottom-divider flag; explicit canonical keys win.
+  const bottomDivider = r.showBottomSeparator !== undefined ? r.showBottomSeparator !== false : r.showBottomDivider !== undefined ? r.showBottomDivider !== false : r.showDividers !== undefined ? r.showDividers !== false : d.showBottomSeparator;
+  const topDivider = r.showTopSeparator !== undefined ? r.showTopSeparator !== false : r.showTopDivider !== undefined ? r.showTopDivider !== false : d.showTopSeparator;
+  const categoryDepth = oneOf(r.categoryDepth, ["ROOT", "ALL"], r.rootOnly === false ? "ALL" : d.categoryDepth);
+  const { rootOnly: _rootOnly, showDividers: _showDividers, showTopDivider: _showTopDivider, showBottomDivider: _showBottomDivider, ...current } = r;
   return {
     ...d,
-    ...r,
+    ...current,
     enabled: r.enabled === true,
     shape: oneOf(r.shape, STRIP_SHAPES, d.shape),
     mode: r.mode === "MANUAL" ? "MANUAL" : "AUTO",
     sortBy: oneOf(r.sortBy, ["CATEGORY_ORDER", "NAME"], d.sortBy),
-    rootOnly: bool("rootOnly"),
+    categoryDepth,
     maxItems: overrides.maxItems ?? d.maxItems,
     showDesktop: bool("showDesktop"),
     showMobile: bool("showMobile"),
@@ -236,7 +244,8 @@ export function normalizeCategoryStrip(raw, overrides = {}) {
     showPartialNextMobile: bool("showPartialNextMobile"),
     spacingDensity: oneOf(r.spacingDensity, ["compact", "comfortable"], d.spacingDensity),
     backgroundMode: oneOf(r.backgroundMode, ["surface", "soft"], d.backgroundMode),
-    showDividers: bool("showDividers"),
+    showTopSeparator: topDivider,
+    showBottomSeparator: bottomDivider,
     items: (Array.isArray(r.items) ? r.items : []).map((item, i) => ({
       ...item,
       id: item.id || `strip-${i + 1}`,
@@ -412,13 +421,16 @@ const clampNumber = (value, min, max, fallback) => {
 // and the storefront-enforced sticky mode is written back explicitly.
 export function buildHeaderSavePayload(headerCms) {
   const h = headerCms || {};
+  // Legacy strip keys are accepted on read but never written back as canonical config.
+  // eslint-disable-next-line no-unused-vars
+  const { rootOnly, showDividers, showTopDivider, showBottomDivider, ...strip } = h.circularCategories || {};
   return {
     ...h,
     stickyMode: STOREFRONT_STICKY_MODE,
     promoTicker: { ...h.promoTicker, speed: clampNumber(h.promoTicker?.speed, 10, 300, 90) },
     megaMenu: { ...h.megaMenu, columns: Math.round(clampNumber(h.megaMenu?.columns, 2, 5, 4)) },
     circularCategories: {
-      ...h.circularCategories,
+      ...strip,
       maxItems: Math.round(clampNumber(h.circularCategories?.maxItems, 1, 24, 12)),
     },
   };

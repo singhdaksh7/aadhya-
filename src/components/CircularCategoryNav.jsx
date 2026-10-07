@@ -112,7 +112,9 @@ export default function CircularCategoryNav({ categories: categoriesProp, cms: c
   const gapClass = cfg.spacingDensity === "compact" ? "gap-2 md:gap-3.5" : "gap-4 md:gap-7";
   const fitClass = cfg.imageFit === "contain" ? "object-contain" : "object-cover";
   const bgClass = cfg.backgroundMode === "soft" ? "store-surface" : "store-bg";
-  const dividerClass = cfg.showDividers !== false ? "border-b store-border" : "";
+  // Theme border token (store-border), never a hard-coded colour; 1px hairlines.
+  const { showTopSeparator, showBottomSeparator } = cfg;
+  const dividerClass = `${showTopSeparator !== false ? "border-t store-border" : ""} ${showBottomSeparator !== false ? "border-b store-border" : ""}`;
   const padClass = cfg.spacingDensity === "compact" ? "py-2" : "py-4";
 
   const scroll = (direction) => {
@@ -129,6 +131,8 @@ export default function CircularCategoryNav({ categories: categoriesProp, cms: c
       aria-label="Shop by category"
       data-testid="category-strip"
       data-shape={cfg.shape}
+      data-top-divider={showTopSeparator !== false ? "true" : "false"}
+      data-bottom-divider={showBottomSeparator !== false ? "true" : "false"}
       className={`${bgClass} ${dividerClass} ${padClass} ${visibility} relative group/scroller w-full max-w-full overflow-x-clip`}
     >
       <div className="mx-auto max-w-7xl relative px-4 sm:px-8 min-w-0">

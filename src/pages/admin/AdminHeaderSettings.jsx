@@ -12,6 +12,7 @@ import { DEFAULT_HEADER_CMS_SETTINGS, buildHeaderSavePayload, normalizeHeaderSet
 import TopUtilityBar from "../../components/TopUtilityBar";
 import PromoStrip from "../../components/PromoStrip";
 import PrimaryNav from "../../components/PrimaryNav";
+import { MegaPromoCard } from "../../components/MegaMenu";
 import NavItemEditor from "../../components/admin/NavItemEditor";
 import CategoryStripSettings from "../../components/admin/CategoryStripSettings";
 import CircularCategoryNav from "../../components/CircularCategoryNav";
@@ -232,6 +233,8 @@ export default function AdminHeaderSettings() {
 
   const previewNavItems = buildNavModel({ cms: headerCms, categories }).filter((i) => i.showDesktop !== false);
   const previewMenuItems = previewNavItems.filter((i) => i.hasMenu);
+  // Mobile preview shows the selected menu's promo card with its mobile image (draft state).
+  const previewMobilePromo = buildNavModel({ cms: headerCms, categories }).find((i) => i.id === previewMenuId)?.promo || null;
 
   const tabs = [
     { id: "general", label: "General Header" },
@@ -1219,6 +1222,12 @@ export default function AdminHeaderSettings() {
                     showBadges={headerCms.primaryNav.showNewBadge !== false}
                     forcedOpenId={previewMenuId || null}
                   />
+                </div>
+              )}
+
+              {previewViewport === "mobile" && previewMobilePromo && (
+                <div className="grid grid-cols-12 p-3 border-b border-stone-200" data-testid="preview-mobile-promo">
+                  <MegaPromoCard promo={previewMobilePromo} viewport="mobile" />
                 </div>
               )}
 

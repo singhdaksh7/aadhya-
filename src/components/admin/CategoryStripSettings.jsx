@@ -12,7 +12,8 @@ const TOGGLES = [
   ["showLabels", "Show Category Labels"],
   ["showArrows", "Show Scroll Arrows (desktop)"],
   ["showPartialNextMobile", "Show Partial Next Item on Mobile"],
-  ["showDividers", "Bottom Divider Line"],
+  ["showTopSeparator", "Show Top Separator Line (below Primary Navigation)"],
+  ["showBottomSeparator", "Show Bottom Separator Line (above hero/content)"],
 ];
 
 function SelectField({ id, label, value, onChange, options }) {
@@ -90,8 +91,8 @@ export default function CategoryStripSettings({ strip, setStrip, categories }) {
         {strip.mode === "AUTO" && (
           <>
             <SelectField
-              id="strip-depth" label="Category Depth" value={strip.rootOnly === false ? "ALL" : "ROOT"}
-              onChange={(v) => setStrip({ rootOnly: v === "ROOT" })}
+              id="strip-depth" label="Category Depth" value={strip.categoryDepth === "ALL" ? "ALL" : "ROOT"}
+              onChange={(categoryDepth) => setStrip({ categoryDepth })}
               options={[["ROOT", "Root Categories Only"], ["ALL", "Include Subcategories"]]}
             />
             <SelectField

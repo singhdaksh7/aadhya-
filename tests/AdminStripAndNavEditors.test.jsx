@@ -80,13 +80,14 @@ describe("Admin: category strip + nav item editors", () => {
     save();
     await waitFor(() => expect(mocks.update).toHaveBeenCalled());
     expect(header().circularCategories).toMatchObject({
-      rootOnly: false,
+      categoryDepth: "ALL",
       desktopSize: "large",
       mobileSize: "small",
       imageFit: "contain",
       showMobile: false,
       enabled: false,
     });
+    for (const legacy of ["rootOnly", "showDividers", "showTopDivider", "showBottomDivider"]) expect(header().circularCategories).not.toHaveProperty(legacy);
   });
 
   it("Books nav item: show toggle, ALL_CATEGORIES, scope, parents, exclusions, max", async () => {

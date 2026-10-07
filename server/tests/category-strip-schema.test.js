@@ -15,6 +15,7 @@ describe("category strip + ALL_CATEGORIES contract", () => {
       mode: "MANUAL",
       sortBy: "NAME",
       rootOnly: false,
+      categoryDepth: "ALL",
       maxItems: 8,
       showDesktop: true,
       showMobile: false,
@@ -26,6 +27,8 @@ describe("category strip + ALL_CATEGORIES contract", () => {
       showPartialNextMobile: true,
       spacingDensity: "compact",
       backgroundMode: "soft",
+      showTopSeparator: true,
+      showBottomSeparator: false,
       showDividers: true,
       items: [
         {
