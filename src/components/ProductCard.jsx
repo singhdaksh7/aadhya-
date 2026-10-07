@@ -192,6 +192,7 @@ export default function ProductCard({ product }) {
                 {formatInr(price)}
               </span>
             )}
+            <span data-testid="price-tax-note" className="text-[10px] font-medium uppercase tracking-wider store-muted">Incl. taxes</span>
           </div>
 
           {/* Mobile Quick Add Button */}

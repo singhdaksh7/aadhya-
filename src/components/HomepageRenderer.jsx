@@ -12,6 +12,7 @@ import EditorialProductSection from "./EditorialProductSection";
 import ReviewsSection from "./ReviewsSection";
 import BlogPreviewSection from "./BlogPreviewSection";
 import ProductScroller from "./ProductScroller";
+import HomepageSectionTitle, { SectionCta } from "./HomepageSectionTitle";
 import { spacingClass } from "../lib/homepageConfig";
 
 const route = (value, fallback = "/shop") => typeof value === "string" && (value.startsWith("/") || /^https?:\/\//i.test(value)) ? value : fallback;
@@ -44,6 +45,9 @@ export default function HomepageRenderer({ sections = [], newArrivals = [], best
         // still supply newArrivals/bestSellers directly.
         const products = Array.isArray(section.products) ? section.products : (isNew ? newArrivals : bestSellers);
         if (!isLoading && products.length === 0) return null; // never render heading + empty grid
+        const centered = s.headingAlign !== "LEFT"; // rails default to a centered editorial heading
+        const ctaTo = s.ctaUrl || defaults[3]; const ctaLabel = s.ctaLabel || defaults[2];
+        if (centered) return <section key={section.id} className="mx-auto max-w-7xl px-4 sm:px-8"><HomepageSectionTitle align="CENTER" eyebrow={s.eyebrow || defaults[0]} title={s.title || defaults[1]} subtitle={s.subtitle} className="mb-10 sm:mb-12" />{renderProducts(products, s.limit, s.showArrows === true)}{s.showCta !== false && <SectionCta to={ctaTo}>{ctaLabel}</SectionCta>}</section>;
         return <section key={section.id} className="mx-auto max-w-7xl px-4 sm:px-8"><div className="mb-8 flex flex-wrap items-end justify-between gap-4 border-b store-border pb-4"><div><span className="text-xs font-semibold uppercase tracking-widest store-primary">{s.eyebrow || defaults[0]}</span><h2 className="mt-1 font-serif-display text-3xl font-bold store-text sm:text-4xl">{s.title || defaults[1]}</h2>{s.subtitle && <p className="mt-2 max-w-xl text-sm store-muted">{s.subtitle}</p>}</div>{s.showCta !== false && <SafeLink to={s.ctaUrl || defaults[3]} className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider store-primary hover:underline">{s.ctaLabel || defaults[2]} <IconArrowRight className="h-4 w-4" /></SafeLink>}</div>{renderProducts(products, s.limit, s.showArrows === true)}</section>;
       }
       case "FEATURED_COLLECTION": case "COLLECTION": {

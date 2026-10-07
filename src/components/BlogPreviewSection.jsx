@@ -1,7 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { resolveMediaUrl } from "../lib/api";
-import { IconArrowRight } from "./icons";
+import HomepageSectionTitle, { SectionCta } from "./HomepageSectionTitle";
 
 const safePath = (value, fallback) =>
   typeof value === "string" && (value.startsWith("/") || /^https?:\/\//i.test(value)) ? value : fallback;
@@ -16,17 +16,7 @@ export default function BlogPreviewSection({ section }) {
 
   return (
     <section data-testid="blog-section" className="mx-auto max-w-7xl px-4 sm:px-8">
-      <div className="mb-8 flex flex-wrap items-end justify-between gap-4 border-b store-border pb-4">
-        <div>
-          {s.eyebrow && <span className="text-xs font-semibold uppercase tracking-widest store-primary">{s.eyebrow}</span>}
-          <h2 className="mt-1 font-serif-display text-3xl font-bold store-text sm:text-4xl">{s.title || "Stories from Aadya"}</h2>
-        </div>
-        {s.showViewAll !== false && (
-          <Link to={viewAll} className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider store-primary hover:underline">
-            View All <IconArrowRight className="h-4 w-4" />
-          </Link>
-        )}
-      </div>
+      <HomepageSectionTitle align={s.headingAlign || "CENTER"} eyebrow={s.eyebrow} title={s.title || "Stories from Aadya"} className="mb-10 sm:mb-12" />
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {posts.map((post) => (
           <Link key={post.id} to={`/blog/${post.slug}`} data-testid="blog-card" className="group flex flex-col overflow-hidden rounded-2xl border store-border store-surface transition hover:shadow-lg">
@@ -47,6 +37,7 @@ export default function BlogPreviewSection({ section }) {
           </Link>
         ))}
       </div>
+      {s.showViewAll !== false && <SectionCta to={viewAll} align={s.headingAlign === "LEFT" ? "LEFT" : "CENTER"}>View All Stories</SectionCta>}
     </section>
   );
 }

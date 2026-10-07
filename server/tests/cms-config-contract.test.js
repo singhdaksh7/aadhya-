@@ -140,3 +140,14 @@ describe("blog reading time", () => {
     expect(estimateReadingMinutes("<p>" + "word ".repeat(450) + "</p>")).toBe(3);
   });
 });
+
+describe("heading alignment", () => {
+  it("accepts LEFT/CENTER on rails, reviews and blog and rejects anything else", () => {
+    for (const type of ["NEW_ARRIVALS", "BEST_SELLERS", "TESTIMONIALS", "BLOG_PREVIEW"]) {
+      expect(homepage(type, { headingAlign: "LEFT" }).headingAlign).toBe("LEFT");
+      expect(homepage(type, { headingAlign: "CENTER" }).headingAlign).toBe("CENTER");
+      expect(() => homepage(type, { headingAlign: "RIGHT" })).toThrow();
+    }
+    expect(homepage("TESTIMONIALS", { subtitle: "Real words" }).subtitle).toBe("Real words");
+  });
+});
