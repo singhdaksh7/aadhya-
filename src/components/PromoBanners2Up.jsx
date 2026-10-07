@@ -45,21 +45,17 @@ export default function PromoBanners2Up({ promoCards }) {
             </picture>
             {/* Overlay (strength + text alignment are admin-configurable) */}
             <div data-testid="promo-banner-overlay" className={`absolute inset-0 bg-gradient-to-t ${BANNER_OVERLAY_CLASSES[card.overlayStrength] || BANNER_OVERLAY_CLASSES.MEDIUM} p-6 sm:p-8 flex flex-col justify-end ${BANNER_ALIGN_CLASSES[card.textAlign] || BANNER_ALIGN_CLASSES.LEFT} text-white`}>
-              <span className="text-xs font-semibold uppercase tracking-widest store-accent">
-                {card.eyebrow || "Curated Edit"}
+              {card.title && (
+                <h3 className="font-serif-display text-xl sm:text-2xl text-white">{card.title}</h3>
+              )}
+              {/* Image-first banner: only the title and a subtle bordered CTA sit on the image (no eyebrow/subtitle). */}
+              <span
+                data-testid="promo-banner-cta"
+                className="mt-3 inline-flex items-center gap-2 rounded-full border border-white/80 px-5 py-2 text-[11px] font-semibold uppercase tracking-wider text-white backdrop-blur-[2px] transition-colors group-hover:bg-white group-hover:text-charcoal"
+              >
+                {card.ctaLabel || "Shop Now"}
+                <span aria-hidden="true" className="transition-transform group-hover:translate-x-1">&rarr;</span>
               </span>
-              <h3 className="font-serif-display text-2xl sm:text-3xl text-white mt-1">
-                {card.title}
-              </h3>
-              <p className="text-xs sm:text-sm text-white/90 mt-1">
-                {card.subtitle}
-              </p>
-              <div className="mt-4 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-white group-hover:store-accent transition-colors">
-                <span>{card.ctaLabel || "Discover Now"}</span>
-                <svg className="h-4 w-4 transform transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                </svg>
-              </div>
             </div>
           </Link>
         ))}
