@@ -1,4 +1,5 @@
 import React, { useRef } from "react";
+import HomepageSectionTitle from "./HomepageSectionTitle";
 
 function Stars({ rating }) {
   const full = Math.round(Number(rating) || 0);
@@ -49,11 +50,10 @@ export default function ReviewsSection({ section }) {
 
   return (
     <section data-testid="reviews-section" data-motion={motion} className="mx-auto max-w-7xl px-4 sm:px-8">
-      <div className="mb-8 flex flex-col items-center text-center">
-        {s.eyebrow && <span className="text-xs font-semibold uppercase tracking-widest store-primary">{s.eyebrow}</span>}
-        <h2 className="mt-1 font-serif-display text-3xl font-bold store-text sm:text-4xl">{s.title || "What Our Customers Say"}</h2>
+      <div className="mb-10 sm:mb-12">
+        <HomepageSectionTitle align={s.headingAlign || "CENTER"} eyebrow={s.eyebrow} title={s.title || "What Our Customers Say"} subtitle={s.subtitle} />
         {reviewCount > 0 && (
-          <p className="mt-2 flex items-center gap-2 text-sm store-muted" data-testid="reviews-summary">
+          <p className={`mt-3 flex items-center gap-2 text-sm store-muted ${s.headingAlign === "LEFT" ? "" : "justify-center"}`} data-testid="reviews-summary">
             <Stars rating={averageRating} /> <span className="font-semibold store-text">{Number(averageRating).toFixed(1)}</span> · {reviewCount} reviews
           </p>
         )}
