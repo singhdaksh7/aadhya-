@@ -13,10 +13,11 @@ const wrap = (ui) => render(<BrowserRouter><CartProvider><WishlistProvider>{ui}<
 describe("image-first editorial banners", () => {
   const cards = [{ id: "1", title: "Home Decor", subtitle: "A long supporting description", eyebrow: "CURATED EDIT", image: "/a.jpg", ctaLabel: "Shop Now", ctaUrl: "/shop/category/home-decor" }];
 
-  it("shows only the image, an optional title and a CTA overlaid on the image, with no subtitle or eyebrow anywhere", () => {
+  it("shows only the image, an optional title and a CTA overlaid on the image, with no subtitle/description anywhere", () => {
     wrap(<PromoBanners2Up promoCards={cards} />);
     expect(screen.queryByText("A long supporting description")).toBeNull();
-    expect(screen.queryByText("CURATED EDIT")).toBeNull();
+    // optional eyebrow is allowed, but only on the image
+    expect(screen.getByText("CURATED EDIT").closest("[data-testid='promo-banner-overlay']")).not.toBeNull();
     const link = screen.getByRole("link");
     const overlay = screen.getByTestId("promo-banner-overlay");
     expect(link.contains(overlay)).toBe(true);
@@ -37,14 +38,23 @@ describe("image-first editorial banners", () => {
   });
 });
 
-describe("clean product cards", () => {
-  const product = { id: "p1", name: "Artisan Vase", slug: "vase", price: 1290, shortDescription: "Hand-thrown vase with a matte glaze", images: ["/v.jpg"], category: { name: "Home Decor", slug: "home-decor" } };
+describe("minimal product cards", () => {
+  const product = { id: "p1", name: "Artisan Vase", slug: "vase", price: 1590, salePrice: 1290, shortDescription: "Hand-thrown vase with a matte glaze", images: ["/v.jpg"], category: { name: "Home Decor", slug: "home-decor" }, averageRating: 4.5, reviewCount: 3, author: "Someone" };
 
-  it("keeps name, price and tax note but never renders the short description", () => {
+  it("shows only image, name and one price: no category, description, tax note, MRP, rating or author", () => {
     wrap(<ProductCard product={product} />);
     expect(screen.getByText("Artisan Vase")).toBeInTheDocument();
-    expect(screen.getByText(/1,290/)).toBeInTheDocument();
-    expect(screen.getByTestId("price-tax-note")).toBeInTheDocument();
+    expect(screen.getByTestId("card-price").textContent).toMatch(/1,290/);
+    expect(screen.queryByText(/1,590/)).toBeNull(); // no strike-through MRP
+    expect(screen.queryByText("Home Decor")).toBeNull();
     expect(screen.queryByText(/Hand-thrown vase/)).toBeNull();
+    expect(screen.queryByText(/Incl\. taxes/i)).toBeNull();
+    expect(screen.queryByText(/By Someone/)).toBeNull();
+    expect(screen.queryByText("(3)")).toBeNull();
+  });
+
+  it("uses the plain price when there is no sale price", () => {
+    wrap(<ProductCard product={{ ...product, salePrice: null }} />);
+    expect(screen.getByTestId("card-price").textContent).toMatch(/1,590/);
   });
 });

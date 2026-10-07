@@ -45,10 +45,13 @@ export default function PromoBanners2Up({ promoCards }) {
             </picture>
             {/* Overlay (strength + text alignment are admin-configurable) */}
             <div data-testid="promo-banner-overlay" className={`absolute inset-0 bg-gradient-to-t ${BANNER_OVERLAY_CLASSES[card.overlayStrength] || BANNER_OVERLAY_CLASSES.MEDIUM} p-6 sm:p-8 flex flex-col justify-end ${BANNER_ALIGN_CLASSES[card.textAlign] || BANNER_ALIGN_CLASSES.LEFT} text-white`}>
+              {card.eyebrow && (
+                <span className="mb-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/85">{card.eyebrow}</span>
+              )}
               {card.title && (
                 <h3 className="font-serif-display text-xl sm:text-2xl text-white">{card.title}</h3>
               )}
-              {/* Image-first banner: only the title and a subtle bordered CTA sit on the image (no eyebrow/subtitle). */}
+              {/* Image-first banner: only the title and a subtle bordered CTA sit on the image (subtitle/description are never rendered). */}
               <span
                 data-testid="promo-banner-cta"
                 className="mt-3 inline-flex items-center gap-2 rounded-full border border-white/80 px-5 py-2 text-[11px] font-semibold uppercase tracking-wider text-white backdrop-blur-[2px] transition-colors group-hover:bg-white group-hover:text-charcoal"

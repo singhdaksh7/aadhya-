@@ -3,14 +3,12 @@ import { Link } from "react-router-dom";
 import { formatInr } from "../lib/format";
 import { useCart } from "../context/CartContext";
 import { useWishlist } from "../context/WishlistContext";
-import { useSiteSettings } from "../hooks/useSiteSettings";
 import { IconCart, IconCheck } from "./icons";
 import { trackAddToCart, trackWishlistAdd } from "../lib/analytics";
 
 export default function ProductCard({ product }) {
   const { addItem, items } = useCart();
   const { isInWishlist, toggleWishlist } = useWishlist();
-  const { showRatings } = useSiteSettings();
 
   const [isHovered, setIsHovered] = useState(false);
   const [addedNotice, setAddedNotice] = useState(false);
@@ -31,8 +29,6 @@ export default function ProductCard({ product }) {
   const primaryImg = product.images?.[0] || product.image || "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?q=80&w=800&auto=format&fit=crop";
   const hoverImg = product.images?.[1] || primaryImg;
 
-  const categoryName = typeof product.category === "object" ? product.category?.name : (product.category || "Home Decor");
-  const categorySlug = product.categorySlug || "home-decor";
 
   const handleQuickAdd = (e) => {
     e.preventDefault();
@@ -142,52 +138,17 @@ export default function ProductCard({ product }) {
 
       {/* Product Content Details */}
       <div className="flex flex-1 flex-col p-4">
-        <div className="flex items-center justify-between text-xs store-muted">
-          <Link to={`/shop/category/${categorySlug}`} className="hover:text-[var(--theme-primary)] hover:underline">
-            {categoryName}
-          </Link>
-          {stockQty <= 5 && stockQty > 0 && (
-            <span className="text-[11px] font-medium store-primary">Only {stockQty} left</span>
-          )}
-        </div>
-
-        <Link to={`/shop/${product.slug}`} className="mt-1.5 block">
+        <Link to={`/shop/${product.slug}`} className="block">
           <h3 className="font-serif-display text-base store-text transition hover:text-[var(--theme-primary)] line-clamp-1">
             {product.name}
           </h3>
         </Link>
 
-        {/* Ratings Display */}
-        {showRatings !== false && (product.reviewCount > 0 || product.averageRating > 0) && (
-          <div className="mt-1 flex items-center gap-1.5 text-xs">
-            <div className="flex items-center text-amber-500">
-              <span className="text-sm">★</span>
-              <span className="ml-0.5 font-semibold store-text">
-                {Number(product.averageRating || 0).toFixed(1)}
-              </span>
-            </div>
-            {product.reviewCount > 0 && (
-              <span className="text-[11px] store-muted">({product.reviewCount})</span>
-            )}
-          </div>
-        )}
-
-        {product.author && (
-          <p className="mt-0.5 text-xs store-muted italic">By {product.author}</p>
-        )}
-
-        <div className="mt-auto pt-3 flex items-center justify-between border-t border-[var(--theme-border)]">
-          <div className="flex items-baseline gap-2">
-            <span className="text-base font-semibold store-primary">
-              {formatInr(salePrice ?? price)}
-            </span>
-            {onSale && (
-              <span className="text-xs store-muted line-through">
-                {formatInr(price)}
-              </span>
-            )}
-            <span data-testid="price-tax-note" className="text-[10px] font-medium uppercase tracking-wider store-muted">Incl. taxes</span>
-          </div>
+        {/* Minimal card: image, name and one clean price line (no category, description, tax note or MRP clutter). */}
+        <div className="mt-auto pt-3 flex items-center justify-between">
+          <span data-testid="card-price" className="text-base font-semibold store-primary">
+            {formatInr(salePrice ?? price)}
+          </span>
 
           {/* Mobile Quick Add Button */}
           <button
