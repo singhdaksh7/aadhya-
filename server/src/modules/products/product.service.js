@@ -81,7 +81,34 @@ function sortToOrderBy(sort) {
   }
 }
 
-function buildWhere(query, { forceActive }) {
+/**
+ * Category ids a product listing should cover: the requested category plus all of
+ * its descendants (any depth). `category`/`subcategory` (slug) wins over `categoryId`.
+ * Returns null when no category filter was requested, [] when it matches nothing.
+ */
+export async function resolveCategoryScopeIds({ categoryId, category, subcategory } = {}) {
+  const slug = subcategory || category;
+  if (!categoryId && !slug) return null;
+  const rows = await prisma.category.findMany({ select: { id: true, slug: true, parentId: true } });
+  const root = slug ? rows.find((r) => r.slug === slug) : rows.find((r) => r.id === categoryId);
+  if (!root) return [];
+  const children = new Map();
+  for (const r of rows) {
+    if (!r.parentId) continue;
+    if (!children.has(r.parentId)) children.set(r.parentId, []);
+    children.get(r.parentId).push(r.id);
+  }
+  const ids = new Set([root.id]);
+  const stack = [root.id];
+  while (stack.length) {
+    for (const child of children.get(stack.pop()) || []) {
+      if (!ids.has(child)) { ids.add(child); stack.push(child); }
+    }
+  }
+  return [...ids];
+}
+
+function buildWhere(query, { forceActive, categoryIds } = {}) {
   const where = {};
   if (forceActive) where.isActive = true;
   else if (query.isActive !== undefined) where.isActive = query.isActive;
@@ -89,9 +116,14 @@ function buildWhere(query, { forceActive }) {
   const type = query.productType || query.type;
   if (type) where.productType = type;
 
-  if (query.categoryId) where.categoryId = query.categoryId;
-  if (query.category) where.category = { slug: query.category };
-  if (query.subcategory) where.category = { slug: query.subcategory };
+  if (categoryIds) {
+    // Public listings: the category and all of its descendants (see resolveCategoryScopeIds).
+    where.categoryId = { in: categoryIds };
+  } else {
+    if (query.categoryId) where.categoryId = query.categoryId;
+    if (query.category) where.category = { slug: query.category };
+    if (query.subcategory) where.category = { slug: query.subcategory };
+  }
   if (query.brand) where.brand = { equals: query.brand, mode: "insensitive" };
   if (query.tag) where.tags = { has: query.tag };
 
@@ -142,7 +174,8 @@ async function paginatedFind(where, { page, limit, sort }, include) {
 }
 
 export async function listPublicProducts(query) {
-  const where = buildWhere(query, { forceActive: true });
+  const categoryIds = await resolveCategoryScopeIds(query);
+  const where = buildWhere(query, { forceActive: true, categoryIds });
   const result = await paginatedFind(where, query, PUBLIC_INCLUDE);
   return {
     ...result,
