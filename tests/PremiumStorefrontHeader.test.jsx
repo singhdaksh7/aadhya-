@@ -98,15 +98,20 @@ describe("Premium Storefront Header & Navigation", () => {
     mockSettings.header = { circularCategories: { enabled: true, rootOnly: false } };
     render(
       <BrowserRouter>
-        <CircularCategoryNav categories={mockCategories.filter((c) => c.isActive)} />
+        <CircularCategoryNav categories={[...mockCategories.filter((c) => c.isActive), { id: "cat-5", name: "Zen", slug: "zen", isActive: true, image: null, parentId: null }]} />
       </BrowserRouter>
     );
 
     const decorImg = document.querySelector("img");
     expect(decorImg.getAttribute("src")).toBe("http://api.test/uploads/decor.jpg");
 
-    // Category without image shows fallback letter "C"
-    expect(screen.getByText("C")).toBeInTheDocument();
+    // A child without its own image inherits the parent's image (Ceramics -> Home Decor)
+    const imgs = [...document.querySelectorAll("img")].map((i) => i.getAttribute("src"));
+    expect(imgs.filter((s) => s === "http://api.test/uploads/decor.jpg")).toHaveLength(2);
+    expect(screen.queryByText("C")).toBeNull();
+
+    // A category with no image anywhere in its chain still shows the neutral fallback letter
+    expect(screen.getByText("Z")).toBeInTheDocument();
     mockSettings.header = original;
   });
 

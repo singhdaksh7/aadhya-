@@ -1,4 +1,5 @@
 import { isSafeUrl } from "./headerCmsHelpers";
+import { buildCategoryIndex, resolveCategoryThumb } from "./categoryInheritance";
 
 /**
  * One normalized navigation structure shared by the desktop primary nav,
@@ -76,13 +77,15 @@ function makeLink(base, extra = {}) {
 export function buildCategoryTree(categories = []) {
   const active = (Array.isArray(categories) ? categories : []).filter((c) => c && c.isActive !== false);
   const byId = new Map();
+  const rawIndex = buildCategoryIndex(active);
   active.forEach((cat) => {
     byId.set(cat.id, {
       id: cat.id,
       parentId: cat.parentId || null,
       name: cat.name,
       slug: cat.slug,
-      image: cat.image || cat.desktopBanner || null,
+      // own image -> nearest ancestor image -> own/ancestor banner (never a broken URL)
+      image: resolveCategoryThumb(cat, rawIndex),
       description: cat.description || "",
       to: `/shop/category/${cat.slug}`,
       children: [],
