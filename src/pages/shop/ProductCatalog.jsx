@@ -4,6 +4,7 @@ import ProductCard from "../../components/ProductCard";
 import { ProductGridSkeleton } from "../../components/ui/Skeleton";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { getProducts, getCategories, getCollections } from "../../services/api";
+import { resolveMediaUrl } from "../../lib/api";
 
 const SORT_OPTIONS = [
   { value: "featured", label: "Featured" },
@@ -85,6 +86,24 @@ export default function ProductCatalog({
 
   return (
     <div className="store-bg store-text space-y-10 pb-20">
+      {/* Optional category banner (category.desktopBanner / mobileBanner); the text header below is unchanged and still renders when none is set. */}
+      {(activeCategoryObj?.desktopBanner || activeCategoryObj?.mobileBanner) && (
+        <section data-testid="category-banner" className="mx-auto w-full max-w-7xl px-4 pt-6 sm:px-8">
+          <div className="relative aspect-[16/9] w-full overflow-hidden rounded-2xl border border-[var(--theme-border)] store-surface md:aspect-[5/2] md:max-h-[460px]">
+            <picture>
+              {activeCategoryObj.mobileBanner && activeCategoryObj.desktopBanner && (
+                <source media="(max-width: 767px)" srcSet={resolveMediaUrl(activeCategoryObj.mobileBanner)} />
+              )}
+              <img
+                src={resolveMediaUrl(activeCategoryObj.desktopBanner || activeCategoryObj.mobileBanner)}
+                alt={`${activeCategoryObj.name} banner`}
+                className="absolute inset-0 h-full w-full object-cover"
+              />
+            </picture>
+          </div>
+        </section>
+      )}
+
       {/* Header Banner */}
       <section className="store-bg border-b border-[var(--theme-border)] py-10 sm:py-14">
         <div className="mx-auto max-w-7xl px-4 sm:px-8">
