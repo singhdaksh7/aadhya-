@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { resolveMediaUrl } from "../lib/api";
+import { ctaLabel } from "../lib/cta";
 import { BANNER_ALIGN_CLASSES, BANNER_OVERLAY_CLASSES } from "../lib/homepageConfig";
 
 const DEFAULT_PROMO_CARDS = [
@@ -34,14 +35,14 @@ export default function PromoBanners2Up({ promoCards, layout = "FULL", showSubti
   if (cards.length === 0) return null;
   const split = layout === "SPLIT" && cards.length > 1;
   return (
-    <section data-testid="promo-banners" data-layout={split ? "SPLIT" : "FULL"} className="w-full">
-      <div className={split ? "grid grid-cols-1 md:grid-cols-2" : "grid grid-cols-1 gap-1 sm:gap-2"}>
+    <section data-testid="promo-banners" data-layout={split ? "SPLIT" : "FULL"} className="mx-auto w-full max-w-7xl px-4 sm:px-8">
+      <div className={split ? "grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6" : "grid grid-cols-1 gap-4 sm:gap-6"}>
         {cards.map((card, idx) => (
           <Link
             key={card.id || idx}
             to={card.ctaUrl || "/shop"}
             data-testid="promo-banner"
-            className={`group relative block w-full overflow-hidden store-surface ${split ? "aspect-[4/5] md:aspect-[4/5] lg:aspect-[5/6]" : "aspect-[4/5] sm:aspect-[16/9] lg:aspect-[21/9]"}`}
+            className={`group relative block w-full overflow-hidden rounded-2xl store-surface ${split ? "aspect-[4/5] md:aspect-[4/5] lg:aspect-[5/6]" : "aspect-[4/5] sm:aspect-[16/9] lg:aspect-[21/9]"}`}
           >
             <picture>
               {card.mobileImage && <source media="(max-width: 767px)" srcSet={resolveMediaUrl(card.mobileImage)} />}
@@ -52,7 +53,7 @@ export default function PromoBanners2Up({ promoCards, layout = "FULL", showSubti
                 className="absolute inset-0 h-full w-full object-cover transition-transform duration-[1400ms] ease-out group-hover:scale-[1.03]"
               />
             </picture>
-            <div data-testid="promo-banner-overlay" data-align={card.textAlign || "LEFT"} className={`absolute inset-0 flex flex-col bg-gradient-to-t ${BANNER_OVERLAY_CLASSES[card.overlayStrength] || BANNER_OVERLAY_CLASSES.MEDIUM} px-6 py-8 sm:px-12 lg:px-20 ${POSITION[card.textAlign] || POSITION.LEFT} text-white`}>
+            <div data-testid="promo-banner-overlay" data-align={card.textAlign || "LEFT"} className={`absolute inset-0 flex flex-col bg-gradient-to-t ${BANNER_OVERLAY_CLASSES[card.overlayStrength] || BANNER_OVERLAY_CLASSES.MEDIUM} px-6 py-8 sm:px-12 lg:px-20 ${POSITION[card.textAlign] || POSITION.LEFT} text-white [text-shadow:0_1px_20px_rgba(0,0,0,0.4)]`}>
               {card.eyebrow && (
                 <span className="mb-3 text-[11px] font-medium uppercase tracking-[0.3em] text-white/90">{card.eyebrow}</span>
               )}
@@ -66,7 +67,7 @@ export default function PromoBanners2Up({ promoCards, layout = "FULL", showSubti
                 data-testid="promo-banner-cta"
                 className="mt-6 inline-flex items-center gap-3 border border-white/85 px-7 py-3 text-[11px] font-medium uppercase tracking-[0.2em] text-white transition-colors group-hover:bg-white group-hover:text-charcoal"
               >
-                {card.ctaLabel || "Shop Now"}
+                {ctaLabel(card.ctaLabel, "Shop Now")}
                 <span aria-hidden="true" className="transition-transform group-hover:translate-x-1">&rarr;</span>
               </span>
             </div>

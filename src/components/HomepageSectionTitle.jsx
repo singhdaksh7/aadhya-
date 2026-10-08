@@ -1,5 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { ctaLabel } from "../lib/cta";
 
 const safePath = (value, fallback) =>
   typeof value === "string" && (value.startsWith("/") || /^https?:\/\//i.test(value)) ? value : fallback;
@@ -43,9 +44,9 @@ export function SectionCta({ to, children, align = "CENTER" }) {
   return (
     <div className={`mt-10 flex ${align === "LEFT" ? "justify-start" : "justify-center"}`}>
       {href.startsWith("/") ? (
-        <Link to={href} data-testid="section-cta" className={cls}>{children} <span aria-hidden="true">&rarr;</span></Link>
+        <Link to={href} data-testid="section-cta" className={cls}>{ctaLabel(children, children)} <span aria-hidden="true">&rarr;</span></Link>
       ) : (
-        <a href={href} data-testid="section-cta" className={cls}>{children} <span aria-hidden="true">&rarr;</span></a>
+        <a href={href} data-testid="section-cta" className={cls}>{ctaLabel(children, children)} <span aria-hidden="true">&rarr;</span></a>
       )}
     </div>
   );

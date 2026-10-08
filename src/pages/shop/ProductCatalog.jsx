@@ -6,6 +6,8 @@ import { EmptyState } from "../../components/ui/EmptyState";
 import { getProducts, getCategories, getCollections } from "../../services/api";
 import { resolveMediaUrl } from "../../lib/api";
 import { buildCategoryIndex, categoryChain, resolveCategoryBanner, resolveCategoryThumb } from "../../lib/categoryInheritance";
+import { buildCategoryOptions, priceCeiling, rootOfCategory, subtreeIds } from "../../lib/catalogFilters";
+import CatalogFilters from "../../components/shop/CatalogFilters";
 
 const SORT_OPTIONS = [
   { value: "featured", label: "Featured" },
@@ -15,7 +17,30 @@ const SORT_OPTIONS = [
   { value: "rating", label: "Customer Rating" },
 ];
 
-export default function ProductCatalog({
+/**
+ * The catalog keeps filter state (selected category/collection, price, stock). That state is seeded
+ * from the route, so the whole catalog is re-keyed on every route change: moving between categories
+ * (Home Decor -> Lighting) can never keep the previous category's state, filters or products.
+ */
+export default function ProductCatalog(props) {
+  const { slug } = useParams();
+  // Category/collection lists live in this wrapper (which survives route changes), so moving between
+  // categories renders the right title, tiles and filters immediately instead of refetching them.
+  const [meta, setMeta] = useState({ categories: [], collections: [] });
+  useEffect(() => {
+    let active = true;
+    Promise.all([getCategories(), getCollections()])
+      .then(([catsRes, colsRes]) => { if (active) setMeta({ categories: catsRes.data || [], collections: colsRes.data || [] }); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
+  const routeKey = [props.lockedCategory || "", props.lockedCollection || "", props.isCollectionRoute ? "c" : "k", slug || ""].join("|");
+  return <CatalogView key={routeKey} {...props} categories={meta.categories} collections={meta.collections} />;
+}
+
+function CatalogView({
+  categories,
+  collections,
   eyebrow = "Aadya Storefront",
   title = "Objects for Thoughtful Living",
   description = "Explore handcrafted oil lamps, unglazed ceramic vessels, linen runners, and slow living monographs.",
@@ -26,71 +51,105 @@ export default function ProductCatalog({
 }) {
   const { slug } = useParams();
   const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [collections, setCollections] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Filter States
+  // Filter state is seeded from the route (the component is re-keyed per route, see ProductCatalog).
   const slugIsCollection = isCollectionRoute || Boolean(lockedCollection);
-  const [selectedCategory, setSelectedCategory] = useState(lockedCategory || (slug && !slugIsCollection ? slug : "all"));
-  const [selectedCollection, setSelectedCollection] = useState(lockedCollection || (slug && slugIsCollection ? slug : "all"));
+  const routeCategory = lockedCategory || (slug && !slugIsCollection ? slug : null);
+  const routeCollection = lockedCollection || (slug && slugIsCollection ? slug : "all");
+  const [selectedCategory, setSelectedCategory] = useState(routeCategory || "all");
+  const [selectedCollection, setSelectedCollection] = useState(routeCollection);
   const [sortBy, setSortBy] = useState("featured");
   const [inStockOnly, setInStockOnly] = useState(false);
-  const [maxPrice, setMaxPrice] = useState(6000);
+  const [maxPrice, setMaxPrice] = useState(null); // null = no price cap
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
 
-  useEffect(() => {
-    async function loadMetadata() {
-      const [catsRes, colsRes] = await Promise.all([getCategories(), getCollections()]);
-      setCategories(catsRes.data || []);
-      setCollections(colsRes.data || []);
-    }
-    loadMetadata();
-  }, []);
+  const categoryIndex = useMemo(() => buildCategoryIndex(categories), [categories]);
+  // Filters are scoped to the page's category tree: its root ancestor's subtree (never unrelated roots).
+  const routeCategoryObj = routeCategory ? categories.find((c) => c.slug === routeCategory) : null;
+  const contextRoot = routeCategoryObj ? rootOfCategory(routeCategoryObj, categoryIndex) : null;
+  // Until the category list arrives, fetch by the route slug itself (descendants are included server-side).
+  const fetchCategory = contextRoot?.slug || routeCategory || undefined;
 
   useEffect(() => {
-    let active = true;
+    let active = true; // a response for a previous category/collection/sort can never overwrite the current one
     async function fetchCatalog() {
       setIsLoading(true);
       const params = {
-        categorySlug: selectedCategory !== "all" ? selectedCategory : undefined,
+        categorySlug: fetchCategory,
         collectionSlug: selectedCollection !== "all" ? selectedCollection : undefined,
-        sortBy: sortBy,
-        maxPrice: maxPrice < 6000 ? maxPrice : undefined
+        sortBy,
       };
       if (lockedType) params.category = lockedType;
-
-      const res = await getProducts(params);
-      if (!active) return;
-      let list = res.data || [];
-      if (inStockOnly) {
-        list = list.filter((p) => p.inStock !== false && (p.stockQuantity ?? 1) > 0);
+      try {
+        const res = await getProducts(params);
+        if (!active) return;
+        setProducts(res.data || []);
+      } catch {
+        if (!active) return;
+        setProducts([]);
       }
-      setProducts(list);
       setIsLoading(false);
     }
-
     fetchCatalog();
     return () => { active = false; };
-  }, [selectedCategory, selectedCollection, sortBy, inStockOnly, maxPrice, lockedType]);
+  }, [fetchCategory, selectedCollection, sortBy, lockedType]);
+
+  const priceMax = useMemo(() => priceCeiling(products), [products]);
+  const effectiveMaxPrice = maxPrice == null ? priceMax : Math.min(maxPrice, priceMax);
+
+  const selectedIds = useMemo(() => {
+    if (selectedCategory === "all") return null;
+    const cat = categories.find((c) => c.slug === selectedCategory);
+    return cat ? subtreeIds(cat.id, categories) : null;
+  }, [selectedCategory, categories]);
+
+  const visibleProducts = useMemo(() => products.filter((p) => {
+    if (selectedIds && p.categoryId && !selectedIds.has(p.categoryId)) return false;
+    if (maxPrice != null && Number(p.salePrice ?? p.price) > effectiveMaxPrice) return false;
+    if (inStockOnly && !(p.inStock !== false && (p.stockQuantity ?? 1) > 0)) return false;
+    return true;
+  }), [products, selectedIds, maxPrice, effectiveMaxPrice, inStockOnly]);
+
+  const categoryOptions = useMemo(
+    () => buildCategoryOptions({ categories, contextSlug: routeCategory, products, productsLoaded: !isLoading, selectedSlug: selectedCategory }),
+    [categories, routeCategory, products, isLoading, selectedCategory],
+  );
 
   const activeCategoryObj = categories.find((c) => c.slug === selectedCategory);
   const activeCollectionObj = collections.find((c) => c.slug === selectedCollection);
 
   // The public categories API is a flat list with parentId: banners/images are
   // inherited from the nearest ancestor, and children/ancestors are derived here.
-  const categoryIndex = useMemo(() => buildCategoryIndex(categories), [categories]);
   const banner = activeCategoryObj ? resolveCategoryBanner(activeCategoryObj, categoryIndex) : { desktop: null, mobile: null };
   const ancestors = activeCategoryObj ? categoryChain(activeCategoryObj, categoryIndex).slice(1).reverse() : [];
   const childCategories = activeCategoryObj ? categories.filter((c) => c.parentId === activeCategoryObj.id && c.isActive !== false) : [];
 
   const resetFilters = () => {
-    setSelectedCategory("all");
-    setSelectedCollection("all");
+    setSelectedCategory(routeCategory || "all");
+    setSelectedCollection(routeCollection);
     setSortBy("featured");
     setInStockOnly(false);
-    setMaxPrice(6000);
+    setMaxPrice(null);
   };
+
+  const filtersPanel = (
+    <CatalogFilters
+      categoryOptions={categoryOptions}
+      showAllCategories={!routeCategory}
+      selectedCategory={selectedCategory}
+      onSelectCategory={setSelectedCategory}
+      collections={collections}
+      selectedCollection={selectedCollection}
+      onSelectCollection={setSelectedCollection}
+      maxPrice={effectiveMaxPrice}
+      priceMax={priceMax}
+      onMaxPrice={(v) => setMaxPrice(v >= priceMax ? null : v)}
+      inStockOnly={inStockOnly}
+      onInStockOnly={setInStockOnly}
+      onReset={resetFilters}
+    />
+  );
 
   return (
     <div className="store-bg store-text space-y-10 pb-20">
@@ -182,99 +241,8 @@ export default function ProductCatalog({
       <section className="mx-auto max-w-7xl px-4 sm:px-8">
         <div className="flex flex-col lg:grid lg:grid-cols-12 lg:gap-10">
           {/* Desktop Filter Sidebar */}
-          <aside className="hidden lg:block lg:col-span-3 space-y-8 pr-6 border-r border-[var(--theme-border)]">
-            <div className="flex items-center justify-between pb-3 border-b border-[var(--theme-border)]">
-              <h3 className="font-serif-display text-lg store-text font-bold">Filters</h3>
-              <button
-                onClick={resetFilters}
-                className="text-xs font-semibold store-primary hover:underline"
-              >
-                Reset All
-              </button>
-            </div>
-
-            {/* Category Filter */}
-            <div className="space-y-3">
-              <h4 className="text-xs font-semibold uppercase tracking-wider store-muted">Category</h4>
-              <div className="space-y-1 text-xs sm:text-sm">
-                <button
-                  onClick={() => setSelectedCategory("all")}
-                  className={`block w-full text-left py-2 px-3 rounded-lg transition ${
-                    selectedCategory === "all" ? "store-bg-primary text-white font-semibold" : "store-muted hover:bg-[var(--theme-border)]/40 hover:text-[var(--theme-text)]"
-                  }`}
-                >
-                  All Categories
-                </button>
-                {categories.map((cat) => (
-                  <button
-                    key={cat.id}
-                    onClick={() => setSelectedCategory(cat.slug)}
-                    className={`flex items-center justify-between w-full text-left py-2 px-3 rounded-lg transition ${
-                      selectedCategory === cat.slug ? "store-bg-primary text-white font-semibold" : "store-muted hover:bg-[var(--theme-border)]/40 hover:text-[var(--theme-text)]"
-                    }`}
-                  >
-                    <span>{cat.name}</span>
-                    <span className="text-xs opacity-75">{cat.itemCount || 0}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Collection Filter */}
-            <div className="space-y-3">
-              <h4 className="text-xs font-semibold uppercase tracking-wider store-muted">Collection</h4>
-              <div className="space-y-1 text-xs sm:text-sm">
-                <button
-                  onClick={() => setSelectedCollection("all")}
-                  className={`block w-full text-left py-2 px-3 rounded-lg transition ${
-                    selectedCollection === "all" ? "store-bg-primary text-white font-semibold" : "store-muted hover:bg-[var(--theme-border)]/40 hover:text-[var(--theme-text)]"
-                  }`}
-                >
-                  All Collections
-                </button>
-                {collections.map((col) => (
-                  <button
-                    key={col.id}
-                    onClick={() => setSelectedCollection(col.slug)}
-                    className={`block w-full text-left py-2 px-3 rounded-lg transition ${
-                      selectedCollection === col.slug ? "store-bg-primary text-white font-semibold" : "store-muted hover:bg-[var(--theme-border)]/40 hover:text-[var(--theme-text)]"
-                    }`}
-                  >
-                    {col.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Price Filter Slider */}
-            <div className="space-y-3">
-              <div className="flex justify-between items-center text-xs font-semibold uppercase tracking-wider store-muted">
-                <span>Max Price</span>
-                <span className="store-primary font-bold">₹{maxPrice.toLocaleString()}</span>
-              </div>
-              <input
-                type="range"
-                min="1000"
-                max="6000"
-                step="250"
-                value={maxPrice}
-                onChange={(e) => setMaxPrice(Number(e.target.value))}
-                className="w-full accent-[var(--theme-primary)] cursor-pointer"
-              />
-            </div>
-
-            {/* Availability Filter */}
-            <div className="pt-2">
-              <label className="flex items-center gap-3 text-xs sm:text-sm store-text cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={inStockOnly}
-                  onChange={(e) => setInStockOnly(e.target.checked)}
-                  className="rounded border-[var(--theme-border)] accent-[var(--theme-primary)] h-4 w-4"
-                />
-                <span>In Stock Items Only</span>
-              </label>
-            </div>
+          <aside data-testid="filter-sidebar" className="hidden lg:block lg:col-span-3 pr-6 border-r border-[var(--theme-border)]">
+            {filtersPanel}
           </aside>
 
           {/* Product Grid Area */}
@@ -282,7 +250,7 @@ export default function ProductCatalog({
             {/* Sorting & Filter Trigger Bar */}
             <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 pb-4 border-b border-[var(--theme-border)]">
               <p className="text-xs font-semibold store-muted uppercase tracking-wider">
-                Showing {products.length} {products.length === 1 ? "Object" : "Objects"}
+                Showing {visibleProducts.length} {visibleProducts.length === 1 ? "Object" : "Objects"}
               </p>
 
               <div className="flex max-w-full flex-wrap items-center gap-3">
@@ -318,7 +286,7 @@ export default function ProductCatalog({
             {/* Grid display */}
             {isLoading ? (
               <ProductGridSkeleton count={6} />
-            ) : products.length === 0 ? (
+            ) : visibleProducts.length === 0 ? (
               <EmptyState
                 title="No items found"
                 description="We couldn't find any objects matching your selected filters."
@@ -327,7 +295,7 @@ export default function ProductCatalog({
               />
             ) : (
               <div className="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-3">
-                {products.map((product) => (
+                {visibleProducts.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
               </div>
@@ -354,51 +322,11 @@ export default function ProductCatalog({
               </button>
             </div>
 
-            <div className="mt-6 space-y-6">
-              {/* Category */}
-              <div>
-                <h4 className="text-xs font-semibold uppercase tracking-wider store-muted mb-2">Category</h4>
-                <select
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="w-full min-h-[44px] rounded-xl border border-[var(--theme-border)] store-bg px-4 py-3 text-sm store-text focus:border-[var(--theme-primary)] focus:outline-none"
-                >
-                  <option value="all">All Categories</option>
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.slug}>{c.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Collection */}
-              <div>
-                <h4 className="text-xs font-semibold uppercase tracking-wider store-muted mb-2">Collection</h4>
-                <select
-                  value={selectedCollection}
-                  onChange={(e) => setSelectedCollection(e.target.value)}
-                  className="w-full min-h-[44px] rounded-xl border border-[var(--theme-border)] store-bg px-4 py-3 text-sm store-text focus:border-[var(--theme-primary)] focus:outline-none"
-                >
-                  <option value="all">All Collections</option>
-                  {collections.map((c) => (
-                    <option key={c.id} value={c.slug}>{c.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* In Stock */}
-              <label className="flex min-h-[44px] items-center gap-3 rounded-xl border border-[var(--theme-border)] store-bg px-4 py-2.5 text-sm store-text cursor-pointer hover:border-[var(--theme-border)]">
-                <input
-                  type="checkbox"
-                  checked={inStockOnly}
-                  onChange={(e) => setInStockOnly(e.target.checked)}
-                  className="rounded border-[var(--theme-border)] accent-[var(--theme-primary)] h-4 w-4"
-                />
-                <span>In Stock Items Only</span>
-              </label>
-
+            <div className="mt-4">
+              {filtersPanel}
               <button
                 onClick={() => setMobileFilterOpen(false)}
-                className="w-full min-h-[44px] rounded-full store-bg-primary py-3 text-xs font-semibold uppercase tracking-wider text-white shadow-xs hover:brightness-95"
+                className="mt-6 w-full min-h-[44px] rounded-full store-bg-primary py-3 text-xs font-semibold uppercase tracking-wider text-white shadow-xs hover:brightness-95"
               >
                 Apply Filters
               </button>
