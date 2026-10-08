@@ -48,15 +48,14 @@ describe("feature strip (TRUST_STRIP) config", () => {
     expect(screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent)).toEqual(["First", "Second"]);
   });
 
-  it("dividers on by default, removable, using theme border tokens", () => {
-    const { unmount } = wrap(<TrustServiceStrip items={items} config={{}} />);
-    expect(screen.getByTestId("trust-strip").className).toContain("border-y store-border");
-    unmount();
-    wrap(<TrustServiceStrip items={items} config={{ showDividers: false }} />);
+  it("is a true full-width band with no separators, even when legacy showDividers is saved", () => {
+    wrap(<TrustServiceStrip items={items} config={{ showDividers: true }} />);
     const strip = screen.getByTestId("trust-strip");
-    expect(strip).toHaveAttribute("data-dividers", "false");
+    expect(strip.className).toContain("w-full");
     expect(strip.className).not.toContain("border-y");
-    expect(strip.firstElementChild.className).not.toContain("divide-");
+    expect(strip.className).not.toContain("border-b");
+    expect(screen.getByTestId("trust-grid").className).not.toMatch(/max-w-|divide-|mx-auto/);
+    screen.getAllByTestId("trust-item").forEach((cell) => expect(cell.className).not.toMatch(/border-|divide-/));
   });
 
   it("applies desktop columns, mobile layout and background", () => {
@@ -64,8 +63,8 @@ describe("feature strip (TRUST_STRIP) config", () => {
     const strip = screen.getByTestId("trust-strip");
     expect(strip.className).toContain("store-bg");
     expect(strip.className).not.toContain("store-surface");
-    expect(strip.firstElementChild.className).toContain("lg:grid-cols-3");
-    expect(strip.firstElementChild.className).toContain("overflow-x-auto");
+    expect(screen.getByTestId("trust-grid").className).toContain("lg:grid-cols-3");
+    expect(screen.getByTestId("trust-grid").className).toContain("overflow-x-auto");
   });
 });
 
@@ -109,9 +108,9 @@ describe("editorial banners (PROMO_BANNERS_2UP)", () => {
     wrap(<PromoBanners2Up promoCards={banners} />);
     const overlays = screen.getAllByTestId("promo-banner-overlay");
     expect(overlays[1].className).toContain("text-right");
-    expect(overlays[1].className).toContain("from-charcoal/95");
+    expect(overlays[1].className).toContain("from-charcoal/70");
     expect(overlays[0].className).toContain("text-left");
-    expect(overlays[0].className).toContain("from-charcoal/80"); // MEDIUM default
+    expect(overlays[0].className).toContain("from-charcoal/55"); // MEDIUM default (lightened so photography stays visible)
     expect(document.querySelector("source[media='(max-width: 767px)']").getAttribute("srcset")).toBe("http://api.test/a-m.jpg");
   });
 });
@@ -347,8 +346,7 @@ describe("homepage admin editor emits the new config", () => {
     expect(onChange).toHaveBeenLastCalledWith({ items: [], desktopColumns: 3 });
     fireEvent.change(screen.getByLabelText("Mobile layout"), { target: { value: "SCROLL" } });
     expect(onChange).toHaveBeenLastCalledWith({ items: [], mobileLayout: "SCROLL" });
-    fireEvent.click(screen.getByLabelText("Show dividers"));
-    expect(onChange).toHaveBeenLastCalledWith({ items: [], showDividers: false });
+    expect(screen.queryByLabelText("Show dividers")).toBeNull(); // the strip never draws separators
   });
 
   it("banners: mobile image, alignment, overlay and sort order are editable per banner", () => {

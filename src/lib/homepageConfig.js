@@ -14,9 +14,9 @@ export const TRUST_MOBILE_CLASSES = {
 
 export const BANNER_OVERLAY_CLASSES = {
   NONE: "from-transparent via-transparent to-transparent",
-  LIGHT: "from-charcoal/40 via-charcoal/10 to-transparent",
-  MEDIUM: "from-charcoal/80 via-charcoal/30 to-transparent",
-  STRONG: "from-charcoal/95 via-charcoal/60 to-charcoal/20",
+  LIGHT: "from-charcoal/30 via-charcoal/5 to-transparent",
+  MEDIUM: "from-charcoal/55 via-charcoal/15 to-transparent",
+  STRONG: "from-charcoal/70 via-charcoal/30 to-charcoal/5",
 };
 export const BANNER_ALIGN_CLASSES = {
   LEFT: "items-start text-left",

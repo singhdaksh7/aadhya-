@@ -34,7 +34,7 @@ describe("image-first editorial banners", () => {
     wrap(<PromoBanners2Up promoCards={[{ ...cards[0], ctaLabel: "", textAlign: "CENTER", overlayStrength: "STRONG" }]} />);
     expect(screen.getByTestId("promo-banner-cta").textContent).toContain("Shop Now");
     expect(screen.getByTestId("promo-banner-overlay").className).toContain("text-center");
-    expect(screen.getByTestId("promo-banner-overlay").className).toContain("from-charcoal/95");
+    expect(screen.getByTestId("promo-banner-overlay").className).toContain("from-charcoal/70");
   });
 });
 

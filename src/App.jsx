@@ -31,6 +31,7 @@ import Contact from "./pages/Contact";
 import NotFound from "./pages/NotFound";
 import BooksStorefront from "./pages/shop/BooksStorefront";
 import ProductCatalog from "./pages/shop/ProductCatalog";
+import CategoryStorefront from "./pages/shop/CategoryStorefront";
 import CollectionsHub from "./pages/shop/CollectionsHub";
 import ProductDetail from "./pages/shop/ProductDetail";
 import CartPage from "./pages/CartPage";
@@ -110,7 +111,7 @@ function SiteLayout() {
                 <Route path="/collections/:slug" element={<ProductCatalog title="Collection" isCollectionRoute />} />
                 <Route path="/products/:slug" element={<ProductDetail />} />
                 <Route path="/shop/:slug" element={<ProductDetail />} />
-                <Route path="/shop/category/:slug" element={<ProductCatalog title="Category Catalog" />} />
+                <Route path="/shop/category/:slug" element={<CategoryStorefront />} />
                 <Route path="/books" element={<BooksStorefront />} />
                 <Route path="/shop/books" element={<BooksStorefront />} />
                 <Route path="/new-arrivals" element={<ProductCatalog eyebrow="Fresh Drops" title="New Arrivals" />} />

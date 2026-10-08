@@ -29,15 +29,13 @@ export default function TrustServiceStrip({ items, config = {} }) {
     .filter((item) => item.enabled !== false)
     .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
   if (visibleItems.length === 0) return null;
-  const dividers = config.showDividers !== false;
   const bg = config.background === "PLAIN" ? "store-bg" : "store-surface";
   const mobile = TRUST_MOBILE_CLASSES[config.mobileLayout] || TRUST_MOBILE_CLASSES.STACKED;
   const columns = TRUST_COLUMN_CLASSES[config.desktopColumns] || TRUST_COLUMN_CLASSES[4];
-  const divide = dividers ? "divide-y store-border sm:divide-x sm:divide-y-0" : "";
 
   return (
-    <section data-testid="trust-strip" data-dividers={dividers ? "true" : "false"} className={`${dividers ? "border-y store-border" : ""} ${bg} py-6 sm:py-10`}>
-      <div className={`mx-auto max-w-7xl px-4 sm:px-8 lg:px-12 sm:grid sm:grid-cols-2 ${columns} ${mobile} ${divide} items-start`}>
+    <section data-testid="trust-strip" className={`w-full ${bg} py-8 sm:py-12`}>
+      <div data-testid="trust-grid" className={`w-full px-4 sm:grid sm:grid-cols-2 sm:px-6 lg:px-10 ${columns} ${mobile} items-start`}>
         {visibleItems.map((item) => (
           <div key={item.id || item.title} data-testid="trust-item" className="flex flex-col items-center px-4 py-5 text-center sm:px-6 sm:py-4">
             <TrustIcon name={item.icon} />
