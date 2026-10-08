@@ -155,6 +155,9 @@ export const DEFAULT_SETTINGS = {
       bodyScale: 1.0,
     },
   },
+  // Admin-driven catalog filters. `categories` holds per-category overrides; an empty list means
+  // every category uses the built-in default filter set.
+  catalogFilters: { categories: [] },
   shop: {
     defaultSort: "featured",
     productsPerPage: 12,
@@ -251,6 +254,29 @@ const NAV_DESTINATION_TYPES = ["CATEGORY", "COLLECTION", "PAGE", "BOOKS", "NEW_A
 // legacy flat keys written by older admin builds; every key the current admin UI saves
 // (see DEFAULT_HEADER_CMS_SETTINGS) is declared explicitly below. Nested objects strip
 // unknown keys, so keep this in sync with the frontend defaults (covered by a test).
+// ── Catalog filter configuration (per category) ──
+export const FILTER_GROUP_TYPES = ["CATEGORY", "COLLECTION", "PRICE", "AVAILABILITY", "ATTRIBUTE", "BRAND", "BOOK_AUTHOR", "BOOK_LANGUAGE", "BOOK_FORMAT", "BOOK_PUBLISHER"];
+const filterGroupSchema = z.object({
+  id: z.string().trim().min(1).max(60),
+  type: z.enum(FILTER_GROUP_TYPES),
+  // Which product attribute (e.g. "Material", "Color") an ATTRIBUTE group reads.
+  attributeKey: z.string().trim().max(80).optional(),
+  label: z.string().trim().max(60).optional(),
+  enabled: z.boolean().optional(),
+  order: z.number().int().min(0).max(100).optional(),
+  defaultOpen: z.boolean().optional(),
+  selection: z.enum(["MULTI", "SINGLE"]).optional(),
+  showDesktop: z.boolean().optional(),
+  showMobile: z.boolean().optional(),
+}).refine((g) => g.type !== "ATTRIBUTE" || Boolean(g.attributeKey), { message: "ATTRIBUTE filter groups need an attributeKey", path: ["attributeKey"] });
+export const catalogFiltersSchema = z.object({
+  categories: z.array(z.object({
+    categoryId: z.string().trim().min(1).max(100),
+    applyToSubcategories: z.boolean().optional(),
+    groups: z.array(filterGroupSchema).max(14),
+  })).max(200),
+});
+
 export const headerSettingsSchema = z.object({
   enabled: z.boolean().optional(),
   showUtilityBar: z.boolean().optional(),
@@ -575,6 +601,8 @@ export const settingsValidationSchema = z.object({
       bodyScale: z.number().min(0.5).max(2.0).optional(),
     }).optional(),
   }).optional(),
+
+  catalogFilters: catalogFiltersSchema.optional(),
 
   shop: z.object({
     defaultSort: z.enum(["featured", "price_asc", "price_desc", "newest"]).optional(),

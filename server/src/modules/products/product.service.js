@@ -7,6 +7,7 @@ const PUBLIC_INCLUDE = {
   category: true,
   images: { orderBy: { sortOrder: "asc" } },
   bookDetail: true,
+  bookFormats: { where: { isActive: true }, select: { format: true } },
   reviews: { where: { status: "APPROVED" }, select: { rating: true, status: true } },
 };
 

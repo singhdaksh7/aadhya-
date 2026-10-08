@@ -49,18 +49,20 @@ export default function ReviewsSection({ section }) {
   const { averageRating, reviewCount } = resolveReviewSummary(s, section.reviewSummary);
   const requested = ["SLIDER", "MARQUEE"].includes(s.motion) ? s.motion : "STATIC";
   const motion = requested === "MARQUEE" && reviews.length < MARQUEE_MIN_REVIEWS ? "STATIC" : requested;
-  const showVerified = s.showVerifiedBadge !== false;
+  const isDemo = section.reviewSource === "DEMO" || reviews.every((r) => r.isDemo);
+  const showVerified = s.showVerifiedBadge !== false && !isDemo;
   const slide = (dir) => trackRef.current?.scrollBy({ left: dir * trackRef.current.clientWidth * 0.8, behavior: "smooth" });
   // Repeat the real reviews (never invented ones) until one half of the loop is wide enough to cover large screens.
   const half = Array.from({ length: Math.ceil(6 / reviews.length) * reviews.length }, (_, i) => reviews[i % reviews.length]);
   const duration = Math.min(300, Math.max(30, Number(s.speed) || 90)) * (half.length / 6);
 
   return (
-    <section data-testid="reviews-section" data-motion={motion} className="border-y store-border store-surface py-14 sm:py-20">
+    <section data-testid="reviews-section" data-motion={motion} data-source={isDemo ? "DEMO" : "REAL"} className="border-y store-border store-surface py-14 sm:py-20">
       <div className="mx-auto max-w-7xl px-4 sm:px-8">
         <div className="mb-10 sm:mb-12">
           <HomepageSectionTitle align={s.headingAlign || "CENTER"} eyebrow={s.eyebrow} title={s.title || "What Our Customers Say"} subtitle={s.subtitle} />
-          {reviewCount > 0 && (
+          {isDemo && <p data-testid="reviews-demo-note" className="mt-4 text-center text-[11px] uppercase tracking-[0.2em] store-muted">Sample testimonials &middot; for demonstration</p>}
+          {!isDemo && reviewCount > 0 && (
             <p className={`mt-4 flex items-center gap-2 text-xs store-muted ${s.headingAlign === "LEFT" ? "" : "justify-center"}`} data-testid="reviews-summary">
               <Stars rating={averageRating} /> <span className="font-semibold store-text">{Number(averageRating).toFixed(1)}</span> &middot; {reviewCount} {reviewCount === 1 ? "review" : "reviews"}
             </p>
