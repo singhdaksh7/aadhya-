@@ -285,7 +285,7 @@ export default function ProductCatalog({
                 Showing {products.length} {products.length === 1 ? "Object" : "Objects"}
               </p>
 
-              <div className="flex items-center gap-3">
+              <div className="flex max-w-full flex-wrap items-center gap-3">
                 {/* Mobile Filter Toggle */}
                 <button
                   onClick={() => setMobileFilterOpen(true)}
