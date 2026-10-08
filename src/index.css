@@ -3,6 +3,7 @@
 @theme {
   --font-serif: "Fraunces", ui-serif, Georgia, serif;
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-script: "Pinyon Script", "Snell Roundhand", cursive;
 
   --color-ivory: #faf6f0;
   --color-ivory-dark: #f2ece1;
@@ -98,6 +99,36 @@ body {
 
 .font-serif-display {
   font-family: var(--font-serif);
+}
+
+.font-script {
+  font-family: var(--font-script);
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+/* Editorial hero: soft entrance for the active slide's copy. */
+@keyframes hero-rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.hero-rise { animation: hero-rise 0.9s ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .hero-rise { animation: none; }
+}
+
+/* Slow, refined review marquee. Duration comes from --reviews-duration. */
+@keyframes reviews-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.reviews-marquee-track {
+  animation: reviews-marquee var(--reviews-duration, 90s) linear infinite;
+}
+.reviews-marquee-track:hover,
+.reviews-marquee-track:focus-within { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) {
+  .reviews-marquee-track { animation: none !important; }
 }
 
 @keyframes fade-up {

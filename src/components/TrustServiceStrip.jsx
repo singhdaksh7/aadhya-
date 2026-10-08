@@ -18,8 +18,8 @@ function TrustIcon({ name }) {
     heart: "M12 21S3 15.5 3 9.5A4.5 4.5 0 0112 8a4.5 4.5 0 019 1.5C21 15.5 12 21 12 21z"
   };
   return (
-    <svg className="h-5 w-5 store-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={paths[name] || paths.sparkles} />
+    <svg aria-hidden="true" className="h-6 w-6 store-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d={paths[name] || paths.sparkles} />
     </svg>
   );
 }
@@ -36,21 +36,16 @@ export default function TrustServiceStrip({ items, config = {} }) {
   const divide = dividers ? "divide-y store-border sm:divide-x sm:divide-y-0" : "";
 
   return (
-    <section data-testid="trust-strip" data-dividers={dividers ? "true" : "false"} className={`${dividers ? "border-y store-border" : ""} ${bg} py-3 sm:py-4`}>
-      <div className={`mx-auto max-w-7xl px-4 sm:px-8 lg:px-12 sm:grid sm:grid-cols-2 ${columns} ${mobile} ${divide} items-center`}>
+    <section data-testid="trust-strip" data-dividers={dividers ? "true" : "false"} className={`${dividers ? "border-y store-border" : ""} ${bg} py-6 sm:py-10`}>
+      <div className={`mx-auto max-w-7xl px-4 sm:px-8 lg:px-12 sm:grid sm:grid-cols-2 ${columns} ${mobile} ${divide} items-start`}>
         {visibleItems.map((item) => (
-          <div key={item.id || item.title} className="flex items-center gap-4 py-5 sm:py-6 px-4 sm:px-6">
-            <div className="shrink-0 p-2.5 rounded-full store-bg-primary-soft flex items-center justify-center">
-              <TrustIcon name={item.icon} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="text-xs sm:text-sm font-semibold store-text uppercase tracking-wider">{item.title}</h3>
-              <p className="mt-0.5 text-xs leading-relaxed store-muted">{item.description}</p>
-            </div>
+          <div key={item.id || item.title} data-testid="trust-item" className="flex flex-col items-center px-4 py-5 text-center sm:px-6 sm:py-4">
+            <TrustIcon name={item.icon} />
+            <h3 className="mt-3 font-serif-display text-[13px] font-normal uppercase tracking-[0.18em] store-text">{item.title}</h3>
+            <p className="mt-1.5 max-w-[16rem] text-xs font-light leading-relaxed store-muted">{item.description}</p>
           </div>
         ))}
       </div>
     </section>
   );
 }
-

@@ -145,6 +145,35 @@ const DEFAULT_HOMEPAGE_SECTIONS = [
   { type: "NEWSLETTER", name: "Newsletter Subscription Section", sortOrder: 12, settings: DEFAULT_HOMEPAGE_CONTENT.NEWSLETTER },
 ];
 
+// Data-driven sections older homepages were created without. They render nothing until real
+// approved reviews / published posts exist, so adding them is safe. Added at most once per type
+// (an admin who dislikes one should disable it rather than delete it).
+const SUPPLEMENTAL_SECTIONS = [
+  { type: "TESTIMONIALS", name: "Customer Reviews", before: ["NEWSLETTER"] },
+  { type: "BLOG_PREVIEW", name: "Stories from Aadya", before: ["NEWSLETTER"] },
+];
+
+let supplementInFlight = null; // serialises concurrent first visits so a section is never inserted twice
+
+async function supplementMissingSections(homePage) {
+  if (supplementInFlight) { await supplementInFlight.catch(() => {}); homePage = await prisma.page.findUnique({ where: { slug: "home" }, include: { sections: { orderBy: { sortOrder: "asc" } } } }); }
+  const missing = SUPPLEMENTAL_SECTIONS.filter((def) => !homePage.sections.some((section) => section.type === def.type));
+  if (!missing.length) return homePage;
+  supplementInFlight = insertSupplementalSections(homePage, missing);
+  try { return await supplementInFlight; } finally { supplementInFlight = null; }
+}
+
+async function insertSupplementalSections(homePage, missing) {
+  const anchor = homePage.sections.find((section) => missing[0].before.includes(section.type));
+  const anchorOrder = anchor ? anchor.sortOrder : Math.max(0, ...homePage.sections.map((section) => section.sortOrder)) + 1;
+  await prisma.$transaction([
+    // Make room so the new sections land immediately before the newsletter, keeping everything else in order.
+    ...homePage.sections.filter((section) => section.sortOrder >= anchorOrder).map((section) => prisma.pageSection.update({ where: { id: section.id }, data: { sortOrder: section.sortOrder + missing.length } })),
+    ...missing.map((def, index) => prisma.pageSection.create({ data: { pageId: homePage.id, type: def.type, name: def.name, sortOrder: anchorOrder + index, settings: DEFAULT_HOMEPAGE_CONTENT[def.type], isEnabled: true } })),
+  ]);
+  return prisma.page.findUnique({ where: { slug: "home" }, include: { sections: { orderBy: { sortOrder: "asc" } } } });
+}
+
 export async function ensureDefaultHomepage() {
   let homePage = await prisma.page.findUnique({
     where: { slug: "home" },
@@ -174,6 +203,8 @@ export async function ensureDefaultHomepage() {
       include: { sections: { orderBy: { sortOrder: "asc" } } },
     });
   }
+
+  homePage = await supplementMissingSections(homePage);
 
   // Existing production pages are only supplemented with missing keys. Nothing
   // configured by an admin is replaced and no section is recreated.

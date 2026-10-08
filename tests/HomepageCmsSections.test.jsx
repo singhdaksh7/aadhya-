@@ -76,11 +76,33 @@ describe("editorial banners (PROMO_BANNERS_2UP)", () => {
     { id: "3", title: "Off", image: "/c.jpg", enabled: false, ctaUrl: "/c" },
   ];
 
-  it("renders multiple banners, ordered, skipping disabled ones, in a 2-col / stacked grid", () => {
+  it("renders multiple banners, ordered, skipping disabled ones, as full-width stacked banners by default", () => {
     wrap(<PromoBanners2Up promoCards={banners} />);
     expect(screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent)).toEqual(["Left", "Right"]);
+    expect(screen.getByTestId("promo-banners")).toHaveAttribute("data-layout", "FULL");
     expect(document.querySelector(".grid").className).toContain("grid-cols-1");
+    expect(document.querySelector(".grid").className).not.toContain("md:grid-cols-2");
+  });
+
+  it("SPLIT layout places banners edge-to-edge side by side", () => {
+    wrap(<PromoBanners2Up promoCards={banners} layout="SPLIT" />);
+    expect(screen.getByTestId("promo-banners")).toHaveAttribute("data-layout", "SPLIT");
     expect(document.querySelector(".grid").className).toContain("md:grid-cols-2");
+  });
+
+  it("keeps every piece of copy and the CTA on top of the image, with subtitles opt-in", () => {
+    const { unmount } = wrap(<PromoBanners2Up promoCards={[{ id: "1", title: "Gift Edit", subtitle: "Heritage objects", image: "/a.jpg", ctaLabel: "Explore", ctaUrl: "/g" }]} />);
+    const card = screen.getByTestId("promo-banner");
+    const overlay = screen.getByTestId("promo-banner-overlay");
+    expect(overlay.className).toContain("absolute inset-0");
+    expect(overlay.contains(screen.getByRole("heading", { level: 3 }))).toBe(true);
+    expect(overlay.contains(screen.getByTestId("promo-banner-cta"))).toBe(true);
+    // nothing but the image wrapper and the overlay lives inside the banner (no block below the image)
+    expect(Array.from(card.children).map((c) => c.tagName)).toEqual(["PICTURE", "DIV"]);
+    expect(screen.queryByTestId("promo-banner-subtitle")).toBeNull();
+    unmount();
+    wrap(<PromoBanners2Up showSubtitle promoCards={[{ id: "1", title: "Gift Edit", subtitle: "Heritage objects", image: "/a.jpg" }]} />);
+    expect(screen.getByTestId("promo-banner-subtitle").textContent).toBe("Heritage objects");
   });
 
   it("applies per-banner alignment, overlay strength and the mobile image source", () => {
@@ -163,19 +185,44 @@ describe("reviews section", () => {
     expect(screen.queryByText("Verified")).toBeNull();
   });
 
-  it.each([["STATIC", 2], ["SLIDER", 2], ["MARQUEE", 4]])("%s motion renders %i cards", (motion, count) => {
+  it.each([["STATIC", 2], ["SLIDER", 2]])("%s motion renders %i cards", (motion, count) => {
     wrap(<ReviewsSection section={section({ motion })} />);
     expect(screen.getByTestId("reviews-section")).toHaveAttribute("data-motion", motion);
     expect(screen.getAllByTestId("review-card")).toHaveLength(count);
   });
 
-  it("marquee uses the configured speed and pauses on hover unless disabled", () => {
-    const { unmount } = wrap(<ReviewsSection section={section({ motion: "MARQUEE", speed: 45 })} />);
-    expect(screen.getByTestId("reviews-marquee").style.animation).toContain("45s");
-    expect(screen.getByTestId("reviews-marquee").className).toContain("animation-play-state:paused");
-    unmount();
-    wrap(<ReviewsSection section={section({ motion: "MARQUEE", pauseOnHover: false })} />);
-    expect(screen.getByTestId("reviews-marquee").className).not.toContain("animation-play-state:paused");
+  describe("marquee", () => {
+    const many = Array.from({ length: 4 }, (_, i) => ({ id: `m${i}`, rating: 5, comment: `Comment ${i}`, customerName: `Cust ${i}.` }));
+    const marquee = (settings, list = many) => ({ id: "rv", type: "TESTIMONIALS", settings, reviews: list, reviewSummary: { averageRating: 5, reviewCount: list.length } });
+
+    it("loops two identical halves built only from the real reviews; the duplicate half is aria-hidden", () => {
+      wrap(<ReviewsSection section={marquee({ motion: "MARQUEE" })} />);
+      expect(screen.getByTestId("reviews-section")).toHaveAttribute("data-motion", "MARQUEE");
+      const cards = screen.getAllByTestId("review-card");
+      expect(cards).toHaveLength(16); // 4 real reviews repeated to 8 per half, two halves
+      const names = new Set(cards.map((c) => c.querySelector("figcaption").textContent));
+      expect([...names].sort()).toEqual(["Cust 0.", "Cust 1.", "Cust 2.", "Cust 3."]);
+      const wrappers = screen.getByTestId("reviews-marquee").children;
+      expect(wrappers[0]).not.toHaveAttribute("aria-hidden", "true");
+      expect(wrappers[wrappers.length - 1]).toHaveAttribute("aria-hidden", "true");
+    });
+
+    it("is slow by default, honours the configured speed and uses the reduced-motion-aware class", () => {
+      const { unmount } = wrap(<ReviewsSection section={marquee({ motion: "MARQUEE" })} />);
+      const track = screen.getByTestId("reviews-marquee");
+      expect(track.className).toContain("reviews-marquee-track");
+      expect(parseFloat(track.style.getPropertyValue("--reviews-duration"))).toBeGreaterThanOrEqual(90);
+      unmount();
+      wrap(<ReviewsSection section={marquee({ motion: "MARQUEE", speed: 120 })} />);
+      expect(parseFloat(screen.getByTestId("reviews-marquee").style.getPropertyValue("--reviews-duration"))).toBeGreaterThanOrEqual(120);
+    });
+
+    it("falls back to a calm static row when there are too few real reviews to loop", () => {
+      wrap(<ReviewsSection section={marquee({ motion: "MARQUEE" }, many.slice(0, 2))} />);
+      expect(screen.getByTestId("reviews-section")).toHaveAttribute("data-motion", "STATIC");
+      expect(screen.queryByTestId("reviews-marquee")).toBeNull();
+      expect(screen.getAllByTestId("review-card")).toHaveLength(2);
+    });
   });
 
   it("renders nothing when there are no approved reviews", () => {

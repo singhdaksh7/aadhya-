@@ -20,41 +20,51 @@ const DEFAULT_PROMO_CARDS = [
   }
 ];
 
-export default function PromoBanners2Up({ promoCards }) {
+// Alignment of the on-image copy block. Overlay text only: nothing is ever rendered below the image.
+const POSITION = {
+  LEFT: "items-start justify-end text-left sm:justify-center",
+  CENTER: "items-center justify-end text-center sm:justify-center",
+  RIGHT: "items-end justify-end text-right sm:justify-center",
+};
+
+export default function PromoBanners2Up({ promoCards, layout = "FULL", showSubtitle = false }) {
   const cards = (Array.isArray(promoCards) && promoCards.length ? promoCards : DEFAULT_PROMO_CARDS)
     .filter((card) => card.enabled !== false)
     .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
   if (cards.length === 0) return null;
+  const split = layout === "SPLIT" && cards.length > 1;
   return (
-    <section className="mx-auto max-w-7xl px-4 sm:px-8 py-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <section data-testid="promo-banners" data-layout={split ? "SPLIT" : "FULL"} className="w-full">
+      <div className={split ? "grid grid-cols-1 md:grid-cols-2" : "grid grid-cols-1 gap-1 sm:gap-2"}>
         {cards.map((card, idx) => (
           <Link
-            key={idx}
+            key={card.id || idx}
             to={card.ctaUrl || "/shop"}
-            className="group relative overflow-hidden rounded-2xl border store-border aspect-[16/9] sm:aspect-[2/1] store-surface block shadow-sm hover:shadow-lg transition-all duration-300"
+            data-testid="promo-banner"
+            className={`group relative block w-full overflow-hidden store-surface ${split ? "aspect-[4/5] md:aspect-[4/5] lg:aspect-[5/6]" : "aspect-[4/5] sm:aspect-[16/9] lg:aspect-[21/9]"}`}
           >
-            {/* Background Image */}
             <picture>
               {card.mobileImage && <source media="(max-width: 767px)" srcSet={resolveMediaUrl(card.mobileImage)} />}
               <img
                 src={resolveMediaUrl(card.image)}
                 alt={card.imageAlt || card.title}
-                className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                loading="lazy"
+                className="absolute inset-0 h-full w-full object-cover transition-transform duration-[1400ms] ease-out group-hover:scale-[1.03]"
               />
             </picture>
-            {/* Overlay (strength + text alignment are admin-configurable) */}
-            <div data-testid="promo-banner-overlay" className={`absolute inset-0 bg-gradient-to-t ${BANNER_OVERLAY_CLASSES[card.overlayStrength] || BANNER_OVERLAY_CLASSES.MEDIUM} p-6 sm:p-8 flex flex-col justify-end ${BANNER_ALIGN_CLASSES[card.textAlign] || BANNER_ALIGN_CLASSES.LEFT} text-white`}>
+            <div data-testid="promo-banner-overlay" data-align={card.textAlign || "LEFT"} className={`absolute inset-0 flex flex-col bg-gradient-to-t ${BANNER_OVERLAY_CLASSES[card.overlayStrength] || BANNER_OVERLAY_CLASSES.MEDIUM} px-6 py-8 sm:px-12 lg:px-20 ${POSITION[card.textAlign] || POSITION.LEFT} text-white`}>
               {card.eyebrow && (
-                <span className="mb-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/85">{card.eyebrow}</span>
+                <span className="mb-3 text-[11px] font-medium uppercase tracking-[0.3em] text-white/90">{card.eyebrow}</span>
               )}
               {card.title && (
-                <h3 className="font-serif-display text-xl sm:text-2xl text-white">{card.title}</h3>
+                <h3 className="max-w-xl font-serif-display text-3xl font-light leading-[1.1] tracking-[-0.01em] text-balance text-white sm:text-4xl lg:text-5xl">{card.title}</h3>
               )}
-              {/* Image-first banner: only the title and a subtle bordered CTA sit on the image (subtitle/description are never rendered). */}
+              {showSubtitle && card.subtitle && (
+                <p data-testid="promo-banner-subtitle" className="mt-3 line-clamp-2 max-w-sm text-sm font-light leading-relaxed text-white/85">{card.subtitle}</p>
+              )}
               <span
                 data-testid="promo-banner-cta"
-                className="mt-3 inline-flex items-center gap-2 rounded-full border border-white/80 px-5 py-2 text-[11px] font-semibold uppercase tracking-wider text-white backdrop-blur-[2px] transition-colors group-hover:bg-white group-hover:text-charcoal"
+                className="mt-6 inline-flex items-center gap-3 border border-white/85 px-7 py-3 text-[11px] font-medium uppercase tracking-[0.2em] text-white transition-colors group-hover:bg-white group-hover:text-charcoal"
               >
                 {card.ctaLabel || "Shop Now"}
                 <span aria-hidden="true" className="transition-transform group-hover:translate-x-1">&rarr;</span>
