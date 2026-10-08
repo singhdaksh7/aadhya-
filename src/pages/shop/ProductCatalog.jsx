@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import ProductCard from "../../components/ProductCard";
 import { ProductGridSkeleton } from "../../components/ui/Skeleton";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { getProducts, getCategories, getCollections } from "../../services/api";
 import { resolveMediaUrl } from "../../lib/api";
+import { buildCategoryIndex, categoryChain, resolveCategoryBanner, resolveCategoryThumb } from "../../lib/categoryInheritance";
 
 const SORT_OPTIONS = [
   { value: "featured", label: "Featured" },
@@ -76,6 +77,13 @@ export default function ProductCatalog({
   const activeCategoryObj = categories.find((c) => c.slug === selectedCategory);
   const activeCollectionObj = collections.find((c) => c.slug === selectedCollection);
 
+  // The public categories API is a flat list with parentId: banners/images are
+  // inherited from the nearest ancestor, and children/ancestors are derived here.
+  const categoryIndex = useMemo(() => buildCategoryIndex(categories), [categories]);
+  const banner = activeCategoryObj ? resolveCategoryBanner(activeCategoryObj, categoryIndex) : { desktop: null, mobile: null };
+  const ancestors = activeCategoryObj ? categoryChain(activeCategoryObj, categoryIndex).slice(1).reverse() : [];
+  const childCategories = activeCategoryObj ? categories.filter((c) => c.parentId === activeCategoryObj.id && c.isActive !== false) : [];
+
   const resetFilters = () => {
     setSelectedCategory("all");
     setSelectedCollection("all");
@@ -86,16 +94,16 @@ export default function ProductCatalog({
 
   return (
     <div className="store-bg store-text space-y-10 pb-20">
-      {/* Optional category banner (category.desktopBanner / mobileBanner); the text header below is unchanged and still renders when none is set. */}
-      {(activeCategoryObj?.desktopBanner || activeCategoryObj?.mobileBanner) && (
+      {/* Optional category banner: own banner, else the nearest ancestor's. The text header below is unchanged and still renders when none is set. */}
+      {(banner.desktop || banner.mobile) && (
         <section data-testid="category-banner" className="mx-auto w-full max-w-7xl px-4 pt-6 sm:px-8">
           <div className="relative aspect-[16/9] w-full overflow-hidden rounded-2xl border border-[var(--theme-border)] store-surface md:aspect-[5/2] md:max-h-[460px]">
             <picture>
-              {activeCategoryObj.mobileBanner && activeCategoryObj.desktopBanner && (
-                <source media="(max-width: 767px)" srcSet={resolveMediaUrl(activeCategoryObj.mobileBanner)} />
+              {banner.mobile && banner.desktop && banner.mobile !== banner.desktop && (
+                <source media="(max-width: 767px)" srcSet={resolveMediaUrl(banner.mobile)} />
               )}
               <img
-                src={resolveMediaUrl(activeCategoryObj.desktopBanner || activeCategoryObj.mobileBanner)}
+                src={resolveMediaUrl(banner.desktop || banner.mobile)}
                 alt={`${activeCategoryObj.name} banner`}
                 className="absolute inset-0 h-full w-full object-cover"
               />
@@ -112,6 +120,12 @@ export default function ProductCatalog({
             <Link to="/" className="hover:text-[var(--theme-primary)]">Home</Link>
             <span>/</span>
             <Link to="/shop" className="hover:text-[var(--theme-primary)]">Shop</Link>
+            {ancestors.map((a) => (
+              <React.Fragment key={a.id}>
+                <span>/</span>
+                <Link to={`/shop/category/${a.slug}`} className="hover:text-[var(--theme-primary)]">{a.name}</Link>
+              </React.Fragment>
+            ))}
             {activeCategoryObj && (
               <>
                 <span>/</span>
@@ -137,19 +151,27 @@ export default function ProductCatalog({
               {activeCategoryObj?.description || activeCollectionObj?.description || description}
             </p>
 
-            {/* Dynamic Child Subcategories Bar */}
-            {activeCategoryObj?.children?.length > 0 && (
-              <div className="mt-4 flex flex-wrap items-center gap-2 pt-3 border-t border-[var(--theme-border)]">
-                <span className="text-xs font-semibold store-muted uppercase tracking-wider mr-1">Subcategories:</span>
-                {activeCategoryObj.children.map((sub) => (
-                  <Link
-                    key={sub.id}
-                    to={`/shop/category/${sub.slug}`}
-                    className="rounded-full border border-[var(--theme-border)] store-surface px-3.5 py-1 text-xs font-medium store-text hover:border-[var(--theme-primary)] hover:bg-[var(--theme-background)] hover:text-[var(--theme-primary)] transition"
-                  >
-                    {sub.name} {sub._count?.products ? `(${sub._count.products})` : ""}
-                  </Link>
-                ))}
+            {/* Subcategory tiles: own image, else inherited from the parent, else a neutral initial */}
+            {childCategories.length > 0 && (
+              <div data-testid="subcategory-tiles" className="mt-4 border-t border-[var(--theme-border)] pt-4">
+                <span className="text-xs font-semibold store-muted uppercase tracking-wider">Subcategories</span>
+                <div className="mt-3 flex flex-wrap gap-x-4 gap-y-4">
+                  {childCategories.map((sub) => {
+                    const thumb = resolveCategoryThumb(sub, categoryIndex);
+                    return (
+                      <Link key={sub.id} to={`/shop/category/${sub.slug}`} data-testid="subcategory-tile" className="group flex w-20 flex-col items-center gap-2 text-center">
+                        <span className="relative h-16 w-16 overflow-hidden rounded-full border border-[var(--theme-border)] store-surface transition group-hover:border-[var(--theme-primary)]">
+                          {thumb ? (
+                            <img src={resolveMediaUrl(thumb)} alt="" loading="lazy" className="h-full w-full object-cover" />
+                          ) : (
+                            <span className="flex h-full w-full items-center justify-center font-serif-display text-lg store-muted">{sub.name.charAt(0)}</span>
+                          )}
+                        </span>
+                        <span className="text-xs font-medium leading-tight store-text transition group-hover:text-[var(--theme-primary)]">{sub.name}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </div>
