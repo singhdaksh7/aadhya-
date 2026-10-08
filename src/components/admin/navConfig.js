@@ -21,6 +21,7 @@ export const adminNavGroups = [
       },
       { to: "/admin/categories", label: "Categories" },
       { to: "/admin/collections", label: "Collections" },
+      { to: "/admin/filters", label: "Storefront Filters" },
       { to: "/admin/inventory", label: "Inventory" },
     ],
   },

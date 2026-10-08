@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import { resolveMediaUrl } from "../lib/api";
 import NavAnchor from "./NavAnchor";
+import { ctaLabel } from "../lib/cta";
 
 /**
  * Editorial promo card shown on the right side of a mega menu.
@@ -9,28 +10,33 @@ import NavAnchor from "./NavAnchor";
 export function MegaPromoCard({ promo, onClose = () => {}, viewport = null }) {
   const mobile = viewport === "mobile";
   const src = resolveMediaUrl(mobile ? promo.mobileImage || promo.image : promo.image);
+  const label = ctaLabel(promo.ctaLabel);
+  // Editorial banner language: the image is the surface; eyebrow, title and CTA sit on top of it.
+  // No separate text block, panel or border around the card.
   return (
-    <div className="col-span-4 pl-6 border-l store-border" data-testid="mega-promo" data-viewport={viewport || undefined}>
+    <div className="col-span-4" data-testid="mega-promo" data-viewport={viewport || undefined}>
       <NavAnchor
         to={promo.ctaUrl}
         external={/^(https?:)?\/\//i.test(promo.ctaUrl)}
         onClick={onClose}
-        className="group block overflow-hidden rounded-xl store-surface border store-border p-3.5 transition hover:shadow-md"
+        className="group relative block aspect-[4/5] w-full overflow-hidden rounded-xl bg-charcoal"
       >
         {promo.image && (
-          <div className="aspect-[4/3] w-full overflow-hidden rounded-lg bg-stone-100 mb-3">
-            <picture>
-              {!mobile && promo.mobileImage && <source media="(max-width: 767px)" srcSet={resolveMediaUrl(promo.mobileImage)} />}
-              <img src={src} alt={promo.altText} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
-            </picture>
-          </div>
+          <picture>
+            {!mobile && promo.mobileImage && <source media="(max-width: 767px)" srcSet={resolveMediaUrl(promo.mobileImage)} />}
+            <img src={src} alt={promo.altText} className="absolute inset-0 h-full w-full object-cover transition duration-[1200ms] ease-out group-hover:scale-[1.04]" />
+          </picture>
         )}
-        {promo.eyebrow && <span className="text-[10px] font-bold uppercase tracking-widest store-secondary block">{promo.eyebrow}</span>}
-        {promo.title && <h5 className="font-serif-display text-sm font-bold store-text group-hover:store-primary transition mt-0.5">{promo.title}</h5>}
-        {promo.description && <p className="text-[11px] store-muted line-clamp-2 mt-1 leading-relaxed">{promo.description}</p>}
-        {promo.ctaLabel && (
-          <span className="mt-3 inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider store-primary group-hover:underline">{promo.ctaLabel}</span>
-        )}
+        <div data-testid="mega-promo-overlay" className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-charcoal/75 via-charcoal/20 to-transparent p-5 text-white [text-shadow:0_1px_14px_rgba(0,0,0,0.35)]">
+          {promo.eyebrow && <span className="text-[10px] font-medium uppercase tracking-[0.28em] text-white/90">{promo.eyebrow}</span>}
+          {promo.title && <h5 className="mt-1.5 font-serif-display text-2xl font-light leading-tight text-white">{promo.title}</h5>}
+          {promo.description && <p className="mt-1.5 line-clamp-2 text-[11px] font-light leading-relaxed text-white/85">{promo.description}</p>}
+          {label && (
+            <span data-testid="mega-promo-cta" className="mt-4 inline-flex w-fit items-center gap-2 border border-white/85 px-5 py-2 text-[10px] font-medium uppercase tracking-[0.2em] text-white transition-colors group-hover:bg-white group-hover:text-charcoal">
+              {label}<span aria-hidden="true">&rarr;</span>
+            </span>
+          )}
+        </div>
       </NavAnchor>
     </div>
   );

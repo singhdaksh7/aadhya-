@@ -1,6 +1,6 @@
 import { prisma } from "../../lib/prisma.js";
 import { ApiError } from "../../utils/ApiError.js";
-import { DEFAULT_HOMEPAGE_CONTENT, mergeMissingSettings, settingsEqual, validateHomepageSettings } from "./homepage-content.js";
+import { DEFAULT_HOMEPAGE_CONTENT, DEMO_REVIEWS, mergeMissingSettings, settingsEqual, validateHomepageSettings } from "./homepage-content.js";
 import { serializePublicProduct } from "../products/product.service.js";
 import { listCategories } from "../categories/category.service.js";
 
@@ -102,7 +102,18 @@ async function resolveReviewsSection(section) {
     }),
     prisma.productReview.aggregate({ where, _avg: { rating: true }, _count: { _all: true } }),
   ]);
+  // Real approved reviews always win. Demo reviews appear only when there are none AND demo mode is on.
+  const realCount = aggregate._count._all;
+  if (realCount === 0) {
+    const demo = settings.demoMode === true ? (Array.isArray(settings.demoReviews) && settings.demoReviews.length ? settings.demoReviews : DEMO_REVIEWS) : [];
+    return {
+      reviewSource: demo.length ? "DEMO" : "NONE",
+      reviews: demo.slice(0, limit).map((r, i) => ({ id: r.id || `demo-${i + 1}`, rating: r.rating, title: r.title || null, comment: r.comment, isVerifiedPurchase: false, isDemo: true, customerName: r.customerName })),
+      reviewSummary: { averageRating: 0, reviewCount: 0 },
+    };
+  }
   return {
+    reviewSource: "REAL",
     reviews: rows.map((r) => ({ id: r.id, rating: r.rating, title: r.title, comment: r.comment, isVerifiedPurchase: r.isVerifiedPurchase, createdAt: r.createdAt, customerName: publicReviewerName(r.customer?.name) })),
     reviewSummary: { averageRating: aggregate._avg.rating ? Math.round(aggregate._avg.rating * 10) / 10 : 0, reviewCount: aggregate._count._all },
   };

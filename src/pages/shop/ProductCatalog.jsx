@@ -8,6 +8,8 @@ import { resolveMediaUrl } from "../../lib/api";
 import { buildCategoryIndex, categoryChain, resolveCategoryBanner, resolveCategoryThumb } from "../../lib/categoryInheritance";
 import { buildCategoryOptions, priceCeiling, rootOfCategory, subtreeIds } from "../../lib/catalogFilters";
 import CatalogFilters from "../../components/shop/CatalogFilters";
+import { useSiteSettings } from "../../hooks/useSiteSettings";
+import { applyFacetSelections, buildFacetOptions, resolveFilterGroups, toggleFacetValue } from "../../lib/catalogFilterEngine";
 
 const SORT_OPTIONS = [
   { value: "featured", label: "Featured" },
@@ -47,7 +49,10 @@ function CatalogView({
   lockedCategory = null,
   lockedCollection = null,
   lockedType = null,
-  isCollectionRoute = false
+  isCollectionRoute = false,
+  beforeCatalog = null,
+  CardComponent = ProductCard,
+  gridClassName = "grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-3",
 }) {
   const { slug } = useParams();
   const [products, setProducts] = useState([]);
@@ -62,6 +67,8 @@ function CatalogView({
   const [sortBy, setSortBy] = useState("featured");
   const [inStockOnly, setInStockOnly] = useState(false);
   const [maxPrice, setMaxPrice] = useState(null); // null = no price cap
+  const [facetSelections, setFacetSelections] = useState({}); // { [groupId]: string[] } for admin-configured facet filters
+  const settings = useSiteSettings();
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
 
   const categoryIndex = useMemo(() => buildCategoryIndex(categories), [categories]);
@@ -104,12 +111,18 @@ function CatalogView({
     return cat ? subtreeIds(cat.id, categories) : null;
   }, [selectedCategory, categories]);
 
-  const visibleProducts = useMemo(() => products.filter((p) => {
+  const baseProducts = useMemo(() => products.filter((p) => {
     if (selectedIds && p.categoryId && !selectedIds.has(p.categoryId)) return false;
     if (maxPrice != null && Number(p.salePrice ?? p.price) > effectiveMaxPrice) return false;
     if (inStockOnly && !(p.inStock !== false && (p.stockQuantity ?? 1) > 0)) return false;
     return true;
   }), [products, selectedIds, maxPrice, effectiveMaxPrice, inStockOnly]);
+
+  // Admin-configured filter groups for this category (or the default set), and their facet data.
+  const filterGroups = useMemo(() => resolveFilterGroups({ settings, categories, categorySlug: routeCategory }), [settings, categories, routeCategory]);
+  const facetOptions = useMemo(() => buildFacetOptions(baseProducts, filterGroups, facetSelections), [baseProducts, filterGroups, facetSelections]);
+  const visibleProducts = useMemo(() => applyFacetSelections(baseProducts, filterGroups, facetSelections), [baseProducts, filterGroups, facetSelections]);
+  const selectCategory = (slug) => { setSelectedCategory(slug); setFacetSelections({}); }; // facet values may not exist in the new subset
 
   const categoryOptions = useMemo(
     () => buildCategoryOptions({ categories, contextSlug: routeCategory, products, productsLoaded: !isLoading, selectedSlug: selectedCategory }),
@@ -131,14 +144,20 @@ function CatalogView({
     setSortBy("featured");
     setInStockOnly(false);
     setMaxPrice(null);
+    setFacetSelections({});
   };
 
-  const filtersPanel = (
+  const renderFilters = (device) => (
     <CatalogFilters
+      groups={filterGroups}
+      device={device}
+      facetOptions={facetOptions}
+      facetSelections={facetSelections}
+      onToggleFacet={(group, value) => setFacetSelections((prev) => toggleFacetValue(prev, group, value))}
       categoryOptions={categoryOptions}
       showAllCategories={!routeCategory}
       selectedCategory={selectedCategory}
-      onSelectCategory={setSelectedCategory}
+      onSelectCategory={selectCategory}
       collections={collections}
       selectedCollection={selectedCollection}
       onSelectCollection={setSelectedCollection}
@@ -237,12 +256,14 @@ function CatalogView({
         </div>
       </section>
 
+      {beforeCatalog}
+
       {/* Main Catalog Section */}
       <section className="mx-auto max-w-7xl px-4 sm:px-8">
         <div className="flex flex-col lg:grid lg:grid-cols-12 lg:gap-10">
           {/* Desktop Filter Sidebar */}
           <aside data-testid="filter-sidebar" className="hidden lg:block lg:col-span-3 pr-6 border-r border-[var(--theme-border)]">
-            {filtersPanel}
+            {renderFilters("desktop")}
           </aside>
 
           {/* Product Grid Area */}
@@ -294,9 +315,9 @@ function CatalogView({
                 onAction={resetFilters}
               />
             ) : (
-              <div className="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-3">
+              <div className={gridClassName}>
                 {visibleProducts.map((product) => (
-                  <ProductCard key={product.id} product={product} />
+                  <CardComponent key={product.id} product={product} />
                 ))}
               </div>
             )}
@@ -323,7 +344,7 @@ function CatalogView({
             </div>
 
             <div className="mt-4">
-              {filtersPanel}
+              {renderFilters("mobile")}
               <button
                 onClick={() => setMobileFilterOpen(false)}
                 className="mt-6 w-full min-h-[44px] rounded-full store-bg-primary py-3 text-xs font-semibold uppercase tracking-wider text-white shadow-xs hover:brightness-95"

@@ -56,6 +56,7 @@ import AdminHomepageBuilder from "./pages/admin/AdminHomepageBuilder";
 import AdminBanners from "./pages/admin/AdminBanners";
 import AdminPromos from "./pages/admin/AdminPromos";
 import AdminReviews from "./pages/admin/AdminReviews";
+import AdminFilters from "./pages/admin/AdminFilters";
 
 import CmsPage from "./pages/CmsPage";
 import BlogList from "./pages/BlogList";
@@ -236,6 +237,7 @@ function AdminRoutes() {
           <Route path="inventory/low-stock" element={<AdminLowStock />} />
           <Route path="categories" element={<AdminCategories />} />
           <Route path="collections" element={<AdminCollections />} />
+          <Route path="filters" element={<AdminFilters />} />
           <Route path="coupons" element={<AdminCoupons />} />
           <Route path="customers" element={<AdminCustomers />} />
           <Route path="customers/:id" element={<AdminCustomers />} />
