@@ -41,11 +41,12 @@ describe("image-first editorial banners", () => {
 describe("minimal product cards", () => {
   const product = { id: "p1", name: "Artisan Vase", slug: "vase", price: 1590, salePrice: 1290, shortDescription: "Hand-thrown vase with a matte glaze", images: ["/v.jpg"], category: { name: "Home Decor", slug: "home-decor" }, averageRating: 4.5, reviewCount: 3, author: "Someone" };
 
-  it("shows only image, name and one price: no category, description, tax note, MRP, rating or author", () => {
+  it("shows image, name and price (sale price + struck-through MRP): no category, description, tax note, rating or author", () => {
     wrap(<ProductCard product={product} />);
     expect(screen.getByText("Artisan Vase")).toBeInTheDocument();
     expect(screen.getByTestId("card-price").textContent).toMatch(/1,290/);
-    expect(screen.queryByText(/1,590/)).toBeNull(); // no strike-through MRP
+    expect(screen.getByTestId("card-mrp").textContent).toMatch(/1,590/);
+    expect(screen.getByTestId("card-mrp").className).toContain("line-through");
     expect(screen.queryByText("Home Decor")).toBeNull();
     expect(screen.queryByText(/Hand-thrown vase/)).toBeNull();
     expect(screen.queryByText(/Incl\. taxes/i)).toBeNull();
@@ -56,5 +57,6 @@ describe("minimal product cards", () => {
   it("uses the plain price when there is no sale price", () => {
     wrap(<ProductCard product={{ ...product, salePrice: null }} />);
     expect(screen.getByTestId("card-price").textContent).toMatch(/1,590/);
+    expect(screen.queryByTestId("card-mrp")).toBeNull();
   });
 });

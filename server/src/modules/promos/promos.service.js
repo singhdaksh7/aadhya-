@@ -3,9 +3,9 @@ import { ApiError } from "../../utils/ApiError.js";
 
 const DEFAULT_SEED_PROMOS = [
   {
-    title: "Welcome Discount",
-    message: "Get ₹500 off on your first purchase above ₹2,999",
-    couponCode: "AADYA500",
+    title: "Free delivery",
+    message: "Free standard delivery on orders above {freeShippingThreshold}",
+    couponCode: null,
     ctaLabel: "Shop Now",
     ctaUrl: "/shop",
     isActive: true,

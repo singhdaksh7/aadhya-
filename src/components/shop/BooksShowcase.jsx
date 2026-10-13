@@ -33,10 +33,10 @@ export function buildBookModules(books = []) {
   return { featured, newReleases, editorsPicks, popular };
 }
 
-function Row({ eyebrow, title, books, testId }) {
+function Row({ eyebrow, title, books, testId, anchor }) {
   if (!books.length) return null;
   return (
-    <section data-testid={testId} className="mx-auto max-w-7xl px-4 sm:px-8">
+    <section id={anchor} data-testid={testId} className="mx-auto max-w-7xl scroll-mt-24 px-4 sm:px-8">
       <HomepageSectionTitle align="CENTER" eyebrow={eyebrow} title={title} className="mb-8 sm:mb-10" />
       <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 sm:gap-x-6 lg:grid-cols-4">
         {books.map((b) => <BookCard key={b.id} product={b} />)}
@@ -84,8 +84,8 @@ export default function BooksShowcase({ books = [], themes = [] }) {
         </section>
       )}
 
-      <Row testId="books-new" eyebrow="Just arrived" title="New Releases" books={newReleases} />
-      <Row testId="books-editors" eyebrow="Hand-picked" title="Editor’s Picks" books={editorsPicks} />
+      <Row testId="books-new" anchor="new-releases" eyebrow="Just arrived" title="New Releases" books={newReleases} />
+      <Row testId="books-editors" anchor="editors-picks" eyebrow="Hand-picked" title="Editor’s Picks" books={editorsPicks} />
       <Row testId="books-popular" eyebrow="Reader favourites" title="Popular Reads" books={popular} />
     </div>
   );

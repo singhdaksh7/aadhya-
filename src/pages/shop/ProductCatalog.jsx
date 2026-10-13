@@ -175,7 +175,7 @@ function CatalogView({
       {/* Optional category banner: own banner, else the nearest ancestor's. The text header below is unchanged and still renders when none is set. */}
       {(banner.desktop || banner.mobile) && (
         <section data-testid="category-banner" className="mx-auto w-full max-w-7xl px-4 pt-6 sm:px-8">
-          <div className="relative aspect-[16/9] w-full overflow-hidden rounded-2xl border border-[var(--theme-border)] store-surface md:aspect-[5/2] md:max-h-[460px]">
+          <div className="relative aspect-[2/1] w-full overflow-hidden rounded-2xl border border-[var(--theme-border)] store-surface md:aspect-[3/1] md:max-h-[300px]">
             <picture>
               {banner.mobile && banner.desktop && banner.mobile !== banner.desktop && (
                 <source media="(max-width: 767px)" srcSet={resolveMediaUrl(banner.mobile)} />

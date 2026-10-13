@@ -3,9 +3,12 @@ import { Link } from "react-router-dom";
 import { useSiteSettings } from "../hooks/useSiteSettings";
 import { fetchPromos } from "../lib/api";
 import { normalizeHeaderSettings } from "../lib/headerCmsHelpers";
+import { commercialContext, interpolateCommercial } from "../lib/commercialText";
 
 export default function PromoStrip({ promoConfig }) {
-  const { header, promoStrip: settingsPromo, shipping, general } = useSiteSettings();
+  const siteSettings = useSiteSettings();
+  const { header, promoStrip: settingsPromo, shipping, general } = siteSettings;
+  const commercial = commercialContext(siteSettings);
   const [promos, setPromos] = useState([]);
   const [copiedCode, setCopiedCode] = useState(null);
 
@@ -37,8 +40,8 @@ export default function PromoStrip({ promoConfig }) {
 
   const promo = promoConfig || settingsPromo || {
     active: true,
-    description: "Get ₹500 off on your first purchase above ₹2,999",
-    couponCode: "AADYA500",
+    description: "Free standard delivery on orders above {freeShippingThreshold}",
+    couponCode: null,
     ctaLabel: "Shop Now",
     ctaUrl: "/shop",
   };
@@ -80,7 +83,7 @@ export default function PromoStrip({ promoConfig }) {
     }
   };
 
-  const fallbackMsg = tickerConfig.fallbackMessage || "Crafted by Master Indian Artisans • Free Delivery Above ₹2,499";
+  const fallbackMsg = interpolateCommercial(tickerConfig.fallbackMessage || "", commercial);
 
   const listToRender = promos.length > 0
     ? promos
@@ -88,7 +91,7 @@ export default function PromoStrip({ promoConfig }) {
         {
           id: "default-1",
           message: fallbackMsg,
-          couponCode: promo.couponCode || "AADYA500",
+          couponCode: promo.couponCode || null,
           ctaLabel: promo.ctaLabel || "Shop Now",
           ctaUrl: promo.ctaUrl || "/shop",
         },
@@ -106,7 +109,7 @@ export default function PromoStrip({ promoConfig }) {
             {idx > 0 && renderSeparator()}
             <div className="flex items-center gap-2">
               <span className="font-semibold uppercase tracking-widest text-[11px] sm:text-xs text-white">
-                {p.message || p.title || p.description}
+                {interpolateCommercial(p.message || p.title || p.description, commercial)}
               </span>
             </div>
 

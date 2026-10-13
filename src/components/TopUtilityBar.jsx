@@ -2,6 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { useSiteSettings } from "../hooks/useSiteSettings";
 import { normalizeHeaderSettings, interpolateText } from "../lib/headerCmsHelpers";
+import { commercialContext } from "../lib/commercialText";
 
 export function UtilityIcon({ name, className = "h-3.5 w-3.5 text-stone-400" }) {
   switch (name) {
@@ -57,8 +58,9 @@ export function UtilityIcon({ name, className = "h-3.5 w-3.5 text-stone-400" }) 
 }
 
 export default function TopUtilityBar() {
-  const { header, freeShippingThreshold, shipping, general, promoStrip } = useSiteSettings();
-  const threshold = shipping?.freeShippingThreshold ?? freeShippingThreshold ?? 2499;
+  const siteSettings = useSiteSettings();
+  const { header, shipping, general, promoStrip } = siteSettings;
+  const commercial = commercialContext(siteSettings);
 
   const cms = normalizeHeaderSettings(header, shipping, general);
 
@@ -74,7 +76,7 @@ export default function TopUtilityBar() {
   const rightItems = activeItems.filter((i) => i.id === "ub-4" || i.id === "ub-5");
 
   const rawCenter = cms.utilityBar.centerMessage || promoStrip?.description || "";
-  const interpolatedCenter = interpolateText(rawCenter, { freeShippingThreshold: threshold, storeName: general?.storeName });
+  const interpolatedCenter = interpolateText(rawCenter, commercial);
 
   return (
     <div className="bg-[#1C1917] border-b border-white/10 text-stone-300 text-[11px] sm:text-xs py-1.5 px-4 sm:px-8">
@@ -82,7 +84,7 @@ export default function TopUtilityBar() {
         {/* Left items */}
         <div className="flex min-w-0 flex-1 items-center gap-4 sm:flex-none sm:gap-6 sm:shrink-0">
           {leftItems.map((item, idx) => {
-            const displayLabel = interpolateText(item.label || item.title || "", { freeShippingThreshold: threshold, storeName: general?.storeName });
+            const displayLabel = interpolateText(item.label || item.title || "", commercial);
             const itemUrl = item.url || item.link;
             const isExternal = item.linkType === "external" || /^https?:\/\//.test(itemUrl || "");
 
@@ -134,7 +136,7 @@ export default function TopUtilityBar() {
         <div className="flex items-center gap-3 sm:gap-4 shrink-0 whitespace-nowrap text-stone-400">
           {rightItems.length > 0 ? (
             rightItems.map((item, idx) => {
-              const displayLabel = interpolateText(item.label || item.title || "", { freeShippingThreshold: threshold, storeName: general?.storeName });
+              const displayLabel = interpolateText(item.label || item.title || "", commercial);
               const itemUrl = item.url || item.link || "#";
               const isExternal = item.linkType === "external" || /^https?:\/\//.test(itemUrl);
 

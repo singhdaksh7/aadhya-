@@ -1,6 +1,12 @@
 import { prisma } from "../../lib/prisma.js";
 import { sanitizeRichText } from "../../utils/sanitizer.js";
 
+// Pages the storefront routes depend on (/about, /shipping, ...). They can be edited and
+// unpublished, but never moved to a different slug or deleted, so a route cannot break.
+export const SYSTEM_PAGE_SLUGS = ["about", "shipping", "returns", "privacy", "terms"];
+const isSystemSlug = (slug) => SYSTEM_PAGE_SLUGS.includes(String(slug || "").toLowerCase().trim());
+function protectedError(message) { const e = new Error(message); e.statusCode = 400; return e; }
+
 export async function listPages({ search, pageType, status, page = 1, limit = 50 } = {}) {
   const where = {};
   if (search) {
@@ -96,6 +102,9 @@ export async function createPage(data) {
 
 export async function updatePage(id, data) {
   const existing = await getPageById(id);
+  if (isSystemSlug(existing.slug) && data.slug && data.slug.toLowerCase().trim() !== existing.slug) {
+    throw protectedError(`The "${existing.slug}" page is a system page and its URL slug cannot be changed.`);
+  }
 
   let normalizedSlug = existing.slug;
   if (data.slug && data.slug.toLowerCase().trim() !== existing.slug) {
@@ -132,7 +141,8 @@ export async function updatePage(id, data) {
 }
 
 export async function deletePage(id) {
-  await getPageById(id);
+  const existing = await getPageById(id);
+  if (isSystemSlug(existing.slug)) throw protectedError(`The "${existing.slug}" page is a system page and cannot be deleted. Edit or unpublish it instead.`);
   return prisma.page.delete({ where: { id } });
 }
 

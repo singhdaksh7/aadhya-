@@ -2,8 +2,11 @@ import React, { useState, useEffect } from "react";
 import { fetchFaqs } from "../lib/api";
 import RichTextRenderer from "../components/cms/RichTextRenderer";
 import { IconChevronDown } from "../components/icons";
+import { useSiteSettings } from "../hooks/useSiteSettings";
+import { commercialContext, interpolateCommercial } from "../lib/commercialText";
 
 export default function FAQ() {
+  const commercial = commercialContext(useSiteSettings());
   const [categories, setCategories] = useState([]);
   const [activeCategory, setActiveCategory] = useState("All");
   const [openId, setOpenId] = useState(null);
@@ -95,7 +98,7 @@ export default function FAQ() {
                     <span className="text-[10px] font-bold uppercase tracking-wider store-primary/80 block">
                       {item.categoryName}
                     </span>
-                    <span className="text-sm font-semibold store-text leading-snug">{item.question}</span>
+                    <span className="text-sm font-semibold store-text leading-snug">{interpolateCommercial(item.question, commercial)}</span>
                   </div>
                   <span
                     className={`shrink-0 store-primary transition-transform duration-300 ${
@@ -108,7 +111,7 @@ export default function FAQ() {
 
                 {isOpen && (
                   <div className="px-6 pb-6 pt-1 text-xs store-muted border-t border-charcoal/5 store-surface">
-                    <RichTextRenderer content={item.answer} />
+                    <RichTextRenderer content={interpolateCommercial(item.answer, commercial)} />
                   </div>
                 )}
               </div>

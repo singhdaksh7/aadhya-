@@ -886,7 +886,63 @@ export default function AdminSettings() {
                   className={inputCls}
                 />
               </div>
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Dispatch Estimate</label>
+                <input
+                  type="text"
+                  value={settings.shipping?.dispatchEstimate ?? ""}
+                  onChange={(e) => setSettings((s) => ({ ...s, shipping: { ...s.shipping, dispatchEstimate: e.target.value } }))}
+                  placeholder="1-2 business days"
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Delivery Estimate</label>
+                <input
+                  type="text"
+                  value={settings.shipping?.deliveryEstimate ?? ""}
+                  onChange={(e) => setSettings((s) => ({ ...s, shipping: { ...s.shipping, deliveryEstimate: e.target.value } }))}
+                  placeholder="3-7 business days"
+                  className={inputCls}
+                />
+              </div>
             </div>
+
+            <h2 className="pt-4 font-serif text-lg font-bold text-charcoal">Return Policy &amp; Tax Display</h2>
+            <div className="grid grid-cols-2 gap-4" data-testid="return-policy-settings">
+              <label className="col-span-2 flex items-center gap-2 text-sm font-semibold text-charcoal cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={settings.returns?.enabled !== false}
+                  onChange={(e) => setSettings((s) => ({ ...s, returns: { ...s.returns, enabled: e.target.checked } }))}
+                />
+                Accept return requests
+              </label>
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Return Window (days after delivery)</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={365}
+                  value={settings.returns?.windowDays ?? 7}
+                  onChange={(e) => setSettings((s) => ({ ...s, returns: { ...s.returns, windowDays: Math.max(0, Math.min(365, Math.round(Number(e.target.value) || 0))) } }))}
+                  className={inputCls}
+                />
+              </div>
+              <label className="flex items-center gap-2 self-end text-sm font-semibold text-charcoal cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={settings.checkout?.pricesIncludeTax !== false}
+                  onChange={(e) => setSettings((s) => ({ ...s, checkout: { ...s.checkout, pricesIncludeTax: e.target.checked } }))}
+                />
+                Prices shown include tax (cart note: “Taxes included”)
+              </label>
+            </div>
+            <p className="text-[11px] leading-relaxed text-charcoal-soft">
+              The return window is the real window the store enforces for return requests. In the utility bar, ticker, promos, FAQs and the About / Shipping / Returns pages you can write
+              {" "}<code>{"{freeShippingThreshold}"}</code>, <code>{"{standardShippingAmount}"}</code>, <code>{"{returnWindowDays}"}</code>, <code>{"{dispatchEstimate}"}</code>, <code>{"{deliveryEstimate}"}</code>
+              {" "}or <code>{"{storeName}"}</code> and the live value is filled in, so messaging always matches these settings.
+            </p>
           </div>
         )}
 

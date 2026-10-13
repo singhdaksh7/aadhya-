@@ -1,4 +1,4 @@
-import { formatInr } from "./format";
+import { interpolateCommercial } from "./commercialText";
 
 // The customer storefront header is never sticky. `stickyMode` stays in the stored
 // contract for backward compatibility but is always normalized to this value, and the
@@ -15,7 +15,7 @@ export const DEFAULT_HEADER_CMS_SETTINGS = {
   utilityBar: {
     enabled: true,
     centerMessageEnabled: true,
-    centerMessage: "Get ₹500 off on your first purchase above ₹2,999",
+    centerMessage: "Handcrafted home decor, books & lifestyle",
     centerMessageLink: "/shop",
     centerMessageIcon: "sparkle",
     showDesktop: true,
@@ -99,7 +99,7 @@ export const DEFAULT_HEADER_CMS_SETTINGS = {
     background: "primary", // "primary" | "secondary"
     textContrastMode: "light", // "light" | "dark"
     hideWhenEmpty: true,
-    fallbackMessage: "Crafted by Master Indian Artisans • Free Delivery Above ₹2,499",
+    fallbackMessage: "Free delivery on orders above {freeShippingThreshold}",
   },
 
   mainHeader: {
@@ -199,16 +199,7 @@ export function isSafeUrl(url) {
 }
 
 export function interpolateText(template, context = {}) {
-  if (!template || typeof template !== "string") return "";
-  let result = template;
-  if (context.freeShippingThreshold !== undefined) {
-    const formatted = formatInr(context.freeShippingThreshold);
-    result = result.replace(/\{\{\s*freeShippingThreshold\s*\}\}/g, formatted);
-  }
-  if (context.storeName) {
-    result = result.replace(/\{\{\s*storeName\s*\}\}/g, context.storeName);
-  }
-  return result;
+  return interpolateCommercial(template, context);
 }
 
 export const STRIP_SHAPES = ["CIRCLE", "SQUARE", "ROUNDED_SQUARE", "RECTANGLE"];
@@ -357,7 +348,7 @@ export function normalizeHeaderSettings(rawHeader, rawShipping, rawGeneral) {
       ...DEFAULT_HEADER_CMS_SETTINGS.utilityBar,
       ...rawUtilityBar,
       enabled: utilityEnabled,
-      centerMessage: rawUtilityBar.centerMessage || h.utilityBarCenterText || "Get ₹500 off on your first purchase above ₹2,999",
+      centerMessage: rawUtilityBar.centerMessage || h.utilityBarCenterText || "Handcrafted home decor, books & lifestyle",
       items: utilityItems,
     },
 

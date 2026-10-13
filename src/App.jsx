@@ -19,7 +19,6 @@ import Home from "./pages/Home";
 import Training from "./pages/Training";
 import ProgramDetail from "./pages/ProgramDetail";
 import Consultation from "./pages/Consultation";
-import About from "./pages/About";
 import Research from "./pages/Research";
 import ContentHub from "./pages/ContentHub";
 import Events from "./pages/Events";
@@ -28,6 +27,7 @@ import Thinkpod from "./pages/Thinkpod";
 import Testimonials from "./pages/Testimonials";
 import FAQ from "./pages/FAQ";
 import Contact from "./pages/Contact";
+import SystemPage from "./pages/SystemPage";
 import NotFound from "./pages/NotFound";
 import BooksStorefront from "./pages/shop/BooksStorefront";
 import ProductCatalog from "./pages/shop/ProductCatalog";
@@ -83,18 +83,6 @@ import SearchResults from "./pages/shop/SearchResults";
 import { captureUtmFromUrl } from "./lib/attribution";
 
 // Policy Pages Component
-function PolicyPage({ title, eyebrow = "Customer Policies", children }) {
-  return (
-    <div className="mx-auto max-w-4xl px-5 py-16 sm:px-8 space-y-6">
-      <span className="text-xs font-semibold uppercase tracking-widest text-terracotta">{eyebrow}</span>
-      <h1 className="font-serif-display text-3xl sm:text-4xl text-charcoal">{title}</h1>
-      <div className="prose prose-stone text-sm leading-relaxed text-charcoal-soft space-y-4 border-t border-charcoal/10 pt-6">
-        {children}
-      </div>
-    </div>
-  );
-}
-
 function SiteLayout() {
   return (
     <CartProvider>
@@ -149,46 +137,13 @@ function SiteLayout() {
                 <Route path="/account/notifications" element={<RequireCustomer><AccountNotifications /></RequireCustomer>} />
 
                 {/* Informational & Policy Routes */}
-                <Route path="/about" element={<About />} />
+                <Route path="/about" element={<SystemPage slug="about" eyebrow="About" fallbackTitle="About" />} />
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/faq" element={<FAQ />} />
-                <Route
-                  path="/shipping"
-                  element={
-                    <PolicyPage title="Shipping & Delivery Policy">
-                      <p>We offer Pan-India express courier dispatch for all Aadya home decor objects and books.</p>
-                      <p>Orders are dispatched within 24-48 hours. Express transit usually takes 3-5 business days depending on pincode location.</p>
-                      <p>Free standard delivery is offered on all domestic orders exceeding ₹2,499.</p>
-                    </PolicyPage>
-                  }
-                />
-                <Route
-                  path="/returns"
-                  element={
-                    <PolicyPage title="Returns & Exchange Policy">
-                      <p>We stand behind the slow craftsmanship of every object we create. If your piece arrives damaged or defective, we offer hassle-free 7-day replacements.</p>
-                      <p>Because items are handcrafted from natural minerals, wood, and clay, subtle variations in shade and texture are intrinsic to authentic artisan products.</p>
-                    </PolicyPage>
-                  }
-                />
-                <Route
-                  path="/privacy"
-                  element={
-                    <PolicyPage title="Privacy Policy">
-                      <p>At Aadya, we respect your personal privacy. We do not sell or share customer data with third parties.</p>
-                      <p>All transactions processed through our store are encrypted using industry-standard SSL security.</p>
-                    </PolicyPage>
-                  }
-                />
-                <Route
-                  path="/terms"
-                  element={
-                    <PolicyPage title="Terms of Service">
-                      <p>Welcome to Aadya Storefront. By browsing or purchasing from our platform, you agree to our standard terms and conditions.</p>
-                      <p>All editorial content, book excerpts, and visual designs are protected under intellectual property laws.</p>
-                    </PolicyPage>
-                  }
-                />
+                <Route path="/shipping" element={<SystemPage slug="shipping" eyebrow="Customer Policies" fallbackTitle="Shipping & Delivery" />} />
+                <Route path="/returns" element={<SystemPage slug="returns" eyebrow="Customer Policies" fallbackTitle="Returns & Exchanges" />} />
+                <Route path="/privacy" element={<SystemPage slug="privacy" eyebrow="Legal" fallbackTitle="Privacy Policy" />} />
+                <Route path="/terms" element={<SystemPage slug="terms" eyebrow="Legal" fallbackTitle="Terms of Service" />} />
 
                 {/* Informational Pages */}
                 <Route path="/training" element={<Training />} />

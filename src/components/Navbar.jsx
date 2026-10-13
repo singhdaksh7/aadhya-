@@ -138,6 +138,7 @@ export default function Navbar() {
                 widthPx={branding?.logoWidthDesktop || 140}
                 maxHeightPx={branding?.logoMaxHeightDesktop || 60}
                 className="w-auto"
+                textClassName="font-serif-display text-4xl tracking-tight text-charcoal font-bold xl:text-5xl"
               />
             </Link>
           </div>
@@ -217,7 +218,7 @@ export default function Navbar() {
               widthPx={branding?.logoWidthMobile || 110}
               maxHeightPx={branding?.logoMaxHeightMobile || 44}
               className="w-auto"
-              textClassName="font-serif-display text-xl tracking-tight store-text font-bold"
+              textClassName="font-serif-display text-2xl tracking-tight store-text font-bold"
             />
           </Link>
 

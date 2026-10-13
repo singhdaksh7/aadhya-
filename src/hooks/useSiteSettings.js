@@ -38,7 +38,7 @@ export const DEFAULT_SITE_SETTINGS = {
   header: {
     showUtilityBar: true,
     utilityBarItems: [
-      { id: "ub-1", enabled: true, title: "Free Shipping on Orders > ₹2,499", icon: "truck", link: "/shipping" },
+      { id: "ub-1", enabled: true, title: "Free shipping on orders {freeShippingThreshold}+", icon: "truck", link: "/shipping" },
       { id: "ub-2", enabled: true, title: "Easy 7-Day Returns", icon: "refresh", link: "/returns" },
       { id: "ub-3", enabled: true, title: "100% Secure Checkout", icon: "shield", link: "/faq" },
     ],
@@ -51,11 +51,11 @@ export const DEFAULT_SITE_SETTINGS = {
     showCategoryCircles: false,
     showMainNavigation: true,
     headerStyle: "WHITE",
-    logoAlignment: "LEFT",
+    logoAlignment: "CENTER",
   },
   announcementBar: {
     active: true,
-    text: "Free delivery above ₹2,499 • Pan-India Express Shipping • Crafted by Master Indian Artisans",
+    text: "Free delivery above {freeShippingThreshold}",
     linkLabel: "Shop New Arrivals",
     linkUrl: "/new-arrivals",
     backgroundStyle: "CHARCOAL",
@@ -198,10 +198,10 @@ export const DEFAULT_SITE_SETTINGS = {
   standardShippingAmount: 150,
   promoStrip: {
     active: true,
-    title: "Get ₹500 off on your first order",
-    couponCode: "AADYA500",
-    description: "Valid on orders above ₹2,499. Applied at checkout.",
-    ctaLabel: "Shop Offer",
+    title: "Free standard delivery above {freeShippingThreshold}",
+    couponCode: "",
+    description: "Free standard delivery on orders above {freeShippingThreshold}.",
+    ctaLabel: "Shop Now",
     ctaUrl: "/shop",
   },
   heroBanners: [
