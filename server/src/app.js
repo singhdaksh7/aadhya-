@@ -4,7 +4,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import morgan from "morgan";
 import { env } from "./config/env.js";
-import { apiLimiter } from "./middleware/rateLimiters.js";
+import { apiLimiter, publicReadLimiter, adminApiLimiter } from "./middleware/rateLimiters.js";
 import { notFoundHandler, errorHandler } from "./middleware/errorHandler.js";
 import { uploadRootDir } from "./modules/uploads/storage.js";
 import routes from "./routes/index.js";
@@ -33,7 +33,7 @@ export function createApp() {
   app.use(cookieParser());
   if (!env.isTest) app.use(morgan(env.isProduction ? "combined" : "dev"));
 
-  app.use("/api", apiLimiter);
+  app.use("/api", publicReadLimiter, adminApiLimiter, apiLimiter);
   app.use("/uploads/products", express.static(uploadRootDir));
   app.use("/api", routes);
 
