@@ -149,16 +149,23 @@ export default function ProductCard({ product }) {
         </button>
       </div>
 
-      {/* Minimal text: name and one clean price (no category, description, tax note or MRP clutter). */}
+      {/* Minimal text: name and price. A discounted product shows the sale price plus the original MRP struck through. */}
       <div className="pt-3">
         <Link to={`/shop/${product.slug}`} className="block">
           <h3 className="line-clamp-1 font-serif-display text-[15px] font-normal store-text transition hover:text-[var(--theme-primary)]">
             {product.name}
           </h3>
         </Link>
-        <span data-testid="card-price" className="mt-1 block text-sm font-medium store-primary">
-          {formatInr(salePrice ?? price)}
-        </span>
+        <div className="mt-1 flex items-baseline gap-2 text-sm">
+          <span data-testid="card-price" className="font-medium store-primary">
+            {formatInr(onSale ? salePrice : price)}
+          </span>
+          {onSale && (
+            <span data-testid="card-mrp" className="text-xs store-muted line-through">
+              {formatInr(price)}
+            </span>
+          )}
+        </div>
       </div>
     </div>
   );

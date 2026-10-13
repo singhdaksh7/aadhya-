@@ -51,7 +51,7 @@ export const DEFAULT_SITE_SETTINGS = {
     showCategoryCircles: false,
     showMainNavigation: true,
     headerStyle: "WHITE",
-    logoAlignment: "LEFT",
+    logoAlignment: "CENTER",
   },
   announcementBar: {
     active: true,

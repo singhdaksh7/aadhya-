@@ -27,11 +27,11 @@ describe("editorial product card", () => {
     expect(media.getAllByRole("img").length).toBeGreaterThan(0);
   });
 
-  it("shows only the name and one price beneath the image: no description, category, tax note or MRP", () => {
+  it("shows the name, sale price and struck-through MRP beneath the image: no description, category or tax note", () => {
     wrap();
     expect(screen.getByText("Artisan Vase")).toBeInTheDocument();
     expect(screen.getByTestId("card-price").textContent).toMatch(/1,290/);
-    expect(screen.queryByText(/1,590/)).toBeNull();
+    expect(screen.getByTestId("card-mrp").textContent).toMatch(/1,590/);
     expect(screen.queryByText(/Hand-thrown/)).toBeNull();
     expect(screen.queryByText("Home Decor")).toBeNull();
     expect(screen.queryByText(/Incl\. taxes/i)).toBeNull();

@@ -76,6 +76,32 @@ export default function MegaMenu({ item, isOpen, onClose, id, maxColumns = 4, wi
             className={promo ? "col-span-8 grid gap-6" : "col-span-12 grid gap-6"}
             style={{ gridTemplateColumns: `repeat(${promo ? Math.min(colCount, 3) : colCount}, minmax(0, 1fr))` }}
           >
+            {Array.isArray(item.secondaryLinks) && item.secondaryLinks.length > 0 && (
+              <nav
+                aria-label={`${item.label} sections`}
+                data-testid="mega-secondary-row"
+                className="col-span-full -mt-1 mb-1 flex flex-wrap items-center gap-x-7 gap-y-2 border-b store-border pb-4"
+              >
+                {item.secondaryLinks.map((link) =>
+                  link.to ? (
+                    <NavAnchor
+                      key={link.id}
+                      to={link.to}
+                      external={link.external}
+                      onClick={onClose}
+                      data-testid="mega-secondary-link"
+                      className="text-[11px] font-medium uppercase tracking-[0.2em] store-muted transition hover:store-primary"
+                    >
+                      {link.label}
+                    </NavAnchor>
+                  ) : (
+                    <span key={link.id} data-testid="mega-secondary-label" className="cursor-default text-[11px] font-medium uppercase tracking-[0.2em] store-muted opacity-70">
+                      {link.label}
+                    </span>
+                  ),
+                )}
+              </nav>
+            )}
             {item.columns.map((col) => (
               <div key={col.id} className="space-y-3">
                 {col.title && (

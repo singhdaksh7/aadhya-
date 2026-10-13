@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useLocation } from "react-router-dom";
 import ProductCatalog from "./ProductCatalog";
 import BooksShowcase from "../../components/shop/BooksShowcase";
 import BookCard from "../../components/shop/BookCard";
@@ -7,6 +8,16 @@ import { getProducts, getCategories } from "../../services/api";
 export default function BooksStorefront() {
   const [books, setBooks] = useState([]);
   const [categories, setCategories] = useState([]);
+  const { hash } = useLocation();
+
+  // Menu links such as /shop/books#new-releases: once the books have rendered, scroll to that module
+  // (or to the showcase itself when the module has no books).
+  useEffect(() => {
+    if (!hash || books.length === 0) return;
+    const id = decodeURIComponent(hash.slice(1));
+    const el = document.getElementById(id) || document.querySelector('[data-testid="books-showcase"]');
+    el?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+  }, [hash, books.length]);
 
   useEffect(() => {
     let active = true;

@@ -214,6 +214,32 @@ export function columnsFromManual(manualColumns = []) {
     .filter((col) => col.links.length > 0);
 }
 
+// Temporary / demo secondary row for the Books mega menu. Each label resolves to a destination that
+// really exists, never a 404: a Books-page section anchor, or an existing Books subcategory (by slug).
+// A label with no real destination yet is returned with `to: null` and rendered as a plain label.
+export const BOOKS_SECONDARY_LINKS = [
+  { id: "bk-new", label: "New Releases", anchor: "/shop/books#new-releases" },
+  { id: "bk-editors", label: "Editor\u2019s Picks", anchor: "/shop/books#editors-picks" },
+  { id: "bk-coffee", label: "Coffee Table Books", categorySlug: "books-coffee-table" },
+  { id: "bk-interiors", label: "Home & Interiors", categorySlug: "books-home-and-interiors" },
+  { id: "bk-slow", label: "Slow Living", categorySlug: "books-slow-living" },
+  { id: "bk-journals", label: "Journals & Guides", categorySlug: "books-journals-and-guides" },
+];
+
+export function resolveBooksSecondaryLinks(tree, booksTo = "/books") {
+  const booksRoot = tree?.bySlug?.get("books") || null;
+  return BOOKS_SECONDARY_LINKS.map((def) => {
+    let to = null;
+    if (def.anchor) to = def.anchor;
+    else {
+      const cat = tree?.bySlug?.get(def.categorySlug);
+      // only link a subcategory that exists, is active (the tree is active-only) and belongs under Books
+      if (cat && (!booksRoot || cat.parentId === booksRoot.id)) to = cat.to;
+    }
+    return { id: def.id, label: def.label, to, external: false, openInNewTab: false, booksTo };
+  });
+}
+
 function buildPromo({ itemPromo, globalPromo, categoryImage, fallbackTo }) {
   const p = itemPromo && typeof itemPromo === "object" ? itemPromo : null;
   let source = null;
@@ -297,6 +323,7 @@ function buildManualItems({ configItems, tree, cms }) {
           ? buildPromo({ itemPromo: item.promoCard, globalPromo: megaGlobal.promoCard, categoryImage: category?.image, fallbackTo: to })
           : null,
         hasMenu: columns.length > 0,
+        secondaryLinks: columns.length && type === "BOOKS" && megaMode === "MANUAL" ? resolveBooksSecondaryLinks(tree, to) : [],
       };
     });
 }
@@ -380,7 +407,7 @@ export function buildNavModel({ cms, categories = [], navigation = [] }) {
   const menusAllowed =
     primary.enableMegaMenu !== false && cms?.megaMenu?.enabled !== false && cms?.megaMenu?.mode !== "DISABLED";
   if (!menusAllowed) {
-    items = items.map((i) => ({ ...i, columns: [], promo: null, hasMenu: false }));
+    items = items.map((i) => ({ ...i, columns: [], promo: null, secondaryLinks: [], hasMenu: false }));
   }
   return items;
 }
