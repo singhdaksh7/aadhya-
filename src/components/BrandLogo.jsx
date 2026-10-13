@@ -39,6 +39,8 @@ export default function BrandLogo({
   const style = {
     ...(widthPx ? { width: `${widthPx}px` } : undefined),
     ...(maxHeightPx ? { maxHeight: `${maxHeightPx}px` } : undefined),
+    // never wider than the space the layout gives it, whatever width the admin configured
+    maxWidth: "100%",
   };
 
   return (
