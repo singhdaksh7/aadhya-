@@ -4,7 +4,7 @@ import { ApiError } from "../../utils/ApiError.js";
 const DEFAULT_SEED_PROMOS = [
   {
     title: "Free delivery",
-    message: "Free standard delivery on orders above ₹2,499",
+    message: "Free standard delivery on orders above {freeShippingThreshold}",
     couponCode: null,
     ctaLabel: "Shop Now",
     ctaUrl: "/shop",

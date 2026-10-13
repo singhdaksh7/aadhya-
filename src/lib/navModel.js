@@ -214,9 +214,10 @@ export function columnsFromManual(manualColumns = []) {
     .filter((col) => col.links.length > 0);
 }
 
-// Temporary / demo secondary row for the Books mega menu. Each label resolves to a destination that
-// really exists, never a 404: a Books-page section anchor, or an existing Books subcategory (by slug).
-// A label with no real destination yet is returned with `to: null` and rendered as a plain label.
+// Built-in default for the Books mega menu's secondary row. It is only a FALLBACK: when the Books
+// nav item carries an admin-saved `secondaryRow` (Admin → Header → Navigation), that config wins.
+// Each label resolves to a destination that really exists, never a 404: a Books-page section anchor,
+// or an existing Books subcategory (by slug). A label with no real destination is a plain label.
 export const BOOKS_SECONDARY_LINKS = [
   { id: "bk-new", label: "New Releases", anchor: "/shop/books#new-releases" },
   { id: "bk-editors", label: "Editor\u2019s Picks", anchor: "/shop/books#editors-picks" },
@@ -236,6 +237,34 @@ export function resolveBooksSecondaryLinks(tree, booksTo = "/books") {
     }
     return { id: def.id, label: def.label, to, external: false, openInNewTab: false, booksTo };
   });
+}
+
+/**
+ * Admin-configured secondary row (item.secondaryRow = { enabled, items: [...] }).
+ * Returns null when no config exists (caller falls back to the built-in default), [] when the row is
+ * disabled, otherwise the enabled, ordered items. An item whose destination cannot be resolved
+ * (category deleted/inactive, blank or unsafe URL) is dropped, so the row never contains a dead link.
+ */
+export function resolveSecondaryRow(tree, row, booksTo = "/books") {
+  if (!row || typeof row !== "object") return null;
+  if (row.enabled === false) return [];
+  const items = (Array.isArray(row.items) ? row.items : [])
+    .filter((i) => i && i.enabled !== false && i.showDesktop !== false && String(i.label || "").trim())
+    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  const out = [];
+  items.forEach((i, n) => {
+    let to = null;
+    if (i.destinationType === "CATEGORY") {
+      const cat = tree?.bySlug?.get(i.categorySlug);
+      if (cat) to = cat.to;
+    } else {
+      const d = typeof i.destination === "string" ? i.destination.trim() : "";
+      if (d && isSafeUrl(d)) to = d;
+    }
+    if (!to) return;
+    out.push({ id: i.id || `secondary-${n}`, label: String(i.label).trim(), to, external: isExternalUrl(to), openInNewTab: false, booksTo });
+  });
+  return out;
 }
 
 function buildPromo({ itemPromo, globalPromo, categoryImage, fallbackTo }) {
@@ -321,7 +350,10 @@ function buildManualItems({ configItems, tree, cms }) {
           ? buildPromo({ itemPromo: item.promoCard, globalPromo: megaGlobal.promoCard, categoryImage: category?.image, fallbackTo: to })
           : null,
         hasMenu: columns.length > 0,
-        secondaryLinks: columns.length && type === "BOOKS" && megaMode === "MANUAL" ? resolveBooksSecondaryLinks(tree, to) : [],
+        secondaryLinks:
+          columns.length && megaMode === "MANUAL"
+            ? resolveSecondaryRow(tree, item.secondaryRow, to) ?? (type === "BOOKS" ? resolveBooksSecondaryLinks(tree, to) : [])
+            : [],
       };
     });
 }

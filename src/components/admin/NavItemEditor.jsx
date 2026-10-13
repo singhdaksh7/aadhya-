@@ -53,6 +53,13 @@ export default function NavItemEditor({ item, index, total, categories, onChange
 
   const setPromo = (updates) => onChange({ promoCard: { ...promo, ...updates } });
 
+  // Secondary row: a single line of text links shown above the manual columns in this mega menu.
+  const secondaryRow = item.secondaryRow && typeof item.secondaryRow === "object" ? item.secondaryRow : { enabled: true, items: [] };
+  const rowItems = Array.isArray(secondaryRow.items) ? secondaryRow.items : [];
+  const setRow = (updates) => onChange({ secondaryRow: { ...secondaryRow, items: rowItems, ...updates } });
+  const setRowItems = (next) => setRow({ items: next.map((r, i) => ({ ...r, sortOrder: i + 1 })) });
+  const updateRowItem = (rIdx, updates) => setRowItems(rowItems.map((r, i) => (i === rIdx ? { ...r, ...updates } : r)));
+
   const setColumns = (next) => onChange({ manualColumns: next });
   const updateColumn = (cIdx, updates) =>
     setColumns(columns.map((col, i) => (i === cIdx ? { ...col, ...updates } : col)));
@@ -322,6 +329,47 @@ export default function NavItemEditor({ item, index, total, categories, onChange
             >
               + Add Column
             </button>
+
+            <div className="space-y-2 rounded-lg border border-charcoal/15 bg-white p-3" data-testid={`nav-secondary-row-${item.id}`}>
+              <label className="flex items-center gap-2 text-xs font-bold text-charcoal cursor-pointer">
+                <input type="checkbox" aria-label="Show secondary row" checked={secondaryRow.enabled !== false} onChange={(e) => setRow({ enabled: e.target.checked })} className="h-4 w-4 rounded text-terracotta" />
+                Show secondary row (text links above the columns)
+              </label>
+              {rowItems.map((r, rIdx) => (
+                <div key={r.id || rIdx} className="flex flex-wrap items-center gap-2 pl-6">
+                  <input type="checkbox" aria-label="Enable row item" checked={r.enabled !== false} onChange={(e) => updateRowItem(rIdx, { enabled: e.target.checked })} className="h-4 w-4 rounded text-terracotta" />
+                  <input type="text" aria-label="Row item label" placeholder="Label" value={r.label || ""} onChange={(e) => updateRowItem(rIdx, { label: e.target.value })} className={inputCls + " sm:w-40 sm:flex-none"} />
+                  <select aria-label="Row item destination type" value={r.destinationType === "CATEGORY" ? "CATEGORY" : "CUSTOM_URL"} onChange={(e) => updateRowItem(rIdx, e.target.value === "CATEGORY" ? { destinationType: "CATEGORY", destination: "" } : { destinationType: "CUSTOM_URL", categorySlug: "" })} className={inputCls + " sm:w-32 sm:flex-none"}>
+                    <option value="CATEGORY">Category</option>
+                    <option value="CUSTOM_URL">Custom URL</option>
+                  </select>
+                  {r.destinationType === "CATEGORY" ? (
+                    <select aria-label="Row item category" value={r.categorySlug || ""} onChange={(e) => updateRowItem(rIdx, { categorySlug: e.target.value })} className={inputCls + " flex-1"}>
+                      <option value="">Select category…</option>
+                      {flatCategories.map((c) => (
+                        <option key={c.id} value={c.slug}>{`${"— ".repeat(c.depth)}${c.name}`}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input type="text" aria-label="Row item destination" placeholder="/books or /shop/books#new-releases" value={r.destination || ""} onChange={(e) => updateRowItem(rIdx, { destination: e.target.value })} className={inputCls + " flex-1"} />
+                  )}
+                  <button type="button" onClick={() => setRowItems(moveInArray(rowItems, rIdx, -1))} disabled={rIdx === 0} className="rounded p-1 text-xs text-stone-500 hover:bg-stone-100 disabled:opacity-30" title="Move item up">↑</button>
+                  <button type="button" onClick={() => setRowItems(moveInArray(rowItems, rIdx, 1))} disabled={rIdx === rowItems.length - 1} className="rounded p-1 text-xs text-stone-500 hover:bg-stone-100 disabled:opacity-30" title="Move item down">↓</button>
+                  <button type="button" onClick={() => setRowItems(rowItems.filter((_, i) => i !== rIdx))} className="rounded p-1 text-xs text-red-600 hover:bg-red-50" title="Remove item">✕</button>
+                </div>
+              ))}
+              <div className="pl-6">
+                <button
+                  type="button"
+                  disabled={rowItems.length >= 12}
+                  onClick={() => setRowItems([...rowItems, { id: uid("row"), label: "", destinationType: "CATEGORY", categorySlug: "", destination: "", enabled: true, showDesktop: true, showMobile: true }])}
+                  className="text-[11px] font-bold text-terracotta hover:underline disabled:opacity-40"
+                >
+                  + Add Row Item
+                </button>
+              </div>
+              <p className="pl-6 text-[11px] text-charcoal-soft">Items whose category is inactive/deleted or whose URL is blank are hidden on the storefront automatically.</p>
+            </div>
           </div>
         )}
 

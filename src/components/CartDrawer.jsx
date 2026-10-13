@@ -5,6 +5,7 @@ import { IconClose, IconCart } from "./icons";
 import { formatInr } from "../lib/format";
 import { EmptyCartState } from "./ui/EmptyState";
 import { useSiteSettings } from "../hooks/useSiteSettings";
+import { commercialContext, cartPolicyNote } from "../lib/commercialText";
 
 export default function CartDrawer() {
   const {
@@ -21,7 +22,9 @@ export default function CartDrawer() {
     applyCoupon,
     removeCoupon,
   } = useCart();
-  const { freeShippingThreshold } = useSiteSettings();
+  const siteSettings = useSiteSettings();
+  const { freeShippingThreshold } = siteSettings;
+  const policyNote = cartPolicyNote(commercialContext(siteSettings));
   const [couponInput, setCouponInput] = useState("");
   const [validating, setValidating] = useState(false);
 
@@ -213,7 +216,7 @@ export default function CartDrawer() {
                 <span>Shipping</span>
                 <span>{subtotal >= freeShippingThreshold ? "FREE" : "Calculated at checkout"}</span>
               </div>
-              <p className="text-[11px] store-muted/80">Taxes included. Free 7-day returns.</p>
+              {policyNote && <p className="text-[11px] store-muted/80">{policyNote}</p>}
             </div>
 
             <div className="grid grid-cols-2 gap-3">

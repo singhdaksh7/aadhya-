@@ -7,6 +7,7 @@ import { formatInr } from "../../lib/format";
 import { useCart } from "../../context/CartContext";
 import { useWishlist } from "../../context/WishlistContext";
 import { useSiteSettings } from "../../hooks/useSiteSettings";
+import { commercialContext, shippingInfoText } from "../../lib/commercialText";
 import { getProductBySlug, getProducts } from "../../services/api";
 import { IconCheck, IconCart } from "../../components/icons";
 import { trackProductView, recordRecentlyViewed } from "../../lib/analytics";
@@ -18,7 +19,8 @@ export default function ProductDetail() {
   const navigate = useNavigate();
   const { addItem, items, setIsOpen: setCartDrawerOpen } = useCart();
   const { isInWishlist, toggleWishlist } = useWishlist();
-  const { promoStrip } = useSiteSettings();
+  const siteSettings = useSiteSettings();
+  const { promoStrip } = siteSettings;
 
   const [product, setProduct] = useState(null);
   const [relatedProducts, setRelatedProducts] = useState([]);
@@ -518,7 +520,7 @@ export default function ProductDetail() {
               <p>{product.careInstructions || "Wipe gently with a soft dry cloth. Avoid harsh chemicals."}</p>
             )}
             {activeTab === "shipping" && (
-              <p>{product.shippingInfo || "Dispatched within 24-48 hours via premium courier. Free shipping over ₹2,499."}</p>
+              <p>{product.shippingInfo || shippingInfoText(commercialContext(siteSettings)) || "Shipping details are shown at checkout."}</p>
             )}
           </div>
         </section>

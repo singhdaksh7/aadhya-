@@ -44,7 +44,7 @@ export const DEFAULT_SETTINGS = {
   header: {
     showUtilityBar: true,
     utilityBarItems: [
-      { id: "ub-1", enabled: true, title: "Free Shipping on Orders > ₹2,499", icon: "truck", link: "/shipping" },
+      { id: "ub-1", enabled: true, title: "Free shipping on orders {freeShippingThreshold}+", icon: "truck", link: "/shipping" },
       { id: "ub-2", enabled: true, title: "Easy 7-Day Returns", icon: "refresh", link: "/returns" },
       { id: "ub-3", enabled: true, title: "100% Secure Checkout", icon: "shield", link: "/faq" },
     ],
@@ -61,7 +61,7 @@ export const DEFAULT_SETTINGS = {
   },
   announcementBar: {
     active: true,
-    text: "Free delivery above ₹2,499 • Pan-India Express Shipping • Crafted by Master Indian Artisans",
+    text: "Free delivery above {freeShippingThreshold}",
     linkLabel: "Shop New Arrivals",
     linkUrl: "/new-arrivals",
     backgroundStyle: "CHARCOAL",
@@ -180,6 +180,9 @@ export const DEFAULT_SETTINGS = {
     showQuickAdd: true,
     showBadges: true,
   },
+  // Customer-facing return policy. The same `returns` key drives the backend return-eligibility
+  // window (modules/returns), so storefront copy and actual behaviour cannot diverge.
+  returns: { enabled: true, windowDays: 7 },
   shipping: {
     standardShippingAmount: 150,
     freeShippingThreshold: 2499,
@@ -198,6 +201,7 @@ export const DEFAULT_SETTINGS = {
   },
   checkout: {
     guestCheckoutEnabled: true,
+    pricesIncludeTax: true,
     requirePhone: true,
     allowDifferentBillingAddress: false,
     showOrderNotes: true,
@@ -247,6 +251,21 @@ const navMegaColumnSchema = z.object({
   enabled: z.boolean().optional(),
   links: z.array(navMegaLinkSchema).max(12),
 });
+
+const secondaryRowSchema = z.object({
+  enabled: z.boolean().optional(),
+  items: z.array(z.object({
+    id: z.string().max(80).optional(),
+    label: z.string().max(100),
+    destinationType: z.enum(["CATEGORY", "CUSTOM_URL"]).optional(),
+    categorySlug: z.string().max(200).nullable().optional(),
+    destination: safeUrl().optional(),
+    enabled: z.boolean().optional(),
+    sortOrder: z.number().optional(),
+    showDesktop: z.boolean().optional(),
+    showMobile: z.boolean().optional(),
+  })).max(12).optional(),
+}).optional();
 
 const NAV_DESTINATION_TYPES = ["CATEGORY", "COLLECTION", "PAGE", "BOOKS", "NEW_ARRIVALS", "CUSTOM_URL"];
 
@@ -400,6 +419,7 @@ export const headerSettingsSchema = z.object({
       megaMaxCategories: z.number().int().min(1).max(60).optional(),
       manualColumns: z.array(navMegaColumnSchema).max(6).optional(),
       promoCard: navPromoCardSchema.optional(),
+      secondaryRow: secondaryRowSchema,
       icon: z.string().max(50).optional(),
       highlight: z.boolean().optional(),
     })).max(30).optional(),
@@ -646,8 +666,17 @@ export const settingsValidationSchema = z.object({
     codFee: z.number().nonnegative().max(100000).optional(),
   }).optional(),
 
+  returns: z.object({
+    enabled: z.boolean().optional(),
+    windowDays: z.number().int().min(0).max(365).optional(),
+    allowedOrderStatuses: z.array(z.string().max(40)).max(10).optional(),
+    excludedProductTypes: z.array(z.string().max(40)).max(10).optional(),
+    allowDigitalReturns: z.boolean().optional(),
+  }).optional(),
+
   checkout: z.object({
     guestCheckoutEnabled: z.boolean().optional(),
+    pricesIncludeTax: z.boolean().optional(),
     requirePhone: z.boolean().optional(),
     allowDifferentBillingAddress: z.boolean().optional(),
     showOrderNotes: z.boolean().optional(),
@@ -718,9 +747,16 @@ async function getMergedSettings() {
 }
 
 export const publicSettingsRouter = Router();
+// Keys stored in SiteSetting that must never be served to anonymous visitors (invoice settings
+// hold the seller GSTIN/PAN, address and bank details).
+export const PRIVATE_SETTING_KEYS = ["invoice"];
+export function toPublicSettings(settings) {
+  const pub = { ...settings };
+  for (const key of PRIVATE_SETTING_KEYS) delete pub[key];
+  return pub;
+}
 publicSettingsRouter.get("/", asyncHandler(async (_req, res) => {
-  const settings = await getMergedSettings();
-  ok(res, settings);
+  ok(res, toPublicSettings(await getMergedSettings()));
 }));
 
 export const adminSettingsRouter = Router();
