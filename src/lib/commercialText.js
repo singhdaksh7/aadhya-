@@ -6,7 +6,7 @@ import { formatInr } from "./format";
 
 const MONEY_KEYS = new Set(["freeShippingThreshold", "standardShippingAmount"]);
 const present = (v) => v !== undefined && v !== null && v !== "";
-const KNOWN_KEYS = new Set(["freeShippingThreshold", "standardShippingAmount", "returnWindowDays", "dispatchEstimate", "deliveryEstimate", "storeName", "supportEmail", "supportPhone"]);
+const KNOWN_KEYS = new Set(["businessAddress", "freeShippingThreshold", "standardShippingAmount", "returnWindowDays", "dispatchEstimate", "deliveryEstimate", "storeName", "supportEmail", "supportPhone"]);
 
 export function commercialContext(settings = {}) {
   const shipping = settings.shipping || {};
@@ -23,6 +23,9 @@ export function commercialContext(settings = {}) {
     storeName: general.storeName,
     supportEmail: settings.supportEmail || general.supportEmail,
     supportPhone: settings.supportPhone || general.supportPhone,
+    businessAddress: [general.businessAddress, general.businessAddressLine2, general.city, general.state, general.postalCode, general.country]
+      .filter((part) => Boolean(part && String(part).trim()))
+      .join(", "),
   };
 }
 

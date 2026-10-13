@@ -72,8 +72,8 @@ describe("system page protection", () => {
   beforeEach(() => vi.clearAllMocks());
   const stub = (slug) => prismaMock.page.findUnique.mockResolvedValue({ id: "p1", slug, status: "PUBLISHED", sections: [] });
 
-  it("lists the five routed policy pages as protected", () => {
-    expect(pageService.SYSTEM_PAGE_SLUGS).toEqual(["about", "shipping", "returns", "privacy", "terms"]);
+  it("lists every routed CMS page as protected", () => {
+    expect(pageService.SYSTEM_PAGE_SLUGS).toEqual(["about", "shipping", "returns", "privacy", "terms", "contact", "training", "consultation", "research", "events", "thinkpod"]);
   });
 
   it("refuses to delete a system page", async () => {

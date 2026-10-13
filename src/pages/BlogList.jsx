@@ -43,7 +43,7 @@ export default function BlogList() {
       <title>Living & Craft Stories — Aadya Lifestyle Journal</title>
       <meta
         name="description"
-        content="Artisanal inspirations, slow living philosophy, decor edits, and home styling guides curated by Aadya Society."
+        content="Artisanal inspirations, slow living philosophy, decor edits, and home styling guides curated by Aadya."
       />
       <link rel="canonical" href={canonicalUrl("/blog")} />
       {/* Header Section */}
@@ -51,7 +51,7 @@ export default function BlogList() {
         <span className="text-xs font-semibold uppercase tracking-widest store-primary">Aadya Lifestyle Journal</span>
         <h1 className="font-serif-display text-4xl sm:text-5xl store-text">Living & Craft Stories</h1>
         <p className="text-sm store-muted leading-relaxed">
-          Explore artisanal inspirations, slow living philosophy, decor edits, and home styling guides curated by Aadya Society.
+          Explore artisanal inspirations, slow living philosophy, decor edits, and home styling guides curated by Aadya.
         </p>
       </div>
 

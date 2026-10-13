@@ -2,14 +2,21 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { fetchPageBySlug, resolveProductImageUrl } from "../lib/api";
 import RichTextRenderer from "../components/cms/RichTextRenderer";
+import NotFound from "./NotFound";
 import { useSiteSettings } from "../hooks/useSiteSettings";
 import { commercialContext, interpolateCommercial } from "../lib/commercialText";
 import { canonicalUrl } from "../lib/seo";
+import { publicPagePath } from "../lib/systemPages";
 
-// Storefront page whose copy is managed in Admin → Pages (slugs: about, shipping, returns, privacy, terms).
-// Commercial facts inside the copy use placeholders such as {{freeShippingThreshold}} or
-// {{returnWindowDays}}, which are filled from Store Settings so the page cannot drift from real behaviour.
-export default function SystemPage({ slug, eyebrow = "Customer Information", fallbackTitle }) {
+// Storefront page whose copy is managed in Admin → Pages (see lib/systemPages.js for the slugs).
+// Commercial/contact facts inside the copy use placeholders such as {{freeShippingThreshold}},
+// {{returnWindowDays}} or {{supportEmail}}, filled from Store Settings so the page cannot drift from them.
+//
+// `missing` decides what visitors see when the page is unpublished/draft or does not exist:
+//   "fallback" (default) - a short, promise-free "being updated" page (children, e.g. a form, still render)
+//   "notfound"           - the normal 404 page; used for optional pages that are off until Admin publishes them
+// Never renders stale static content.
+export default function SystemPage({ slug, eyebrow = "Customer Information", fallbackTitle, missing = "fallback", children }) {
   const settings = useSiteSettings();
   const [page, setPage] = useState(null);
   const [state, setState] = useState("loading"); // loading | ready | missing
@@ -41,13 +48,15 @@ export default function SystemPage({ slug, eyebrow = "Customer Information", fal
   }
 
   if (state === "missing") {
+    if (missing === "notfound") return <NotFound />;
     const title = fallbackTitle || "Page";
     return (
-      <div className="mx-auto max-w-4xl space-y-4 px-5 py-16 sm:px-8" data-testid="system-page-fallback">
+      <div className="mx-auto max-w-4xl space-y-6 px-5 py-16 sm:px-8" data-testid="system-page-fallback">
         <title>{`${title} | ${storeName}`}</title>
         <span className="text-xs font-semibold uppercase tracking-widest store-primary">{eyebrow}</span>
         <h1 className="font-serif-display text-3xl store-text sm:text-4xl">{title}</h1>
         <p className="text-sm store-muted">This page is being updated. Please <Link to="/contact" className="underline">contact us</Link> if you need help in the meantime.</p>
+        {children}
       </div>
     );
   }
@@ -59,7 +68,7 @@ export default function SystemPage({ slug, eyebrow = "Customer Information", fal
     <div className="mx-auto max-w-4xl space-y-8 px-5 py-16 sm:px-8" data-testid="system-page">
       <title>{`${page.seoTitle || page.name} | ${storeName}`}</title>
       {description && <meta name="description" content={description} />}
-      <link rel="canonical" href={canonicalUrl(`/${slug}`)} />
+      <link rel="canonical" href={canonicalUrl(publicPagePath(slug))} />
       <header className="space-y-3 border-b store-border pb-6">
         <span className="text-xs font-semibold uppercase tracking-widest store-primary">{eyebrow}</span>
         <h1 className="font-serif-display text-3xl leading-tight store-text sm:text-5xl">{page.name}</h1>
@@ -71,6 +80,7 @@ export default function SystemPage({ slug, eyebrow = "Customer Information", fal
         </div>
       )}
       <RichTextRenderer content={interpolateCommercial(page.content || "", ctx)} className="py-2" />
+      {children}
     </div>
   );
 }

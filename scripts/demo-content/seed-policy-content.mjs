@@ -3,14 +3,36 @@
 //    from Store Settings at render time: shipping threshold, fee, dispatch/delivery, return window, ...)
 //  - a small set of general store FAQs
 //  - the Books mega menu secondary row, the `returns` policy settings and placeholder-based utility copy
-// Safe to re-run: existing pages/FAQs are updated in place by slug/question, never duplicated.
+// Safe to re-run: a page that already exists is LEFT ALONE (so re-running never overwrites Admin edits or
+// re-publishes a page that was unpublished); set FORCE_OVERWRITE=1 to reset pages to the seed copy.
+// Optional pages (training, consultation, research, events, thinkpod) are created as DRAFT: they stay a
+// 404 on the storefront until someone writes real content and publishes them in Admin → Pages.
 //
 //   API_BASE=... ADMIN_EMAIL=... ADMIN_PASSWORD=... node scripts/demo-content/seed-policy-content.mjs
 import { adminLogin, client, API_BASE } from "./admin-client.mjs";
 
 const DRAFT_NOTE = "<p><em>Draft policy: this is general starter wording and should be reviewed and finalised for your business before launch.</em></p>";
 
+const FORCE = process.env.FORCE_OVERWRITE === "1";
+const draftPage = (slug, name) => ({ slug, name, status: "DRAFT", excerpt: "", seoTitle: name, seoDescription: "",
+  content: `<p>This page is a draft. Add your content in Admin → Pages, then publish it to make /${slug} live.</p>` });
+
 const PAGES = [
+  {
+    slug: "contact", name: "Contact Us", excerpt: "We're happy to help with orders, products and returns.",
+    seoTitle: "Contact Us", seoDescription: "Get in touch about an order, a product or a return.",
+    content: [
+      "<h2>How we can help</h2>",
+      "<p>Send us a message about an order, a product, a delivery or a return and we will get back to you.</p>",
+      "<h2>Before you write</h2>",
+      "<ul><li>Follow an order on the <a href=\"/track-order\">Track Order</a> page</li><li>Delivery times are on the <a href=\"/shipping\">Shipping</a> page</li><li>Return details are on the <a href=\"/returns\">Returns</a> page</li><li>Quick answers are in the <a href=\"/faq\">FAQ</a></li></ul>",
+    ].join(""),
+  },
+  draftPage("training", "Training"),
+  draftPage("consultation", "Consultation"),
+  draftPage("research", "Research"),
+  draftPage("events", "Events"),
+  draftPage("thinkpod", "Thinkpod"),
   {
     slug: "about", name: "About Aadya", excerpt: "Considered objects for everyday living.",
     seoTitle: "About Aadya", seoDescription: "Aadya is a home and lifestyle store of handcrafted decor, textiles, lighting, fragrance and books.",
@@ -126,9 +148,10 @@ async function main() {
     aboutImage = asList(await api.get("/admin/media?search=aadya-14-&limit=5"))[0]?.url || null;
   } catch { /* optional hero image */ }
   for (const p of PAGES) {
-    const body = { name: p.name, slug: p.slug, pageType: "STANDARD", status: "PUBLISHED", content: p.content, excerpt: p.excerpt, seoTitle: p.seoTitle, seoDescription: p.seoDescription, ...(p.slug === "about" && aboutImage ? { featuredImage: aboutImage } : {}) };
+    const body = { name: p.name, slug: p.slug, pageType: "STANDARD", status: p.status || "PUBLISHED", content: p.content, excerpt: p.excerpt, seoTitle: p.seoTitle, seoDescription: p.seoDescription, ...(p.slug === "about" && aboutImage ? { featuredImage: aboutImage } : {}) };
     const existing = list.find((x) => x.slug === p.slug);
-    if (existing) { await api.put(`/admin/pages/${existing.id}`, body); console.log(`page updated: ${p.slug}`); }
+    if (existing && !FORCE) console.log(`page exists, left unchanged: ${p.slug} (${existing.status})`);
+    else if (existing) { await api.put(`/admin/pages/${existing.id}`, body); console.log(`page reset (FORCE_OVERWRITE): ${p.slug}`); }
     else { await api.post("/admin/pages", body); console.log(`page created: ${p.slug}`); }
   }
 
@@ -144,6 +167,7 @@ async function main() {
   for (const [i, [catName, , question, answer]] of FAQS.entries()) {
     const body = { categoryId: byName.get(catName).id, question, answer, sortOrder: i, isActive: true };
     const existing = itemList.find((x) => x.question === question);
+    if (existing && !FORCE) continue; // never overwrite an FAQ that already exists
     if (existing) await api.put(`/admin/faqs/items/${existing.id}`, body); else await api.post("/admin/faqs/items", body);
   }
   console.log(`faqs ensured: ${FAQS.length}`);
@@ -153,11 +177,11 @@ async function main() {
   const header = JSON.parse(JSON.stringify(s.header || {}));
   const items2 = header.primaryNav?.items || [];
   const books = items2.find((i) => i.categorySlug === "books" || i.destinationType === "BOOKS");
-  if (books) books.secondaryRow = BOOKS_ROW; else console.log("skip secondary row: no Books nav item");
+  if (books && (FORCE || !books.secondaryRow)) books.secondaryRow = BOOKS_ROW; else if (!books) console.log("skip secondary row: no Books nav item");
   const bar = header.utilityBar || {};
-  bar.items = (bar.items || []).map((i) => (/free ship/i.test(i.label || "") ? { ...i, label: "Free shipping on orders {freeShippingThreshold}+" } : /return/i.test(i.label || "") ? { ...i, label: "Easy {returnWindowDays}-day returns" } : i));
+  if (FORCE) bar.items = (bar.items || []).map((i) => (/free ship/i.test(i.label || "") ? { ...i, label: "Free shipping on orders {freeShippingThreshold}+" } : /return/i.test(i.label || "") ? { ...i, label: "Easy {returnWindowDays}-day returns" } : i));
   header.utilityBar = bar;
-  if (header.promoTicker) header.promoTicker.fallbackMessage = "Free delivery on orders above {freeShippingThreshold}";
+  if (FORCE && header.promoTicker) header.promoTicker.fallbackMessage = "Free delivery on orders above {freeShippingThreshold}";
   await api.put("/admin/settings", {
     header,
     returns: { ...(s.returns || {}), enabled: s.returns?.enabled !== false, windowDays: s.returns?.windowDays ?? 7 },
@@ -167,7 +191,7 @@ async function main() {
 
   // Promo ticker messages: placeholder-based so they follow the shipping setting.
   const promos = asList(await api.get("/admin/promos"));
-  for (const p of promos) {
+  for (const p of FORCE ? promos : []) {
     if (/free (standard )?delivery/i.test(p.message || "")) await api.put(`/admin/promos/${p.id}`, { title: p.title, message: "Free standard delivery on orders above {freeShippingThreshold}", isActive: p.isActive });
     if (/returns/i.test(p.message || "")) await api.put(`/admin/promos/${p.id}`, { title: p.title, message: "Easy {returnWindowDays}-day returns on eligible orders", isActive: p.isActive });
   }

@@ -56,7 +56,7 @@ export default function CmsPage({ overrideSlug }) {
 
   return (
     <div className="mx-auto max-w-4xl px-5 py-16 sm:px-8 space-y-8 animate-fade-in">
-      <title>{`${page.name} — Aadya Society`}</title>
+      <title>{`${page.name} — Aadya`}</title>
       <meta name="description" content={metaDescription} />
       <link rel="canonical" href={canonicalUrl(`/pages/${page.slug || slug}`)} />
       {/* Page Header */}
