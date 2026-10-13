@@ -107,9 +107,13 @@ export const analyticsLimiter = rateLimit({
 
 // Token-refresh endpoint doesn't take a password but is still a credential
 // exchange worth throttling against brute-force/enumeration attempts.
+// The storefront restores the customer session with a refresh call on every full page load (even for
+// anonymous visitors, which just get a cheap 401), so a normal browsing session - or several people
+// behind one office IP - easily exceeds a few dozen. The refresh token is a high-entropy httpOnly cookie
+// that is rotated on use, so guessing it is not feasible; this limit only needs to stop floods.
 export const refreshLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 60,
+  limit: 600,
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, error: { message: "Too many session refresh attempts. Try again later." } },
