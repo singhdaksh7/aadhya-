@@ -3,15 +3,15 @@ import ProductCatalog from "./shop/ProductCatalog";
 export default function Shop() {
   return (
     <>
-      <title>Shop — Aadya Society</title>
+      <title>Shop — Aadya</title>
       <meta
         name="description"
-        content="Tushaqsa Handcrafted home decor and accessories, thoughtfully made — shop the full Aadya Society catalog."
+        content="Handcrafted home decor and accessories, thoughtfully made — shop the full Aadya catalog."
       />
       <ProductCatalog
-        eyebrow="Tushaqsa Handcrafted"
+        eyebrow="Shop"
         title="Thoughtfully Handcrafted for Everyday Spaces"
-        description="Home decor, handcrafted accessories and books — browse the full Aadya Society catalog."
+        description="Home decor, handcrafted accessories and books — browse the full Aadya catalog."
         showCategoryFilter
       />
     </>

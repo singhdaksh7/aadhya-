@@ -16,14 +16,8 @@ import RequireAdmin from "./components/admin/RequireAdmin";
 import AdminLayout from "./components/admin/AdminLayout";
 
 import Home from "./pages/Home";
-import Training from "./pages/Training";
-import ProgramDetail from "./pages/ProgramDetail";
-import Consultation from "./pages/Consultation";
-import Research from "./pages/Research";
 import ContentHub from "./pages/ContentHub";
-import Events from "./pages/Events";
 import Shop from "./pages/Shop";
-import Thinkpod from "./pages/Thinkpod";
 import Testimonials from "./pages/Testimonials";
 import FAQ from "./pages/FAQ";
 import Contact from "./pages/Contact";
@@ -146,13 +140,13 @@ function SiteLayout() {
                 <Route path="/terms" element={<SystemPage slug="terms" eyebrow="Legal" fallbackTitle="Terms of Service" />} />
 
                 {/* Informational Pages */}
-                <Route path="/training" element={<Training />} />
-                <Route path="/training/:slug" element={<ProgramDetail />} />
-                <Route path="/consultation" element={<Consultation />} />
-                <Route path="/research" element={<Research />} />
+                {/* Optional pages managed in Admin → Pages. Unpublished/draft = normal 404 (no static fallback content). */}
+                <Route path="/training" element={<SystemPage slug="training" eyebrow="Training" missing="notfound" />} />
+                <Route path="/consultation" element={<SystemPage slug="consultation" eyebrow="Consultation" missing="notfound" />} />
+                <Route path="/research" element={<SystemPage slug="research" eyebrow="Research" missing="notfound" />} />
                 <Route path="/content" element={<ContentHub />} />
-                <Route path="/events" element={<Events />} />
-                <Route path="/thinkpod" element={<Thinkpod />} />
+                <Route path="/events" element={<SystemPage slug="events" eyebrow="Events" missing="notfound" />} />
+                <Route path="/thinkpod" element={<SystemPage slug="thinkpod" eyebrow="Thinkpod" missing="notfound" />} />
                 <Route path="/testimonials" element={<Testimonials />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>

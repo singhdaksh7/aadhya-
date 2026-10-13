@@ -3,7 +3,7 @@ import { sanitizeRichText } from "../../utils/sanitizer.js";
 
 // Pages the storefront routes depend on (/about, /shipping, ...). They can be edited and
 // unpublished, but never moved to a different slug or deleted, so a route cannot break.
-export const SYSTEM_PAGE_SLUGS = ["about", "shipping", "returns", "privacy", "terms"];
+export const SYSTEM_PAGE_SLUGS = ["about", "shipping", "returns", "privacy", "terms", "contact", "training", "consultation", "research", "events", "thinkpod"];
 const isSystemSlug = (slug) => SYSTEM_PAGE_SLUGS.includes(String(slug || "").toLowerCase().trim());
 function protectedError(message) { const e = new Error(message); e.statusCode = 400; return e; }
 

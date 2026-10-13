@@ -8,6 +8,7 @@ import {
 } from "../../lib/api";
 import RichTextEditor from "../../components/cms/RichTextEditor";
 import ImagePickerInput from "../../components/admin/ImagePickerInput";
+import { isSystemPageSlug, publicPagePath } from "../../lib/systemPages";
 
 export default function AdminPages() {
   const [pages, setPages] = useState([]);
@@ -233,7 +234,10 @@ export default function AdminPages() {
                   <tr key={p.id} className="hover:bg-ivory/50 transition">
                     <td className="px-6 py-4">
                       <p className="font-semibold text-charcoal">{p.name}</p>
-                      <p className="text-[11px] text-terracotta font-mono mt-0.5">/pages/{p.slug}</p>
+                      <p className="text-[11px] text-terracotta font-mono mt-0.5">
+                        {publicPagePath(p.slug)}
+                        {isSystemPageSlug(p.slug) && <span className="ml-2 rounded-full bg-charcoal/10 px-2 py-0.5 font-sans text-[10px] font-semibold text-charcoal" title="System page: fixed route, cannot be deleted or re-slugged">System</span>}
+                      </p>
                     </td>
                     <td className="px-4 py-4">
                       <span className="inline-block px-2.5 py-1 rounded-full text-[10px] font-semibold bg-charcoal/5 text-charcoal">
@@ -258,7 +262,7 @@ export default function AdminPages() {
                     </td>
                     <td className="px-6 py-4 text-right space-x-2">
                       <button
-                        onClick={() => window.open(`/pages/${p.slug}`, "_blank")}
+                        onClick={() => window.open(publicPagePath(p.slug), "_blank")}
                         className="px-2.5 py-1 rounded-lg border border-charcoal/15 text-[11px] font-medium hover:bg-charcoal/5"
                         title="Preview Public Page"
                       >
@@ -284,12 +288,14 @@ export default function AdminPages() {
                       >
                         Duplicate
                       </button>
-                      <button
-                        onClick={() => handleDelete(p.id)}
-                        className="px-2.5 py-1 rounded-lg border border-red-200 text-red-600 text-[11px] font-medium hover:bg-red-50"
-                      >
-                        Delete
-                      </button>
+                      {!isSystemPageSlug(p.slug) && (
+                        <button
+                          onClick={() => handleDelete(p.id)}
+                          className="px-2.5 py-1 rounded-lg border border-red-200 text-red-600 text-[11px] font-medium hover:bg-red-50"
+                        >
+                          Delete
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -338,6 +344,8 @@ export default function AdminPages() {
                   <input
                     type="text"
                     value={formData.slug}
+                    disabled={Boolean(editingId) && isSystemPageSlug(formData.slug)}
+                    title={Boolean(editingId) && isSystemPageSlug(formData.slug) ? "System page: the URL slug is fixed" : undefined}
                     onChange={(e) => setFormData({ ...formData, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, "-") })}
                     placeholder="e.g. shipping-policy"
                     className="w-full px-3 py-2 text-xs rounded-xl border border-charcoal/15 bg-white text-charcoal font-mono focus:border-terracotta focus:outline-none"

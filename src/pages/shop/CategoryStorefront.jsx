@@ -21,13 +21,13 @@ export default function CategoryStorefront() {
 
   return (
     <>
-      <title>{`${title} — Aadya Society Shop`}</title>
-      <meta name="description" content={`Shop ${title} from Aadya Society's Tushaqsa Handcrafted collection.`} />
+      <title>{`${title} — Aadya`}</title>
+      <meta name="description" content={`Shop ${title} from Aadya.`} />
       <link rel="canonical" href={canonicalUrl(`/shop/category/${slug}`)} />
       <script type="application/ld+json" {...jsonLdProps(breadcrumbJsonLd)} />
       <ProductCatalog
         key={slug}
-        eyebrow="Tushaqsa Handcrafted"
+        eyebrow="Shop"
         title={title}
         description={`Browse the ${title} collection.`}
         lockedCategory={slug}

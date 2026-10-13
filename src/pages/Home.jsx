@@ -63,10 +63,10 @@ export default function Home() {
 
   return (
     <>
-      <title>Aadya Society — Handcrafted Home Decor & Slow Living</title>
+      <title>Aadya — Handcrafted Home Decor & Slow Living</title>
       <meta
         name="description"
-        content="Aadya Society: handcrafted oil lamps, unglazed ceramic vessels, linen runners, and slow-living monographs curated for thoughtful homes."
+        content="Aadya: handcrafted oil lamps, unglazed ceramic vessels, linen runners, and slow-living monographs curated for thoughtful homes."
       />
       <link rel="canonical" href={canonicalUrl("/")} />
       <HomepageRenderer sections={sections} />
