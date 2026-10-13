@@ -220,8 +220,6 @@ export function columnsFromManual(manualColumns = []) {
 export const BOOKS_SECONDARY_LINKS = [
   { id: "bk-new", label: "New Releases", anchor: "/shop/books#new-releases" },
   { id: "bk-editors", label: "Editor\u2019s Picks", anchor: "/shop/books#editors-picks" },
-  { id: "bk-coffee", label: "Coffee Table Books", categorySlug: "books-coffee-table" },
-  { id: "bk-interiors", label: "Home & Interiors", categorySlug: "books-home-and-interiors" },
   { id: "bk-slow", label: "Slow Living", categorySlug: "books-slow-living" },
   { id: "bk-journals", label: "Journals & Guides", categorySlug: "books-journals-and-guides" },
 ];

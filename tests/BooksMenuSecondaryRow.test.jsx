@@ -26,10 +26,10 @@ const booksModel = (categories) => model(categories).find((i) => i.label === "Bo
 const renderMenu = (item) => render(<MemoryRouter><MegaMenu item={item} isOpen onClose={() => {}} id="m" /></MemoryRouter>);
 
 describe("Books mega menu: secondary row", () => {
-  it("renders all 6 labels in order, plus the 4 existing Books links, and keeps the promo", () => {
+  it("renders all 4 labels in order, plus the 4 existing Books links, and keeps the promo", () => {
     renderMenu(booksModel([BOOKS, ...ALL_THEMES]));
     const row = screen.getByTestId("mega-secondary-row");
-    expect(Array.from(row.children).map((c) => c.textContent)).toEqual(["New Releases", "Editor’s Picks", "Coffee Table Books", "Home & Interiors", "Slow Living", "Journals & Guides"]);
+    expect(Array.from(row.children).map((c) => c.textContent)).toEqual(["New Releases", "Editor’s Picks", "Slow Living", "Journals & Guides"]);
     ["View All Books", "Spaces of Stillness", "Aadya Home Styling Guide", "The Art of Slow Living"].forEach((t) => expect(screen.getByText(t)).toBeInTheDocument());
     expect(screen.getByTestId("mega-promo")).toBeInTheDocument();
   });
@@ -39,24 +39,24 @@ describe("Books mega menu: secondary row", () => {
     const hrefs = screen.getAllByTestId("mega-secondary-link").map((a) => a.getAttribute("href"));
     expect(hrefs).toEqual([
       "/shop/books#new-releases", "/shop/books#editors-picks",
-      "/shop/category/books-coffee-table", "/shop/category/books-home-and-interiors", "/shop/category/books-slow-living", "/shop/category/books-journals-and-guides",
+      "/shop/category/books-slow-living", "/shop/category/books-journals-and-guides",
     ]);
   });
 
   it("a label with no matching category becomes a non-clickable label, never a broken link", () => {
-    renderMenu(booksModel([BOOKS, ALL_THEMES[0], ALL_THEMES[1]])); // production today: only Home & Interiors + Slow Living exist
-    expect(screen.getAllByTestId("mega-secondary-link").map((a) => a.textContent)).toEqual(["New Releases", "Editor’s Picks", "Home & Interiors", "Slow Living"]);
+    renderMenu(booksModel([BOOKS, ALL_THEMES[1]])); // only Slow Living exists; Journals & Guides does not
+    expect(screen.getAllByTestId("mega-secondary-link").map((a) => a.textContent)).toEqual(["New Releases", "Editor’s Picks", "Slow Living"]);
     const labels = screen.getAllByTestId("mega-secondary-label");
-    expect(labels.map((l) => l.textContent)).toEqual(["Coffee Table Books", "Journals & Guides"]);
+    expect(labels.map((l) => l.textContent)).toEqual(["Journals & Guides"]);
     labels.forEach((l) => { expect(l.tagName).toBe("SPAN"); expect(l.closest("a")).toBeNull(); });
   });
 
   it("ignores same-named categories that are inactive or not under Books", () => {
     const stray = cat("x", "Slow Living", "books-slow-living", "other-root");
-    const hidden = cat("y", "Coffee Table", "books-coffee-table", "books", { isActive: false });
+    const hidden = cat("y", "Journaling & Guides", "books-journals-and-guides", "books", { isActive: false });
     const links = resolveBooksSecondaryLinks(buildCategoryTree([BOOKS, stray, hidden, cat("other-root", "Other", "other")]));
     expect(links.find((l) => l.id === "bk-slow").to).toBeNull();
-    expect(links.find((l) => l.id === "bk-coffee").to).toBeNull();
+    expect(links.find((l) => l.id === "bk-journals").to).toBeNull();
   });
 
   it("only the Books menu gets the row; other mega menus are unchanged", () => {
@@ -66,8 +66,8 @@ describe("Books mega menu: secondary row", () => {
     expect(container.querySelector("[data-testid='mega-secondary-row']")).toBeNull();
   });
 
-  it("defines exactly the six requested labels", () => {
-    expect(BOOKS_SECONDARY_LINKS.map((l) => l.label)).toEqual(["New Releases", "Editor’s Picks", "Coffee Table Books", "Home & Interiors", "Slow Living", "Journals & Guides"]);
+  it("defines exactly the four requested labels", () => {
+    expect(BOOKS_SECONDARY_LINKS.map((l) => l.label)).toEqual(["New Releases", "Editor’s Picks", "Slow Living", "Journals & Guides"]);
   });
 
   it("wraps cleanly (flex-wrap) with no heavy pill buttons or boxes", () => {
