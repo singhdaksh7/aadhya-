@@ -210,7 +210,8 @@ export default function Navbar() {
             <IconMenu className="h-6 w-6" />
           </button>
 
-          <Link to="/" className="flex items-center shrink-0">
+          {/* min-w-0 + shrink: an admin-chosen logo width can never push the icons off-screen */}
+          <Link to="/" className="mx-2 flex min-w-0 shrink items-center justify-center">
             <BrandLogo
               src={branding?.mobileLogo || branding?.desktopLogo}
               alt={branding?.logoAltText || `${general?.storeName || "Aadya"} Logo`}
