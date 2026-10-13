@@ -37,8 +37,8 @@ export default function PromoStrip({ promoConfig }) {
 
   const promo = promoConfig || settingsPromo || {
     active: true,
-    description: "Get ₹500 off on your first purchase above ₹2,999",
-    couponCode: "AADYA500",
+    description: "Free standard delivery on orders above ₹2,499",
+    couponCode: null,
     ctaLabel: "Shop Now",
     ctaUrl: "/shop",
   };
@@ -88,7 +88,7 @@ export default function PromoStrip({ promoConfig }) {
         {
           id: "default-1",
           message: fallbackMsg,
-          couponCode: promo.couponCode || "AADYA500",
+          couponCode: promo.couponCode || null,
           ctaLabel: promo.ctaLabel || "Shop Now",
           ctaUrl: promo.ctaUrl || "/shop",
         },

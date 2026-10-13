@@ -198,10 +198,10 @@ export const DEFAULT_SITE_SETTINGS = {
   standardShippingAmount: 150,
   promoStrip: {
     active: true,
-    title: "Get ₹500 off on your first order",
-    couponCode: "AADYA500",
-    description: "Valid on orders above ₹2,499. Applied at checkout.",
-    ctaLabel: "Shop Offer",
+    title: "Free standard delivery above ₹2,499",
+    couponCode: "",
+    description: "Free standard delivery on orders above ₹2,499.",
+    ctaLabel: "Shop Now",
     ctaUrl: "/shop",
   },
   heroBanners: [

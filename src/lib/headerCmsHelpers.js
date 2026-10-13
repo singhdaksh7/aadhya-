@@ -15,7 +15,7 @@ export const DEFAULT_HEADER_CMS_SETTINGS = {
   utilityBar: {
     enabled: true,
     centerMessageEnabled: true,
-    centerMessage: "Get ₹500 off on your first purchase above ₹2,999",
+    centerMessage: "Handcrafted home decor, books & lifestyle",
     centerMessageLink: "/shop",
     centerMessageIcon: "sparkle",
     showDesktop: true,
@@ -357,7 +357,7 @@ export function normalizeHeaderSettings(rawHeader, rawShipping, rawGeneral) {
       ...DEFAULT_HEADER_CMS_SETTINGS.utilityBar,
       ...rawUtilityBar,
       enabled: utilityEnabled,
-      centerMessage: rawUtilityBar.centerMessage || h.utilityBarCenterText || "Get ₹500 off on your first purchase above ₹2,999",
+      centerMessage: rawUtilityBar.centerMessage || h.utilityBarCenterText || "Handcrafted home decor, books & lifestyle",
       items: utilityItems,
     },
 
