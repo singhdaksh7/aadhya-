@@ -11,12 +11,41 @@ import { env } from "../config/env.js";
 // rest of the suite exercise auth/checkout endpoints as many times as needed.
 const skipInTest = () => env.isTest || process.env.DISABLE_RATE_LIMIT === "true";
 
-export const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  limit: 500,
+// The global /api limiter is split into independent buckets (each IP has a separate counter per
+// bucket) so that ordinary browsing and admin work cannot exhaust the budget meant for sensitive
+// writes. A storefront page load alone issues ~10-15 read requests, and several people (e.g. a client
+// and their team in one office) can share a single IP, so reads and the chatty admin UI get a much
+// larger allowance. Login, refresh, checkout, track-order etc. keep their own stricter per-route
+// limiters below, and the Razorpay/shipping webhooks are mounted before any limiter.
+const WINDOW_MS = 15 * 60 * 1000;
+export const isAdminApiRequest = (req) => req.path === "/admin" || req.path.startsWith("/admin/");
+export const isPublicReadRequest = (req) => (req.method === "GET" || req.method === "HEAD") && !isAdminApiRequest(req);
+
+// Public GET/HEAD (catalog, settings, pages, search, ...).
+export const publicReadLimiter = rateLimit({
+  windowMs: WINDOW_MS,
+  limit: 3000,
   standardHeaders: true,
   legacyHeaders: false,
-  skip: skipInTest,
+  skip: (req) => skipInTest() || !isPublicReadRequest(req),
+});
+
+// Authenticated admin API (the admin UI is chatty; /admin/auth/login keeps its own strict limiter).
+export const adminApiLimiter = rateLimit({
+  windowMs: WINDOW_MS,
+  limit: 3000,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => skipInTest() || !isAdminApiRequest(req),
+});
+
+// Everything else: public writes (cart, account, newsletter, analytics, orders...).
+export const apiLimiter = rateLimit({
+  windowMs: WINDOW_MS,
+  limit: 1000,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => skipInTest() || isAdminApiRequest(req) || isPublicReadRequest(req),
 });
 
 export const loginLimiter = rateLimit({

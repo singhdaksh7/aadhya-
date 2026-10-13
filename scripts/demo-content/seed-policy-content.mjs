@@ -112,17 +112,18 @@ const BOOKS_ROW = {
   ].map((item, i) => ({ ...item, sortOrder: i + 1 })),
 };
 
+// List endpoints return either { data: [...] }, { data: { items } } or { items } depending on the module.
+const asList = (body) => (Array.isArray(body?.data) ? body.data : body?.data?.items ?? body?.items ?? []);
+
 async function main() {
   console.log(`Target API: ${API_BASE}`);
   const api = client(await adminLogin());
 
   // Pages: upsert by slug, published.
-  const pages = (await api.get("/admin/pages?limit=100")).data;
-  const list = Array.isArray(pages) ? pages : pages.items || [];
+  const list = asList(await api.get("/admin/pages?limit=100"));
   let aboutImage = null;
   try {
-    const media = (await api.get("/admin/media?search=aadya-14-&limit=5")).data;
-    aboutImage = (media.items || [])[0]?.url || null;
+    aboutImage = asList(await api.get("/admin/media?search=aadya-14-&limit=5"))[0]?.url || null;
   } catch { /* optional hero image */ }
   for (const p of PAGES) {
     const body = { name: p.name, slug: p.slug, pageType: "STANDARD", status: "PUBLISHED", content: p.content, excerpt: p.excerpt, seoTitle: p.seoTitle, seoDescription: p.seoDescription, ...(p.slug === "about" && aboutImage ? { featuredImage: aboutImage } : {}) };
@@ -132,16 +133,14 @@ async function main() {
   }
 
   // FAQs: categories + items, matched by name/question.
-  const cats = (await api.get("/admin/faqs/categories")).data;
-  const catList = Array.isArray(cats) ? cats : cats.items || [];
+  const catList = asList(await api.get("/admin/faqs/categories"));
   const byName = new Map(catList.map((c) => [c.name, c]));
   let order = 0;
   for (const [name, slug] of [...new Set(FAQS.map((f) => `${f[0]}|${f[1]}`))].map((s) => s.split("|"))) {
     if (!byName.has(name)) byName.set(name, (await api.post("/admin/faqs/categories", { name, slug, sortOrder: order, isActive: true })).data);
     order += 1;
   }
-  const items = (await api.get("/admin/faqs/items")).data;
-  const itemList = Array.isArray(items) ? items : items.items || [];
+  const itemList = asList(await api.get("/admin/faqs/items"));
   for (const [i, [catName, , question, answer]] of FAQS.entries()) {
     const body = { categoryId: byName.get(catName).id, question, answer, sortOrder: i, isActive: true };
     const existing = itemList.find((x) => x.question === question);
@@ -167,7 +166,7 @@ async function main() {
   console.log("settings updated: books secondary row, returns, utility copy");
 
   // Promo ticker messages: placeholder-based so they follow the shipping setting.
-  const promos = (await api.get("/admin/promos")).data;
+  const promos = asList(await api.get("/admin/promos"));
   for (const p of promos) {
     if (/free (standard )?delivery/i.test(p.message || "")) await api.put(`/admin/promos/${p.id}`, { title: p.title, message: "Free standard delivery on orders above {freeShippingThreshold}", isActive: p.isActive });
     if (/returns/i.test(p.message || "")) await api.put(`/admin/promos/${p.id}`, { title: p.title, message: "Easy {returnWindowDays}-day returns on eligible orders", isActive: p.isActive });
