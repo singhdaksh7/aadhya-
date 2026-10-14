@@ -79,9 +79,10 @@ function ImageOnlyBanner({ config }) {
   const radius = `${Number.isFinite(config.borderRadius) ? config.borderRadius : 24}px`;
   return (
     <section data-testid="trust-banner" data-image-only="true" className="mx-auto mt-4 max-w-7xl px-4 sm:mt-6 sm:px-8">
+      {/* Fixed compact frame: the picture is cropped to fit, so a tall photo never makes the banner large. */}
       <picture>
         {mobile && <source media="(max-width: 639px)" srcSet={mobile} />}
-        <img src={desktop} alt={(config.bannerAlt || "").trim()} decoding="async" onError={() => setBroken(true)} style={{ borderRadius: radius }} className="block h-auto w-full" />
+        <img src={desktop} alt={(config.bannerAlt || "").trim()} decoding="async" onError={() => setBroken(true)} style={{ borderRadius: radius, "--tb-img-m": `${config.bannerHeightMobile ?? 110}px`, "--tb-img-d": `${config.bannerHeightDesktop ?? 140}px` }} className="block h-[var(--tb-img-m)] w-full object-cover sm:h-[var(--tb-img-d)]" />
       </picture>
     </section>
   );

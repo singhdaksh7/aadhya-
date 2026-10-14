@@ -23,6 +23,8 @@ export function TrustBannerSettings({ value, set }) {
         <ImagePickerInput label="Banner image (desktop)" value={value.bannerImage} onChange={(url) => set("bannerImage", url)} pickerTitle="Select banner image" inputClassName="mt-1 w-full rounded-xl border border-charcoal/20 px-3 py-2 text-xs" enableCrop aspectOptions={["banner", "wide", "free"]} />
         <ImagePickerInput label="Banner image (mobile, optional)" value={value.bannerMobileImage} onChange={(url) => set("bannerMobileImage", url)} pickerTitle="Select mobile banner image" inputClassName="mt-1 w-full rounded-xl border border-charcoal/20 px-3 py-2 text-xs" enableCrop aspectOptions={["wide", "square", "free"]} />
         <label className="block text-xs font-semibold text-charcoal-soft">Image description (alt text)<input value={value.bannerAlt ?? ""} onChange={(e) => set("bannerAlt", e.target.value)} className={INPUT} /></label>
+        <NumberField label="Banner height on desktop / tablet (px, 60–600)" value={value.bannerHeightDesktop} onChange={(v) => set("bannerHeightDesktop", v)} min={60} max={600} />
+        <NumberField label="Banner height on mobile (px, 40–400)" value={value.bannerHeightMobile} onChange={(v) => set("bannerHeightMobile", v)} min={40} max={400} />
         <NumberField label="Corner radius (px, 0–48)" value={value.borderRadius} onChange={(v) => set("borderRadius", v)} min={0} max={48} />
         {!value.bannerImage && <p className="text-[11px] text-terracotta">Upload a desktop image, otherwise this banner stays hidden.</p>}
       </>}
