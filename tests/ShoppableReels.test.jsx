@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent, within } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, fireEvent, within, act } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import ShoppableReels from "../src/components/ShoppableReels";
 import HomepageRenderer from "../src/components/HomepageRenderer";
@@ -16,6 +16,20 @@ const P2 = { id: "p2", name: "Linen Runner", slug: "linen", price: 800, image: "
 const reel = (id, over = {}) => ({ id, title: `Reel ${id}`, videoUrl: `/v/${id}.mp4`, coverImage: `/c/${id}.jpg`, ctaLabel: "", products: [], ...over });
 const section = (reels, settings = {}) => ({ id: "s", type: "SHOPPABLE_REELS", settings: { title: "Shop Our Reels", reels, ...settings } });
 const view = (reels, settings) => render(<MemoryRouter><ShoppableReels section={section(reels, settings)} /></MemoryRouter>);
+
+// Controllable IntersectionObserver: tests decide which reel cards are on screen.
+let observers = [];
+class FakeIO { constructor(cb) { this.cb = cb; this.el = null; observers.push(this); } observe(el) { this.el = el; } disconnect() { observers = observers.filter((o) => o !== this); } unobserve() {} }
+const setVisible = (el, ratio) => act(() => { observers.filter((o) => o.el === el).forEach((o) => o.cb([{ isIntersecting: ratio > 0, intersectionRatio: ratio }])); });
+let playSpy; let pauseSpy;
+beforeEach(() => {
+  observers = [];
+  vi.stubGlobal("IntersectionObserver", FakeIO);
+  playSpy = vi.spyOn(HTMLMediaElement.prototype, "play").mockImplementation(() => Promise.resolve());
+  pauseSpy = vi.spyOn(HTMLMediaElement.prototype, "pause").mockImplementation(() => {});
+  window.matchMedia = vi.fn(() => ({ matches: false, addEventListener() {}, removeEventListener() {} }));
+});
+afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe("ShoppableReels storefront", () => {
   it("renders nothing for zero reels or when none are live", () => {
@@ -39,22 +53,73 @@ describe("ShoppableReels storefront", () => {
     expect(screen.queryByText("Reel b")).toBeNull();
   });
 
-  it("loads no video before activation, then one at a time, muted and looping", () => {
+  it("loads no video until a reel scrolls into view, then autoplays it muted and looping", () => {
     const { container } = view([reel("a"), reel("b")]);
     expect(container.querySelector("video")).toBeNull();
     expect(container.innerHTML).not.toContain("/v/a.mp4");
-    fireEvent.click(screen.getByRole("button", { name: "Play Reel a" }));
+    const [cardA, cardB] = screen.getAllByTestId("reel-card");
+    setVisible(cardA, 0.8);
     let videos = container.querySelectorAll("video");
     expect(videos).toHaveLength(1);
+    expect(videos[0].getAttribute("src")).toBe("http://api.test/v/a.mp4");
     expect(videos[0].muted).toBe(true);
     expect(videos[0].loop).toBe(true);
-    expect(videos[0].getAttribute("src")).toBe("http://api.test/v/a.mp4");
-    fireEvent.click(screen.getByRole("button", { name: "Play Reel b" }));
-    videos = container.querySelectorAll("video");
-    expect(videos).toHaveLength(1);
-    expect(videos[0].getAttribute("src")).toBe("http://api.test/v/b.mp4");
-    fireEvent.click(screen.getByRole("button", { name: "Stop Reel b" }));
+    expect(playSpy).toHaveBeenCalled();
+    expect(container.innerHTML).not.toContain("/v/b.mp4");
+    setVisible(cardB, 0.8);
+    expect(container.querySelectorAll("video")).toHaveLength(2);
+  });
+
+  it("plays every visible reel at once, all muted, and pauses one that leaves the screen", () => {
+    const { container } = view([reel("a"), reel("b")]);
+    const [cardA, cardB] = screen.getAllByTestId("reel-card");
+    setVisible(cardA, 1); setVisible(cardB, 1);
+    container.querySelectorAll("video").forEach((v) => expect(v.muted).toBe(true));
+    pauseSpy.mockClear();
+    setVisible(cardA, 0);
+    expect(pauseSpy).toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Play Reel a" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Pause Reel b" })).toBeInTheDocument();
+  });
+
+  it("ignores a card that is barely visible", () => {
+    const { container } = view([reel("a")]);
+    setVisible(screen.getByTestId("reel-card"), 0.2);
     expect(container.querySelector("video")).toBeNull();
+  });
+
+  it("lets the visitor pause and resume, and unmute only one reel at a time", () => {
+    const { container } = view([reel("a"), reel("b")]);
+    const [cardA, cardB] = screen.getAllByTestId("reel-card");
+    setVisible(cardA, 1); setVisible(cardB, 1);
+    fireEvent.click(screen.getByRole("button", { name: "Pause Reel a" }));
+    expect(screen.getByRole("button", { name: "Play Reel a" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Play Reel a" }));
+    expect(screen.getByRole("button", { name: "Pause Reel a" })).toBeInTheDocument();
+    const sound = screen.getAllByRole("button", { name: "Turn sound on" });
+    fireEvent.click(sound[0]);
+    let vids = [...container.querySelectorAll("video")];
+    expect(vids.map((v) => v.muted)).toEqual([false, true]);
+    fireEvent.click(screen.getAllByRole("button", { name: /Turn sound (on|off)/ })[1]);
+    vids = [...container.querySelectorAll("video")];
+    expect(vids.map((v) => v.muted)).toEqual([true, false]);
+  });
+
+  it("waits for a tap when the visitor prefers reduced motion", () => {
+    window.matchMedia = vi.fn(() => ({ matches: true, addEventListener() {}, removeEventListener() {} }));
+    view([reel("a")]);
+    setVisible(screen.getByTestId("reel-card"), 1);
+    expect(playSpy).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Play Reel a" }));
+    expect(playSpy).toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Pause Reel a" })).toBeInTheDocument();
+  });
+
+  it("shows the play button when the browser refuses autoplay", async () => {
+    playSpy.mockImplementation(() => Promise.reject(new Error("NotAllowedError")));
+    view([reel("a")]);
+    setVisible(screen.getByTestId("reel-card"), 1);
+    expect(await screen.findByRole("button", { name: "Play Reel a" })).toBeInTheDocument();
   });
 
   it("falls back to a neutral tile when the cover is missing", () => {
