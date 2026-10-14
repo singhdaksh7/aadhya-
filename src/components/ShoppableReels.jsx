@@ -101,8 +101,8 @@ function ReelCard({ reel, soundOn, onSound, onShop }) {
 
   const single = products.length === 1;
   const cta = reel.ctaLabel || "Shop Now";
-  // Same premium treatment as the hero banner button: solid brand block, white spaced caps, square corners.
-  const ctaCls = "pointer-events-auto mt-3 flex w-full items-center justify-center border border-transparent store-bg-primary px-4 py-3 text-[11px] font-medium uppercase tracking-[0.2em] text-white shadow-lg transition store-primary-hover";
+  // Outline-only premium button (no fill), matching the hero banner's secondary button: white spaced caps and a thin white border.
+  const ctaCls = "pointer-events-auto mt-3 flex w-full items-center justify-center border border-white/80 bg-transparent px-4 py-3 text-[11px] font-medium uppercase tracking-[0.2em] text-white transition hover:bg-white hover:text-charcoal";
 
   return (
     <article ref={cardRef} data-testid="reel-card" className="w-[64%] shrink-0 snap-start sm:w-[36%] md:w-[26%] lg:w-[19.2%]">
