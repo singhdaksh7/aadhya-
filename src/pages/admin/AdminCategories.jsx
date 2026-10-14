@@ -3,6 +3,7 @@ import { adminListCategories, adminCreateCategory, adminUpdateCategory, adminDel
 import { Button } from "../../components/ui";
 import { LoadingNotice, ErrorNotice } from "../../components/StateNotice";
 import ImagePickerInput from "../../components/admin/ImagePickerInput";
+import CategoryBannersEditor, { bannersFromCategory, bannersToPayload } from "../../components/admin/CategoryBannersEditor";
 
 const emptyForm = {
   id: null,
@@ -12,8 +13,9 @@ const emptyForm = {
   parentId: "",
   image: "",
   icon: "",
-  desktopBanner: "",
-  mobileBanner: "",
+  banners: [],
+  bannerAutoplay: true,
+  bannerIntervalMs: 5000,
   isFeatured: false,
   sortOrder: "0",
   isActive: true,
@@ -47,8 +49,9 @@ export default function AdminCategories() {
       parentId: c.parentId || "",
       image: c.image || "",
       icon: c.icon || "",
-      desktopBanner: c.desktopBanner || "",
-      mobileBanner: c.mobileBanner || "",
+      banners: bannersFromCategory(c),
+      bannerAutoplay: c.bannerAutoplay !== false,
+      bannerIntervalMs: c.bannerIntervalMs || 5000,
       isFeatured: c.isFeatured || false,
       sortOrder: String(c.sortOrder),
       isActive: c.isActive,
@@ -66,8 +69,12 @@ export default function AdminCategories() {
       parentId: form.parentId || null,
       image: form.image || null,
       icon: form.icon || null,
-      desktopBanner: form.desktopBanner || null,
-      mobileBanner: form.mobileBanner || null,
+      // Legacy single-banner fields are superseded by the list (a legacy banner is promoted to banner #1 on edit).
+      desktopBanner: null,
+      mobileBanner: null,
+      banners: bannersToPayload(form.banners),
+      bannerAutoplay: form.bannerAutoplay,
+      bannerIntervalMs: form.bannerIntervalMs,
       isFeatured: form.isFeatured,
       sortOrder: Number(form.sortOrder) || 0,
       isActive: form.isActive,
@@ -109,7 +116,7 @@ export default function AdminCategories() {
         </div>
       </div>
 
-      <form onSubmit={onSubmit} className="admin-card max-w-2xl space-y-4 p-5">
+      <form onSubmit={onSubmit} className="admin-card max-w-3xl space-y-4 p-5">
         <p className="text-base font-semibold text-charcoal">{form.id ? "Edit Category" : "New Category"}</p>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -182,26 +189,14 @@ export default function AdminCategories() {
           />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <ImagePickerInput
-            label="Desktop Banner"
-            value={form.desktopBanner}
-            onChange={(url) => setForm((f) => ({ ...f, desktopBanner: url }))}
-            pickerTitle="Select category desktop banner"
-            inputClassName={inputCls}
-            enableCrop
-            aspectOptions={["wide", "free"]}
-          />
-          <ImagePickerInput
-            label="Mobile Banner"
-            value={form.mobileBanner}
-            onChange={(url) => setForm((f) => ({ ...f, mobileBanner: url }))}
-            pickerTitle="Select category mobile banner"
-            inputClassName={inputCls}
-            enableCrop
-            aspectOptions={["wide", "free"]}
-          />
-        </div>
+        <CategoryBannersEditor
+          banners={form.banners}
+          onChange={(banners) => setForm((f) => ({ ...f, banners }))}
+          autoplay={form.bannerAutoplay}
+          onAutoplayChange={(bannerAutoplay) => setForm((f) => ({ ...f, bannerAutoplay }))}
+          intervalMs={form.bannerIntervalMs}
+          onIntervalChange={(bannerIntervalMs) => setForm((f) => ({ ...f, bannerIntervalMs }))}
+        />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>

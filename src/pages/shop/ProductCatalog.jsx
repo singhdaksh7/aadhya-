@@ -5,7 +5,8 @@ import { ProductGridSkeleton } from "../../components/ui/Skeleton";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { getProducts, getCategories, getCollections } from "../../services/api";
 import { resolveMediaUrl } from "../../lib/api";
-import { buildCategoryIndex, categoryChain, resolveCategoryBanner, resolveCategoryThumb } from "../../lib/categoryInheritance";
+import CategoryBannerCarousel from "../../components/CategoryBannerCarousel";
+import { buildCategoryIndex, categoryChain, resolveCategoryBanners, resolveCategoryThumb } from "../../lib/categoryInheritance";
 import { buildCategoryOptions, priceCeiling, rootOfCategory, subtreeIds } from "../../lib/catalogFilters";
 import CatalogFilters from "../../components/shop/CatalogFilters";
 import { useSiteSettings } from "../../hooks/useSiteSettings";
@@ -134,7 +135,7 @@ function CatalogView({
 
   // The public categories API is a flat list with parentId: banners/images are
   // inherited from the nearest ancestor, and children/ancestors are derived here.
-  const banner = activeCategoryObj ? resolveCategoryBanner(activeCategoryObj, categoryIndex) : { desktop: null, mobile: null };
+  const bannerSet = activeCategoryObj ? resolveCategoryBanners(activeCategoryObj, categoryIndex) : { slides: [], autoplay: false, intervalMs: 5000 };
   const ancestors = activeCategoryObj ? categoryChain(activeCategoryObj, categoryIndex).slice(1).reverse() : [];
   const childCategories = activeCategoryObj ? categories.filter((c) => c.parentId === activeCategoryObj.id && c.isActive !== false) : [];
 
@@ -173,21 +174,14 @@ function CatalogView({
   return (
     <div className="store-bg store-text space-y-10 pb-20">
       {/* Optional category banner: own banner, else the nearest ancestor's. The text header below is unchanged and still renders when none is set. */}
-      {(banner.desktop || banner.mobile) && (
-        <section data-testid="category-banner" className="mx-auto w-full max-w-7xl px-4 pt-6 sm:px-8">
-          <div className="relative aspect-[2/1] w-full overflow-hidden rounded-2xl border border-[var(--theme-border)] store-surface md:aspect-[3/1] md:max-h-[300px]">
-            <picture>
-              {banner.mobile && banner.desktop && banner.mobile !== banner.desktop && (
-                <source media="(max-width: 767px)" srcSet={resolveMediaUrl(banner.mobile)} />
-              )}
-              <img
-                src={resolveMediaUrl(banner.desktop || banner.mobile)}
-                alt={`${activeCategoryObj.name} banner`}
-                className="absolute inset-0 h-full w-full object-cover"
-              />
-            </picture>
-          </div>
-        </section>
+      {activeCategoryObj && bannerSet.slides.length > 0 && (
+        <CategoryBannerCarousel
+          key={activeCategoryObj.id}
+          slides={bannerSet.slides}
+          autoplay={bannerSet.autoplay}
+          intervalMs={bannerSet.intervalMs}
+          categoryName={activeCategoryObj.name}
+        />
       )}
 
       {/* Header Banner */}
