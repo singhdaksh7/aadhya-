@@ -259,3 +259,12 @@ describe("Footer developer credit is untouched", () => {
     expect(screen.getByTestId("footer-credit")).toBeInTheDocument();
   });
 });
+
+describe("footer link bands keep each link name together", () => {
+  it("renders band links as inline-block units capped at the container width (no mid-name wrap, no overflow)", () => {
+    mockSettings = { general: {}, footer: { seoSections: [{ id: "b", enabled: true, heading: "Shop", text: "", links: [{ label: "Table Runners", url: "/shop/category/table-runners" }, { label: "Cushion Covers", url: "/shop/category/cushion-covers" }] }] } };
+    render(<BrowserRouter><Footer /></BrowserRouter>);
+    const link = screen.getByRole("link", { name: "Table Runners" });
+    expect(link).toHaveClass("inline-block", "max-w-full");
+  });
+});
