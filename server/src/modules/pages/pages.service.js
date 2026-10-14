@@ -3,6 +3,7 @@ import { ApiError } from "../../utils/ApiError.js";
 import { DEFAULT_HOMEPAGE_CONTENT, DEMO_REVIEWS, mergeMissingSettings, settingsEqual, validateHomepageSettings } from "./homepage-content.js";
 import { serializePublicProduct } from "../products/product.service.js";
 import { listCategories } from "../categories/category.service.js";
+import { resolveReelsSection } from "./reels.js";
 
 const PRODUCT_SECTION_INCLUDE = {
   category: true,
@@ -264,6 +265,7 @@ export async function getPublicHomepage() {
     if (section.type === "TESTIMONIALS") {
       return { ...section, ...(await resolveReviewsSection(section)) };
     }
+    if (section.type === "SHOPPABLE_REELS") return { ...section, settings: await resolveReelsSection(section) };
     if (section.type === "BLOG_PREVIEW") {
       return { ...section, posts: await resolveBlogSection(section) };
     }
