@@ -12,6 +12,7 @@ vi.mock("../src/components/admin/ImagePickerInput", () => ({ default: ({ label, 
 vi.mock("../src/lib/api", async (importOriginal) => ({ ...(await importOriginal()), resolveMediaUrl: (u) => (u ? `http://api.test${u}` : null), adminUploadMedia: vi.fn() }));
 
 const P1 = { id: "p1", name: "Clay Vessel", slug: "clay-vessel", price: 1200, image: "/p1.jpg" };
+const C1 = { id: "c1", name: "Home Decor", slug: "home-decor", image: "/c1.jpg" };
 const P2 = { id: "p2", name: "Linen Runner", slug: "linen", price: 800, image: "" };
 const reel = (id, over = {}) => ({ id, title: `Reel ${id}`, videoUrl: `/v/${id}.mp4`, coverImage: `/c/${id}.jpg`, ctaLabel: "", products: [], ...over });
 const section = (reels, settings = {}) => ({ id: "s", type: "SHOPPABLE_REELS", settings: { title: "Shop Our Reels", reels, ...settings } });
@@ -133,6 +134,20 @@ describe("ShoppableReels storefront", () => {
     expect(screen.getByRole("link", { name: "Shop Now" })).toHaveAttribute("href", "/products/clay-vessel");
   });
 
+  it("one linked category: Shop Now links to the category page", () => {
+    view([reel("a", { categories: [C1] })]);
+    expect(screen.getByRole("link", { name: "Shop Now" })).toHaveAttribute("href", "/shop/category/home-decor");
+  });
+
+  it("category plus product opens the tray with both, category labelled", () => {
+    view([reel("a", { products: [P1], categories: [C1] })]);
+    expect(screen.queryByRole("link", { name: "Shop Now" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Shop Now" }));
+    const dialog = screen.getByRole("dialog", { name: "Shop this reel" });
+    expect(within(dialog).getAllByRole("link").map((l) => l.getAttribute("href"))).toEqual(["/products/clay-vessel", "/shop/category/home-decor"]);
+    expect(within(dialog).getByText("Category")).toBeInTheDocument();
+  });
+
   it("shows the title and Shop Now on top of the reel, not below it", () => {
     view([reel("a", { products: [P1] })]);
     const frame = screen.getByTestId("reel-card").firstElementChild;
@@ -184,9 +199,10 @@ describe("ShoppableReels storefront", () => {
 
 describe("ShoppableReels admin editor", () => {
   const products = [{ id: "p1", name: "Clay Vessel", isActive: true }, { id: "p2", name: "Old", isActive: false }];
+  const categories = [{ id: "c1", name: "Home Decor", isActive: true }, { id: "c2", name: "Retired", isActive: false }];
   function Harness({ onValue }) {
     const [value, setValue] = useState({ reels: [] });
-    return <HomepageSectionFields type="SHOPPABLE_REELS" value={value} onChange={(v) => { setValue(v); onValue(v); }} products={products} />;
+    return <HomepageSectionFields type="SHOPPABLE_REELS" value={value} onChange={(v) => { setValue(v); onValue(v); }} products={products} categories={categories} />;
   }
   it("adds, edits, reorders, publishes and removes reels", () => {
     let latest;
@@ -208,5 +224,19 @@ describe("ShoppableReels admin editor", () => {
     expect(latest.reels.map((r) => r.sortOrder)).toEqual([1, 2]);
     fireEvent.click(screen.getByRole("button", { name: "Remove reel 1" }));
     expect(latest.reels.map((r) => r.title)).toEqual(["First"]);
+  });
+
+  it("links and unlinks categories, flagging inactive ones", () => {
+    let latest;
+    render(<Harness onValue={(v) => { latest = v; }} />);
+    fireEvent.click(screen.getByRole("button", { name: "Add reel" }));
+    const select = screen.getByLabelText("Reel 1 add category");
+    expect(within(select).getByRole("option", { name: /Retired.*Inactive/ })).toBeDisabled();
+    fireEvent.change(select, { target: { value: "c1" } });
+    fireEvent.change(select, { target: { value: "c1" } });
+    expect(latest.reels[0].categoryIds).toEqual(["c1"]);
+    expect(screen.getByText("Home Decor", { selector: "span" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Unlink category Home Decor" }));
+    expect(latest.reels[0].categoryIds).toEqual([]);
   });
 });
