@@ -103,6 +103,10 @@ describe("homepage config serialization", () => {
     expect(homepage("BLOG_PREVIEW", config)).toEqual(config);
     expect(() => homepage("BLOG_PREVIEW", { viewAllUrl: "javascript:alert(1)" })).toThrow();
     expect(() => homepage("BLOG_PREVIEW", { limit: 13 })).toThrow();
+    const extra = { subtitle: "Notes", viewAllLabel: "Read Journal", showEmptyState: true, emptyStateMessage: "Stories coming soon." };
+    expect(homepage("BLOG_PREVIEW", extra)).toEqual(extra);
+    expect(() => homepage("BLOG_PREVIEW", { showEmptyState: "yes" })).toThrow();
+    expect(() => homepage("BLOG_PREVIEW", { emptyStateMessage: "x".repeat(201) })).toThrow();
   });
 
   it("shared spacing accepts only COMPACT / NORMAL / SPACIOUS on every section type", () => {
@@ -138,6 +142,13 @@ describe("blog reading time", () => {
   it("is at least one minute and strips markup", () => {
     expect(estimateReadingMinutes("")).toBe(1);
     expect(estimateReadingMinutes("<p>" + "word ".repeat(450) + "</p>")).toBe(3);
+  });
+});
+
+describe("blog preview backfill", () => {
+  it("keeps the empty state off for existing rows and backfills the new fields", () => {
+    const merged = mergeMissingSettings("BLOG_PREVIEW", { title: "Mine", limit: 4 });
+    expect(merged).toMatchObject({ title: "Mine", limit: 4, showEmptyState: false, viewAllLabel: "Read Journal", emptyStateMessage: "Stories coming soon." });
   });
 });
 

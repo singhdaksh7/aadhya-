@@ -134,7 +134,7 @@ async function resolveBlogSection(section) {
     where: { status: "PUBLISHED", publishDate: { lte: new Date() } },
     orderBy: { publishDate: "desc" },
     take: limit,
-    select: { id: true, title: true, slug: true, excerpt: true, featuredImage: true, author: true, publishDate: true, content: true },
+    select: { id: true, title: true, slug: true, excerpt: true, featuredImage: true, author: true, category: true, publishDate: true, content: true },
   });
   return posts.map(({ content, ...post }) => ({ ...post, readingMinutes: estimateReadingMinutes(content) }));
 }
