@@ -46,6 +46,20 @@ export function interpolateCommercial(template, ctx = {}) {
     .replace(/[ \t]{2,}/g, " ");
 }
 
+// True when the template uses a known placeholder whose setting is not configured (or, for the
+// return window, when returns are switched off). Callers use it to drop a message that would
+// otherwise read as a half-sentence, e.g. "Ships within ".
+export function hasUnresolvedPlaceholder(template, ctx = {}) {
+  if (!template || typeof template !== "string") return false;
+  for (const match of template.matchAll(/\{\{\s*([a-zA-Z]+)\s*\}\}|\{\s*([a-zA-Z]+)\s*\}/g)) {
+    const key = match[1] || match[2];
+    if (!KNOWN_KEYS.has(key)) continue;
+    if (!present(ctx[key])) return true;
+    if (key === "returnWindowDays" && (ctx.returnsEnabled === false || !(Number(ctx.returnWindowDays) > 0))) return true;
+  }
+  return false;
+}
+
 export const returnWindowLabel = (ctx) => (ctx.returnsEnabled && Number(ctx.returnWindowDays) > 0 ? `${Number(ctx.returnWindowDays)}-day returns` : "");
 
 // Short reassurance line under the cart totals; only states what the store settings support.

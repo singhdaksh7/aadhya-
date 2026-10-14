@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import PromoStrip from "./PromoStrip";
 import HeroBannerCarousel from "./HeroBannerCarousel";
 import TrustServiceStrip from "./TrustServiceStrip";
+import TrustBanner from "./TrustBanner";
 import PromoBanners2Up from "./PromoBanners2Up";
 import ProductCard from "./ProductCard";
 import { ProductGridSkeleton } from "./ui/Skeleton";
@@ -38,6 +39,7 @@ export default function HomepageRenderer({ sections = [], newArrivals = [], best
       }
       case "HERO_CAROUSEL": case "HERO": return <HeroBannerCarousel key={section.id} />;
       case "TRUST_STRIP": case "TRUST_BADGES": return <TrustServiceStrip key={section.id} items={s.items} config={s} />;
+      case "TRUST_BANNER": return <TrustBanner key={section.id} config={s} />;
       case "PROMO_BANNERS_2UP": case "MULTI_BANNER": return <PromoBanners2Up key={section.id} promoCards={s.items} layout={s.layout} showSubtitle={s.showSubtitle === true} />;
       case "NEW_ARRIVALS": case "BEST_SELLERS": {
         const isNew = section.type === "NEW_ARRIVALS"; const defaults = isNew ? ["Fresh Drops", "New This Week", "View All New Arrivals", "/new-arrivals", "New pieces selected for the season"] : ["Most Cherished", "Best Sellers", "View All Best Sellers", "/best-sellers", "Loved most by our community"];
@@ -85,9 +87,9 @@ export default function HomepageRenderer({ sections = [], newArrivals = [], best
     const cls = spacingClass(section.settings?.spacing);
     return node && cls ? <div key={section.id} data-spacing={section.settings.spacing} className={cls}>{node}</div> : node;
   };
-  const topTypes = new Set(["CIRCULAR_CATEGORY_NAV", "CATEGORY_CIRCLES", "PROMO_STRIP", "PROMO_TICKER", "HERO_CAROUSEL", "HERO", "TRUST_STRIP", "TRUST_BADGES"]);
-  // The trust strip always sits directly under the hero, whatever order the sections were saved in.
-  const TOP_RANK = { CIRCULAR_CATEGORY_NAV: 0, CATEGORY_CIRCLES: 0, PROMO_STRIP: 1, PROMO_TICKER: 1, HERO_CAROUSEL: 2, HERO: 2, TRUST_STRIP: 3, TRUST_BADGES: 3 };
+  const topTypes = new Set(["CIRCULAR_CATEGORY_NAV", "CATEGORY_CIRCLES", "PROMO_STRIP", "PROMO_TICKER", "HERO_CAROUSEL", "HERO", "TRUST_STRIP", "TRUST_BADGES", "TRUST_BANNER"]);
+  // The trust strip / banner always sit directly under the hero (ties keep the admin's saved order).
+  const TOP_RANK = { CIRCULAR_CATEGORY_NAV: 0, CATEGORY_CIRCLES: 0, PROMO_STRIP: 1, PROMO_TICKER: 1, HERO_CAROUSEL: 2, HERO: 2, TRUST_STRIP: 3, TRUST_BADGES: 3, TRUST_BANNER: 3 };
   const top = sections.filter((s) => topTypes.has(s.type)).sort((a, b) => TOP_RANK[a.type] - TOP_RANK[b.type]); const body = sections.filter((s) => !topTypes.has(s.type));
   return <div className="w-full">{top.map(spaced)}<div className="mt-12 space-y-12 sm:mt-16 sm:space-y-16">{body.map(spaced)}</div></div>;
 }
