@@ -52,11 +52,11 @@ export function TrustBannerSettings({ value, set }) {
 export function TrustBannerItemFields({ item, update }) {
   return <div className="grid gap-2">
     <div className="grid gap-2 sm:grid-cols-2">
-      <input aria-label="Trust item title" value={item.title || ""} placeholder="Title" onChange={(e) => update("title", e.target.value)} className={SMALL} />
+      <input aria-label="Trust item title" value={item.title || ""} placeholder="Title (optional if you upload an image)" onChange={(e) => update("title", e.target.value)} className={SMALL} />
       <select aria-label="Trust item icon" value={item.icon || "sparkles"} onChange={(e) => update("icon", e.target.value)} className={SMALL}>{TRUST_BANNER_ICON_OPTIONS.map(([v, t]) => <option key={v} value={v}>{t}</option>)}</select>
     </div>
     <input aria-label="Trust item description" value={item.description || ""} placeholder="Description (supports {freeShippingThreshold}, {returnWindowDays}, {dispatchEstimate})" onChange={(e) => update("description", e.target.value)} className={SMALL} />
-    <ImagePickerInput label="Uploaded icon (optional, replaces the glyph)" value={item.iconImage} onChange={(url) => update("iconImage", url)} pickerTitle="Select item icon" inputClassName="rounded border p-2 text-xs w-full" enableCrop aspectOptions={["square", "free"]} />
+    <ImagePickerInput label="Uploaded image (optional). With no title or description it shows as an image-only badge" value={item.iconImage} onChange={(url) => update("iconImage", url)} pickerTitle="Select item icon" inputClassName="rounded border p-2 text-xs w-full" enableCrop aspectOptions={["square", "free"]} />
     <div className="flex flex-wrap gap-4">
       <label className="flex items-center gap-1 text-xs"><input type="checkbox" checked={item.showOnDesktop !== false} onChange={(e) => update("showOnDesktop", e.target.checked)} /> Show on desktop / tablet</label>
       <label className="flex items-center gap-1 text-xs"><input type="checkbox" checked={item.showOnMobile !== false} onChange={(e) => update("showOnMobile", e.target.checked)} /> Show on mobile</label>
