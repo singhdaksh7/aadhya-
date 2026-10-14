@@ -192,4 +192,15 @@ describe("HomepageRenderer Component", () => {
     );
     expect(screen.queryByText("From Our Bookshelf")).not.toBeInTheDocument();
   });
+
+  it("leaves white space between the newsletter section and the footer", () => {
+    render(
+      <BrowserRouter>
+        <HomepageRenderer sections={[{ id: "nl", type: "NEWSLETTER", name: "Newsletter", isEnabled: true, sortOrder: 1, settings: {}, content: {} }]} />
+      </BrowserRouter>
+    );
+    const section = screen.getByTestId("newsletter-section");
+    expect(section.className).toContain("pb-12");
+    expect(section.className).toContain("sm:pb-16");
+  });
 });
