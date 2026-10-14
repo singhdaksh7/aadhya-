@@ -8,7 +8,7 @@ const DEFAULT_BG = "#F6EFE3";
 const HEX = /^#[0-9a-fA-F]{6}$/;
 const MOBILE_LAYOUTS = {
   // Horizontal swipe row on phones, grid from the `sm` breakpoint up.
-  SCROLL: "flex gap-5 overflow-x-auto no-scrollbar snap-x snap-mandatory -mx-5 px-5 pb-1 sm:mx-0 sm:px-0 sm:pb-0",
+  SCROLL: "flex gap-5 overflow-x-auto no-scrollbar snap-x snap-mandatory scroll-px-5 -mx-5 px-5 pb-1 sm:mx-0 sm:px-0 sm:pb-0",
   STACKED: "grid grid-cols-1 gap-3",
 };
 const VISIBILITY = { both: "flex", mobile: "flex sm:hidden", desktop: "hidden sm:flex" };
