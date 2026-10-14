@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import PromoStrip from "./PromoStrip";
+import HowWeWork from "./HowWeWork";
 import HeroBannerCarousel from "./HeroBannerCarousel";
 import TrustServiceStrip from "./TrustServiceStrip";
 import TrustBanner from "./TrustBanner";
@@ -76,6 +77,7 @@ export default function HomepageRenderer({ sections = [], newArrivals = [], best
       }
       case "EDITORIAL_BRAND": case "IMAGE_TEXT": return <EditorialProductSection key={section.id} section={section} />;
       case "NEWSLETTER": return <section key={section.id} className="mx-auto max-w-4xl px-4 pt-4 text-center sm:px-8"><div className="space-y-4 rounded-2xl border store-border store-surface p-8 sm:p-12"><span className="text-xs font-semibold uppercase tracking-widest store-primary">{s.eyebrow || "Join Our Circle"}</span><h2 className="font-serif-display text-3xl font-bold store-text sm:text-4xl">{s.title || "Stories of Craft & New Arrivals"}</h2><p className="mx-auto max-w-md text-xs leading-relaxed store-muted sm:text-sm">{s.description}</p>{subscribed ? <div className="rounded-xl store-bg-secondary-soft p-4 text-xs font-medium store-secondary sm:text-sm">{s.successMessage || "Thank you for subscribing to Aadya!"}</div> : <form onSubmit={handleNewsletterSubmit} className="mx-auto mt-6 flex max-w-md flex-col gap-3 sm:flex-row"><input type="email" value={newsletterEmail} onChange={(e) => setNewsletterEmail(e.target.value)} placeholder={s.placeholder || "Enter your email address"} required className="flex-1 rounded-full border store-border store-bg px-5 py-3 text-xs store-text" /><button type="submit" disabled={newsletterStatus === "loading"} className="rounded-full store-bg-primary px-7 py-3 text-xs font-semibold uppercase tracking-wider text-white disabled:opacity-60">{newsletterStatus === "loading" ? (s.loadingLabel || "Subscribing…") : (s.buttonLabel || "Subscribe")}</button></form>}{newsletterStatus === "error" && <p className="text-xs font-medium store-primary">{s.errorPrefix ? `${s.errorPrefix} ${newsletterError}` : newsletterError}</p>}</div></section>;
+      case "HOW_WE_WORK": return <HowWeWork key={section.id} config={s} />;
       case "TESTIMONIALS": return <ReviewsSection key={section.id} section={section} />;
       case "BLOG_PREVIEW": return <BlogPreviewSection key={section.id} section={section} />;
       default: return null;
