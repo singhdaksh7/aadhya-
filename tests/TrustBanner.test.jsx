@@ -122,6 +122,32 @@ describe("TrustBanner storefront rendering", () => {
   });
 });
 
+describe("TrustBanner image-only items", () => {
+  it("renders an item that has only an uploaded image", () => {
+    view({ showSummary: false, items: [item("a1", { title: "", description: "", iconImage: "/media/badge.png" })] });
+    const li = screen.getByTestId("trust-banner-item");
+    expect(li).toHaveAttribute("data-image-only", "true");
+    expect(li.querySelector("img")).toHaveAttribute("src", "http://api.test/media/badge.png");
+    expect(within(li).queryByRole("heading")).toBeNull();
+  });
+
+  it("drops an image-only item whose image fails to load", () => {
+    view({ summaryTitle: "Keep", items: [item("a1", { title: "", description: "", iconImage: "/media/bad.png" })] });
+    fireEvent.error(screen.getByTestId("trust-banner-item").querySelector("img"));
+    expect(screen.queryByTestId("trust-banner-item")).toBeNull();
+  });
+
+  it("still hides an item with no title, description or image", () => {
+    view({ summaryTitle: "Keep", items: [item("a1", { title: "", description: "" })] });
+    expect(screen.queryByTestId("trust-banner-item")).toBeNull();
+  });
+
+  it("mixes image-only and text items", () => {
+    view({ showSummary: false, items: [item("a1"), item("b2", { title: "", description: "", iconImage: "/media/b.png" })] });
+    expect(screen.getAllByTestId("trust-banner-item")).toHaveLength(2);
+  });
+});
+
 describe("hasUnresolvedPlaceholder", () => {
   it("flags blank settings and leaves unknown tokens alone", () => {
     const ctx = commercialContext(settings({ shipping: { freeShippingThreshold: 2499 } }));

@@ -33,6 +33,17 @@ function ItemIcon({ item }) {
   );
 }
 
+// An item with only an uploaded image (a badge or logo): shown on its own, dropped if it fails to load.
+function ImageOnlyItem({ item }) {
+  const [broken, setBroken] = useState(false);
+  if (broken) return null;
+  return (
+    <li data-testid="trust-banner-item" data-image-only="true" className={`${item.visibility} min-w-[8rem] shrink-0 snap-start items-center justify-center sm:min-w-0 sm:shrink`}>
+      <img src={resolveMediaUrl(item.iconImage)} alt="" aria-hidden="true" loading="lazy" decoding="async" onError={() => setBroken(true)} className="h-12 max-w-[9rem] object-contain" />
+    </li>
+  );
+}
+
 function Summary({ config, dark }) {
   const [broken, setBroken] = useState(false);
   const score = Number(config.reviewScore) > 0 ? Number(config.reviewScore) : null;
@@ -73,8 +84,9 @@ export default function TrustBanner({ config = {} }) {
       // A message built on a setting that is not configured is dropped rather than shown half-written.
       if (hasUnresolvedPlaceholder(item.title, ctx) || hasUnresolvedPlaceholder(item.description, ctx)) return null;
       const title = interpolateCommercial(item.title, ctx).trim();
-      if (!title) return null;
-      return { ...item, title, description: interpolateCommercial(item.description, ctx).trim(), visibility: VISIBILITY[mobile && desktop ? "both" : mobile ? "mobile" : "desktop"] };
+      const description = interpolateCommercial(item.description, ctx).trim();
+      if (!title && !description && !item.iconImage) return null;
+      return { ...item, title, description, visibility: VISIBILITY[mobile && desktop ? "both" : mobile ? "mobile" : "desktop"] };
     })
     .filter(Boolean)
     .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
@@ -99,15 +111,15 @@ export default function TrustBanner({ config = {} }) {
           {hasSummary && <Summary config={config} dark={dark} />}
           {items.length > 0 && (
             <ul data-testid="trust-banner-items" className={`${MOBILE_LAYOUTS[config.mobileLayout] || MOBILE_LAYOUTS.SCROLL} min-w-0 list-none sm:grid sm:overflow-visible sm:grid-cols-2 sm:gap-x-6 sm:gap-y-4 lg:flex-1 lg:grid-cols-[repeat(auto-fit,minmax(11.5rem,1fr))]`}>
-              {items.map((item) => (
+              {items.map((item) => (!item.title && !item.description ? <ImageOnlyItem key={item.id || item.iconImage} item={item} /> : (
                 <li key={item.id || item.title} data-testid="trust-banner-item" className={`${item.visibility} min-w-[15rem] shrink-0 snap-start items-start gap-3 sm:min-w-0 sm:shrink`}>
                   <ItemIcon item={item} />
                   <div className="min-w-0">
-                    <h3 className="text-sm font-semibold leading-tight">{item.title}</h3>
+                    {item.title && <h3 className="text-sm font-semibold leading-tight">{item.title}</h3>}
                     {item.description && <p className={`mt-1 text-xs leading-snug ${dark ? "text-white/75" : "store-muted"}`}>{item.description}</p>}
                   </div>
                 </li>
-              ))}
+              )))}
             </ul>
           )}
         </div>
