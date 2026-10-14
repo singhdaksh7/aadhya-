@@ -71,4 +71,11 @@ describe("TRUST_BANNER settings", () => {
     expect(mergeMissingSettings("TRUST_BANNER", {}).items).toHaveLength(4);
     expect(mergeMissingSettings("TRUST_BANNER", { backgroundColor: "#FFFFFF", items: [] }).backgroundColor).toBe("#FFFFFF");
   });
+
+  it("accepts image-only mode settings and rejects unsafe image URLs", () => {
+    expect(validateHomepageSettings("TRUST_BANNER", { imageOnly: true, bannerImage: "/uploads/a.jpg", bannerMobileImage: "https://cdn.example.com/m.jpg", bannerAlt: "Offer", items: [] })).toMatchObject({ imageOnly: true, bannerImage: "/uploads/a.jpg" });
+    expect(() => validateHomepageSettings("TRUST_BANNER", { imageOnly: true, bannerImage: "javascript:alert(1)", items: [] })).toThrow("relative or http(s)");
+    expect(() => validateHomepageSettings("TRUST_BANNER", { imageOnly: "yes", items: [] })).toThrow();
+    expect(DEFAULT_HOMEPAGE_CONTENT.TRUST_BANNER.imageOnly).toBe(false);
+  });
 });

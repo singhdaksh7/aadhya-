@@ -32,7 +32,7 @@ const empty = (type, count = 0) => type === "HOW_WE_WORK" ? howWeWorkEmptyItem(c
 export default function HomepageSectionFields({ type, value = {}, onChange, collections = [], categories = [], pages = [], products = [] }) {
   const set = (key, val) => onChange({ ...value, [key]: val });
   const fields = textFields[type] || [];
-  const listType = labels[type];
+  const listType = type === "TRUST_BANNER" && value.imageOnly === true ? undefined : labels[type];
   const items = value.items || (type === "EDITORIAL_BRAND" ? value.features || [] : []);
   const itemKey = type === "EDITORIAL_BRAND" ? "features" : "items";
   const updateItem = (index, key, val) => { const next = [...items]; next[index] = { ...next[index], [key]: val }; set(itemKey, next); };

@@ -148,6 +148,42 @@ describe("TrustBanner image-only items", () => {
   });
 });
 
+describe("TrustBanner image-only mode", () => {
+  const base = { imageOnly: true, bannerImage: "/media/hero-strip.jpg", summaryTitle: "Hidden", reviewScore: 4.8, items: [item("a1")] };
+  it("shows only the uploaded image, never the summary or items", () => {
+    view(base);
+    const banner = screen.getByTestId("trust-banner");
+    expect(banner).toHaveAttribute("data-image-only", "true");
+    expect(banner.querySelector("img")).toHaveAttribute("src", "http://api.test/media/hero-strip.jpg");
+    expect(screen.queryByTestId("trust-banner-items")).toBeNull();
+    expect(screen.queryByTestId("trust-banner-summary")).toBeNull();
+    expect(banner.textContent).toBe("");
+  });
+
+  it("uses the mobile image for small screens and the radius and alt text settings", () => {
+    view({ ...base, bannerMobileImage: "/media/hero-strip-m.jpg", bannerAlt: "Free shipping offer", borderRadius: 10 });
+    const banner = screen.getByTestId("trust-banner");
+    expect(banner.querySelector("source")).toHaveAttribute("srcset", "http://api.test/media/hero-strip-m.jpg");
+    expect(banner.querySelector("source")).toHaveAttribute("media", "(max-width: 639px)");
+    expect(screen.getByAltText("Free shipping offer")).toHaveStyle({ borderRadius: "10px" });
+  });
+
+  it("renders nothing without an image or when the image fails to load", () => {
+    const empty = view({ ...base, bannerImage: "" });
+    expect(empty.container).toBeEmptyDOMElement();
+    empty.unmount();
+    const broken = view(base);
+    fireEvent.error(screen.getByTestId("trust-banner").querySelector("img"));
+    expect(broken.container).toBeEmptyDOMElement();
+  });
+
+  it("is off by default so the content banner is unchanged", () => {
+    view({ bannerImage: "/media/x.jpg", items: [item("a1")] });
+    expect(screen.getByTestId("trust-banner-items")).toBeInTheDocument();
+    expect(screen.queryByTestId("trust-banner")).not.toHaveAttribute("data-image-only");
+  });
+});
+
 describe("hasUnresolvedPlaceholder", () => {
   it("flags blank settings and leaves unknown tokens alone", () => {
     const ctx = commercialContext(settings({ shipping: { freeShippingThreshold: 2499 } }));
@@ -201,5 +237,23 @@ describe("TrustBanner admin fields", () => {
     expect(onChange.mock.calls.at(-1)[0].items[0].showOnMobile).toBe(false);
     fireEvent.click(screen.getByText("Delete"));
     expect(onChange.mock.calls.at(-1)[0].items).toEqual([]);
+  });
+});
+
+describe("TrustBanner admin image-only toggle", () => {
+  it("shows only the image controls (no items list) when image-only is on", () => {
+    const onChange = vi.fn();
+    const { rerender } = render(<HomepageSectionFields type="TRUST_BANNER" value={{ items: [item("a1")] }} onChange={onChange} />);
+    expect(screen.getByText("+ Add")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Banner image (desktop)")).toBeNull();
+    fireEvent.click(screen.getByLabelText("Image only"));
+    expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ imageOnly: true }));
+    rerender(<HomepageSectionFields type="TRUST_BANNER" value={{ imageOnly: true, items: [item("a1")] }} onChange={onChange} />);
+    expect(screen.getByLabelText("Banner image (desktop)")).toBeInTheDocument();
+    expect(screen.getByLabelText("Banner image (mobile, optional)")).toBeInTheDocument();
+    expect(screen.queryByText("+ Add")).toBeNull();
+    expect(screen.queryByLabelText(/Review score/)).toBeNull();
+    fireEvent.change(screen.getByLabelText("Banner image (desktop)"), { target: { value: "/media/new.jpg" } });
+    expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ bannerImage: "/media/new.jpg" }));
   });
 });
