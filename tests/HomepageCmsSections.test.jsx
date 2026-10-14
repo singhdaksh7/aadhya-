@@ -243,7 +243,7 @@ describe("blog section", () => {
     expect(screen.getByText("Slow making")).toBeInTheDocument();
     expect(screen.getAllByText(/By Aadya Editorial/)).toHaveLength(2);
     expect(screen.getByText("4 min read")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /View All/ })).toHaveAttribute("href", "/blog");
+    expect(screen.getByRole("link", { name: /Read Journal/ })).toHaveAttribute("href", "/blog");
   });
 
   it("honours the display toggles and the maximum posts", () => {
@@ -255,9 +255,44 @@ describe("blog section", () => {
     expect(screen.queryByRole("link", { name: /View All/ })).toBeNull();
   });
 
+  it("renders nothing with zero posts unless the empty state is on", () => {
+    const { container } = wrap(<BlogPreviewSection section={{ id: "bl", type: "BLOG_PREVIEW", settings: {}, posts: [] }} />);
+    expect(container.querySelector("[data-testid=blog-section]")).toBeNull();
+    const off = wrap(<BlogPreviewSection section={{ id: "bl", type: "BLOG_PREVIEW", settings: { showEmptyState: false, emptyStateMessage: "Soon" }, posts: [] }} />);
+    expect(off.container.querySelector("[data-testid=blog-section]")).toBeNull();
+  });
+
+  it("shows heading, empty-state message and a custom View All label with zero posts when enabled", () => {
+    wrap(<BlogPreviewSection section={{ id: "bl", type: "BLOG_PREVIEW", settings: { showEmptyState: true, emptyStateMessage: "Stories coming soon.", subtitle: "Notes", viewAllLabel: "All Stories", viewAllUrl: "/blog" }, posts: [] }} />);
+    expect(screen.getByRole("heading", { name: "Stories from Aadya" })).toBeInTheDocument();
+    expect(screen.getByText("Notes")).toBeInTheDocument();
+    expect(screen.getByTestId("blog-empty")).toHaveTextContent("Stories coming soon.");
+    expect(screen.queryAllByTestId("blog-card")).toHaveLength(0);
+    expect(screen.getByRole("link", { name: /All Stories/ })).toHaveAttribute("href", "/blog");
+  });
+
+  it("hides View All in the empty state when the admin turns it off", () => {
+    wrap(<BlogPreviewSection section={{ id: "bl", type: "BLOG_PREVIEW", settings: { showEmptyState: true, showViewAll: false }, posts: [] }} />);
+    expect(screen.getByTestId("blog-empty")).toHaveTextContent("Stories coming soon.");
+    expect(screen.queryByRole("link")).toBeNull();
+  });
+
+  it("renders one post, links to the post route, shows category and an image placeholder", () => {
+    wrap(<BlogPreviewSection section={{ id: "bl", type: "BLOG_PREVIEW", settings: {}, posts: [{ ...posts[1], category: "Craft" }] }} />);
+    expect(screen.getByTestId("blog-card")).toHaveAttribute("href", "/blog/light");
+    expect(screen.getByTestId("blog-category")).toHaveTextContent("Craft");
+    expect(screen.getByTestId("blog-image-placeholder")).toBeInTheDocument();
+  });
+
+  it("caps many posts at the limit", () => {
+    const many = Array.from({ length: 6 }, (_, i) => ({ ...posts[0], id: `m${i}`, slug: `p${i}` }));
+    wrap(<BlogPreviewSection section={{ id: "bl", type: "BLOG_PREVIEW", settings: { limit: 4 }, posts: many }} />);
+    expect(screen.getAllByTestId("blog-card")).toHaveLength(4);
+  });
+
   it("falls back to /blog for an unsafe View All URL", () => {
     wrap(<BlogPreviewSection section={section({ viewAllUrl: "javascript:alert(1)" })} />);
-    expect(screen.getByRole("link", { name: /View All/ })).toHaveAttribute("href", "/blog");
+    expect(screen.getByRole("link", { name: /Read Journal/ })).toHaveAttribute("href", "/blog");
   });
 
   it("renders nothing without published posts", () => {
@@ -385,5 +420,16 @@ describe("homepage admin editor emits the new config", () => {
     expect(onChange).toHaveBeenLastCalledWith({ showReadingTime: false });
     fireEvent.click(screen.getByLabelText("Show View All"));
     expect(onChange).toHaveBeenLastCalledWith({ showViewAll: false });
+  });
+
+  it("blog: empty-state, label and subtitle fields", () => {
+    const onChange = edit("BLOG_PREVIEW", {});
+    fireEvent.click(screen.getByLabelText("Show empty state when no posts"));
+    expect(onChange).toHaveBeenLastCalledWith({ showEmptyState: true });
+    fireEvent.change(screen.getByLabelText("View All label"), { target: { value: "Journal" } });
+    expect(onChange).toHaveBeenLastCalledWith({ viewAllLabel: "Journal" });
+    fireEvent.change(screen.getByLabelText("Empty-state message"), { target: { value: "Soon" } });
+    expect(onChange).toHaveBeenLastCalledWith({ emptyStateMessage: "Soon" });
+    expect(screen.getByLabelText("Subtitle")).toBeInTheDocument();
   });
 });
