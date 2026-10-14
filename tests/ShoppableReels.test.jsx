@@ -153,7 +153,8 @@ describe("ShoppableReels storefront", () => {
     const frame = screen.getByTestId("reel-card").firstElementChild;
     expect(within(frame).getByText("Reel a")).toBeInTheDocument();
     const cta = within(frame).getByRole("link", { name: "Shop Now" });
-    expect(cta).toHaveClass("pointer-events-auto", "store-bg-primary", "uppercase", "tracking-[0.2em]", "text-white");
+    expect(cta).toHaveClass("pointer-events-auto", "bg-transparent", "border-white/80", "uppercase", "tracking-[0.2em]", "text-white");
+    expect(cta.className).not.toContain("store-bg-primary");
     expect(cta.parentElement).toHaveClass("pointer-events-none", "absolute", "bottom-0");
     expect(screen.getByTestId("reel-card").lastElementChild).toBe(frame);
   });
