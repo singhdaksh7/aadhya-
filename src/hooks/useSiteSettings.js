@@ -192,6 +192,7 @@ export const DEFAULT_SITE_SETTINGS = {
     shippingPageId: "",
     returnPageId: "",
   },
+  decorations: { items: [] },
   supportEmail: "",
   supportPhone: "",
   freeShippingThreshold: 2499,

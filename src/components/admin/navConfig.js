@@ -48,6 +48,7 @@ export const adminNavGroups = [
     title: "Content",
     items: [
       { to: "/admin/homepage-builder", label: "Homepage Builder" },
+      { to: "/admin/decorations", label: "Decorative Artwork" },
       { to: "/admin/header-settings", label: "Header & Navigation" },
       { to: "/admin/banners", label: "Banners" },
       { to: "/admin/promos", label: "Promos" },
