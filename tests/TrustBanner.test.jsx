@@ -177,6 +177,21 @@ describe("TrustBanner image-only mode", () => {
     expect(broken.container).toBeEmptyDOMElement();
   });
 
+  it("keeps a compact fixed height and crops the picture instead of growing", () => {
+    view({ ...base, bannerHeightDesktop: 150, bannerHeightMobile: 90 });
+    const img = screen.getByTestId("trust-banner").querySelector("img");
+    expect(img).toHaveClass("object-cover", "h-[var(--tb-img-m)]", "sm:h-[var(--tb-img-d)]");
+    expect(img.style.getPropertyValue("--tb-img-d")).toBe("150px");
+    expect(img.style.getPropertyValue("--tb-img-m")).toBe("90px");
+  });
+
+  it("defaults to a compact 140px desktop / 110px mobile frame", () => {
+    view(base);
+    const img = screen.getByTestId("trust-banner").querySelector("img");
+    expect(img.style.getPropertyValue("--tb-img-d")).toBe("140px");
+    expect(img.style.getPropertyValue("--tb-img-m")).toBe("110px");
+  });
+
   it("is off by default so the content banner is unchanged", () => {
     view({ bannerImage: "/media/x.jpg", items: [item("a1")] });
     expect(screen.getByTestId("trust-banner-items")).toBeInTheDocument();

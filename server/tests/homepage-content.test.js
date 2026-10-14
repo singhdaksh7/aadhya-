@@ -77,5 +77,7 @@ describe("TRUST_BANNER settings", () => {
     expect(() => validateHomepageSettings("TRUST_BANNER", { imageOnly: true, bannerImage: "javascript:alert(1)", items: [] })).toThrow("relative or http(s)");
     expect(() => validateHomepageSettings("TRUST_BANNER", { imageOnly: "yes", items: [] })).toThrow();
     expect(DEFAULT_HOMEPAGE_CONTENT.TRUST_BANNER.imageOnly).toBe(false);
+    expect(validateHomepageSettings("TRUST_BANNER", { bannerHeightDesktop: 140, bannerHeightMobile: 100, items: [] })).toMatchObject({ bannerHeightDesktop: 140 });
+    expect(() => validateHomepageSettings("TRUST_BANNER", { bannerHeightDesktop: 5000, items: [] })).toThrow();
   });
 });

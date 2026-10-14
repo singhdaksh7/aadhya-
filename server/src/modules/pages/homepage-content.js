@@ -40,6 +40,8 @@ const rawSchemas = {
     bannerImage: optionalUrl,
     bannerMobileImage: optionalUrl,
     bannerAlt: optionalText(240),
+    bannerHeightDesktop: z.number().int().min(60).max(600).optional(),
+    bannerHeightMobile: z.number().int().min(40).max(400).optional(),
     borderRadius: z.number().int().min(0).max(48).optional(),
     paddingDesktop: z.number().int().min(8).max(96).optional(),
     paddingMobile: z.number().int().min(8).max(64).optional(),
@@ -90,7 +92,7 @@ export const DEFAULT_HOMEPAGE_CONTENT = {
     { id: "trust-4", title: "Secure Payments", description: "100% encrypted checkout & Pan-India express dispatch", icon: "shield", enabled: true, sortOrder: 4 },
   ] },
   // Neutral, setting-driven copy only: score/count stay blank until the admin enters real figures.
-  TRUST_BANNER: { backgroundColor: "#F6EFE3", backgroundImage: "", backgroundImageOpacity: 30, imageOnly: false, bannerImage: "", bannerMobileImage: "", bannerAlt: "", borderRadius: 24, paddingDesktop: 40, paddingMobile: 24, mobileLayout: "SCROLL", showSummary: true, summaryTitle: "Shop with confidence", reviewScore: null, reviewCount: null, reviewSource: "", summaryIcon: "", spacing: "NORMAL", items: [
+  TRUST_BANNER: { backgroundColor: "#F6EFE3", backgroundImage: "", backgroundImageOpacity: 30, imageOnly: false, bannerImage: "", bannerMobileImage: "", bannerAlt: "", bannerHeightDesktop: 140, bannerHeightMobile: 110, borderRadius: 24, paddingDesktop: 40, paddingMobile: 24, mobileLayout: "SCROLL", showSummary: true, summaryTitle: "Shop with confidence", reviewScore: null, reviewCount: null, reviewSource: "", summaryIcon: "", spacing: "NORMAL", items: [
     { id: "tb-1", title: "Free shipping", description: "On orders above {freeShippingThreshold}", icon: "truck", enabled: true, sortOrder: 1, showOnDesktop: true, showOnMobile: true },
     { id: "tb-2", title: "Easy returns", description: "Within {returnWindowDays} days of delivery", icon: "return", enabled: true, sortOrder: 2, showOnDesktop: true, showOnMobile: true },
     { id: "tb-3", title: "Prompt dispatch", description: "Orders ship within {dispatchEstimate}", icon: "badge", enabled: true, sortOrder: 3, showOnDesktop: true, showOnMobile: true },
