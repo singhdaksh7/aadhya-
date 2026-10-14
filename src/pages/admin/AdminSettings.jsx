@@ -8,6 +8,7 @@ import {
 import { Button } from "../../components/ui";
 import { LoadingNotice, ErrorNotice } from "../../components/StateNotice";
 import ImagePickerInput from "../../components/admin/ImagePickerInput";
+import FooterSectionsEditor from "../../components/admin/FooterSectionsEditor";
 import BrandLogo from "../../components/BrandLogo";
 import { applyThemeVariables, DEFAULT_SITE_SETTINGS, refreshSiteSettings } from "../../hooks/useSiteSettings";
 
@@ -627,6 +628,12 @@ export default function AdminSettings() {
                 className={inputCls}
               />
             </div>
+
+            <FooterSectionsEditor
+              footer={settings.footer || {}}
+              pages={pages}
+              onChange={(patch) => setSettings((s) => ({ ...s, footer: { ...s.footer, ...patch } }))}
+            />
           </div>
         )}
 

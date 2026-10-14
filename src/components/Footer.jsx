@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { useSiteSettings } from "../hooks/useSiteSettings";
 import BrandLogo from "./BrandLogo";
 import { SITE_CREDIT } from "../lib/siteCredit";
+import { isExternalUrl } from "../lib/footerUrls";
+import { CompanyBlock, ContactItems, SeoBand, PaymentBadges, FooterImage, hasPaymentBadgeImages } from "./FooterSections";
 
 export default function Footer() {
   const { footer, general, social, branding, supportEmail, supportPhone } = useSiteSettings();
@@ -72,12 +74,17 @@ export default function Footer() {
 
   const columns = (footer?.footerColumns?.length ? footer.footerColumns : defaultColumns).filter((c) => c.enabled !== false);
 
+  const hasBadges = hasPaymentBadgeImages(footer?.paymentBadges);
+  // Up to 8 columns: the classic 3-column layout is unchanged; more columns wrap in a 4/6-track grid.
+  const gridCls = columns.length > 3 ? "grid grid-cols-2 gap-x-6 gap-y-10 md:grid-cols-4 lg:grid-cols-6" : "grid grid-cols-2 gap-10 md:grid-cols-5";
+
   return (
     <footer className="bg-charcoal text-[#F7F4EF] pt-16 pb-12 border-t border-charcoal/20">
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
-        <div className="grid grid-cols-2 gap-10 md:grid-cols-5">
+        <FooterImage config={footer?.image} placement="TOP" />
+        <div className={gridCls}>
           {/* Brand Intro Column */}
-          <div className="col-span-2 space-y-4">
+          <div className="col-span-2 min-w-0 space-y-4">
             <Link to="/" className="inline-block">
               <BrandLogo
                 src={footer?.footerLogo || branding?.desktopLogo}
@@ -90,6 +97,7 @@ export default function Footer() {
             <p className="max-w-sm text-xs sm:text-sm leading-relaxed text-[#FAF6F0]/80">
               {brandDesc}
             </p>
+            <CompanyBlock block={footer?.companyBlock} />
             {footer?.contactDetails !== false && (address || email || phone) && (
               <div className="pt-2 text-xs text-[#FAF6F0]/70 space-y-1.5 font-medium">
                 {address && (
@@ -110,6 +118,9 @@ export default function Footer() {
               </div>
             )}
 
+            <ContactItems items={footer?.contactItems} />
+            <FooterImage config={footer?.image} placement="BRAND" />
+
             {/* Configured Social Links */}
             {footer?.socialLinksVisibility !== false && socialList.length > 0 && (
               <div className="pt-3">
@@ -127,7 +138,7 @@ export default function Footer() {
 
           {/* Dynamic Footer Columns */}
           {columns.map((col) => (
-            <div key={col.id || col.title}>
+            <div key={col.id || col.title} className="min-w-0 break-words">
               <h4 className="mb-4 text-xs font-semibold uppercase tracking-widest store-accent">
                 {col.title}
               </h4>
@@ -136,9 +147,15 @@ export default function Footer() {
                   const to = link.url || (link.type === "CMS_PAGE" ? `/pages/${link.targetId}` : link.type === "CATEGORY" ? `/shop/category/${link.targetId}` : link.type === "COLLECTION" ? `/collections/${link.targetId}` : "#");
                   return (
                     <li key={idx}>
-                      <Link to={to} className="hover:text-white transition">
-                        {link.label}
-                      </Link>
+                      {isExternalUrl(to) ? (
+                        <a href={to} target="_blank" rel="noopener noreferrer" className="hover:text-white transition">
+                          {link.label}
+                        </a>
+                      ) : (
+                        <Link to={to} className="hover:text-white transition">
+                          {link.label}
+                        </Link>
+                      )}
                     </li>
                   );
                 })}
@@ -147,12 +164,16 @@ export default function Footer() {
           ))}
         </div>
 
+        <SeoBand sections={footer?.seoSections} />
+        <FooterImage config={footer?.image} placement="BOTTOM" />
+
         {/* Payment Icons & Copyright */}
         <div className="mt-14 border-t border-white/10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#FAF6F0]/60">
           <p>© {new Date().getFullYear()} {general?.legalName || "Aadya Storefront"}. All rights reserved.</p>
           
           {/* Payment Icons */}
-          {footer?.paymentIcons?.length > 0 && (
+          {hasBadges && <PaymentBadges badges={footer.paymentBadges} />}
+          {!hasBadges && footer?.paymentIcons?.length > 0 && (
             <div className="flex flex-wrap items-center gap-2 text-[10px] text-white/70 font-semibold tracking-wider uppercase">
               {footer.paymentIcons.map((icon) => (
                 <span key={icon} className="rounded border border-white/15 bg-white/5 px-2 py-0.5">

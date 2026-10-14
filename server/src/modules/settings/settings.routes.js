@@ -516,6 +516,69 @@ export const headerSettingsSchema = z.object({
   logoAlignment: z.enum(["LEFT", "CENTER", "left", "center"]).optional(),
 }).passthrough();
 
+// ---- Footer section validators (URLs must be relative or http(s); contact rows may also use tel:/mailto:) ----
+const NO_CONTROL_OR_SPACE = /^[^\s\u0000-\u001f]*$/;
+function isSafeLinkUrl(value, { allowTelMailto = false } = {}) {
+  if (value === "") return true;
+  if (typeof value !== "string" || !NO_CONTROL_OR_SPACE.test(value)) return false;
+  if (value.startsWith("//")) return false;
+  if (value.startsWith("/")) return true;
+  if (allowTelMailto && /^(tel|mailto):[^\s]+$/i.test(value)) return true;
+  try {
+    const u = new URL(value);
+    return (u.protocol === "http:" || u.protocol === "https:") && Boolean(u.hostname);
+  } catch {
+    return false;
+  }
+}
+const safeLinkUrl = (max = 500) =>
+  z.string().max(max).refine((v) => isSafeLinkUrl(v), { message: "URL must be relative (start with /) or start with http:// or https://" });
+const safeContactUrl = z.string().max(500).refine((v) => isSafeLinkUrl(v, { allowTelMailto: true }), {
+  message: "URL must be relative, http(s), tel: or mailto:",
+});
+const footerIdSchema = z.string().min(1).max(80);
+
+const footerSectionsSchema = {
+  companyBlock: z.object({
+    enabled: z.boolean().optional(),
+    heading: z.string().max(100).optional(),
+    lines: z.array(z.string().max(200)).max(10).optional(),
+  }).optional(),
+  contactItems: z.array(z.object({
+    id: footerIdSchema,
+    enabled: z.boolean().optional(),
+    label: z.string().max(60).optional(),
+    value: z.string().max(200).optional(),
+    url: safeContactUrl.optional(),
+    sortOrder: z.number().optional(),
+  })).max(12).optional(),
+  seoSections: z.array(z.object({
+    id: footerIdSchema,
+    enabled: z.boolean().optional(),
+    heading: z.string().max(100).optional(),
+    text: z.string().max(2000).optional(),
+    links: z.array(z.object({
+      label: z.string().max(100),
+      url: safeLinkUrl(500),
+    })).max(40).optional(),
+    sortOrder: z.number().optional(),
+  })).max(12).optional(),
+  paymentBadges: z.array(z.object({
+    id: footerIdSchema,
+    label: z.string().max(60).optional(),
+    image: safeLinkUrl(500).optional(),
+  })).max(12).optional(),
+  image: z.object({
+    enabled: z.boolean().optional(),
+    image: safeLinkUrl(500).optional(),
+    alt: z.string().max(240).optional(),
+    linkUrl: safeLinkUrl(500).optional(),
+    placement: z.enum(["TOP", "BRAND", "BOTTOM"]).optional(),
+    maxWidth: z.number().int().min(40).max(1200).optional(),
+    showOnMobile: z.boolean().optional(),
+  }).optional(),
+};
+
 export const settingsValidationSchema = z.object({
   general: z.object({
     storeName: z.string().max(100).optional(),
@@ -574,6 +637,7 @@ export const settingsValidationSchema = z.object({
     socialLinksVisibility: z.boolean().optional(),
     socialHeading: z.string().max(80).optional(),
     paymentIcons: z.array(z.string()).optional(),
+    ...footerSectionsSchema,
     footerColumns: z.array(z.object({
       id: z.string(),
       title: z.string().max(100),
@@ -584,8 +648,8 @@ export const settingsValidationSchema = z.object({
         type: z.enum(["CMS_PAGE", "CATEGORY", "COLLECTION", "CUSTOM_URL"]),
         url: z.string().max(500).optional(),
         targetId: z.string().optional(),
-      })),
-    })).optional(),
+      })).max(30),
+    })).max(8).optional(),
   }).optional(),
 
   social: z.object({
