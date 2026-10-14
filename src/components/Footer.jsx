@@ -2,6 +2,31 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { useSiteSettings } from "../hooks/useSiteSettings";
 import BrandLogo from "./BrandLogo";
+import { resolveMediaUrl } from "../lib/api";
+
+// "Website by <name>" credit. Everything (on/off, wording, link, logo) comes from Admin > Settings > Footer.
+function FooterCredit({ credit }) {
+  const [logoBroken, setLogoBroken] = React.useState(false);
+  const name = (credit?.name || "").trim();
+  if (!credit || credit.enabled === false || !name) return null;
+  const prefix = (credit.prefix || "").trim();
+  const url = (credit.url || "").trim();
+  const logo = credit.logo && !logoBroken ? resolveMediaUrl(credit.logo) : "";
+  const inner = (
+    <>
+      {logo && <img src={logo} alt="" aria-hidden="true" loading="lazy" decoding="async" onError={() => setLogoBroken(true)} className="h-4 w-auto max-w-[5rem] object-contain" />}
+      <span>{name}</span>
+    </>
+  );
+  const cls = "inline-flex items-center gap-1.5 font-semibold text-[#FAF6F0]/80";
+  return (
+    <p data-testid="footer-credit" className="mt-5 flex flex-wrap items-center justify-center gap-1.5 text-center text-[11px] text-[#FAF6F0]/50">
+      {prefix && <span>{prefix}</span>}
+      {prefix && " "}
+      {url ? <a href={url} target="_blank" rel="noopener noreferrer" className={`${cls} transition hover:text-white`}>{inner}</a> : <span className={cls}>{inner}</span>}
+    </p>
+  );
+}
 
 export default function Footer() {
   const { footer, general, social, branding, supportEmail, supportPhone } = useSiteSettings();
@@ -167,6 +192,7 @@ export default function Footer() {
             <Link to="/shipping" className="hover:text-white transition">Shipping Policy</Link>
           </div>
         </div>
+        <FooterCredit credit={footer?.credit} />
       </div>
     </footer>
   );

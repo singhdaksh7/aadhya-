@@ -58,4 +58,20 @@ describe("AdminSettings save behavior", () => {
     await screen.findByText(/Support email must be a valid email address/);
     expect(refreshSiteSettings).not.toHaveBeenCalled();
   });
+
+  it("edits the footer website credit (on/off, wording, name, link) and saves it", async () => {
+    adminFetchSiteSettings.mockResolvedValue({ data: { ...DEFAULT_SITE_SETTINGS, footer: { ...DEFAULT_SITE_SETTINGS.footer, credit: { enabled: true, prefix: "Website by", name: "Digital Clik", url: "", logo: "" } } } });
+    adminUpdateSiteSettings.mockResolvedValue({ data: DEFAULT_SITE_SETTINGS });
+    const user = userEvent.setup();
+    render(<AdminSettings />);
+    await user.click(await screen.findByRole("button", { name: "Footer Details" }));
+    expect(screen.getByLabelText("Credit name")).toHaveValue("Digital Clik");
+    await user.clear(screen.getByLabelText("Credit text"));
+    await user.type(screen.getByLabelText("Credit text"), "Crafted by");
+    await user.type(screen.getByLabelText("Credit link"), "https://example.com");
+    await user.click(screen.getByLabelText("Show website credit"));
+    await user.click(screen.getByText("Save All Settings"));
+    await waitFor(() => expect(adminUpdateSiteSettings).toHaveBeenCalled());
+    expect(adminUpdateSiteSettings.mock.calls[0][0].footer.credit).toMatchObject({ enabled: false, prefix: "Crafted by", name: "Digital Clik", url: "https://example.com" });
+  });
 });
