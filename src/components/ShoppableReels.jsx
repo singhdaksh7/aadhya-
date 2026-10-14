@@ -7,6 +7,7 @@ import { formatInr } from "../lib/format";
 
 const FOCUSABLE = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])';
 const isLive = (reel) => reel && reel.enabled !== false && reel.published !== false && (reel.videoUrl || reel.coverImage);
+const categoryPath = (category) => `/shop/category/${encodeURIComponent(category.slug || category.id)}`;
 const productPath = (product) => `/products/${encodeURIComponent(product.slug || product.id)}`;
 
 /** Accessible "Shop this reel" dialog: focus moves in, Tab is trapped, Escape closes, focus returns to the trigger. */
@@ -45,6 +46,15 @@ function ShopTray({ reel, onClose }) {
               </Link>
             </li>
           ))}
+          {(reel.categories || []).map((category) => (
+            <li key={`c-${category.id}`}>
+              <Link to={categoryPath(category)} onClick={onClose} className="flex items-center gap-4 px-5 py-3 transition hover:opacity-80">
+                {category.image ? <img src={resolveMediaUrl(category.image)} alt="" loading="lazy" className="h-16 w-16 shrink-0 rounded-lg object-cover store-surface" /> : <span aria-hidden="true" className="h-16 w-16 shrink-0 rounded-lg store-surface" />}
+                <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium store-text">{category.name}</span><span className="text-xs uppercase tracking-wider store-muted">Category</span></span>
+                <span aria-hidden="true" className="store-primary">&rarr;</span>
+              </Link>
+            </li>
+          ))}
         </ul>
       </div>
     </div>,
@@ -68,6 +78,8 @@ function ReelCard({ reel, soundOn, onSound, onShop }) {
   const [started, setStarted] = useState(autoplayAllowed); // false => wait for an explicit tap
   const title = reel.title || "Reel";
   const products = reel.products || [];
+  const categories = reel.categories || [];
+  const targetCount = products.length + categories.length;
   const cover = reel.coverImage ? resolveMediaUrl(reel.coverImage) : "";
   const playable = Boolean(reel.videoUrl);
   const muted = !soundOn;
@@ -99,7 +111,8 @@ function ReelCard({ reel, soundOn, onSound, onShop }) {
     if (!started) { setStarted(true); setPaused(false); } else setPaused((current) => !current);
   };
 
-  const single = products.length === 1;
+  const single = targetCount === 1;
+  const singleHref = single ? (products.length === 1 ? productPath(products[0]) : categoryPath(categories[0])) : "";
   const cta = reel.ctaLabel || "Shop Now";
   // Same premium treatment as the hero banner button: solid brand block, white spaced caps, square corners.
   const ctaCls = "pointer-events-auto mt-3 flex w-full items-center justify-center border border-transparent store-bg-primary px-4 py-3 text-[11px] font-medium uppercase tracking-[0.2em] text-white shadow-lg transition store-primary-hover";
@@ -119,11 +132,11 @@ function ReelCard({ reel, soundOn, onSound, onShop }) {
         {playable && loaded && (
           <button type="button" onClick={onSound} aria-label={muted ? "Turn sound on" : "Turn sound off"} className="absolute right-3 top-3 z-10 rounded-full bg-black/60 px-3 py-1 text-[11px] font-semibold text-white">{muted ? "Sound off" : "Sound on"}</button>
         )}
-        {(reel.title || single || products.length > 1) && (
+        {(reel.title || targetCount > 0) && (
           <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/75 via-black/35 to-transparent p-3 pt-14 text-white">
             {reel.title && <h3 className="line-clamp-2 text-sm font-medium leading-snug drop-shadow">{reel.title}</h3>}
-            {single && <Link to={productPath(products[0])} className={ctaCls}>{cta}</Link>}
-            {products.length > 1 && <button type="button" onClick={onShop} aria-haspopup="dialog" className={ctaCls}>{cta}</button>}
+            {single && <Link to={singleHref} className={ctaCls}>{cta}</Link>}
+            {targetCount > 1 && <button type="button" onClick={onShop} aria-haspopup="dialog" className={ctaCls}>{cta}</button>}
           </div>
         )}
       </div>
@@ -149,12 +162,12 @@ export default function ShoppableReels({ section }) {
         <div ref={scrollRef} className="no-scrollbar flex snap-x gap-4 overflow-x-auto scroll-smooth pb-1 sm:gap-5">
           {reels.map((reel, index) => {
             const id = reel.id || `reel-${index}`;
-            return <ReelCard key={id} reel={{ ...reel, products: reel.products || [] }} soundOn={soundId === id} onSound={() => setSoundId((current) => (current === id ? null : id))} onShop={() => setTrayReel(reel)} />;
+            return <ReelCard key={id} reel={{ ...reel, products: reel.products || [], categories: reel.categories || [] }} soundOn={soundId === id} onSound={() => setSoundId((current) => (current === id ? null : id))} onShop={() => setTrayReel(reel)} />;
           })}
         </div>
         {s.showArrows !== false && <button type="button" aria-label="Next reels" onClick={() => slide(1)} className={`${arrow} -right-3`}>&rarr;</button>}
       </div>
-      {trayReel && <ShopTray reel={{ ...trayReel, products: trayReel.products || [] }} onClose={closeTray} />}
+      {trayReel && <ShopTray reel={{ ...trayReel, products: trayReel.products || [], categories: trayReel.categories || [] }} onClose={closeTray} />}
     </section>
   );
 }

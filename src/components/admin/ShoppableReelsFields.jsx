@@ -4,10 +4,11 @@ import { adminUploadMedia } from "../../lib/api";
 
 export const MAX_REELS = 24;
 export const MAX_REEL_PRODUCTS = 12;
+export const MAX_REEL_CATEGORIES = 12;
 const MAX_VIDEO_BYTES = 30 * 1024 * 1024;
 const btn = "rounded border border-charcoal/15 px-2 py-0.5 text-xs disabled:opacity-30";
 const input = "mt-1 w-full rounded-xl border border-charcoal/20 px-3 py-2 text-sm";
-const newReel = () => ({ id: crypto.randomUUID(), title: "", videoUrl: "", coverImage: "", ctaLabel: "Shop Now", productIds: [], enabled: true, published: false });
+const newReel = () => ({ id: crypto.randomUUID(), title: "", videoUrl: "", coverImage: "", ctaLabel: "Shop Now", productIds: [], categoryIds: [], enabled: true, published: false });
 
 function VideoField({ value, onChange }) {
   const [busy, setBusy] = useState(false);
@@ -42,7 +43,7 @@ function VideoField({ value, onChange }) {
   </div>;
 }
 
-export default function ShoppableReelsFields({ value = {}, onChange, products = [] }) {
+export default function ShoppableReelsFields({ value = {}, onChange, products = [], categories = [] }) {
   const reels = Array.isArray(value.reels) ? value.reels : [];
   const setReels = (next) => onChange({ ...value, reels: next.map((reel, index) => ({ ...reel, sortOrder: index + 1 })) });
   const patch = (index, change) => setReels(reels.map((reel, i) => (i === index ? { ...reel, ...change } : reel)));
@@ -56,6 +57,7 @@ export default function ShoppableReelsFields({ value = {}, onChange, products = 
     {reels.length === 0 && <p className="text-xs text-charcoal-soft">No reels yet. The section stays hidden on the storefront until at least one reel is published.</p>}
     {reels.map((reel, index) => {
       const ids = reel.productIds || [];
+      const catIds = reel.categoryIds || [];
       return <fieldset key={reel.id || index} data-testid="reel-editor" className="space-y-3 rounded-xl border border-charcoal/10 p-3">
         <legend className="px-1 text-xs font-bold text-charcoal">Reel {index + 1}{reel.published ? "" : " (draft)"}</legend>
         <div className="flex flex-wrap items-center gap-3">
@@ -78,6 +80,14 @@ export default function ShoppableReelsFields({ value = {}, onChange, products = 
             {products.map((product) => <option key={product.id} value={product.id} disabled={!product.isActive}>{product.name}{product.sku ? ` • ${product.sku}` : ""} • {product.isActive ? "Active" : "Inactive"}</option>)}
           </select>
           {ids.map((id) => { const product = products.find((p) => p.id === id); return <div key={id} className="flex items-center gap-2 rounded border border-charcoal/10 p-2 text-xs"><span className="flex-1 truncate">{product ? product.name : id}{product && !product.isActive && <span className="ml-1 text-terracotta">(inactive)</span>}</span><button type="button" aria-label={`Unlink ${product ? product.name : id}`} onClick={() => patch(index, { productIds: ids.filter((x) => x !== id) })} className="text-terracotta">Remove</button></div>; })}
+        </div>
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-charcoal-soft">Linked categories ({catIds.length}/{MAX_REEL_CATEGORIES}) — a single category goes straight to it; with other links they appear in the tray</p>
+          <select aria-label={`Reel ${index + 1} add category`} value="" disabled={catIds.length >= MAX_REEL_CATEGORIES} onChange={(e) => { if (e.target.value && !catIds.includes(e.target.value)) patch(index, { categoryIds: [...catIds, e.target.value] }); }} className="w-full rounded-xl border border-charcoal/20 px-3 py-2 text-sm">
+            <option value="">+ Link a category…</option>
+            {categories.map((category) => <option key={category.id} value={category.id} disabled={category.isActive === false}>{category.name} • {category.isActive === false ? "Inactive" : "Active"}</option>)}
+          </select>
+          {catIds.map((id) => { const category = categories.find((c) => c.id === id); const inactive = category && category.isActive === false; return <div key={id} className="flex items-center gap-2 rounded border border-charcoal/10 p-2 text-xs"><span className="flex-1 truncate">{category ? category.name : id}{inactive && <span className="ml-1 text-terracotta">(inactive)</span>}</span><button type="button" aria-label={`Unlink category ${category ? category.name : id}`} onClick={() => patch(index, { categoryIds: catIds.filter((x) => x !== id) })} className="text-terracotta">Remove</button></div>; })}
         </div>
       </fieldset>;
     })}

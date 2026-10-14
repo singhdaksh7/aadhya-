@@ -4,6 +4,7 @@ import { prisma } from "../../lib/prisma.js";
 // SHOPPABLE_REELS: portrait video cards, each optionally linked to products.
 export const MAX_REELS = 24;
 export const MAX_PRODUCTS_PER_REEL = 12;
+export const MAX_CATEGORIES_PER_REEL = 12;
 const VIDEO_EXT = /\.(mp4|webm|m4v|mov|ogv)$/i;
 
 const text = (max) => z.string().trim().max(max);
@@ -26,6 +27,7 @@ export const reelSchema = z.object({
   coverImage: imageUrl,
   ctaLabel: optionalText(60),
   productIds: z.array(text(100)).max(MAX_PRODUCTS_PER_REEL).transform(dedupe).optional(),
+  categoryIds: z.array(text(100)).max(MAX_CATEGORIES_PER_REEL).transform(dedupe).optional(),
 });
 
 export const shoppableReelsSchema = z.object({
@@ -53,13 +55,16 @@ const isLive = (reel) => reel && reel.enabled !== false && reel.published === tr
 
 // Pure: turns stored settings + a Map of active public products into the public settings.
 // Unpublished/disabled reels (and their video URLs) are removed entirely.
-export function buildPublicReels(settings, productsById) {
+export function buildPublicReels(settings, productsById, categoriesById = new Map()) {
   const out = [];
   for (const reel of orderedReels(Array.isArray(settings?.reels) ? settings.reels : [])) {
     if (!isLive(reel)) continue;
     const ids = Array.isArray(reel.productIds) ? reel.productIds.filter(Boolean) : [];
     const products = ids.map((id) => productsById.get(id)).filter(Boolean);
-    if (ids.length > 0 && products.length === 0) continue; // every linked product is gone/inactive
+    const catIds = Array.isArray(reel.categoryIds) ? reel.categoryIds.filter(Boolean) : [];
+    const categories = catIds.map((id) => categoriesById.get(id)).filter(Boolean);
+    // Linked something, but every target is gone/inactive: drop the reel rather than leave a dead CTA.
+    if (ids.length + catIds.length > 0 && products.length + categories.length === 0) continue;
     out.push({
       id: reel.id || `reel-${out.length}`,
       title: reel.title || "",
@@ -67,6 +72,7 @@ export function buildPublicReels(settings, productsById) {
       coverImage: reel.coverImage || "",
       ctaLabel: reel.ctaLabel || "",
       products,
+      categories,
     });
   }
   return { ...settings, reels: out };
@@ -85,5 +91,14 @@ export async function resolveReelsSection(section, client = prisma) {
     });
     for (const row of rows) map.set(row.id, { id: row.id, name: row.name, slug: row.slug, price: Number(row.price), image: row.images?.[0]?.url || "" });
   }
-  return buildPublicReels(settings, map);
+  const catIds = [...new Set(live.flatMap((reel) => (Array.isArray(reel.categoryIds) ? reel.categoryIds : [])).filter(Boolean))];
+  const catMap = new Map();
+  if (catIds.length) {
+    const rows = await client.category.findMany({
+      where: { id: { in: catIds }, isActive: true },
+      select: { id: true, name: true, slug: true, image: true },
+    });
+    for (const row of rows) catMap.set(row.id, { id: row.id, name: row.name, slug: row.slug, image: row.image || "" });
+  }
+  return buildPublicReels(settings, map, catMap);
 }
