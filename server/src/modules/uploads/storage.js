@@ -67,6 +67,8 @@ const EXT_BY_MIME = {
   "image/png": ".png",
   "image/webp": ".webp",
   "image/svg+xml": ".svg",
+  "video/mp4": ".mp4",
+  "video/webm": ".webm",
 };
 
 export function randomFilename(mimeType) {

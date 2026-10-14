@@ -37,6 +37,7 @@ const SECTION_TYPE_LABELS = {
   BLOG_PREVIEW: "Blog / Stories",
   TESTIMONIALS: "Reviews / Testimonials",
   HOW_WE_WORK: "How We Work",
+  SHOPPABLE_REELS: "Shoppable Reels",
 };
 
 export default function AdminHomepageBuilder() {
