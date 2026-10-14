@@ -75,6 +75,8 @@ import AdminShipping from "./pages/admin/AdminShipping";
 import AdminHeaderSettings from "./pages/admin/AdminHeaderSettings";
 import SearchResults from "./pages/shop/SearchResults";
 import { captureUtmFromUrl } from "./lib/attribution";
+import { SiteDecorations } from "./components/DecorationLayer";
+import AdminDecorations from "./pages/admin/AdminDecorations";
 
 // Policy Pages Component
 function SiteLayout() {
@@ -83,9 +85,11 @@ function SiteLayout() {
       <WishlistProvider>
         <BrochureProvider>
           <ScrollToTop />
-          <div className="storefront-theme flex min-h-screen flex-col font-sans">
+          <div className="storefront-theme isolate flex min-h-screen flex-col font-sans">
             <Navbar />
-            <main className="flex-1">
+            <main className="relative flex-1">
+              {/* Decorative Edge Artwork for entire-site / route-scoped placements. Mounted once, clipped to <main>. */}
+              <SiteDecorations />
               <Routes>
                 {/* Primary E-Commerce Storefront Routes */}
                 <Route path="/" element={<Home />} />
@@ -175,6 +179,7 @@ function AdminRoutes() {
         >
           <Route index element={<AdminDashboard />} />
           <Route path="homepage-builder" element={<AdminHomepageBuilder />} />
+          <Route path="decorations" element={<AdminDecorations />} />
           <Route path="header-settings" element={<AdminHeaderSettings />} />
           <Route path="storefront/header" element={<AdminHeaderSettings />} />
           <Route path="banners" element={<AdminBanners />} />

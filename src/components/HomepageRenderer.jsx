@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { Link } from "react-router-dom";
 import PromoStrip from "./PromoStrip";
 import HowWeWork from "./HowWeWork";
@@ -19,12 +19,17 @@ import ShoppableReels from "./ShoppableReels";
 import HomepageSectionTitle, { SectionCta } from "./HomepageSectionTitle";
 import { ctaLabel as cleanCtaLabel } from "../lib/cta";
 import { spacingClass } from "../lib/homepageConfig";
+import { useSiteSettings } from "../hooks/useSiteSettings";
+import { DecorationLayer } from "./DecorationLayer";
+import { normalizeDecorations, sectionDecorations } from "../lib/decorations";
 
 const route = (value, fallback = "/shop") => typeof value === "string" && (value.startsWith("/") || /^https?:\/\//i.test(value)) ? value : fallback;
 function SafeLink({ to, children, ...props }) { const url = route(to); return url.startsWith("/") ? <Link to={url} {...props}>{children}</Link> : <a href={url} {...props}>{children}</a>; }
 const enabled = (items = []) => items.filter((item) => item.enabled !== false).sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
 
 export default function HomepageRenderer({ sections = [], newArrivals = [], bestSellers = [], featuredCollection = null, booksList = [], isLoading = false, subscribed = false, newsletterEmail = "", setNewsletterEmail = () => {}, handleNewsletterSubmit = () => {}, newsletterStatus = "idle", newsletterError = "" }) {
+  const siteSettings = useSiteSettings();
+  const artwork = useMemo(() => normalizeDecorations(siteSettings), [siteSettings]);
   if (!sections?.length) return null;
   const renderProducts = (products, limit, arrows = false) => {
     if (isLoading) return <ProductGridSkeleton count={limit || 4} />;
@@ -91,7 +96,10 @@ export default function HomepageRenderer({ sections = [], newArrivals = [], best
   const spaced = (section) => {
     const node = renderSection(section);
     const cls = spacingClass(section.settings?.spacing);
-    return node && cls ? <div key={section.id} data-spacing={section.settings.spacing} className={cls}>{node}</div> : node;
+    const out = node && cls ? <div key={section.id} data-spacing={section.settings.spacing} className={cls}>{node}</div> : node;
+    // Decorative Edge Artwork targeted at this exact homepage section (by its stable id).
+    const art = out ? sectionDecorations(artwork, section.id) : [];
+    return art.length ? <div key={section.id} data-testid="decorated-section" className="relative"><DecorationLayer items={art} />{out}</div> : out;
   };
   const topTypes = new Set(["CIRCULAR_CATEGORY_NAV", "CATEGORY_CIRCLES", "PROMO_STRIP", "PROMO_TICKER", "HERO_CAROUSEL", "HERO", "TRUST_STRIP", "TRUST_BADGES", "TRUST_BANNER"]);
   // The trust strip / banner always sit directly under the hero (ties keep the admin's saved order).

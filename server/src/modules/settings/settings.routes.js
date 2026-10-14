@@ -4,6 +4,7 @@ import { prisma } from "../../lib/prisma.js";
 import { requireAdmin } from "../../middleware/adminAuth.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
 import { ok } from "../../utils/apiResponse.js";
+import { decorationsSchema, DEFAULT_DECORATIONS } from "./decorations.js";
 
 // Hex color validator (#fff or #ffffff)
 const colorHexSchema = z.string().regex(/^#([A-Fa-f0-9]{3}){1,2}$/, "Must be a valid hex color code");
@@ -158,6 +159,8 @@ export const DEFAULT_SETTINGS = {
   // Admin-driven catalog filters. `categories` holds per-category overrides; an empty list means
   // every category uses the built-in default filter set.
   catalogFilters: { categories: [] },
+  // Decorative Edge Artwork: nothing renders until an admin adds a decoration.
+  decorations: DEFAULT_DECORATIONS,
   shop: {
     defaultSort: "featured",
     productsPerPage: 12,
@@ -623,6 +626,7 @@ export const settingsValidationSchema = z.object({
   }).optional(),
 
   catalogFilters: catalogFiltersSchema.optional(),
+  decorations: decorationsSchema.optional(),
 
   shop: z.object({
     defaultSort: z.enum(["featured", "price_asc", "price_desc", "newest"]).optional(),
