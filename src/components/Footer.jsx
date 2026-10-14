@@ -170,7 +170,7 @@ export default function Footer() {
         </div>
         {/* Developer credit: fixed in code (src/lib/siteCredit.js), not managed from Admin. */}
         <p data-testid="footer-credit" className="mt-5 text-center text-[11px] text-[#FAF6F0]/50">
-          {SITE_CREDIT.prefix} <span className="font-semibold text-[#FAF6F0]/80">{SITE_CREDIT.name}</span>
+          © Copyright {new Date().getFullYear()}. All Rights Reserved. Made with ❤️ by <span className="font-semibold text-[#FAF6F0]/80">{SITE_CREDIT.team}</span>
         </p>
       </div>
     </footer>

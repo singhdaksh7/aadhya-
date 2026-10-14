@@ -143,17 +143,17 @@ describe("Footer", () => {
 });
 
 describe("Footer developer credit", () => {
-  it("always shows 'Website by Digital Clik', independent of any store setting", () => {
+  it("always shows the Digital Clik credit line, independent of any store setting", () => {
     mockSettings = { general: {} };
     renderFooter();
-    expect(screen.getByTestId("footer-credit")).toHaveTextContent("Website by Digital Clik");
+    expect(screen.getByTestId("footer-credit")).toHaveTextContent(`© Copyright ${new Date().getFullYear()}. All Rights Reserved. Made with ❤️ by Team Digital Clik`);
   });
 
   it("cannot be switched off, renamed or re-pointed through site settings", () => {
     mockSettings = { general: {}, footer: { credit: { enabled: false, prefix: "Hacked by", name: "Someone Else", url: "https://evil.example" } } };
     renderFooter();
     const credit = screen.getByTestId("footer-credit");
-    expect(credit).toHaveTextContent("Website by Digital Clik");
+    expect(credit).toHaveTextContent("Made with ❤️ by Team Digital Clik");
     expect(credit.querySelector("a")).toBeNull();
     expect(credit.textContent).not.toContain("Someone Else");
   });
