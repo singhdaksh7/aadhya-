@@ -1,23 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { settingsValidationSchema, DEFAULT_SETTINGS } from "../src/modules/settings/settings.routes.js";
 
-const parse = (credit) => settingsValidationSchema.safeParse({ footer: { credit } });
-
-describe("footer website credit settings", () => {
-  it("ships an editable default credit", () => {
-    expect(DEFAULT_SETTINGS.footer.credit).toEqual({ enabled: true, prefix: "Website by", name: "Digital Clik", url: "", logo: "" });
+// The "Website by Digital Clik" credit is fixed in the storefront code, so the settings API must not carry it.
+describe("footer developer credit is not a store setting", () => {
+  it("has no default credit setting", () => {
+    expect(DEFAULT_SETTINGS.footer.credit).toBeUndefined();
   });
 
-  it("accepts on/off, wording, name, link and logo", () => {
-    expect(parse({ enabled: false, prefix: "Crafted by", name: "Studio", url: "https://example.com/x", logo: "/uploads/a.png" }).success).toBe(true);
-    expect(parse({ url: "", logo: "" }).success).toBe(true);
-    expect(parse({ url: "/about" }).success).toBe(true);
-  });
-
-  it("rejects unsafe links/logos and over-long text", () => {
-    expect(parse({ url: "javascript:alert(1)" }).success).toBe(false);
-    expect(parse({ logo: "data:image/png;base64,AAA" }).success).toBe(false);
-    expect(parse({ name: "x".repeat(81) }).success).toBe(false);
-    expect(parse({ prefix: "x".repeat(61) }).success).toBe(false);
+  it("drops any credit sent to the settings API instead of storing it", () => {
+    const out = settingsValidationSchema.safeParse({ footer: { brandDescription: "x", credit: { enabled: false, name: "Someone Else" } } });
+    expect(out.success).toBe(true);
+    expect(out.data.footer.credit).toBeUndefined();
+    expect(out.data.footer.brandDescription).toBe("x");
   });
 });

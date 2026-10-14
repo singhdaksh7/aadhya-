@@ -77,8 +77,6 @@ export const DEFAULT_SETTINGS = {
     contactDetails: true,
     socialLinksVisibility: true,
     socialHeading: "Connect With Us",
-    // "Website by" credit shown at the bottom of the footer; fully editable from Admin > Settings > Footer.
-    credit: { enabled: true, prefix: "Website by", name: "Digital Clik", url: "", logo: "" },
     paymentIcons: ["Visa", "Mastercard", "RuPay", "UPI", "Razorpay", "COD"],
     footerColumns: [
       {
@@ -575,13 +573,6 @@ export const settingsValidationSchema = z.object({
     contactDetails: z.boolean().optional(),
     socialLinksVisibility: z.boolean().optional(),
     socialHeading: z.string().max(80).optional(),
-    credit: z.object({
-      enabled: z.boolean().optional(),
-      prefix: z.string().trim().max(60).optional(),
-      name: z.string().trim().max(80).optional(),
-      url: z.string().trim().max(500).refine((v) => v === "" || v.startsWith("/") || /^https?:\/\//i.test(v), "Link must be a relative or http(s) URL").optional(),
-      logo: z.string().trim().max(500).refine((v) => v === "" || v.startsWith("/") || /^https?:\/\//i.test(v), "Logo must be a relative or http(s) URL").optional(),
-    }).optional(),
     paymentIcons: z.array(z.string()).optional(),
     footerColumns: z.array(z.object({
       id: z.string(),
