@@ -209,12 +209,12 @@ export default function MediaPicker({ isOpen, onClose, onSelect, title = "Select
                         }`}
                       >
                         <div className="aspect-square w-full overflow-hidden bg-ivory flex items-center justify-center">
-                          <img
+                          {asset.mimeType?.startsWith("video/") ? <span className="px-2 text-center text-xs font-semibold text-charcoal-soft">Video<br />{asset.fileName}</span> : <img
                             src={imgUrl}
                             alt={asset.altText || asset.fileName}
                             className="object-cover w-full h-full group-hover:scale-105 transition duration-300"
                             loading="lazy"
-                          />
+                          />}
                         </div>
                         <div className="p-2 text-xs truncate text-charcoal font-medium bg-white border-t border-charcoal/5">
                           {asset.title || asset.originalName || asset.fileName}
