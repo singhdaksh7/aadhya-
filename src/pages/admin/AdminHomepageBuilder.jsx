@@ -21,6 +21,7 @@ const SECTION_TYPE_LABELS = {
   PROMO_TICKER: "Promo / Coupon Ticker",
   CATEGORY_CIRCLES: "Circular Category Bar",
   TRUST_BADGES: "Trust & Service Strip",
+  OUR_JOURNEY: "Our Journey Timeline",
   NEW_ARRIVALS: "New Arrivals Grid",
   MULTI_BANNER: "2-Up Promo Banners",
   BEST_SELLERS: "Best Sellers Grid",
