@@ -37,30 +37,42 @@ const visibleMilestones = (list) =>
  */
 export default function OurJourney({ config = {} }) {
   const items = visibleMilestones(config.milestones);
+  const [imageBroken, setImageBroken] = useState(false);
   if (items.length === 0) return null;
   const surface = config.background === "SURFACE";
+  const sideImage = config.image && !imageBroken ? resolveMediaUrl(config.image) : "";
+  const imageLeft = config.imagePosition === "LEFT";
+  // With a side image the timeline keeps a single spine (alternating sides would be cramped in half the width).
+  const alternate = !sideImage;
   return (
-    <section data-testid="our-journey" aria-label={config.title || "Our journey"} className={`mx-auto max-w-5xl px-4 sm:px-8 ${surface ? "rounded-3xl py-10 store-surface sm:py-14" : ""}`}>
+    <section data-testid="our-journey" data-image-position={sideImage ? (imageLeft ? "LEFT" : "RIGHT") : undefined} aria-label={config.title || "Our journey"} className={`mx-auto px-4 sm:px-8 ${sideImage ? "max-w-7xl" : "max-w-5xl"} ${surface ? "rounded-3xl py-10 store-surface sm:py-14" : ""}`}>
       {(config.title || config.eyebrow || config.subtitle) && <HomepageSectionTitle eyebrow={config.eyebrow} title={config.title} subtitle={config.subtitle} />}
-      <SafeImage src={config.image} alt={config.imageAlt || ""} className="mx-auto mt-8 max-h-64 w-full max-w-3xl rounded-2xl object-cover" />
-      <ol data-testid="journey-list" className="relative mt-10 space-y-8 before:absolute before:bottom-2 before:left-[15px] before:top-2 before:w-px before:bg-[var(--theme-primary,#8a5a44)]/30 md:space-y-10 md:before:left-1/2">
-        {items.map((m, idx) => {
-          const left = idx % 2 === 0;
-          return (
-            <li key={m.id || idx} data-testid="journey-item" className="relative pl-12 md:grid md:grid-cols-2 md:pl-0">
-              <span aria-hidden="true" className="absolute left-0 top-1 flex h-8 w-8 items-center justify-center rounded-full border border-[var(--theme-primary,#8a5a44)] bg-white store-primary md:left-1/2 md:-translate-x-1/2">
-                {m.icon ? <Glyph name={m.icon} /> : <span className="h-2 w-2 rounded-full bg-[var(--theme-primary,#8a5a44)]" />}
-              </span>
-              <div className={`min-w-0 ${left ? "md:pr-12 md:text-right" : "md:col-start-2 md:pl-12"}`}>
-                {m.date && <p className="text-[11px] font-semibold uppercase tracking-[0.25em] store-primary">{m.date}</p>}
-                <h3 className="mt-1 font-serif-display text-xl leading-snug store-text break-words">{m.title}</h3>
-                {m.description && <p className="mt-2 text-sm leading-relaxed store-muted break-words">{m.description}</p>}
-                <SafeImage src={m.image} alt={m.imageAlt || ""} className={`mt-3 h-40 w-full max-w-xs rounded-xl object-cover ${left ? "md:ml-auto" : ""}`} />
-              </div>
-            </li>
-          );
-        })}
-      </ol>
+      {/* DOM order is heading, timeline, image so phones read top to bottom; the image sits beside the timeline from lg. */}
+      <div className={sideImage ? "mt-10 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] lg:items-start lg:gap-14" : ""}>
+        <ol data-testid="journey-list" className={`relative space-y-8 before:absolute before:bottom-2 before:left-[15px] before:top-2 before:w-px before:bg-[var(--theme-primary,#8a5a44)]/30 md:space-y-10 ${alternate ? "mt-10 md:before:left-1/2" : ""} ${sideImage && imageLeft ? "lg:order-2" : ""}`}>
+          {items.map((m, idx) => {
+            const left = alternate && idx % 2 === 0;
+            return (
+              <li key={m.id || idx} data-testid="journey-item" className={`relative pl-12 ${alternate ? "md:grid md:grid-cols-2 md:pl-0" : ""}`}>
+                <span aria-hidden="true" className={`absolute left-0 top-1 flex h-8 w-8 items-center justify-center rounded-full border border-[var(--theme-primary,#8a5a44)] bg-white store-primary ${alternate ? "md:left-1/2 md:-translate-x-1/2" : ""}`}>
+                  {m.icon ? <Glyph name={m.icon} /> : <span className="h-2 w-2 rounded-full bg-[var(--theme-primary,#8a5a44)]" />}
+                </span>
+                <div className={`min-w-0 ${alternate ? (left ? "md:pr-12 md:text-right" : "md:col-start-2 md:pl-12") : ""}`}>
+                  {m.date && <p className="text-[11px] font-semibold uppercase tracking-[0.25em] store-primary">{m.date}</p>}
+                  <h3 className="mt-1 font-serif-display text-xl leading-snug store-text break-words">{m.title}</h3>
+                  {m.description && <p className="mt-2 text-sm leading-relaxed store-muted break-words">{m.description}</p>}
+                  <SafeImage src={m.image} alt={m.imageAlt || ""} className={`mt-3 h-40 w-full max-w-xs rounded-xl object-cover ${left ? "md:ml-auto" : ""}`} />
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+        {sideImage && (
+          <div data-testid="journey-side-image" className={`mt-10 overflow-hidden rounded-2xl lg:sticky lg:top-28 lg:mt-0 ${imageLeft ? "lg:order-1" : ""}`}>
+            <img src={sideImage} alt={config.imageAlt || ""} loading="lazy" decoding="async" onError={() => setImageBroken(true)} className="aspect-[4/5] w-full object-cover" />
+          </div>
+        )}
+      </div>
     </section>
   );
 }

@@ -16,6 +16,7 @@ export const ourJourneySchema = z.object({
   subtitle: optionalText(400),
   image: optionalUrl,
   imageAlt: optionalText(240),
+  imagePosition: z.enum(["LEFT", "RIGHT"]).optional(),
   background: z.enum(["PLAIN", "SURFACE"]).optional(),
   milestones: z.array(z.object({
     id: optionalText(100),
@@ -38,6 +39,7 @@ export const OUR_JOURNEY_DEFAULTS = {
   subtitle: "",
   image: "",
   imageAlt: "",
+  imagePosition: "RIGHT",
   background: "PLAIN",
   spacing: "NORMAL",
   milestones: [

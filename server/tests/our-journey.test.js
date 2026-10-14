@@ -27,4 +27,9 @@ describe("OUR_JOURNEY homepage section", () => {
     const out = validateHomepageSettings("OUR_JOURNEY", { spacing: "SPACIOUS", image: "/media/a.jpg", milestones: [{ title: "x", sortOrder: 3, enabled: false, icon: "leaf", image: "" }] });
     expect(out).toMatchObject({ spacing: "SPACIOUS", milestones: [{ sortOrder: 3, enabled: false }] });
   });
+
+  it("accepts an image position and rejects unknown ones", () => {
+    expect(validateHomepageSettings("OUR_JOURNEY", { image: "/media/a.jpg", imagePosition: "LEFT", milestones: [] })).toMatchObject({ imagePosition: "LEFT" });
+    expect(() => validateHomepageSettings("OUR_JOURNEY", { imagePosition: "TOP", milestones: [] })).toThrow();
+  });
 });

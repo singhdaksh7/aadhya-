@@ -32,6 +32,7 @@ export default function OurJourneyFields({ value, set }) {
         <select aria-label="Journey background" value={value.background || "PLAIN"} onChange={(e) => set("background", e.target.value)} className={INPUT}><option value="PLAIN">Plain page background</option><option value="SURFACE">Soft surface</option></select>
       </label>
       <label className="block text-xs font-semibold text-charcoal-soft">Illustration alt text<input aria-label="Journey image alt" value={value.imageAlt ?? ""} onChange={(e) => set("imageAlt", e.target.value)} className={INPUT} /></label>
+      <label className="block text-xs font-semibold text-charcoal-soft">Image position (beside the timeline on desktop)<select aria-label="Journey image position" value={value.imagePosition || "RIGHT"} onChange={(e) => set("imagePosition", e.target.value)} className={INPUT}><option value="RIGHT">Right side</option><option value="LEFT">Left side</option></select></label>
       <div className="sm:col-span-2"><ImagePickerInput label="Section image / illustration (optional)" value={value.image} onChange={(url) => set("image", url)} pickerTitle="Select journey image" inputClassName="mt-1 w-full rounded-xl border border-charcoal/20 px-3 py-2 text-xs" enableCrop aspectOptions={["wide", "banner", "free"]} /></div>
     </div>
     <div className="space-y-3 border-t border-charcoal/10 pt-4">
