@@ -2,6 +2,8 @@ import { z } from "zod";
 import { ApiError } from "../../utils/ApiError.js";
 
 export const SAFE_ICONS = ["sparkles", "badge", "home", "shield", "leaf", "heart"];
+// The compact trust banner adds service icons (shipping, returns, ...) on top of the shared set.
+export const TRUST_BANNER_ICONS = [...SAFE_ICONS, "truck", "return", "lock", "gift", "star"];
 const safeUrl = z.string().trim().max(2048).refine((value) => value.startsWith("/") || /^https?:\/\//i.test(value), "Must be a relative or http(s) URL");
 const optionalUrl = z.union([safeUrl, z.literal("")]).optional();
 const text = (max) => z.string().trim().max(max);
@@ -11,6 +13,7 @@ export const SECTION_SPACING = ["COMPACT", "NORMAL", "SPACIOUS"];
 const spacing = z.enum(SECTION_SPACING).optional();
 // Heading alignment for rails, reviews and blog (default CENTER on the storefront).
 const headingAlign = z.enum(["LEFT", "CENTER"]).optional();
+const hexColor = z.union([z.string().trim().regex(/^#[0-9a-fA-F]{6}$/, "Colour must be a #RRGGBB hex value"), z.literal("")]);
 const item = z.object({ id: optionalText(100), enabled: z.boolean().optional(), sortOrder: z.number().int().min(0).max(1000).optional() });
 
 const rawSchemas = {
@@ -20,6 +23,24 @@ const rawSchemas = {
     desktopColumns: z.number().int().min(2).max(4).optional(),
     mobileLayout: z.enum(["STACKED", "GRID", "SCROLL"]).optional(),
     items: z.array(item.extend({ title: text(120), description: text(300), icon: z.enum(SAFE_ICONS) })).min(1).max(8),
+  }),
+  // Compact trust/info banner under the hero. Item text may use {freeShippingThreshold},
+  // {returnWindowDays} and {dispatchEstimate}; they resolve from Store Settings on the storefront.
+  TRUST_BANNER: z.object({
+    backgroundColor: hexColor.optional(),
+    backgroundImage: optionalUrl,
+    backgroundImageOpacity: z.number().int().min(0).max(100).optional(),
+    borderRadius: z.number().int().min(0).max(48).optional(),
+    paddingDesktop: z.number().int().min(8).max(96).optional(),
+    paddingMobile: z.number().int().min(8).max(64).optional(),
+    mobileLayout: z.enum(["SCROLL", "STACKED"]).optional(),
+    showSummary: z.boolean().optional(),
+    summaryTitle: optionalText(120),
+    reviewScore: z.number().min(0).max(5).nullable().optional(),
+    reviewCount: z.number().int().min(0).max(10000000).nullable().optional(),
+    reviewSource: optionalText(80),
+    summaryIcon: optionalUrl,
+    items: z.array(item.extend({ title: text(120), description: optionalText(300), icon: z.enum(TRUST_BANNER_ICONS).optional(), iconImage: optionalUrl, showOnDesktop: z.boolean().optional(), showOnMobile: z.boolean().optional() })).max(12),
   }),
   SHOP_THE_LOOK: z.object({ headingAlign, eyebrow: optionalText(120), title: optionalText(160), subtitle: optionalText(300), ctaLabel: optionalText(80), items: z.array(item.extend({ title: text(120), tagline: optionalText(240), image: optionalUrl, imageAlt: optionalText(240), targetType: z.enum(["COLLECTION", "CATEGORY", "PAGE", "CUSTOM_URL"]).optional(), targetId: optionalText(100), url: optionalUrl })).max(12) }),
   NEW_ARRIVALS: z.object({ headingAlign, eyebrow: optionalText(120), title: optionalText(160), subtitle: optionalText(300), ctaLabel: optionalText(80), ctaUrl: optionalUrl, showCta: z.boolean().optional(), showArrows: z.boolean().optional(), limit: z.number().int().min(1).max(24).optional(), sourceMode: z.enum(["AUTO", "MANUAL"]).optional(), productIds: z.array(text(100)).max(24).optional() }),
@@ -55,6 +76,13 @@ export const DEFAULT_HOMEPAGE_CONTENT = {
     { id: "trust-3", title: "Styles for Every Space", description: "Proportions tailored for modern and traditional homes", icon: "home", enabled: true, sortOrder: 3 },
     { id: "trust-4", title: "Secure Payments", description: "100% encrypted checkout & Pan-India express dispatch", icon: "shield", enabled: true, sortOrder: 4 },
   ] },
+  // Neutral, setting-driven copy only: score/count stay blank until the admin enters real figures.
+  TRUST_BANNER: { backgroundColor: "#F6EFE3", backgroundImage: "", backgroundImageOpacity: 30, borderRadius: 24, paddingDesktop: 40, paddingMobile: 24, mobileLayout: "SCROLL", showSummary: true, summaryTitle: "Shop with confidence", reviewScore: null, reviewCount: null, reviewSource: "", summaryIcon: "", spacing: "NORMAL", items: [
+    { id: "tb-1", title: "Free shipping", description: "On orders above {freeShippingThreshold}", icon: "truck", enabled: true, sortOrder: 1, showOnDesktop: true, showOnMobile: true },
+    { id: "tb-2", title: "Easy returns", description: "Within {returnWindowDays} days of delivery", icon: "return", enabled: true, sortOrder: 2, showOnDesktop: true, showOnMobile: true },
+    { id: "tb-3", title: "Prompt dispatch", description: "Orders ship within {dispatchEstimate}", icon: "badge", enabled: true, sortOrder: 3, showOnDesktop: true, showOnMobile: true },
+    { id: "tb-4", title: "Secure payments", description: "Encrypted checkout", icon: "lock", enabled: true, sortOrder: 4, showOnDesktop: true, showOnMobile: true },
+  ] },
   NEW_ARRIVALS: { headingAlign: "CENTER", limit: 4, eyebrow: "Fresh Drops", title: "New This Week", subtitle: "New pieces selected for the season", ctaLabel: "View All New Arrivals", ctaUrl: "/new-arrivals", showCta: true, showArrows: false },
   BEST_SELLERS: { headingAlign: "CENTER", limit: 4, eyebrow: "Most Cherished", title: "Best Sellers", subtitle: "Loved most by our community", ctaLabel: "View All Best Sellers", ctaUrl: "/best-sellers" },
   FEATURED_COLLECTION: { eyebrow: "Featured Editorial Collection", ctaLabel: "Explore Collection", backgroundStyle: "IVORY" },
@@ -79,7 +107,8 @@ export function mergeMissingSettings(type, current = {}) {
   const defaults = DEFAULT_HOMEPAGE_CONTENT[type];
   if (!defaults) return current || {};
   const merged = { ...defaults, ...(current || {}) };
-  if (Array.isArray(defaults.items) && (!Array.isArray(current?.items) || current.items.length === 0)) merged.items = defaults.items;
+  // The trust banner may legitimately have zero items (summary only), so an emptied list is not refilled.
+  if (Array.isArray(defaults.items) && (!Array.isArray(current?.items) || (current.items.length === 0 && type !== "TRUST_BANNER"))) merged.items = defaults.items;
   return merged;
 }
 

@@ -38,3 +38,37 @@ describe("Phase F.1 homepage content validation", () => {
     expect(settingsEqual({ title: "Custom", nested: { limit: 3 } }, { nested: { limit: 3 }, title: "Custom" })).toBe(true);
   });
 });
+
+describe("TRUST_BANNER settings", () => {
+  it("accepts the seeded defaults", () => {
+    const parsed = validateHomepageSettings("TRUST_BANNER", DEFAULT_HOMEPAGE_CONTENT.TRUST_BANNER);
+    expect(parsed.items.length).toBeGreaterThanOrEqual(3);
+    expect(parsed.reviewScore).toBeNull();
+  });
+
+  it("keeps settings placeholders as plain text", () => {
+    const parsed = validateHomepageSettings("TRUST_BANNER", { items: [{ title: "Free shipping", description: "Above {freeShippingThreshold}", icon: "truck" }] });
+    expect(parsed.items[0].description).toBe("Above {freeShippingThreshold}");
+  });
+
+  it("allows zero items and more than three", () => {
+    expect(validateHomepageSettings("TRUST_BANNER", { items: [] }).items).toEqual([]);
+    expect(validateHomepageSettings("TRUST_BANNER", { items: Array.from({ length: 8 }, (_, i) => ({ title: `T${i}` })) }).items).toHaveLength(8);
+    expect(() => validateHomepageSettings("TRUST_BANNER", { items: Array.from({ length: 13 }, (_, i) => ({ title: `T${i}` })) })).toThrow();
+  });
+
+  it("rejects bad colours, unknown icons, out-of-range numbers and unsafe URLs", () => {
+    expect(() => validateHomepageSettings("TRUST_BANNER", { backgroundColor: "red", items: [] })).toThrow("#RRGGBB");
+    expect(() => validateHomepageSettings("TRUST_BANNER", { items: [{ title: "x", icon: "skull" }] })).toThrow();
+    expect(() => validateHomepageSettings("TRUST_BANNER", { reviewScore: 6, items: [] })).toThrow();
+    expect(() => validateHomepageSettings("TRUST_BANNER", { borderRadius: 99, items: [] })).toThrow();
+    expect(() => validateHomepageSettings("TRUST_BANNER", { backgroundImage: "javascript:alert(1)", items: [] })).toThrow("relative or http(s)");
+    expect(validateHomepageSettings("TRUST_BANNER", { backgroundColor: "", backgroundImage: "", items: [] })).toMatchObject({ backgroundColor: "" });
+  });
+
+  it("backfills missing keys but never refills an emptied item list", () => {
+    expect(mergeMissingSettings("TRUST_BANNER", { items: [] }).items).toEqual([]);
+    expect(mergeMissingSettings("TRUST_BANNER", {}).items).toHaveLength(4);
+    expect(mergeMissingSettings("TRUST_BANNER", { backgroundColor: "#FFFFFF", items: [] }).backgroundColor).toBe("#FFFFFF");
+  });
+});
