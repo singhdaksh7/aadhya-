@@ -133,6 +133,16 @@ describe("ShoppableReels storefront", () => {
     expect(screen.getByRole("link", { name: "Shop Now" })).toHaveAttribute("href", "/products/clay-vessel");
   });
 
+  it("shows the title and Shop Now on top of the reel, not below it", () => {
+    view([reel("a", { products: [P1] })]);
+    const frame = screen.getByTestId("reel-card").firstElementChild;
+    expect(within(frame).getByText("Reel a")).toBeInTheDocument();
+    const cta = within(frame).getByRole("link", { name: "Shop Now" });
+    expect(cta).toHaveClass("pointer-events-auto");
+    expect(cta.parentElement).toHaveClass("pointer-events-none", "absolute", "bottom-0");
+    expect(screen.getByTestId("reel-card").lastElementChild).toBe(frame);
+  });
+
   it("no linked products: no CTA", () => {
     view([reel("a")]);
     expect(screen.queryByRole("link")).toBeNull();
