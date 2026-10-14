@@ -138,7 +138,7 @@ describe("ShoppableReels storefront", () => {
     const frame = screen.getByTestId("reel-card").firstElementChild;
     expect(within(frame).getByText("Reel a")).toBeInTheDocument();
     const cta = within(frame).getByRole("link", { name: "Shop Now" });
-    expect(cta).toHaveClass("pointer-events-auto");
+    expect(cta).toHaveClass("pointer-events-auto", "store-bg-primary", "uppercase", "tracking-[0.2em]", "text-white");
     expect(cta.parentElement).toHaveClass("pointer-events-none", "absolute", "bottom-0");
     expect(screen.getByTestId("reel-card").lastElementChild).toBe(frame);
   });
