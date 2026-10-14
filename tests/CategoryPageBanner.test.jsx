@@ -56,6 +56,16 @@ describe("category page banner", () => {
     before(tiles, card);
   });
 
+  it("keeps the title block and the banner close together (tight gap, no extra top padding)", async () => {
+    state.categories = [cat({ desktopBanner: "/uploads/products/decor.jpg" })];
+    renderCategory();
+    const banner = await screen.findByTestId("category-banner");
+    const header = screen.getByRole("heading", { level: 1 }).closest("section");
+    expect(banner.parentElement).toBe(header.parentElement);
+    expect(banner.parentElement.className).toContain("space-y-4");
+    expect(banner.className).not.toContain("pt-6");
+  });
+
   it("uses mobileBanner for small screens when present, with desktopBanner as the default image", async () => {
     state.categories = [cat({ desktopBanner: "/uploads/products/d.jpg", mobileBanner: "/uploads/products/m.jpg" })];
     renderCategory();

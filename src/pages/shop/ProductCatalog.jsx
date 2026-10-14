@@ -173,58 +173,61 @@ function CatalogView({
 
   return (
     <div className="store-bg store-text space-y-10 pb-20">
-      {/* Header Banner */}
-      <section className="store-bg pt-8 sm:pt-10">
-        <div className="mx-auto max-w-7xl px-4 sm:px-8">
-          {/* Breadcrumbs */}
-          <nav className="mb-3 flex items-center gap-2 text-xs store-muted">
-            <Link to="/" className="hover:text-[var(--theme-primary)]">Home</Link>
-            <span>/</span>
-            <Link to="/shop" className="hover:text-[var(--theme-primary)]">Shop</Link>
-            {ancestors.map((a) => (
-              <React.Fragment key={a.id}>
-                <span>/</span>
-                <Link to={`/shop/category/${a.slug}`} className="hover:text-[var(--theme-primary)]">{a.name}</Link>
-              </React.Fragment>
-            ))}
-            {activeCategoryObj && (
-              <>
-                <span>/</span>
-                <span className="store-text font-medium">{activeCategoryObj.name}</span>
-              </>
-            )}
-            {activeCollectionObj && (
-              <>
-                <span>/</span>
-                <span className="store-text font-medium">{activeCollectionObj.name}</span>
-              </>
-            )}
-          </nav>
+      {/* Title block and banner sit close together; the page-level section gap applies below the banner. */}
+      <div className="space-y-4 sm:space-y-5">
+        {/* Header Banner */}
+        <section className="store-bg pt-8 sm:pt-10">
+          <div className="mx-auto max-w-7xl px-4 sm:px-8">
+            {/* Breadcrumbs */}
+            <nav className="mb-3 flex items-center gap-2 text-xs store-muted">
+              <Link to="/" className="hover:text-[var(--theme-primary)]">Home</Link>
+              <span>/</span>
+              <Link to="/shop" className="hover:text-[var(--theme-primary)]">Shop</Link>
+              {ancestors.map((a) => (
+                <React.Fragment key={a.id}>
+                  <span>/</span>
+                  <Link to={`/shop/category/${a.slug}`} className="hover:text-[var(--theme-primary)]">{a.name}</Link>
+                </React.Fragment>
+              ))}
+              {activeCategoryObj && (
+                <>
+                  <span>/</span>
+                  <span className="store-text font-medium">{activeCategoryObj.name}</span>
+                </>
+              )}
+              {activeCollectionObj && (
+                <>
+                  <span>/</span>
+                  <span className="store-text font-medium">{activeCollectionObj.name}</span>
+                </>
+              )}
+            </nav>
 
-          <div className="max-w-2xl space-y-2">
-            <span className="text-xs font-semibold uppercase tracking-widest store-primary">
-              {activeCategoryObj?.name || activeCollectionObj?.name || eyebrow}
-            </span>
-            <h1 className="font-serif-display text-3xl sm:text-4xl store-text font-bold">
-              {activeCategoryObj?.name || activeCollectionObj?.name || title}
-            </h1>
-            <p className="text-xs sm:text-sm store-muted leading-relaxed">
-              {activeCategoryObj?.description || activeCollectionObj?.description || description}
-            </p>
+            <div className="max-w-2xl space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-widest store-primary">
+                {activeCategoryObj?.name || activeCollectionObj?.name || eyebrow}
+              </span>
+              <h1 className="font-serif-display text-3xl sm:text-4xl store-text font-bold">
+                {activeCategoryObj?.name || activeCollectionObj?.name || title}
+              </h1>
+              <p className="text-xs sm:text-sm store-muted leading-relaxed">
+                {activeCategoryObj?.description || activeCollectionObj?.description || description}
+              </p>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Optional category banner (own banner, else the nearest ancestor's). Sits below the title/description and above the subcategories. */}
-      {activeCategoryObj && bannerSet.slides.length > 0 && (
-        <CategoryBannerCarousel
-          key={activeCategoryObj.id}
-          slides={bannerSet.slides}
-          autoplay={bannerSet.autoplay}
-          intervalMs={bannerSet.intervalMs}
-          categoryName={activeCategoryObj.name}
-        />
-      )}
+        {/* Optional category banner (own banner, else the nearest ancestor's). Sits below the title/description and above the subcategories. */}
+        {activeCategoryObj && bannerSet.slides.length > 0 && (
+          <CategoryBannerCarousel
+            key={activeCategoryObj.id}
+            slides={bannerSet.slides}
+            autoplay={bannerSet.autoplay}
+            intervalMs={bannerSet.intervalMs}
+            categoryName={activeCategoryObj.name}
+          />
+        )}
+      </div>
 
       {/* Subcategories: under the banner, above the products. */}
       {childCategories.length > 0 && (

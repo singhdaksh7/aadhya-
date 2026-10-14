@@ -64,7 +64,7 @@ export default function CategoryBannerCarousel({ slides = [], autoplay = false, 
 
   if (count === 1) {
     return (
-      <section data-testid="category-banner" className="mx-auto w-full max-w-7xl px-4 pt-6 sm:px-8">
+      <section data-testid="category-banner" className="mx-auto w-full max-w-7xl px-4 sm:px-8">
         <div className={frame}>
           <SlideImage slide={slides[0]} alt={alt(slides[0])} first />
           {overlay(slides[0])}
@@ -86,7 +86,7 @@ export default function CategoryBannerCarousel({ slides = [], autoplay = false, 
       data-testid="category-banner"
       aria-roledescription="carousel"
       aria-label={`${categoryName} banners`}
-      className="mx-auto w-full max-w-7xl px-4 pt-6 sm:px-8"
+      className="mx-auto w-full max-w-7xl px-4 sm:px-8"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}
