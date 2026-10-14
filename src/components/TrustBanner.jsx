@@ -70,7 +70,29 @@ function Summary({ config, dark }) {
   );
 }
 
+// Image-only mode: one uploaded picture (optional mobile version) and nothing else. A missing or broken image hides the section.
+function ImageOnlyBanner({ config }) {
+  const [broken, setBroken] = useState(false);
+  const desktop = config.bannerImage ? resolveMediaUrl(config.bannerImage) : "";
+  const mobile = config.bannerMobileImage ? resolveMediaUrl(config.bannerMobileImage) : "";
+  if (!desktop || broken) return null;
+  const radius = `${Number.isFinite(config.borderRadius) ? config.borderRadius : 24}px`;
+  return (
+    <section data-testid="trust-banner" data-image-only="true" className="mx-auto mt-4 max-w-7xl px-4 sm:mt-6 sm:px-8">
+      <picture>
+        {mobile && <source media="(max-width: 639px)" srcSet={mobile} />}
+        <img src={desktop} alt={(config.bannerAlt || "").trim()} decoding="async" onError={() => setBroken(true)} style={{ borderRadius: radius }} className="block h-auto w-full" />
+      </picture>
+    </section>
+  );
+}
+
 export default function TrustBanner({ config = {} }) {
+  if (config.imageOnly === true) return <ImageOnlyBanner config={config} />;
+  return <TrustBannerContent config={config} />;
+}
+
+function TrustBannerContent({ config }) {
   const ctx = commercialContext(useSiteSettings());
   const bg = HEX.test(config.backgroundColor || "") ? config.backgroundColor : DEFAULT_BG;
   const dark = isDark(bg);
