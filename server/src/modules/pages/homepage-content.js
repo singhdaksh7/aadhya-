@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ApiError } from "../../utils/ApiError.js";
+import { howWeWorkSchema, HOW_WE_WORK_DEFAULTS } from "./how-we-work-content.js";
 
 export const SAFE_ICONS = ["sparkles", "badge", "home", "shield", "leaf", "heart"];
 const safeUrl = z.string().trim().max(2048).refine((value) => value.startsWith("/") || /^https?:\/\//i.test(value), "Must be a relative or http(s) URL");
@@ -14,6 +15,7 @@ const headingAlign = z.enum(["LEFT", "CENTER"]).optional();
 const item = z.object({ id: optionalText(100), enabled: z.boolean().optional(), sortOrder: z.number().int().min(0).max(1000).optional() });
 
 const rawSchemas = {
+  HOW_WE_WORK: howWeWorkSchema,
   TRUST_STRIP: z.object({
     background: z.enum(["SURFACE", "PLAIN"]).optional(),
     showDividers: z.boolean().optional(),
@@ -49,6 +51,7 @@ export const DEMO_REVIEWS = [
 ];
 
 export const DEFAULT_HOMEPAGE_CONTENT = {
+  HOW_WE_WORK: HOW_WE_WORK_DEFAULTS,
   TRUST_STRIP: { background: "SURFACE", showDividers: true, desktopColumns: 4, mobileLayout: "STACKED", spacing: "NORMAL", items: [
     { id: "trust-1", title: "Thoughtfully Curated", description: "Hand-selected slow design objects for mindful living", icon: "sparkles", enabled: true, sortOrder: 1 },
     { id: "trust-2", title: "Premium Quality", description: "Authentic materials from Indian craft clusters", icon: "badge", enabled: true, sortOrder: 2 },
