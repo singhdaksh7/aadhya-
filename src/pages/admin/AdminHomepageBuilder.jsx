@@ -22,6 +22,7 @@ const SECTION_TYPE_LABELS = {
   CATEGORY_CIRCLES: "Circular Category Bar",
   TRUST_BADGES: "Trust & Service Strip",
   TRUST_BANNER: "Compact Trust Banner",
+  OUR_JOURNEY: "Our Journey Timeline",
   NEW_ARRIVALS: "New Arrivals Grid",
   MULTI_BANNER: "2-Up Promo Banners",
   BEST_SELLERS: "Best Sellers Grid",
