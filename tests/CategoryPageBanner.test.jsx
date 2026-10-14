@@ -25,7 +25,7 @@ const cat = (extra = {}) => ({ id: "c1", name: "Home Decor", slug: "home-decor",
 describe("category page banner", () => {
   beforeEach(() => { state.categories = []; });
 
-  it("renders the desktop banner above the breadcrumbs/title when set", async () => {
+  it("renders the title and breadcrumbs first, then the desktop banner, then the products", async () => {
     state.categories = [cat({ desktopBanner: "/uploads/products/decor.jpg" })];
     renderCategory();
     const banner = await screen.findByTestId("category-banner");
@@ -35,8 +35,25 @@ describe("category page banner", () => {
     expect(banner.querySelector("source")).toBeNull();
     const heading = screen.getByRole("heading", { level: 1 });
     expect(heading.textContent).toBe("Home Decor");
-    expect(banner.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(await screen.findByTestId("product-card")).toBeInTheDocument();
+    // Order: breadcrumbs + title + description, then the banner, then the products.
+    expect(heading.compareDocumentPosition(banner) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const card = await screen.findByTestId("product-card");
+    expect(banner.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("orders the page: breadcrumb/title/description, banner, subcategories, then products", async () => {
+    state.categories = [cat({ desktopBanner: "/uploads/products/decor.jpg", children: [{ id: "c2", name: "Vases", slug: "vases", parentId: "c1", isActive: true }] }), { id: "c2", name: "Vases", slug: "vases", parentId: "c1", isActive: true, children: [] }];
+    renderCategory();
+    const banner = await screen.findByTestId("category-banner");
+    const heading = screen.getByRole("heading", { level: 1 });
+    const description = screen.getByText("Objects for the home");
+    const tiles = await screen.findByTestId("subcategory-tiles");
+    const card = await screen.findByTestId("product-card");
+    const before = (a, b) => expect(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    before(heading, description);
+    before(description, banner);
+    before(banner, tiles);
+    before(tiles, card);
   });
 
   it("uses mobileBanner for small screens when present, with desktopBanner as the default image", async () => {

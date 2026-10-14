@@ -173,19 +173,8 @@ function CatalogView({
 
   return (
     <div className="store-bg store-text space-y-10 pb-20">
-      {/* Optional category banner: own banner, else the nearest ancestor's. The text header below is unchanged and still renders when none is set. */}
-      {activeCategoryObj && bannerSet.slides.length > 0 && (
-        <CategoryBannerCarousel
-          key={activeCategoryObj.id}
-          slides={bannerSet.slides}
-          autoplay={bannerSet.autoplay}
-          intervalMs={bannerSet.intervalMs}
-          categoryName={activeCategoryObj.name}
-        />
-      )}
-
       {/* Header Banner */}
-      <section className="store-bg border-b border-[var(--theme-border)] py-10 sm:py-14">
+      <section className="store-bg pt-8 sm:pt-10">
         <div className="mx-auto max-w-7xl px-4 sm:px-8">
           {/* Breadcrumbs */}
           <nav className="mb-3 flex items-center gap-2 text-xs store-muted">
@@ -222,33 +211,49 @@ function CatalogView({
             <p className="text-xs sm:text-sm store-muted leading-relaxed">
               {activeCategoryObj?.description || activeCollectionObj?.description || description}
             </p>
-
-            {/* Subcategory tiles: own image, else inherited from the parent, else a neutral initial */}
-            {childCategories.length > 0 && (
-              <div data-testid="subcategory-tiles" className="mt-4 border-t border-[var(--theme-border)] pt-4">
-                <span className="text-xs font-semibold store-muted uppercase tracking-wider">Subcategories</span>
-                <div className="mt-3 flex flex-wrap gap-x-4 gap-y-4">
-                  {childCategories.map((sub) => {
-                    const thumb = resolveCategoryThumb(sub, categoryIndex);
-                    return (
-                      <Link key={sub.id} to={`/shop/category/${sub.slug}`} data-testid="subcategory-tile" className="group flex w-20 flex-col items-center gap-2 text-center">
-                        <span className="relative h-16 w-16 overflow-hidden rounded-full border border-[var(--theme-border)] store-surface transition group-hover:border-[var(--theme-primary)]">
-                          {thumb ? (
-                            <img src={resolveMediaUrl(thumb)} alt="" loading="lazy" className="h-full w-full object-cover" />
-                          ) : (
-                            <span className="flex h-full w-full items-center justify-center font-serif-display text-lg store-muted">{sub.name.charAt(0)}</span>
-                          )}
-                        </span>
-                        <span className="text-xs font-medium leading-tight store-text transition group-hover:text-[var(--theme-primary)]">{sub.name}</span>
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </section>
+
+      {/* Optional category banner (own banner, else the nearest ancestor's). Sits below the title/description and above the subcategories. */}
+      {activeCategoryObj && bannerSet.slides.length > 0 && (
+        <CategoryBannerCarousel
+          key={activeCategoryObj.id}
+          slides={bannerSet.slides}
+          autoplay={bannerSet.autoplay}
+          intervalMs={bannerSet.intervalMs}
+          categoryName={activeCategoryObj.name}
+        />
+      )}
+
+      {/* Subcategories: under the banner, above the products. */}
+      {childCategories.length > 0 && (
+        <section data-testid="subcategory-section" className="mx-auto max-w-7xl px-4 sm:px-8">
+          {/* Subcategory tiles: own image, else inherited from the parent, else a neutral initial */}
+          {(
+            <div data-testid="subcategory-tiles" className="border-t border-[var(--theme-border)] pt-4">
+              <span className="text-xs font-semibold store-muted uppercase tracking-wider">Subcategories</span>
+              <div className="mt-3 flex flex-wrap gap-x-4 gap-y-4">
+                {childCategories.map((sub) => {
+                  const thumb = resolveCategoryThumb(sub, categoryIndex);
+                  return (
+                    <Link key={sub.id} to={`/shop/category/${sub.slug}`} data-testid="subcategory-tile" className="group flex w-20 flex-col items-center gap-2 text-center">
+                      <span className="relative h-16 w-16 overflow-hidden rounded-full border border-[var(--theme-border)] store-surface transition group-hover:border-[var(--theme-primary)]">
+                        {thumb ? (
+                          <img src={resolveMediaUrl(thumb)} alt="" loading="lazy" className="h-full w-full object-cover" />
+                        ) : (
+                          <span className="flex h-full w-full items-center justify-center font-serif-display text-lg store-muted">{sub.name.charAt(0)}</span>
+                        )}
+                      </span>
+                      <span className="text-xs font-medium leading-tight store-text transition group-hover:text-[var(--theme-primary)]">{sub.name}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </section>
+      )}
 
       {beforeCatalog}
 
