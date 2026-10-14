@@ -30,6 +30,7 @@ export default function AdminSettings() {
   const [activeTab, setActiveTab] = useState("general");
   const [status, setStatus] = useState("loading");
   const [settings, setSettings] = useState(DEFAULT_SITE_SETTINGS);
+  const setCredit = (patch) => setSettings((s) => ({ ...s, footer: { ...s.footer, credit: { ...s.footer?.credit, ...patch } } }));
   const [pages, setPages] = useState([]);
   const [error, setError] = useState(null);
   const [saved, setSaved] = useState(false);
@@ -626,6 +627,41 @@ export default function AdminSettings() {
                 }
                 className={inputCls}
               />
+            </div>
+
+            <div className="space-y-4 rounded-xl border border-charcoal/10 p-4" data-testid="footer-credit-settings">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-charcoal">Website credit (bottom of footer)</h3>
+              <label className="flex items-center gap-2 text-xs font-medium text-charcoal cursor-pointer">
+                <input
+                  type="checkbox"
+                  aria-label="Show website credit"
+                  checked={settings.footer?.credit?.enabled !== false}
+                  onChange={(e) => setCredit({ enabled: e.target.checked })}
+                />
+                Show the website credit in the footer
+              </label>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Text before the name</label>
+                  <input aria-label="Credit text" placeholder="Website by" value={settings.footer?.credit?.prefix ?? ""} onChange={(e) => setCredit({ prefix: e.target.value })} className={inputCls} />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Name</label>
+                  <input aria-label="Credit name" placeholder="Digital Clik" value={settings.footer?.credit?.name ?? ""} onChange={(e) => setCredit({ name: e.target.value })} className={inputCls} />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Link (optional)</label>
+                  <input aria-label="Credit link" placeholder="https://..." value={settings.footer?.credit?.url ?? ""} onChange={(e) => setCredit({ url: e.target.value })} className={inputCls} />
+                </div>
+                <div className="sm:col-span-2">
+                  <ImagePickerInput
+                    label="Logo (optional, shown before the name)"
+                    value={settings.footer?.credit?.logo || ""}
+                    onChange={(url) => setCredit({ logo: url })}
+                    pickerTitle="Select credit logo"
+                  />
+                </div>
+              </div>
             </div>
           </div>
         )}
