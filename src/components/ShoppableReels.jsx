@@ -52,25 +52,52 @@ function ShopTray({ reel, onClose }) {
   );
 }
 
-function ReelCard({ reel, active, onActivate, onDeactivate, onShop }) {
+// Autoplay is skipped for visitors who asked for reduced motion or Save-Data; they get a play button instead.
+const autoplayAllowed = () => {
+  if (typeof window === "undefined") return false;
+  if (window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) return false;
+  return navigator.connection?.saveData !== true;
+};
+
+function ReelCard({ reel, soundOn, onSound, onShop }) {
   const cardRef = useRef(null);
   const videoRef = useRef(null);
-  const [soundOn, setSoundOn] = useState(false);
-  const muted = !(active && soundOn);
+  const [inView, setInView] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const [started, setStarted] = useState(autoplayAllowed); // false => wait for an explicit tap
   const title = reel.title || "Reel";
   const products = reel.products || [];
   const cover = reel.coverImage ? resolveMediaUrl(reel.coverImage) : "";
   const playable = Boolean(reel.videoUrl);
+  const muted = !soundOn;
+  const playing = inView && started && !paused;
 
-  // Pause (and unload) the video as soon as the card scrolls out of view.
+  // The video element only exists once the card has actually scrolled into view (no eager downloads),
+  // plays while at least 40% visible and pauses when it leaves the screen.
   useEffect(() => {
-    if (!active || typeof IntersectionObserver === "undefined" || !cardRef.current) return undefined;
-    const observer = new IntersectionObserver(([entry]) => { if (entry && entry.intersectionRatio < 0.25) onDeactivate(); }, { threshold: [0, 0.25, 0.5] });
+    if (!playable || typeof IntersectionObserver === "undefined" || !cardRef.current) return undefined;
+    const observer = new IntersectionObserver(([entry]) => {
+      const visible = Boolean(entry) && entry.intersectionRatio >= 0.4;
+      setInView(visible);
+      if (visible) setLoaded(true);
+    }, { threshold: [0, 0.4, 0.75] });
     observer.observe(cardRef.current);
     return () => observer.disconnect();
-  }, [active, onDeactivate]);
+  }, [playable]);
 
-  useEffect(() => { if (active) videoRef.current?.play?.()?.catch?.(() => {}); }, [active]);
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.muted = muted;
+    if (playing) video.play?.()?.catch?.(() => setPaused(true)); // browser refused autoplay: show the play button
+    else video.pause?.();
+  }, [playing, muted, loaded]);
+
+  const toggle = () => {
+    setLoaded(true);
+    if (!started) { setStarted(true); setPaused(false); } else setPaused((current) => !current);
+  };
 
   const single = products.length === 1;
   const cta = reel.ctaLabel || "Shop Now";
@@ -80,16 +107,16 @@ function ReelCard({ reel, active, onActivate, onDeactivate, onShop }) {
     <article ref={cardRef} data-testid="reel-card" className="w-[64%] shrink-0 snap-start sm:w-[36%] md:w-[26%] lg:w-[19.2%]">
       <div className="relative aspect-[9/16] overflow-hidden rounded-2xl store-surface">
         {cover ? <img src={cover} alt={reel.title ? `${reel.title} cover` : ""} loading="lazy" className="absolute inset-0 h-full w-full object-cover" /> : <div data-testid="reel-fallback" aria-hidden="true" className="absolute inset-0 flex items-center justify-center store-muted"><svg viewBox="0 0 24 24" className="h-10 w-10 opacity-40" fill="currentColor"><path d="M8 5v14l11-7z" /></svg></div>}
-        {active && playable && (
-          <video ref={videoRef} data-testid="reel-video" src={resolveMediaUrl(reel.videoUrl)} poster={cover || undefined} muted={muted} loop playsInline preload="metadata" aria-label={title} className="absolute inset-0 h-full w-full bg-black object-cover" />
+        {playable && loaded && (
+          <video ref={videoRef} data-testid="reel-video" src={resolveMediaUrl(reel.videoUrl)} poster={cover || undefined} muted loop playsInline autoPlay={started && playing} preload="metadata" aria-label={title} className="absolute inset-0 h-full w-full object-cover" />
         )}
         {playable && (
-          <button type="button" onClick={() => { if (active) onDeactivate(); else { setSoundOn(false); onActivate(); } }} aria-label={active ? `Stop ${title}` : `Play ${title}`} aria-pressed={active} className="absolute inset-0 flex items-center justify-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-4px]">
-            {!active && <span aria-hidden="true" className="flex h-12 w-12 items-center justify-center rounded-full bg-white/85 text-charcoal shadow-md"><svg viewBox="0 0 24 24" className="ml-0.5 h-5 w-5" fill="currentColor"><path d="M8 5v14l11-7z" /></svg></span>}
+          <button type="button" onClick={toggle} aria-label={playing ? `Pause ${title}` : `Play ${title}`} aria-pressed={playing} className="absolute inset-0 flex items-center justify-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-4px]">
+            {!playing && <span aria-hidden="true" className="flex h-12 w-12 items-center justify-center rounded-full bg-white/85 text-charcoal shadow-md"><svg viewBox="0 0 24 24" className="ml-0.5 h-5 w-5" fill="currentColor"><path d="M8 5v14l11-7z" /></svg></span>}
           </button>
         )}
-        {active && playable && (
-          <button type="button" onClick={() => setSoundOn((on) => !on)} aria-label={muted ? "Turn sound on" : "Turn sound off"} className="absolute bottom-3 right-3 rounded-full bg-black/60 px-3 py-1 text-[11px] font-semibold text-white">{muted ? "Sound off" : "Sound on"}</button>
+        {playable && loaded && (
+          <button type="button" onClick={onSound} aria-label={muted ? "Turn sound on" : "Turn sound off"} className="absolute bottom-3 right-3 rounded-full bg-black/60 px-3 py-1 text-[11px] font-semibold text-white">{muted ? "Sound off" : "Sound on"}</button>
         )}
       </div>
       {reel.title && <h3 className="mt-3 line-clamp-2 text-sm font-medium store-text">{reel.title}</h3>}
@@ -103,7 +130,7 @@ export default function ShoppableReels({ section }) {
   const s = section?.settings || {};
   const reels = (Array.isArray(s.reels) ? s.reels : []).filter(isLive);
   const scrollRef = useRef(null);
-  const [activeId, setActiveId] = useState(null);
+  const [soundId, setSoundId] = useState(null); // only one reel is ever unmuted
   const [trayReel, setTrayReel] = useState(null);
   const closeTray = useCallback(() => setTrayReel(null), []);
   if (reels.length === 0) return null;
@@ -117,7 +144,7 @@ export default function ShoppableReels({ section }) {
         <div ref={scrollRef} className="no-scrollbar flex snap-x gap-4 overflow-x-auto scroll-smooth pb-1 sm:gap-5">
           {reels.map((reel, index) => {
             const id = reel.id || `reel-${index}`;
-            return <ReelCard key={id} reel={{ ...reel, products: reel.products || [] }} active={activeId === id} onActivate={() => setActiveId(id)} onDeactivate={() => setActiveId((current) => (current === id ? null : current))} onShop={() => { setActiveId(null); setTrayReel(reel); }} />;
+            return <ReelCard key={id} reel={{ ...reel, products: reel.products || [] }} soundOn={soundId === id} onSound={() => setSoundId((current) => (current === id ? null : id))} onShop={() => setTrayReel(reel)} />;
           })}
         </div>
         {s.showArrows !== false && <button type="button" aria-label="Next reels" onClick={() => slide(1)} className={`${arrow} -right-3`}>&rarr;</button>}
