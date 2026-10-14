@@ -99,7 +99,7 @@ export function SeoBand({ sections }) {
                       |
                     </span>
                   )}
-                  <SafeFooterLink url={l.url} className="hover:text-white transition">
+                  <SafeFooterLink url={l.url} className="inline-block max-w-full align-baseline hover:text-white transition">
                     {l.label}
                   </SafeFooterLink>
                 </React.Fragment>
