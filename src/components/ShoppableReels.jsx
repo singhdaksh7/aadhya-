@@ -101,7 +101,7 @@ function ReelCard({ reel, soundOn, onSound, onShop }) {
 
   const single = products.length === 1;
   const cta = reel.ctaLabel || "Shop Now";
-  const ctaCls = "mt-3 inline-flex w-full items-center justify-center rounded-full border store-border px-4 py-2.5 text-xs font-semibold uppercase tracking-wider store-text transition hover:border-[var(--theme-primary)] hover:store-primary";
+  const ctaCls = "pointer-events-auto mt-2.5 inline-flex w-full items-center justify-center rounded-full bg-white/95 px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-charcoal shadow-sm transition hover:bg-white";
 
   return (
     <article ref={cardRef} data-testid="reel-card" className="w-[64%] shrink-0 snap-start sm:w-[36%] md:w-[26%] lg:w-[19.2%]">
@@ -116,12 +116,16 @@ function ReelCard({ reel, soundOn, onSound, onShop }) {
           </button>
         )}
         {playable && loaded && (
-          <button type="button" onClick={onSound} aria-label={muted ? "Turn sound on" : "Turn sound off"} className="absolute bottom-3 right-3 rounded-full bg-black/60 px-3 py-1 text-[11px] font-semibold text-white">{muted ? "Sound off" : "Sound on"}</button>
+          <button type="button" onClick={onSound} aria-label={muted ? "Turn sound on" : "Turn sound off"} className="absolute right-3 top-3 z-10 rounded-full bg-black/60 px-3 py-1 text-[11px] font-semibold text-white">{muted ? "Sound off" : "Sound on"}</button>
+        )}
+        {(reel.title || single || products.length > 1) && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/75 via-black/35 to-transparent p-3 pt-14 text-white">
+            {reel.title && <h3 className="line-clamp-2 text-sm font-medium leading-snug drop-shadow">{reel.title}</h3>}
+            {single && <Link to={productPath(products[0])} className={ctaCls}>{cta}</Link>}
+            {products.length > 1 && <button type="button" onClick={onShop} aria-haspopup="dialog" className={ctaCls}>{cta}</button>}
+          </div>
         )}
       </div>
-      {reel.title && <h3 className="mt-3 line-clamp-2 text-sm font-medium store-text">{reel.title}</h3>}
-      {single && <Link to={productPath(products[0])} className={ctaCls}>{cta}</Link>}
-      {products.length > 1 && <button type="button" onClick={onShop} aria-haspopup="dialog" className={ctaCls}>{cta}</button>}
     </article>
   );
 }
