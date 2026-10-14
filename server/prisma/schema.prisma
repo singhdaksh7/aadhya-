@@ -165,6 +165,10 @@ model Category {
   logo           String?
   desktopBanner  String?
   mobileBanner   String?
+  // Multi-banner carousel (additive). Legacy desktopBanner/mobileBanner act as banner #1 when `banners` is null/empty.
+  banners          Json?
+  bannerAutoplay   Boolean  @default(true)
+  bannerIntervalMs Int      @default(5000)
   isFeatured     Boolean  @default(false)
   isActive       Boolean  @default(true)
   sortOrder      Int      @default(0)

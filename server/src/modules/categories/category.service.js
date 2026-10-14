@@ -102,6 +102,17 @@ export async function getCategoryBySlug(slug) {
   return category;
 }
 
+// Json columns need Prisma.DbNull-free handling: store [] instead of null so reads are uniform.
+function bannerData(input, isCreate) {
+  const out = {};
+  if (input.banners !== undefined || isCreate) {
+    out.banners = (input.banners ?? []).map((b, i) => ({ ...b, sortOrder: b.sortOrder ?? i }));
+  }
+  if (input.bannerAutoplay !== undefined) out.bannerAutoplay = input.bannerAutoplay;
+  if (input.bannerIntervalMs !== undefined) out.bannerIntervalMs = input.bannerIntervalMs;
+  return out;
+}
+
 export async function createCategory(input) {
   const baseSlug = slugify(input.slug || input.name);
   const slug = await ensureUniqueSlug(baseSlug);
@@ -123,6 +134,7 @@ export async function createCategory(input) {
       logo: input.logo ?? null,
       desktopBanner: input.desktopBanner ?? null,
       mobileBanner: input.mobileBanner ?? null,
+      ...bannerData(input, true),
       isFeatured: input.isFeatured ?? false,
       isActive: input.isActive ?? true,
       sortOrder: input.sortOrder ?? 0,
@@ -164,6 +176,7 @@ export async function updateCategory(id, input) {
       ...(input.logo !== undefined ? { logo: input.logo } : {}),
       ...(input.desktopBanner !== undefined ? { desktopBanner: input.desktopBanner } : {}),
       ...(input.mobileBanner !== undefined ? { mobileBanner: input.mobileBanner } : {}),
+      ...bannerData(input, false),
       ...(input.isFeatured !== undefined ? { isFeatured: input.isFeatured } : {}),
       ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
       ...(input.sortOrder !== undefined ? { sortOrder: input.sortOrder } : {}),
