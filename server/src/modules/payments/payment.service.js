@@ -105,7 +105,9 @@ export async function verifyRazorpayWebhookSignature(rawBody, signatureHeader) {
   const config = await (await import("./razorpay.client.js")).getRazorpayConfig();
   if (!config?.webhookSecret) return false;
   const expected = crypto.createHmac("sha256", config.webhookSecret).update(rawBody).digest("hex");
-  if (expected.length !== signatureHeader.length) return false;
+  // Razorpay signatures are 64 hex chars. Anything else is rejected up front so a
+  // malformed header can never reach timingSafeEqual (which throws on length mismatch).
+  if (typeof signatureHeader !== "string" || !/^[0-9a-f]{64}$/i.test(signatureHeader)) return false;
   return crypto.timingSafeEqual(Buffer.from(expected, "hex"), Buffer.from(signatureHeader, "hex"));
 }
 

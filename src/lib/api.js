@@ -400,6 +400,15 @@ export async function downloadAccountInvoice(id) { const res = await fetch(`${AP
 export function adminGetIntegrationStatus() { return api.get("/admin/integrations", { auth: "admin" }); }
 export function adminSaveIntegration(data) { return api.put("/admin/integrations/credentials", data, { auth: "admin" }); }
 export function adminTestIntegration(provider, environment) { return api.post(`/admin/integrations/${provider}/${environment}/test`, {}, { auth: "admin" }); }
+export function adminDeleteIntegration(provider, environment) { return api.delete(`/admin/integrations/${provider}/${environment}`, { auth: "admin" }); }
+export function adminRazorpaySummary() { return api.get("/admin/integrations/razorpay/summary", { auth: "admin" }); }
+export function adminRazorpaySave(data) { return api.put("/admin/integrations/razorpay/credentials", data, { auth: "admin" }); }
+export function adminRazorpayTest(environment) { return api.post("/admin/integrations/razorpay/test", { environment }, { auth: "admin" }); }
+export function adminRazorpaySetMode(environment) { return api.post("/admin/integrations/razorpay/mode", { environment, confirm: true }, { auth: "admin" }); }
+export function adminRazorpayGenerateWebhookSecret(environment) { return api.post("/admin/integrations/razorpay/webhook-secret/generate", { environment }, { auth: "admin" }); }
+export function adminRazorpayRemoveWebhookSecret(environment) { return api.delete(`/admin/integrations/razorpay/webhook-secret?environment=${encodeURIComponent(environment)}`, { auth: "admin" }); }
+export function adminRazorpayVerifySetup() { return api.post("/admin/integrations/razorpay/verify-setup", {}, { auth: "admin" }); }
+export function adminRazorpayWebhookEvents(limit = 25) { return api.get(`/admin/integrations/razorpay/webhook-events?limit=${limit}`, { auth: "admin" }); }
 
 export function adminGetEmailStatus() { return api.get("/admin/email/status", { auth: "admin" }); }
 export function adminSendTestEmail(recipient) { return api.post("/admin/email/test", { recipient }, { auth: "admin" }); }

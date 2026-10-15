@@ -925,6 +925,22 @@ model WebhookEvent {
   @@unique([provider, eventId])
 }
 
+// One row per inbound webhook delivery (including rejected ones) so Admin can
+// see integration health. Never stores payload bodies, signatures or secrets.
+model WebhookDeliveryLog {
+  id              String   @id @default(uuid())
+  provider        String
+  eventType       String?
+  eventId         String?
+  signatureResult String
+  result          String
+  reference       String?
+  errorSummary    String?
+  createdAt       DateTime @default(now())
+
+  @@index([provider, createdAt])
+}
+
 model SiteSetting {
   key       String   @id
   value     Json

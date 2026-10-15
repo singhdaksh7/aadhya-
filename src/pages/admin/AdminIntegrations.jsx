@@ -14,6 +14,7 @@ import {
   adminRetryEmailLog,
 } from "../../lib/api";
 import { PageHeader, AdminCard, StatusBadge } from "../../components/admin/ui";
+import RazorpayPanel from "../../components/admin/integrations/RazorpayPanel";
 
 const initialBusiness = {
   provider: "MANUAL",
@@ -65,9 +66,6 @@ export default function AdminIntegrations() {
   const [status, setStatus] = useState(null);
   const [message, setMessage] = useState("");
   const [business, setBusiness] = useState(initialBusiness);
-  const [razorpay, setRazorpay] = useState({ environment: "TEST", keyId: "", keySecret: "", webhookSecret: "" });
-  const [razorpayErrors, setRazorpayErrors] = useState({});
-  const [testingRazorpay, setTestingRazorpay] = useState(false);
   const [shiprocket, setShiprocket] = useState({
     environment: "TEST",
     apiEmail: "",
@@ -158,7 +156,6 @@ export default function AdminIntegrations() {
   };
 
   const findCred = (provider) => status?.credentials?.find((x) => x.provider === provider);
-  const razorpayCred = findCred("RAZORPAY");
   const shiprocketCred = findCred("SHIPROCKET");
 
   return (
@@ -166,7 +163,7 @@ export default function AdminIntegrations() {
       <PageHeader
         eyebrow="Operations"
         title="Integrations"
-        description="Payment and shipping providers. Secrets are never displayed after save."
+        description="Payment, shipping and email providers. Secrets are write-only: they can be replaced but never displayed after save."
         actions={
           <Link to="/admin/shipping" className="admin-btn admin-btn--ghost">
             Shipping
@@ -179,102 +176,9 @@ export default function AdminIntegrations() {
         </p>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <ProviderCard
-          name="Razorpay"
-          configured={Boolean(razorpayCred?.configured)}
-          environment={razorpay.environment}
-          testStatus={razorpayCred?.testStatus}
-          lastTestedAt={razorpayCred?.lastTestedAt}
-        >
-          <form
-            onSubmit={async (e) => {
-              e.preventDefault();
-              setRazorpayErrors({});
-              try {
-                await adminSaveIntegration({
-                  provider: "RAZORPAY",
-                  environment: razorpay.environment,
-                  data: {
-                    keyId: razorpay.keyId.trim(),
-                    keySecret: razorpay.keySecret.trim(),
-                    webhookSecret: razorpay.webhookSecret.trim(),
-                  },
-                });
-                setMessage("Razorpay credentials saved securely.");
-                setRazorpay((v) => ({ ...v, keySecret: "", webhookSecret: "" }));
-                load();
-              } catch (err) {
-                setMessage(err.message);
-                if (err.details && typeof err.details === "object") setRazorpayErrors(err.details);
-              }
-            }}
-            className="admin-form-grid sm:grid-cols-2"
-          >
-            <label className="admin-label">
-              Environment
-              <select
-                className="admin-select"
-                value={razorpay.environment}
-                onChange={(e) => setRazorpay({ ...razorpay, environment: e.target.value })}
-              >
-                <option>TEST</option>
-                <option>LIVE</option>
-              </select>
-              {razorpayErrors.environment && (
-                <span role="alert" className="mt-1 block text-xs text-terracotta">
-                  {razorpayErrors.environment}
-                </span>
-              )}
-            </label>
-            <Input
-              label="Key ID"
-              value={razorpay.keyId}
-              required
-              error={razorpayErrors.keyId}
-              onChange={(e) => setRazorpay({ ...razorpay, keyId: e.target.value })}
-            />
-            <Input
-              label="Key Secret"
-              type="password"
-              value={razorpay.keySecret}
-              required
-              error={razorpayErrors.keySecret}
-              onChange={(e) => setRazorpay({ ...razorpay, keySecret: e.target.value })}
-            />
-            <Input
-              label="Webhook secret"
-              type="password"
-              value={razorpay.webhookSecret}
-              required
-              error={razorpayErrors.webhookSecret}
-              onChange={(e) => setRazorpay({ ...razorpay, webhookSecret: e.target.value })}
-            />
-            <div className="flex flex-wrap items-end gap-2 sm:col-span-2">
-              <button className="admin-btn admin-btn--primary">Save Razorpay</button>
-              <button
-                type="button"
-                disabled={testingRazorpay}
-                onClick={async () => {
-                  setTestingRazorpay(true);
-                  try {
-                    await adminTestIntegration("RAZORPAY", razorpay.environment);
-                    setMessage("Connection test completed.");
-                    load();
-                  } catch (err) {
-                    setMessage(err.message);
-                  } finally {
-                    setTestingRazorpay(false);
-                  }
-                }}
-                className="admin-btn admin-btn--ghost"
-              >
-                {testingRazorpay ? "Testing…" : "Test Connection"}
-              </button>
-            </div>
-          </form>
-        </ProviderCard>
+      <RazorpayPanel onChanged={load} />
 
+      <div className="grid gap-4 lg:grid-cols-2">
         <ProviderCard
           name="Shiprocket"
           configured={Boolean(shiprocketCred?.configured)}
