@@ -18,6 +18,9 @@ export const env = {
   trustProxy: Number.isInteger(Number(process.env.TRUST_PROXY)) && process.env.TRUST_PROXY !== "" ? Number(process.env.TRUST_PROXY) : process.env.NODE_ENV === "production" ? 1 : 0,
   port: Number(process.env.PORT || 4000),
   frontendUrl: process.env.FRONTEND_URL || "http://localhost:5173",
+  // Optional explicit public API origin (e.g. https://api.example.com). When unset the
+  // Admin webhook URL is derived from the incoming request's host instead.
+  apiPublicUrl: (process.env.API_PUBLIC_URL || "").replace(/\/+$/, ""),
   databaseUrl: required("DATABASE_URL"),
   jwt: {
     accessSecret: required("JWT_ACCESS_SECRET"),
