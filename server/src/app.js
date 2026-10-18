@@ -34,7 +34,9 @@ export function createApp() {
   if (!env.isTest) app.use(morgan(env.isProduction ? "combined" : "dev"));
 
   app.use("/api", publicReadLimiter, adminApiLimiter, apiLimiter);
-  app.use("/uploads/products", express.static(uploadRootDir));
+  // Upload filenames are random UUIDs and files are never rewritten in place, so a URL's content
+// never changes: let browsers/CDNs keep them for 30 days instead of revalidating every view.
+  app.use("/uploads/products", express.static(uploadRootDir, { maxAge: "30d", immutable: true }));
   app.use("/api", routes);
 
   app.use(notFoundHandler);
