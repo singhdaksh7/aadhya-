@@ -489,16 +489,20 @@ export default function ProductDetail() {
             )}
 
             {/* Trust Guarantees */}
-            <div className="border-t border-[var(--theme-border)] pt-4 grid grid-cols-2 gap-3 text-xs store-muted">
-              <div className="flex items-center gap-2">
-                <span className="store-primary font-bold">✓</span>
-                <span>100% Artisan Handcrafted</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="store-primary font-bold">✓</span>
-                <span>Pan-India Insured Transit</span>
-              </div>
-            </div>
+            {(() => {
+              const c = commercialContext(siteSettings);
+              const facts = [returnWindowLabel(c), c.deliveryEstimate ? `Delivery in ${c.deliveryEstimate}` : ""].filter(Boolean);
+              return facts.length ? (
+                <div className="border-t border-[var(--theme-border)] pt-4 grid grid-cols-2 gap-3 text-xs store-muted" data-testid="pdp-facts">
+                  {facts.map((fact) => (
+                    <div key={fact} className="flex items-center gap-2">
+                      <span className="store-primary font-bold">✓</span>
+                      <span>{fact}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : null;
+            })()}
           </div>
         </div>
 

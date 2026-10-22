@@ -11,7 +11,7 @@ export default function Shop() {
       <ProductCatalog
         eyebrow="Shop"
         title="Thoughtfully Handcrafted for Everyday Spaces"
-        description="Home decor, handcrafted accessories and books — browse the full Aadya catalog."
+        description="Home decor and handcrafted accessories — browse the full Aadya catalog."
         showCategoryFilter
       />
     </>

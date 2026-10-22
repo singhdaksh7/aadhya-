@@ -40,7 +40,7 @@ export function EmptyCartState() {
   return (
     <EmptyState
       title="Your cart is empty"
-      description="It seems you haven't added any handcrafted home decor or books yet. Explore our curated collections to find thoughtful pieces for your sanctuary."
+      description="Your cart is empty. Explore the store to find something you like."
       actionText="Browse Shop"
       actionLink="/shop"
       icon={<IconCart width="32" height="32" />}
