@@ -678,6 +678,13 @@ export default function CheckoutPage() {
                       ? "Place Order (Cash on Delivery)"
                       : "Pay Securely via Razorpay"}
                   </button>
+                  <p className="text-center text-[11px] leading-relaxed store-muted" data-testid="checkout-policy-links">
+                    Before you order, you can read our{" "}
+                    <a href="/terms" target="_blank" rel="noopener noreferrer" className="underline">Terms &amp; Conditions</a>,{" "}
+                    <a href="/privacy" target="_blank" rel="noopener noreferrer" className="underline">Privacy Policy</a>,{" "}
+                    <a href="/shipping" target="_blank" rel="noopener noreferrer" className="underline">Shipping Policy</a> and{" "}
+                    <a href="/returns" target="_blank" rel="noopener noreferrer" className="underline">Returns &amp; Refunds</a>.
+                  </p>
                 </>
               )}
             </form>

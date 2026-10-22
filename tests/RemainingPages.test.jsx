@@ -61,35 +61,24 @@ describe("Contact page", () => {
     mockSettings = { general: { storeName: "Aadya" }, shipping: {}, returns: {} };
     mockFetchPage.mockResolvedValue(page("contact", "Contact Us", "<p>Hi</p>"));
     wrap(<Contact />);
-    await screen.findByTestId("contact-form");
+    await screen.findByRole("heading", { level: 1, name: "Contact Us" });
     expect(screen.queryByTestId("contact-details")).toBeNull();
     expect(screen.queryByText(/to be added/i)).toBeNull();
   });
 
-  it("keeps the enquiry form working: required fields, submit, confirmation", async () => {
+  it("does not show an enquiry form (the store has no endpoint to receive one)", async () => {
     mockFetchPage.mockResolvedValue(page("contact", "Contact Us", "<p>Hi</p>"));
     wrap(<Contact />);
-    const form = await screen.findByTestId("contact-form");
-    expect(within(form).getByPlaceholderText("Full name")).toBeRequired();
-    expect(within(form).getByPlaceholderText("Email address")).toBeRequired();
-    expect(within(form).getByPlaceholderText("Your message")).toBeRequired();
-    // the old enquiry categories (training/consultation/research/events) are gone
-    expect(within(form).queryByText(/Training|Consultation|Research|Events/)).toBeNull();
-    fireEvent.change(within(form).getByPlaceholderText("Full name"), { target: { value: "Asha" } });
-    fireEvent.change(within(form).getByPlaceholderText("Email address"), { target: { value: "asha@example.com" } });
-    fireEvent.change(within(form).getByPlaceholderText("Phone number"), { target: { value: "9876543210" } });
-    fireEvent.change(within(form).getByPlaceholderText("Your message"), { target: { value: "Where is my order?" } });
-    fireEvent.submit(form);
-    expect(await screen.findByText(/Thank you/)).toBeInTheDocument();
+    await screen.findByRole("heading", { level: 1, name: "Contact Us" });
     expect(screen.queryByTestId("contact-form")).toBeNull();
+    expect(document.body.textContent).not.toMatch(/demo enquiry/i);
   });
 
-  it("uses a safe fallback when the CMS page is missing/unpublished, and the form still works", async () => {
+  it("uses a safe fallback when the CMS page is missing/unpublished", async () => {
     mockFetchPage.mockRejectedValue(notFound());
     wrap(<Contact />);
     expect(await screen.findByTestId("system-page-fallback")).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 1, name: "Contact Us" })).toBeInTheDocument();
-    expect(screen.getByTestId("contact-form")).toBeInTheDocument();
     expect(document.body.textContent).not.toMatch(LEGACY);
   });
 });
@@ -130,7 +119,7 @@ describe("routes and legacy content", () => {
   const src = (p) => fs.readFileSync(path.join(__dirname, "..", "src", p), "utf8");
 
   it("every system page has a fixed route and the lookup helpers agree", () => {
-    expect(Object.keys(SYSTEM_PAGES).sort()).toEqual(["about", "consultation", "contact", "events", "privacy", "research", "returns", "shipping", "terms", "thinkpod", "training"]);
+    expect(Object.keys(SYSTEM_PAGES).sort()).toEqual(["about", "cancellation", "consultation", "contact", "events", "payments", "privacy", "research", "returns", "shipping", "terms", "thinkpod", "training"]);
     expect(isSystemPageSlug("contact")).toBe(true);
     expect(isSystemPageSlug("summer-lookbook")).toBe(false);
     expect(publicPagePath("thinkpod")).toBe("/thinkpod");

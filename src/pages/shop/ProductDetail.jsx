@@ -7,12 +7,43 @@ import { formatInr } from "../../lib/format";
 import { useCart } from "../../context/CartContext";
 import { useWishlist } from "../../context/WishlistContext";
 import { useSiteSettings } from "../../hooks/useSiteSettings";
-import { commercialContext, shippingInfoText } from "../../lib/commercialText";
+import { commercialContext, shippingInfoText, returnWindowLabel } from "../../lib/commercialText";
 import { getProductBySlug, getProducts } from "../../services/api";
 import { IconCheck, IconCart } from "../../components/icons";
 import { trackProductView, recordRecentlyViewed } from "../../lib/analytics";
 import RecentlyViewed from "../../components/shop/RecentlyViewed";
 import { canonicalUrl, jsonLdProps } from "../../lib/seo";
+
+// Concise, settings-driven policy summary for the "Shipping & Returns" tab; full wording lives on the policy pages.
+const HANDMADE_HINT = /hand(made|crafted|woven|-woven|\s?embroider|\s?paint|\s?block|\s?stitch)|kantha|kilim|chindi|dhurrie/i;
+function ProductPolicyInfo({ product, settings }) {
+  const ctx = commercialContext(settings);
+  const payments = settings?.payments || {};
+  const methods = [
+    payments.razorpayEnabled !== false ? "online (UPI, cards, net banking)" : "",
+    payments.codEnabled ? "cash on delivery where available" : "",
+  ].filter(Boolean);
+  const returns = returnWindowLabel(ctx);
+  const handmade = HANDMADE_HINT.test([product.name, product.shortDescription, product.description, product.materials].filter(Boolean).join(" "));
+  const lines = [
+    product.shippingInfo || shippingInfoText(ctx) || "Shipping details are shown at checkout.",
+    returns ? `Returns: ${returns} on eligible items.` : "",
+    methods.length ? `Payment: ${methods.join(" or ")}.` : "",
+  ].filter(Boolean);
+  return (
+    <div className="space-y-3" data-testid="product-policy-info">
+      {lines.map((line) => <p key={line}>{line}</p>)}
+      {handmade && (
+        <p data-testid="handcrafted-note">
+          Handcrafted and textile pieces can show small natural differences in weave, print placement, texture, colour or size. These are part of the handmade character and are not defects; damage or a wrong item is handled under our returns policy.
+        </p>
+      )}
+      <p>
+        <a href="/shipping" className="underline">Shipping Policy</a> · <a href="/returns" className="underline">Returns &amp; Refunds</a> · <a href="/cancellation" className="underline">Cancellation</a> · <a href="/payments" className="underline">Payment Information</a>
+      </p>
+    </div>
+  );
+}
 
 export default function ProductDetail() {
   const { slug } = useParams();
@@ -520,7 +551,7 @@ export default function ProductDetail() {
               <p>{product.careInstructions || "Wipe gently with a soft dry cloth. Avoid harsh chemicals."}</p>
             )}
             {activeTab === "shipping" && (
-              <p>{product.shippingInfo || shippingInfoText(commercialContext(siteSettings)) || "Shipping details are shown at checkout."}</p>
+              <ProductPolicyInfo product={product} settings={siteSettings} />
             )}
           </div>
         </section>

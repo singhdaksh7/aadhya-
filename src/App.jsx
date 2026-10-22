@@ -21,6 +21,7 @@ import Shop from "./pages/Shop";
 import Testimonials from "./pages/Testimonials";
 import FAQ from "./pages/FAQ";
 import Contact from "./pages/Contact";
+import PaymentInfo from "./pages/PaymentInfo";
 import SystemPage from "./pages/SystemPage";
 import NotFound from "./pages/NotFound";
 import BooksStorefront from "./pages/shop/BooksStorefront";
@@ -141,7 +142,9 @@ function SiteLayout() {
                 <Route path="/shipping" element={<SystemPage slug="shipping" eyebrow="Customer Policies" fallbackTitle="Shipping & Delivery" />} />
                 <Route path="/returns" element={<SystemPage slug="returns" eyebrow="Customer Policies" fallbackTitle="Returns & Exchanges" />} />
                 <Route path="/privacy" element={<SystemPage slug="privacy" eyebrow="Legal" fallbackTitle="Privacy Policy" />} />
-                <Route path="/terms" element={<SystemPage slug="terms" eyebrow="Legal" fallbackTitle="Terms of Service" />} />
+                <Route path="/terms" element={<SystemPage slug="terms" eyebrow="Legal" fallbackTitle="Terms & Conditions" />} />
+                <Route path="/cancellation" element={<SystemPage slug="cancellation" eyebrow="Customer Policies" fallbackTitle="Cancellation Policy" />} />
+                <Route path="/payments" element={<PaymentInfo />} />
 
                 {/* Informational Pages */}
                 {/* Optional pages managed in Admin → Pages. Unpublished/draft = normal 404 (no static fallback content). */}

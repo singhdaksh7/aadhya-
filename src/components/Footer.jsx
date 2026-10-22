@@ -169,7 +169,7 @@ export default function Footer() {
 
         {/* Payment Icons & Copyright */}
         <div className="mt-14 border-t border-white/10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#FAF6F0]/60">
-          <p>© {new Date().getFullYear()} {general?.legalName || "Aadya Storefront"}. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} {general?.legalName || general?.storeName || "Aadya"}. All rights reserved.</p>
           
           {/* Payment Icons */}
           {hasBadges && <PaymentBadges badges={footer.paymentBadges} />}
