@@ -67,7 +67,7 @@ export default function Footer() {
         { label: "About Aadya", url: "/about" },
         { label: "Featured Collections", url: "/collections" },
         { label: "Privacy Policy", url: "/privacy" },
-        { label: "Terms of Service", url: "/terms" },
+        { label: "Terms & Conditions", url: "/terms" },
       ],
     },
   ];
@@ -185,7 +185,7 @@ export default function Footer() {
 
           <div className="flex gap-6">
             <Link to="/privacy" className="hover:text-white transition">Privacy Policy</Link>
-            <Link to="/terms" className="hover:text-white transition">Terms of Service</Link>
+            <Link to="/terms" className="hover:text-white transition">Terms &amp; Conditions</Link>
             <Link to="/shipping" className="hover:text-white transition">Shipping Policy</Link>
           </div>
         </div>

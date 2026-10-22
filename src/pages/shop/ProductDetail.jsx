@@ -277,7 +277,7 @@ export default function ProductDetail() {
         {/* Main PDP Grid */}
         <div className="grid gap-12 lg:grid-cols-12 items-start">
           {/* Gallery Column (7 cols) */}
-          <div className="lg:col-span-7 space-y-4">
+          <div className="min-w-0 lg:col-span-7 space-y-4">
             <div className="relative aspect-square w-full overflow-hidden rounded-2xl border border-[var(--theme-border)] store-surface shadow-xs">
               <img
                 src={images[activeImageIdx]}

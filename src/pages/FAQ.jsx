@@ -4,9 +4,12 @@ import RichTextRenderer from "../components/cms/RichTextRenderer";
 import { IconChevronDown } from "../components/icons";
 import { useSiteSettings } from "../hooks/useSiteSettings";
 import { commercialContext, interpolateCommercial } from "../lib/commercialText";
+import { canonicalUrl } from "../lib/seo";
 
 export default function FAQ() {
-  const commercial = commercialContext(useSiteSettings());
+  const settings = useSiteSettings();
+  const commercial = commercialContext(settings);
+  const storeName = settings.general?.storeName || "Aadya";
   const [categories, setCategories] = useState([]);
   const [activeCategory, setActiveCategory] = useState("All");
   const [openId, setOpenId] = useState(null);
@@ -38,12 +41,15 @@ export default function FAQ() {
 
   return (
     <div className="store-bg min-h-screen py-12 px-5 sm:px-8 max-w-4xl mx-auto space-y-12 animate-fade-in">
+      <title>{`Frequently Asked Questions | ${storeName}`}</title>
+      <meta name="description" content="Answers about placing an order, payments, shipping, returns and caring for handcrafted products." />
+      <link rel="canonical" href={canonicalUrl("/faq")} />
       {/* Header */}
       <div className="text-center space-y-3">
         <span className="text-xs font-semibold uppercase tracking-widest store-primary">Customer Help & Support</span>
         <h1 className="font-serif-display text-3xl sm:text-5xl store-text">Frequently Asked Questions</h1>
         <p className="text-sm store-muted leading-relaxed max-w-xl mx-auto">
-          Find instant answers regarding shipping timelines, returns, handcrafted minerals, order tracking, and bespoke gifting.
+          Find answers about placing an order, payments, shipping, returns, order tracking and caring for handcrafted products.
         </p>
       </div>
 
