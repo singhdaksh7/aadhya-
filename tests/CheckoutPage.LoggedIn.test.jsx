@@ -92,6 +92,18 @@ describe("CheckoutPage — logged-in", () => {
     await waitFor(() => expect(screen.getByLabelText("Email")).toHaveValue("jane@example.com"));
   });
 
+  it("shows links to the Terms, Privacy, Shipping and Returns policies (new tab) without a mandatory checkbox", async () => {
+    seedCart();
+    render(<Harness />);
+    const box = await screen.findByTestId("checkout-policy-links");
+    for (const [name, href] of [[/Terms/, "/terms"], [/Privacy Policy/, "/privacy"], [/Shipping Policy/, "/shipping"], [/Returns/, "/returns"]]) {
+      const link = Array.from(box.querySelectorAll("a")).find((a) => name.test(a.textContent));
+      expect(link).toHaveAttribute("href", href);
+      expect(link).toHaveAttribute("target", "_blank");
+    }
+    expect(box.querySelector("input[type=checkbox]")).toBeNull();
+  });
+
   it("loads saved addresses and preselects the default one", async () => {
     seedCart();
     render(<Harness />);
