@@ -395,6 +395,13 @@ export function Account() {
       <section className="rounded-3xl border border-[var(--theme-border)]/10 bg-ivory-dark/45 p-6 shadow-sm sm:flex sm:items-center sm:justify-between sm:p-8"><div><p className="text-[10px] font-semibold uppercase tracking-[0.16em] store-primary">Customer Account</p><h1 className="mt-2 font-serif-display text-3xl store-text sm:text-4xl">Welcome back, {user.name}</h1><p className="mt-3 max-w-xl text-sm leading-relaxed store-muted">Manage your profile, orders, addresses and account security.</p></div><div className="mt-6 flex items-center gap-3 sm:mt-0 sm:pl-8"><div aria-hidden="true" className="grid h-12 w-12 place-items-center rounded-full store-bg-primary-soft font-serif-display text-lg store-primary">{user.name?.trim()?.charAt(0)?.toUpperCase() || "A"}</div><div className="min-w-0"><p className="truncate text-sm font-semibold store-text">{user.name}</p><p className="truncate text-xs store-muted">{user.email}</p></div></div></section>
       <AccountNav />
 
+      {user?.requiresPasswordSetup && (
+        <div role="status" data-testid="set-password-reminder" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--theme-primary)]/30 store-bg-primary-soft p-4 text-sm">
+          <p className="store-text">You are signed in with a one-time code. Set a password to sign in faster next time.</p>
+          <Link to="/account/set-password" className="shrink-0 font-semibold store-primary underline underline-offset-4">Set password</Link>
+        </div>
+      )}
+
       {/* Dashboard Stat Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <Link to="/account/orders" className="rounded-2xl border border-[var(--theme-border)]/10 bg-ivory-dark/40 p-5 transition hover:border-[var(--theme-primary)]/40 hover:shadow-sm text-center">
