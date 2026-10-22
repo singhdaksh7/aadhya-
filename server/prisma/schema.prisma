@@ -61,9 +61,14 @@ model Customer {
   passwordHash      String
   isActive          Boolean                @default(true)
   emailVerifiedAt   DateTime?
+  // null = the customer has never chosen a password (account auto-created from a guest order and
+  // reached only through one-time email codes). Set the first time they set or reset a password.
+  passwordSetAt     DateTime?
+  autoCreated       Boolean                @default(false)
   createdAt         DateTime               @default(now())
   updatedAt         DateTime               @updatedAt
   addresses         Address[]
+  loginOtps         CustomerLoginOtp[]
   orders            Order[]
   refreshSessions   CustomerRefreshSession[]
   passwordResets    PasswordResetToken[]
@@ -1341,3 +1346,19 @@ model AdminNotification {
   @@index([entityType, entityId])
 }
 
+
+// One-time email login codes. Only an HMAC of the 6-digit code is stored; codes expire after 10 minutes,
+// are single-use and are invalidated after 5 wrong attempts.
+model CustomerLoginOtp {
+  id         String    @id @default(uuid())
+  customerId String
+  codeHash   String
+  expiresAt  DateTime
+  attempts   Int       @default(0)
+  usedAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId, createdAt])
+}

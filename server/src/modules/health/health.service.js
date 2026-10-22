@@ -4,6 +4,7 @@ import crypto from "node:crypto";
 import { prisma } from "../../lib/prisma.js";
 import { env } from "../../config/env.js";
 import { notifyAdmin } from "./notify-admin.js";
+import { getSmtpConfig } from "../email/email.service.js";
 
 // Directories we do a writability smoke-test against. Never expose these
 // absolute paths in the API response — only booleans.
@@ -146,7 +147,7 @@ export async function getInternalHealth() {
       books: booksWritable,
       invoices: invoicesWritable,
     },
-    email: { smtpConfigured: env.smtp.isConfigured },
+    email: { smtpConfigured: (await getSmtpConfig()).configured },
     integrations: {
       razorpay: { configured: env.razorpay.isConfigured || razorpay.configured, lastTestStatus: razorpay.lastTestStatus },
       shiprocket: { configured: shiprocket.configured, lastTestStatus: shiprocket.lastTestStatus },

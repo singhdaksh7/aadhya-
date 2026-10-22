@@ -31,6 +31,9 @@ const api = vi.hoisted(() => ({
   adminGetEmailHealth: vi.fn(),
   adminGetEmailLogs: vi.fn(),
   adminRetryEmailLog: vi.fn(),
+  adminGetSmtpSettings: vi.fn(),
+  adminSaveSmtpSettings: vi.fn(),
+  adminDeleteSmtpSettings: vi.fn(),
 }));
 
 vi.mock("../src/lib/api", () => api);
@@ -88,6 +91,7 @@ beforeEach(() => {
   api.adminGetEmailStatus.mockResolvedValue({ data: {} });
   api.adminGetEmailHealth.mockResolvedValue({ data: { failedCount: 0 } });
   api.adminGetEmailLogs.mockResolvedValue({ data: { items: [] } });
+  api.adminGetSmtpSettings.mockResolvedValue({ data: { saved: false, enabled: false, host: "", port: 587, encryption: "STARTTLS", user: "", hasPassword: false, fromName: "", fromEmail: "", replyTo: "", effectiveSource: "none" } });
 });
 
 describe("AdminIntegrations — access", () => {

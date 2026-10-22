@@ -760,3 +760,10 @@ export function adminCloseReturn(id) {
 }
 
 export { API_URL };
+
+export function customerOtpRequest(email) { return api.post("/auth/otp/request", { email }); }
+export function customerOtpVerify(data) { return api.post("/auth/otp/verify", data); }
+export function customerSetPassword(data) { return api.post("/account/set-password", data, { auth: true }); }
+export function adminGetSmtpSettings() { return api.get("/admin/email/settings", { auth: "admin" }); }
+export function adminSaveSmtpSettings(data) { return api.put("/admin/email/settings", data, { auth: "admin" }); }
+export function adminDeleteSmtpSettings() { return api.delete("/admin/email/settings", { auth: "admin" }); }

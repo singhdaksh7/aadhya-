@@ -4,11 +4,13 @@ import { SectionHeading, Button, Tag } from "../components/ui";
 import { LoadingNotice, ErrorNotice } from "../components/StateNotice";
 import { fetchOrderConfirmation } from "../lib/api";
 import { formatInr } from "../lib/format";
+import { useCustomerAuth } from "../context/CustomerAuthContext";
 
 export default function OrderConfirmation() {
   const { orderNumber } = useParams();
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token");
+  const { user } = useCustomerAuth();
 
   const [order, setOrder] = useState(null);
   const [status, setStatus] = useState("loading");
@@ -52,6 +54,16 @@ export default function OrderConfirmation() {
         <Tag>Order: {order.status}</Tag>
         <Tag>Payment: {order.paymentStatus}</Tag>
       </div>
+
+      {!user && order.status !== "PENDING" && (
+        <div className="mt-6 rounded-2xl border store-border store-surface p-5 text-sm store-muted" data-testid="guest-account-note">
+          <p className="font-semibold store-text">Your account is ready</p>
+          <p className="mt-1">
+            We created an account for the email you used, so you can follow this order and reorder faster. Go to the{" "}
+            <Link to="/login" className="underline">login page</Link>, choose <em>Email me a login code</em>, and set a password when asked.
+          </p>
+        </div>
+      )}
 
       <div className="mt-8 rounded-2xl border store-border store-surface p-6">
         <h2 className="font-serif-display text-lg store-text">Items</h2>

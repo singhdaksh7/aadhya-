@@ -94,3 +94,13 @@ export function generateWebhookSecret() {
   return crypto.randomBytes(32).toString("base64url");
 }
 export const recordSecretAudit = audit;
+
+// Raw read for Admin forms: returns the row and decrypted fields even when the credential is disabled,
+// so non-secret settings can be shown and edited. Callers must never return secret fields to the browser.
+export async function getCredentialRaw(provider, environment) {
+  const row = await prisma.integrationCredential.findUnique({ where: { provider_environment: { provider, environment } } });
+  if (!row) return null;
+  let data = {};
+  try { data = decrypt(row.encryptedData); } catch { data = {}; }
+  return { row, data };
+}

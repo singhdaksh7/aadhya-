@@ -912,3 +912,65 @@ body {
     --admin-sidebar-w: min(18rem, 86vw);
   }
 }
+
+/* ------------------------------------------------------------------
+   CMS rich-text content (policy pages, About, blog, FAQ answers).
+   RichTextRenderer marks its wrapper with `.prose`, but the Tailwind
+   typography plugin is not installed, so Tailwind's reset left headings,
+   lists and spacing unstyled. These rules style that content directly
+   from the store theme variables (no extra dependency).
+   ------------------------------------------------------------------ */
+.prose {
+  color: var(--theme-text);
+  font-size: 1rem;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+.prose > :first-child { margin-top: 0; }
+.prose > :last-child { margin-bottom: 0; }
+.prose p { margin: 0 0 1.1rem; color: var(--theme-text); }
+.prose h1, .prose h2, .prose h3, .prose h4 {
+  font-family: var(--font-serif, "Fraunces", Georgia, serif);
+  color: var(--theme-text);
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+.prose h1 { font-size: 2rem; margin: 2.5rem 0 1rem; }
+.prose h2 {
+  font-size: 1.55rem;
+  font-weight: 600;
+  margin: 2.5rem 0 1rem;
+  padding-top: 1.75rem;
+  border-top: 1px solid var(--theme-border);
+}
+.prose > h2:first-child, .prose > p:first-child + h2 { margin-top: 2rem; }
+.prose > h2:first-child { padding-top: 0; border-top: 0; margin-top: 0; }
+.prose h3 { font-size: 1.2rem; font-weight: 600; margin: 1.75rem 0 0.6rem; }
+.prose h4 { font-size: 1rem; font-weight: 600; margin: 1.25rem 0 0.5rem; }
+.prose ul, .prose ol { margin: 0 0 1.25rem; padding-left: 1.4rem; }
+.prose ul { list-style: disc; }
+.prose ol { list-style: decimal; }
+.prose li { margin: 0.5rem 0; padding-left: 0.25rem; color: var(--theme-text); }
+.prose li::marker { color: var(--theme-primary); }
+.prose li > p { margin: 0 0 0.4rem; }
+.prose li > ul, .prose li > ol { margin: 0.5rem 0 0; }
+.prose strong { font-weight: 600; color: var(--theme-text); }
+.prose em { color: var(--theme-muted); }
+.prose a { color: var(--theme-primary); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+.prose a:hover { color: var(--theme-primary-hover); }
+.prose hr { border: 0; border-top: 1px solid var(--theme-border); margin: 2rem 0; }
+.prose blockquote {
+  margin: 1.5rem 0; padding: 0.25rem 0 0.25rem 1.1rem;
+  border-left: 3px solid var(--theme-primary); color: var(--theme-muted); font-style: italic;
+}
+.prose img { max-width: 100%; height: auto; border-radius: 1rem; margin: 1.5rem 0; }
+.prose table { width: 100%; border-collapse: collapse; margin: 1.25rem 0; font-size: 0.95rem; display: block; overflow-x: auto; }
+.prose th, .prose td { border: 1px solid var(--theme-border); padding: 0.6rem 0.8rem; text-align: left; vertical-align: top; }
+.prose th { background: var(--theme-surface); font-weight: 600; }
+.prose code { background: var(--theme-surface); padding: 0.1rem 0.35rem; border-radius: 0.35rem; font-size: 0.9em; }
+
+@media (max-width: 640px) {
+  .prose { font-size: 0.97rem; line-height: 1.75; }
+  .prose h2 { font-size: 1.35rem; margin-top: 2rem; padding-top: 1.4rem; }
+  .prose h3 { font-size: 1.1rem; }
+}

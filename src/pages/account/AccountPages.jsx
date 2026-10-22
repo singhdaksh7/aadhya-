@@ -6,6 +6,8 @@ import { ApiRequestError } from "../../lib/api";
 import { useCart } from "../../context/CartContext";
 import { useWishlist } from "../../context/WishlistContext";
 import {
+  customerOtpRequest,
+  customerSetPassword,
   accountAddresses,
   accountOrder,
   accountOrders,
@@ -116,6 +118,86 @@ function AddressForm({ form, setForm, onSubmit, label }) {
   );
 }
 
+function OtpLogin({ initialEmail = "", onBack, returnTo }) {
+  const { loginWithOtp } = useCustomerAuth();
+  const nav = useNavigate();
+  const [step, setStep] = useState("email");
+  const [email, setEmail] = useState(initialEmail);
+  const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
+  const safeReturn = returnTo && returnTo.startsWith("/") && !returnTo.startsWith("//") ? returnTo : "";
+  const field = "w-full rounded-xl border border-[var(--theme-border)]/15 store-bg px-4 py-2.5 text-sm store-text focus:border-[var(--theme-primary)] focus:outline-none";
+
+  const requestCode = async (e) => {
+    if (e) e.preventDefault();
+    if (busy) return;
+    setBusy(true);
+    setError("");
+    setInfo("");
+    try {
+      await customerOtpRequest(email.trim());
+      setStep("code");
+      setInfo("If an account exists for this email, we have sent a 6-digit code. It expires in 10 minutes.");
+    } catch (err) {
+      setError(err instanceof ApiRequestError && err.status === 429 ? "Too many requests. Please wait a few minutes and try again." : "We couldn't send a code right now. Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const verify = async (e) => {
+    e.preventDefault();
+    if (busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      const customer = await loginWithOtp({ email: email.trim(), code: code.trim() });
+      if (customer && customer.requiresPasswordSetup) nav(`/account/set-password${safeReturn ? `?returnTo=${encodeURIComponent(safeReturn)}` : ""}`, { replace: true });
+      else nav(safeReturn || "/account", { replace: true });
+    } catch (err) {
+      setError(err instanceof ApiRequestError && err.status === 429 ? "Too many attempts. Please wait a few minutes and try again." : err.message || "That code is invalid or has expired.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="mx-auto max-w-md px-5 py-16" data-testid="otp-login">
+      <SectionHeading eyebrow="Account Portal" title="Sign in with a code" />
+      {step === "email" ? (
+        <form onSubmit={requestCode} className="mt-8 space-y-4 rounded-3xl border border-[var(--theme-border)]/10 bg-ivory-dark/40 p-6 sm:p-8 shadow-sm">
+          <p className="text-sm store-muted">Enter the email you used to order. We will email you a one-time code. No password needed the first time.</p>
+          <div>
+            <label htmlFor="otp-email" className="mb-1 block text-xs font-semibold uppercase tracking-wider store-muted">Email Address</label>
+            <input id="otp-email" required type="email" className={field} placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          </div>
+          {error && <p role="alert" className="rounded-xl p-3 text-xs font-medium store-primary store-bg-primary-soft">{error}</p>}
+          <Button disabled={busy} className="w-full py-3">{busy ? "Sending..." : "Email me a code"}</Button>
+        </form>
+      ) : (
+        <form onSubmit={verify} className="mt-8 space-y-4 rounded-3xl border border-[var(--theme-border)]/10 bg-ivory-dark/40 p-6 sm:p-8 shadow-sm">
+          {info && <p role="status" className="text-sm store-muted">{info}</p>}
+          <div>
+            <label htmlFor="otp-code" className="mb-1 block text-xs font-semibold uppercase tracking-wider store-muted">6-digit code</label>
+            <input id="otp-code" required inputMode="numeric" autoComplete="one-time-code" pattern="\d{6}" maxLength={6} className={`${field} text-center text-lg tracking-[0.4em]`} placeholder="000000" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} />
+          </div>
+          {error && <p role="alert" className="rounded-xl p-3 text-xs font-medium store-primary store-bg-primary-soft">{error}</p>}
+          <Button disabled={busy || code.length !== 6} className="w-full py-3">{busy ? "Checking..." : "Sign in"}</Button>
+          <div className="flex justify-between text-xs store-muted">
+            <button type="button" className="underline" onClick={() => { setStep("email"); setCode(""); setError(""); }}>Use a different email</button>
+            <button type="button" className="underline" disabled={busy} onClick={requestCode}>Send a new code</button>
+          </div>
+        </form>
+      )}
+      <div className="mt-6 text-center text-xs store-muted">
+        <button type="button" className="underline hover:text-[var(--theme-primary-hover)]" onClick={onBack}>Sign in with a password instead</button>
+      </div>
+    </div>
+  );
+}
+
 export function Login({ register = false }) {
   const { login, register: join } = useCustomerAuth();
   const nav = useNavigate();
@@ -123,6 +205,7 @@ export function Login({ register = false }) {
   const [form, set] = useState({ name: "", email: "", password: "", phone: "" });
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [otpMode, setOtpMode] = useState(false);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -146,6 +229,8 @@ export function Login({ register = false }) {
       setSubmitting(false);
     }
   };
+
+  if (otpMode && !register) return <OtpLogin initialEmail={form.email} onBack={() => setOtpMode(false)} returnTo={q.get("returnTo")} />;
 
   return (
     <div className="mx-auto max-w-md px-5 py-16">
@@ -204,6 +289,13 @@ export function Login({ register = false }) {
 
         <Button disabled={submitting} className="w-full py-3">{submitting ? (register ? "Creating account..." : "Signing in...") : (register ? "Create account" : "Log in")}</Button>
       </form>
+
+      {!register && (
+        <div className="mt-4 text-center" data-testid="otp-login-link">
+          <button type="button" onClick={() => setOtpMode(true)} className="text-sm font-semibold store-primary underline underline-offset-4">Email me a login code instead</button>
+          <p className="mt-1 text-xs store-muted">Ordered as a guest? Your account is ready. Use a code to sign in the first time.</p>
+        </div>
+      )}
 
       <div className="mt-6 text-center text-xs store-muted space-x-3">
         <Link className="hover:text-[var(--theme-primary-hover)] underline" to={register ? "/login" : "/register"}>
@@ -943,6 +1035,67 @@ export function AccountReturnDetail() {
       <Link to="/account/returns" className="inline-block text-xs font-semibold uppercase tracking-wider store-primary hover:underline">
         ← Return to Returns
       </Link>
+    </div>
+  );
+}
+
+export function SetPassword() {
+  const { user, updateUser } = useCustomerAuth();
+  const nav = useNavigate();
+  const [q] = useSearchParams();
+  const [form, setForm] = useState({ newPassword: "", confirmPassword: "" });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const rawReturn = q.get("returnTo");
+  const dest = rawReturn && rawReturn.startsWith("/") && !rawReturn.startsWith("//") ? rawReturn : "/account";
+  const field = "w-full rounded-xl border border-[var(--theme-border)]/15 store-bg px-4 py-2.5 text-sm store-text focus:border-[var(--theme-primary)] focus:outline-none";
+
+  useEffect(() => {
+    if (user && user.requiresPasswordSetup === false) nav(dest, { replace: true });
+  }, [user, dest, nav]);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (busy) return;
+    if (form.newPassword.length < 10 || !/[A-Za-z]/.test(form.newPassword) || !/\d/.test(form.newPassword)) {
+      setError("Password must be at least 10 characters and include a letter and a number.");
+      return;
+    }
+    if (form.newPassword !== form.confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      await customerSetPassword(form);
+      updateUser({ requiresPasswordSetup: false });
+      nav(dest, { replace: true });
+    } catch (err) {
+      setError(err.message || "We couldn't save your password right now. Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="mx-auto max-w-md px-5 py-16" data-testid="set-password">
+      <SectionHeading eyebrow="Welcome" title="Set your password" />
+      <form onSubmit={submit} className="mt-8 space-y-4 rounded-3xl border border-[var(--theme-border)]/10 bg-ivory-dark/40 p-6 sm:p-8 shadow-sm">
+        <p className="text-sm store-muted">You signed in with a one-time code. Choose a password so you can sign in with it next time{user?.email ? ` (${user.email})` : ""}.</p>
+        <div>
+          <label htmlFor="set-password-new" className="mb-1 block text-xs font-semibold uppercase tracking-wider store-muted">New password</label>
+          <input id="set-password-new" required type="password" minLength="10" autoComplete="new-password" className={field} value={form.newPassword} onChange={(e) => setForm({ ...form, newPassword: e.target.value })} />
+          <p className="mt-1 text-xs store-muted">At least 10 characters, including a letter and a number.</p>
+        </div>
+        <div>
+          <label htmlFor="set-password-confirm" className="mb-1 block text-xs font-semibold uppercase tracking-wider store-muted">Confirm password</label>
+          <input id="set-password-confirm" required type="password" minLength="10" autoComplete="new-password" className={field} value={form.confirmPassword} onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })} />
+        </div>
+        {error && <p role="alert" className="rounded-xl p-3 text-xs font-medium store-primary store-bg-primary-soft">{error}</p>}
+        <Button disabled={busy} className="w-full py-3">{busy ? "Saving..." : "Save password"}</Button>
+        <p className="text-center text-xs store-muted"><Link to={dest} className="underline">Skip for now</Link></p>
+      </form>
     </div>
   );
 }

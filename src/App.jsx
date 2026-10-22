@@ -6,7 +6,7 @@ import { BrochureProvider } from "./context/BrochureContext";
 import { AdminAuthProvider } from "./context/AdminAuthContext";
 import { CustomerAuthProvider } from "./context/CustomerAuthContext";
 import RequireCustomer from "./components/RequireCustomer";
-import { Login, Account, Addresses, Orders, OrderDetail, Forgot, Reset, AccountWishlist, AccountReviews, AccountDownloads, AccountNotifications, AccountInvoices, AccountReturns, AccountReturnDetail } from "./pages/account/AccountPages";
+import { Login, Account, Addresses, Orders, OrderDetail, Forgot, Reset, SetPassword, AccountWishlist, AccountReviews, AccountDownloads, AccountNotifications, AccountInvoices, AccountReturns, AccountReturnDetail } from "./pages/account/AccountPages";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import CartDrawer from "./components/CartDrawer";
@@ -123,6 +123,7 @@ function SiteLayout() {
                 <Route path="/forgot-password" element={<Forgot />} />
                 <Route path="/reset-password" element={<Reset />} />
                 <Route path="/account" element={<RequireCustomer><Account /></RequireCustomer>} />
+                <Route path="/account/set-password" element={<RequireCustomer><SetPassword /></RequireCustomer>} />
                 <Route path="/account/profile" element={<RequireCustomer><Account /></RequireCustomer>} />
                 <Route path="/account/orders" element={<RequireCustomer><Orders /></RequireCustomer>} />
                 <Route path="/account/orders/:orderNumber" element={<RequireCustomer><OrderDetail /></RequireCustomer>} />

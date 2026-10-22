@@ -2,21 +2,64 @@ import nodemailer from "nodemailer";
 import { env } from "../../config/env.js";
 import { prisma } from "../../lib/prisma.js";
 import { getStoreName } from "../../lib/storeName.js";
+import { getCredential } from "../integrations/credential.service.js";
 import { readInvoicePdf } from "../invoices/invoice.storage.js";
 import { ApiError } from "../../utils/ApiError.js";
 
-let transporter = null;
-function getTransporter() {
-  if (!env.smtp.isConfigured) return null;
-  if (!transporter) {
-    transporter = nodemailer.createTransport({
-      host: env.smtp.host,
-      port: env.smtp.port,
-      secure: env.smtp.port === 465,
-      auth: env.smtp.user ? { user: env.smtp.user, pass: env.smtp.pass } : undefined,
-    });
+let cachedMailer = null;
+let cachedMailerKey = "";
+
+// Effective SMTP settings: the Admin-managed credential (Admin -> Integrations -> Email, secrets encrypted
+// at rest) wins; the SMTP_* environment variables remain as a fallback so existing deployments keep working.
+export async function getSmtpConfig() {
+  let stored = null;
+  try {
+    const cred = await getCredential("SMTP", "DEFAULT");
+    if (cred?.data?.host) stored = cred.data;
+  } catch { stored = null; }
+  if (stored) {
+    const port = Number(stored.port) || 587;
+    const encryption = ["SSL_TLS", "STARTTLS", "NONE"].includes(stored.encryption) ? stored.encryption : port === 465 ? "SSL_TLS" : "STARTTLS";
+    const fromEmail = stored.fromEmail || stored.user || "";
+    const fromName = String(stored.fromName || (await getStoreName())).replace(/["<>\r\n]/g, "");
+    return { configured: true, source: "admin", host: stored.host, port, encryption, user: stored.user || "", pass: stored.apiPassword || "", from: fromEmail ? `"${fromName}" <${fromEmail}>` : env.smtp.from, replyTo: stored.replyTo || "" };
   }
-  return transporter;
+  if (env.smtp.isConfigured) {
+    const port = env.smtp.port;
+    return { configured: true, source: "env", host: env.smtp.host || process.env.SMTP_HOST, port, encryption: port === 465 ? "SSL_TLS" : "STARTTLS", user: env.smtp.user, pass: env.smtp.pass, replyTo: "" };
+  }
+  return { configured: false, source: "none" };
+}
+
+async function getMailer() {
+  const cfg = await getSmtpConfig();
+  if (!cfg.configured) return { mailer: null };
+  const key = JSON.stringify([cfg.host, cfg.port, cfg.encryption, cfg.user, cfg.pass, cfg.from, cfg.replyTo]);
+  if (!cachedMailer || cachedMailerKey !== key) {
+    cachedMailerKey = key;
+    cachedMailer = nodemailer.createTransport(
+      {
+        host: cfg.host,
+        port: cfg.port,
+        secure: cfg.encryption === "SSL_TLS",
+        requireTLS: cfg.encryption === "STARTTLS",
+        ignoreTLS: cfg.encryption === "NONE",
+        auth: cfg.user ? { user: cfg.user, pass: cfg.pass } : undefined,
+        connectionTimeout: 15000,
+        greetingTimeout: 15000,
+        socketTimeout: 20000,
+      },
+      { from: cfg.from, ...(cfg.replyTo ? { replyTo: cfg.replyTo } : {}) }
+    );
+  }
+  return { mailer: cachedMailer };
+}
+
+function accountNoteHtml(order) {
+  const c = order.customer;
+  if (!c || !c.autoCreated || c.passwordSetAt) return "";
+  const loginUrl = `${env.frontendUrl.replace(/\/$/, "")}/login`;
+  return `<p style="margin-top:16px;padding:12px;border:1px solid #e5e0d8;border-radius:8px">We have created an account for <strong>${escapeHtml(c.email)}</strong> so you can follow this order. Open the <a href="${loginUrl}">login page</a>, choose <em>Email me a login code</em>, and set a password when asked.</p>`;
 }
 
 function renderOrderConfirmationHtml(order, storeName = "Aadya") {
@@ -57,13 +100,37 @@ function escapeHtml(str) {
 }
 
 export async function sendPasswordResetEmail({ customer, token }) {
-  const mailer = getTransporter();
+  const { mailer } = await getMailer();
   if (!mailer) return { sent: false, reason: "smtp_not_configured" };
   const resetUrl = `${env.frontendUrl.replace(/\/$/, "")}/reset-password?token=${encodeURIComponent(token)}`;
   try {
-    await mailer.sendMail({ from: env.smtp.from, to: customer.email, subject: `Reset your ${await getStoreName()} password`, html: `<div style="font-family:Georgia,serif;max-width:560px;margin:auto;color:#2b2723"><h1>Reset your password</h1><p>Hello ${escapeHtml(customer.name || "there")},</p><p>We received a request to reset your Aadya Society account password. This link expires in one hour.</p><p><a href="${resetUrl}" style="display:inline-block;padding:12px 20px;background:#3c4a3a;color:#fff;text-decoration:none;border-radius:6px">Reset password</a></p><p>If you did not request this, you can safely ignore this email.</p></div>` });
+    await mailer.sendMail({ to: customer.email, subject: `Reset your ${await getStoreName()} password`, html: `<div style="font-family:Georgia,serif;max-width:560px;margin:auto;color:#2b2723"><h1>Reset your password</h1><p>Hello ${escapeHtml(customer.name || "there")},</p><p>We received a request to reset your Aadya Society account password. This link expires in one hour.</p><p><a href="${resetUrl}" style="display:inline-block;padding:12px 20px;background:#3c4a3a;color:#fff;text-decoration:none;border-radius:6px">Reset password</a></p><p>If you did not request this, you can safely ignore this email.</p></div>` });
     return { sent: true };
   } catch (err) { console.error("[email] failed to send password reset email:", err.message); return { sent: false, reason: "send_failed" }; }
+}
+
+export async function sendLoginOtpEmail({ customer, code }) {
+  const { mailer } = await getMailer();
+  const storeName = await getStoreName();
+  const log = async (status, extra = {}) => { try { await prisma.emailLog.create({ data: { type: "LOGIN_OTP", recipient: customer.email, status, ...extra } }); } catch { /* logging must never block login */ } };
+  if (!mailer) {
+    console.log("[email] SMTP not configured — login code email not sent");
+    await log("SKIPPED", { failureMessage: "SMTP not configured" });
+    return { sent: false, reason: "smtp_not_configured" };
+  }
+  try {
+    const info = await mailer.sendMail({
+      to: customer.email,
+      subject: `Your ${storeName} login code`,
+      html: `<div style="font-family:Georgia,serif;max-width:520px;margin:auto;color:#2b2723"><h1 style="font-size:22px">Your login code</h1><p>Hello ${escapeHtml(customer.name || "there")},</p><p>Use this code to sign in to ${escapeHtml(storeName)}:</p><p style="font-size:34px;letter-spacing:8px;font-weight:700;margin:20px 0">${escapeHtml(code)}</p><p>It expires in 10 minutes and can be used once. If you did not ask for it, you can safely ignore this email.</p></div>`,
+    });
+    await log("SENT", { providerMessageId: info.messageId || null, sentAt: new Date() });
+    return { sent: true };
+  } catch (err) {
+    console.error("[email] failed to send login code:", err.message);
+    await log("FAILED", { failureMessage: String(err.message || "send failed").slice(0, 300) });
+    return { sent: false, reason: "send_failed" };
+  }
 }
 
 // Fire-and-forget by design: called after a payment is finalized, and must
@@ -76,7 +143,7 @@ export async function sendOrderConfirmationEmail(orderId, { resend = false, admi
   });
   if (!order) return { sent: false, reason: "order_not_found" };
 
-  const mailer = getTransporter();
+  const { mailer } = await getMailer();
   if (!mailer) {
     // eslint-disable-next-line no-console
     console.log(`[email] SMTP not configured — skipping confirmation email for ${order.orderNumber}`);
@@ -90,10 +157,9 @@ export async function sendOrderConfirmationEmail(orderId, { resend = false, admi
 
   try {
     const info = await mailer.sendMail({
-      from: env.smtp.from,
       to: order.customerEmail,
       subject: `Your ${await getStoreName()} order ${order.orderNumber} is confirmed`,
-      html: `${renderOrderConfirmationHtml(order, await getStoreName())}${order.customer ? `<p style="text-align:center"><a href="${env.frontendUrl.replace(/\/$/, "")}/account/orders/${encodeURIComponent(order.orderNumber)}">View your order</a></p>` : ""}`,
+      html: `${renderOrderConfirmationHtml(order, await getStoreName())}${accountNoteHtml(order)}${order.customer ? `<p style="text-align:center"><a href="${env.frontendUrl.replace(/\/$/, "")}/account/orders/${encodeURIComponent(order.orderNumber)}">View your order</a></p>` : ""}`,
     });
     try {
       await prisma.emailLog.create({ data: { type: "ORDER_CONFIRMATION", recipient: order.customerEmail, orderId, status: "SENT", providerMessageId: info.messageId || null, sentAt: new Date() } });
@@ -139,7 +205,7 @@ export async function sendInvoiceEmail(invoiceId, { resend = false, adminId = nu
     }
     if (!claim.count) return { sent: false, reason: "already_emailed" };
   }
-  const mailer = getTransporter();
+  const { mailer } = await getMailer();
   try {
     if (!mailer) {
       if (!resend) await prisma.invoice.update({ where: { id: invoiceId }, data: { emailedAt: null } });
@@ -148,7 +214,6 @@ export async function sendInvoiceEmail(invoiceId, { resend = false, adminId = nu
     }
     const attachment = invoice.pdfStorageKey ? await readInvoicePdf(invoice.pdfStorageKey) : null;
     const info = await mailer.sendMail({
-      from: env.smtp.from,
       to: invoice.customerEmail,
       subject: `Your Aadya Invoice — ${invoice.invoiceNumber}`,
       html: `<div style="font-family:Georgia,serif;max-width:560px;margin:auto;color:#2b2723"><h1>Your Aadya invoice</h1><p>Hello ${escapeHtml(invoice.customerName)},</p><p>Invoice <strong>${escapeHtml(invoice.invoiceNumber)}</strong> for order <strong>${escapeHtml(invoice.order.orderNumber)}</strong> is attached.</p><p>Total: <strong>₹${Number(invoice.totalAmount).toLocaleString("en-IN")}</strong><br/>Payment method: ${escapeHtml(invoice.order.paymentMethod)}</p><p><a href="${env.frontendUrl.replace(/\/$/, "")}/account/orders/${encodeURIComponent(invoice.order.orderNumber)}">View your order</a></p></div>`,
@@ -180,10 +245,10 @@ export async function sendShippingStatusEmail(orderId, status, { resend = false,
     if (exists) return { sent: false, reason: "already_sent" };
   }
   const subject = status === "DELIVERED" ? "Your Aadya order has been delivered" : status === "OUT_FOR_DELIVERY" ? "Your Aadya order is out for delivery" : "Your Aadya order has shipped";
-  const mailer = getTransporter();
+  const { mailer } = await getMailer();
   if (!mailer) return { sent: false, reason: "smtp_not_configured" };
   try {
-    await mailer.sendMail({ from: env.smtp.from, to: order.customerEmail, subject, html: `<p>Hello ${escapeHtml(order.customerName)},</p><p>Your order <strong>${escapeHtml(order.orderNumber)}</strong> is ${escapeHtml(status.replaceAll("_", " ").toLowerCase())}.</p><p>Carrier: ${escapeHtml(order.shipment?.carrier || "")}${order.shipment?.trackingNumber ? `<br/>Tracking: ${escapeHtml(order.shipment.trackingNumber)}` : ""}</p><p><a href="${env.frontendUrl.replace(/\/$/, "")}/account/orders/${encodeURIComponent(order.orderNumber)}">View your order</a></p>` });
+    await mailer.sendMail({ to: order.customerEmail, subject, html: `<p>Hello ${escapeHtml(order.customerName)},</p><p>Your order <strong>${escapeHtml(order.orderNumber)}</strong> is ${escapeHtml(status.replaceAll("_", " ").toLowerCase())}.</p><p>Carrier: ${escapeHtml(order.shipment?.carrier || "")}${order.shipment?.trackingNumber ? `<br/>Tracking: ${escapeHtml(order.shipment.trackingNumber)}` : ""}</p><p><a href="${env.frontendUrl.replace(/\/$/, "")}/account/orders/${encodeURIComponent(order.orderNumber)}">View your order</a></p>` });
     await prisma.emailLog.create({ data: { type, recipient: order.customerEmail, orderId, status: "SENT", sentAt: new Date() } });
     if (order.customerId && !resend) await prisma.customerNotification.create({ data: { customerId: order.customerId, type: `ORDER_${status}`, title: status === "DELIVERED" ? "Delivered" : status === "OUT_FOR_DELIVERY" ? "Out for delivery" : "Shipped", message: `Your order ${order.orderNumber} is ${status.replaceAll("_", " ").toLowerCase()}.`, link: `/account/orders/${order.orderNumber}` } });
     if (adminId && resend) await prisma.adminAuditLog.create({ data: { adminId, action: "SHIPPING_EMAIL_RESEND", provider: "email", metadata: { orderId, status } } });
@@ -206,12 +271,14 @@ export async function getEmailStatus() {
     where: { type: "TEST_EMAIL" },
     orderBy: { createdAt: "desc" },
   });
+  const cfg = await getSmtpConfig();
   return {
-    configured: env.smtp.isConfigured,
-    host: env.smtp.host || null,
-    port: env.smtp.port,
-    senderAddress: env.smtp.from,
-    hasAuthUser: Boolean(env.smtp.user),
+    configured: cfg.configured,
+    source: cfg.source,
+    host: cfg.host || null,
+    port: cfg.port || null,
+    senderAddress: cfg.from || null,
+    hasAuthUser: Boolean(cfg.user),
     lastTestAt: lastTest ? (lastTest.sentAt || lastTest.createdAt) : null,
     lastTestStatus: lastTest ? lastTest.status : null,
   };
@@ -224,7 +291,7 @@ export async function getEmailStatus() {
  * EmailLog row of type TEST_EMAIL so status/health surfaces can read it back.
  */
 export async function sendTestEmail(recipient, adminId) {
-  const mailer = getTransporter();
+  const { mailer } = await getMailer();
   if (!mailer) {
     await prisma.emailLog.create({ data: { type: "TEST_EMAIL", recipient, status: "SKIPPED", failureMessage: "SMTP not configured" } });
     return { sent: false, reason: "smtp_not_configured" };
@@ -237,7 +304,6 @@ export async function sendTestEmail(recipient, adminId) {
   }
   try {
     const info = await mailer.sendMail({
-      from: env.smtp.from,
       to: recipient,
       subject: `${await getStoreName()} — test email`,
       html: `<div style="font-family:Georgia,serif;max-width:480px;margin:auto;color:#2b2723"><h1>SMTP test successful</h1><p>This is a test message sent from the admin panel to confirm outgoing email is working correctly.</p></div>`,
@@ -299,7 +365,7 @@ export async function sendReturnStatusEmail(orderId, returnRequest, statusLabel)
   const order = await prisma.order.findUnique({ where: { id: orderId } });
   if (!order) return { sent: false, reason: "order_not_found" };
 
-  const mailer = getTransporter();
+  const { mailer } = await getMailer();
   const subject = `Update on your return for order ${order.orderNumber}`;
   const html = `<div style="font-family:Georgia,'Times New Roman',serif;max-width:560px;margin:0 auto;color:#2b2723;">
     <h1 style="font-size:20px;">Return update</h1>
@@ -319,7 +385,7 @@ export async function sendReturnStatusEmail(orderId, returnRequest, statusLabel)
   }
 
   try {
-    const info = await mailer.sendMail({ from: env.smtp.from, to: order.customerEmail, subject, html });
+    const info = await mailer.sendMail({ to: order.customerEmail, subject, html });
     try {
       await prisma.emailLog.create({ data: { type: "RETURN_STATUS", recipient: order.customerEmail, orderId, status: "SENT", providerMessageId: info.messageId || null, sentAt: new Date() } });
     } catch (writeErr) {

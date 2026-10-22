@@ -15,6 +15,7 @@ import {
 } from "../../lib/api";
 import { PageHeader, AdminCard, StatusBadge } from "../../components/admin/ui";
 import RazorpayPanel from "../../components/admin/integrations/RazorpayPanel";
+import SmtpSettingsForm from "../../components/admin/integrations/SmtpSettingsForm";
 
 const initialBusiness = {
   provider: "MANUAL",
@@ -309,7 +310,7 @@ export default function AdminIntegrations() {
 
       <AdminCard
         title="Email"
-        subtitle="SMTP transport status, test sending, and delivery logs"
+        subtitle="SMTP settings, test sending, and delivery logs"
         actions={
           <>
             <StatusBadge
@@ -320,6 +321,7 @@ export default function AdminIntegrations() {
           </>
         }
       >
+        <SmtpSettingsForm onSaved={loadEmail} />
         {emailMessage && (
           <p role="status" aria-live="polite" className="mb-3 rounded-xl bg-sage-light px-3 py-2 text-sm text-green-deep">
             {emailMessage}
