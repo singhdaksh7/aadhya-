@@ -6,7 +6,7 @@ import { BrochureProvider } from "./context/BrochureContext";
 import { AdminAuthProvider } from "./context/AdminAuthContext";
 import { CustomerAuthProvider } from "./context/CustomerAuthContext";
 import RequireCustomer from "./components/RequireCustomer";
-import { Login, Account, Addresses, Orders, OrderDetail, Forgot, Reset, AccountWishlist, AccountReviews, AccountDownloads, AccountNotifications, AccountInvoices, AccountReturns, AccountReturnDetail } from "./pages/account/AccountPages";
+import { Login, Account, Addresses, Orders, OrderDetail, Forgot, Reset, SetPassword, AccountWishlist, AccountReviews, AccountDownloads, AccountNotifications, AccountInvoices, AccountReturns, AccountReturnDetail } from "./pages/account/AccountPages";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import CartDrawer from "./components/CartDrawer";
@@ -21,6 +21,7 @@ import Shop from "./pages/Shop";
 import Testimonials from "./pages/Testimonials";
 import FAQ from "./pages/FAQ";
 import Contact from "./pages/Contact";
+import PaymentInfo from "./pages/PaymentInfo";
 import SystemPage from "./pages/SystemPage";
 import NotFound from "./pages/NotFound";
 import BooksStorefront from "./pages/shop/BooksStorefront";
@@ -122,6 +123,7 @@ function SiteLayout() {
                 <Route path="/forgot-password" element={<Forgot />} />
                 <Route path="/reset-password" element={<Reset />} />
                 <Route path="/account" element={<RequireCustomer><Account /></RequireCustomer>} />
+                <Route path="/account/set-password" element={<RequireCustomer><SetPassword /></RequireCustomer>} />
                 <Route path="/account/profile" element={<RequireCustomer><Account /></RequireCustomer>} />
                 <Route path="/account/orders" element={<RequireCustomer><Orders /></RequireCustomer>} />
                 <Route path="/account/orders/:orderNumber" element={<RequireCustomer><OrderDetail /></RequireCustomer>} />
@@ -141,7 +143,9 @@ function SiteLayout() {
                 <Route path="/shipping" element={<SystemPage slug="shipping" eyebrow="Customer Policies" fallbackTitle="Shipping & Delivery" />} />
                 <Route path="/returns" element={<SystemPage slug="returns" eyebrow="Customer Policies" fallbackTitle="Returns & Exchanges" />} />
                 <Route path="/privacy" element={<SystemPage slug="privacy" eyebrow="Legal" fallbackTitle="Privacy Policy" />} />
-                <Route path="/terms" element={<SystemPage slug="terms" eyebrow="Legal" fallbackTitle="Terms of Service" />} />
+                <Route path="/terms" element={<SystemPage slug="terms" eyebrow="Legal" fallbackTitle="Terms & Conditions" />} />
+                <Route path="/cancellation" element={<SystemPage slug="cancellation" eyebrow="Customer Policies" fallbackTitle="Cancellation Policy" />} />
+                <Route path="/payments" element={<PaymentInfo />} />
 
                 {/* Informational Pages */}
                 {/* Optional pages managed in Admin → Pages. Unpublished/draft = normal 404 (no static fallback content). */}

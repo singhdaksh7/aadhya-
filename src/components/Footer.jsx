@@ -67,7 +67,7 @@ export default function Footer() {
         { label: "About Aadya", url: "/about" },
         { label: "Featured Collections", url: "/collections" },
         { label: "Privacy Policy", url: "/privacy" },
-        { label: "Terms of Service", url: "/terms" },
+        { label: "Terms & Conditions", url: "/terms" },
       ],
     },
   ];
@@ -169,7 +169,7 @@ export default function Footer() {
 
         {/* Payment Icons & Copyright */}
         <div className="mt-14 border-t border-white/10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#FAF6F0]/60">
-          <p>© {new Date().getFullYear()} {general?.legalName || "Aadya Storefront"}. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} {general?.legalName || general?.storeName || "Aadya"}. All rights reserved.</p>
           
           {/* Payment Icons */}
           {hasBadges && <PaymentBadges badges={footer.paymentBadges} />}
@@ -185,7 +185,7 @@ export default function Footer() {
 
           <div className="flex gap-6">
             <Link to="/privacy" className="hover:text-white transition">Privacy Policy</Link>
-            <Link to="/terms" className="hover:text-white transition">Terms of Service</Link>
+            <Link to="/terms" className="hover:text-white transition">Terms &amp; Conditions</Link>
             <Link to="/shipping" className="hover:text-white transition">Shipping Policy</Link>
           </div>
         </div>

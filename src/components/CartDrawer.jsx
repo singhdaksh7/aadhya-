@@ -63,7 +63,7 @@ export default function CartDrawer() {
         {/* Free Delivery Progress Bar (bg-beige-light/text-green-deep here is a success state, left as semantic) */}
         <div className="bg-beige-light/70 px-6 py-4 border-b store-border text-xs">
           {subtotal >= freeShippingThreshold ? (
-            <p className="font-semibold text-green-deep">🎉 You unlocked Free Pan-India Shipping!</p>
+            <p className="font-semibold text-green-deep">🎉 You unlocked free shipping!</p>
           ) : (
             <p className="store-muted">
               Add <span className="font-semibold store-primary">{formatInr(amountNeeded)}</span> more for Free Shipping

@@ -8,7 +8,7 @@ const DEFAULTS = {
   prefix: "AADYA",
   financialYearFormat: "YYYY-YY",
   nextInvoiceNumber: 1,
-  legalName: "Aadya Society",
+  legalName: "",
   address: "",
   email: "",
   phone: "",

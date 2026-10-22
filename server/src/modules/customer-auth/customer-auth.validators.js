@@ -17,3 +17,6 @@ export const profileSchema = z.object({ name: z.string().trim().min(1).max(120),
 export const changePasswordSchema = z.object({ currentPassword: z.string().min(1), newPassword: password, confirmPassword: z.string() }).refine(x => x.newPassword === x.confirmPassword, { message: "Passwords do not match", path: ["confirmPassword"] });
 export const forgotPasswordSchema = z.object({ email });
 export const resetPasswordSchema = z.object({ token: z.string().length(48), newPassword: password, confirmPassword: z.string() }).refine(x => x.newPassword === x.confirmPassword, { message: "Passwords do not match", path: ["confirmPassword"] });
+export const otpRequestSchema = z.object({ email });
+export const otpVerifySchema = z.object({ email, code: z.string().trim().regex(/^\d{6}$/, "Enter the 6-digit code") });
+export const setPasswordSchema = z.object({ newPassword: password, confirmPassword: z.string() }).refine(x => x.newPassword === x.confirmPassword, { message: "Passwords do not match", path: ["confirmPassword"] });

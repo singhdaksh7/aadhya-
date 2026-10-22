@@ -48,7 +48,7 @@ export const DEFAULT_HEADER_CMS_SETTINGS = {
       {
         id: "ub-3",
         enabled: true,
-        label: "100% Secure Checkout",
+        label: "Secure Checkout",
         icon: "shield",
         linkType: "internal",
         url: "/faq",

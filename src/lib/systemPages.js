@@ -7,6 +7,8 @@ export const SYSTEM_PAGES = {
   returns: "/returns",
   privacy: "/privacy",
   terms: "/terms",
+  cancellation: "/cancellation",
+  payments: "/payments",
   contact: "/contact",
   training: "/training",
   consultation: "/consultation",

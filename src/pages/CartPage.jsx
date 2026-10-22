@@ -4,6 +4,7 @@ import { useCart } from "../context/CartContext";
 import { formatInr } from "../lib/format";
 import { EmptyCartState } from "../components/ui/EmptyState";
 import { useSiteSettings } from "../hooks/useSiteSettings";
+import { commercialContext, shippingInfoText } from "../lib/commercialText";
 
 export default function CartPage() {
   const {
@@ -19,7 +20,9 @@ export default function CartPage() {
     applyCoupon,
     removeCoupon,
   } = useCart();
-  const { freeShippingThreshold, standardShippingAmount } = useSiteSettings();
+  const siteSettings = useSiteSettings();
+  const { freeShippingThreshold, standardShippingAmount } = siteSettings;
+  const dispatchNote = shippingInfoText(commercialContext(siteSettings));
   const [couponInput, setCouponInput] = useState("");
   const [validating, setValidating] = useState(false);
 
@@ -213,10 +216,12 @@ export default function CartPage() {
               </div>
 
               {/* Dispatch Note */}
-              <div className="rounded-xl store-bg p-3 border store-border text-xs store-muted space-y-1">
-                <p className="font-semibold store-text">📦 Pan-India Express Delivery</p>
-                <p>Estimated dispatch: Within 24 hours. Express transit in 3-5 business days.</p>
-              </div>
+              {dispatchNote && (
+                <div className="rounded-xl store-bg p-3 border store-border text-xs store-muted space-y-1" data-testid="cart-dispatch-note">
+                  <p className="font-semibold store-text">📦 Shipping</p>
+                  <p>{dispatchNote}</p>
+                </div>
+              )}
 
               <Link
                 to="/checkout"

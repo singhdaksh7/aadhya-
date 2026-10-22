@@ -2,10 +2,10 @@ import React from "react";
 import { TRUST_COLUMN_CLASSES, TRUST_MOBILE_CLASSES } from "../lib/homepageConfig";
 
 const FALLBACK_ITEMS = [
-  { id: "trust-1", icon: "sparkles", title: "Thoughtfully Curated", description: "Hand-selected slow design objects for mindful living" },
-  { id: "trust-2", icon: "badge", title: "Premium Quality", description: "Authentic materials from Indian craft clusters" },
+  { id: "trust-1", icon: "sparkles", title: "Thoughtfully Curated", description: "Home and lifestyle pieces chosen for texture and everyday use" },
+  { id: "trust-2", icon: "badge", title: "Clear Product Details", description: "Materials, dimensions and care are listed on every product page" },
   { id: "trust-3", icon: "home", title: "Styles for Every Space", description: "Proportions tailored for modern and traditional homes" },
-  { id: "trust-4", icon: "shield", title: "Secure Payments", description: "100% encrypted checkout & Pan-India express dispatch" },
+  { id: "trust-4", icon: "shield", title: "Secure Payments", description: "Encrypted checkout, with cash on delivery on eligible orders" },
 ];
 
 export function TrustIcon({ name, className = "h-6 w-6" }) {

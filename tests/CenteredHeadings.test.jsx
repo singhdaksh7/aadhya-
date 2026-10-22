@@ -56,7 +56,7 @@ describe("centered homepage headings", () => {
     wrap(<BlogPreviewSection section={{ id: "bl", settings: { viewAllUrl: "/blog" }, posts }} />);
     expect(screen.getByTestId("section-title")).toHaveAttribute("data-align", "CENTER");
     expect(screen.getByTestId("section-cta")).toHaveAttribute("href", "/blog");
-    expect(screen.getByTestId("section-cta").textContent).toContain("View All Stories");
+    expect(screen.getByTestId("section-cta").textContent).toContain("Read Journal");
   });
 
   it("admin exposes Heading alignment only for sections that support it", () => {

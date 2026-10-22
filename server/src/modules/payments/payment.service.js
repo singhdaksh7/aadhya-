@@ -1,9 +1,11 @@
+import { getStoreName } from "../../lib/storeName.js";
 import crypto from "node:crypto";
 import { prisma } from "../../lib/prisma.js";
 import { ApiError } from "../../utils/ApiError.js";
 import { rupeesToPaise } from "../../utils/money.js";
 import { getRazorpayClient, isRazorpayConfigured } from "./razorpay.client.js";
 import { sendOrderConfirmationEmail } from "../email/email.service.js";
+import { ensureAccountForOrder } from "../customer-auth/guest-account.service.js";
 import { recordPurchaseEvent } from "../analytics/analytics.service.js";
 import { decrementStockForOrder, runPendingLowStockChecks } from "../orders/stock.js";
 import { ensureDigitalDownloadForOrderItem } from "../downloads/download.service.js";
@@ -70,14 +72,15 @@ export async function createRazorpayOrderForOrder(orderId, requestingCustomerId)
 
 async function buildCheckoutOptions(order, payment) {
   const config = await (await import("./razorpay.client.js")).getRazorpayConfig();
+  const storeName = await getStoreName();
   return {
     keyId: config?.keyId,
     razorpayOrderId: payment.providerOrderId,
     amount: rupeesToPaise(order.totalAmount),
     currency: order.currency,
     orderNumber: order.orderNumber,
-    name: "Aadya Society",
-    description: `Aadya Society Order ${order.orderNumber}`,
+    name: storeName,
+    description: `${storeName} Order ${order.orderNumber}`,
     prefill: {
       name: order.customerName,
       email: order.customerEmail,
@@ -200,6 +203,7 @@ export async function finalizePaidPayment({ providerOrderId, providerPaymentId, 
     // Email and analytics are best-effort and must never affect payment/order
     // state. This is the single, server-authoritative place a `purchase`
     // analytics event is ever recorded — it is never accepted from a client.
+    await ensureAccountForOrder(result.order.id).catch((err) => console.error("Guest account creation failed:", err.message));
     sendOrderConfirmationEmail(result.order.id).catch(() => {});
     try {
       const invoice = await ensureInvoiceForOrder(result.order.id);

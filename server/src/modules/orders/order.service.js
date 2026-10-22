@@ -8,7 +8,8 @@ import { decrementStockForOrder, restoreStockForOrder, runPendingLowStockChecks 
 import { round2 } from "../../utils/money.js";
 import crypto from "node:crypto";
 import { ensureInvoiceForOrder } from "../invoices/invoice.service.js";
-import { sendInvoiceEmail } from "../email/email.service.js";
+import { sendInvoiceEmail, sendOrderConfirmationEmail } from "../email/email.service.js";
+import { ensureAccountForOrder } from "../customer-auth/guest-account.service.js";
 import { getShippingProvider } from "../shipping/provider.service.js";
 import { attemptAutomaticShipment, assertPickupConfigured, generateAwbForShipment, schedulePickupForShipment, getLabelForShipment, refreshTrackingForShipment, sanitizeProviderError } from "../shipping/fulfilment.service.js";
 
@@ -290,6 +291,10 @@ export async function createOrder({
   if (pendingLowStockChecks.length) await runPendingLowStockChecks(pendingLowStockChecks);
 
   if (paymentMethod === "cod") {
+    // COD orders are confirmed at checkout: create/link the customer account and send the confirmation
+    // email (best effort; neither may ever affect the order).
+    await ensureAccountForOrder(order.id).catch((err) => console.error("Guest account creation failed:", err.message));
+    sendOrderConfirmationEmail(order.id).catch(() => {});
     try {
       const invoice = await ensureInvoiceForOrder(order.id);
       if (invoice) sendInvoiceEmail(invoice.id).catch((err) => console.error("Invoice email failed:", err.message));
