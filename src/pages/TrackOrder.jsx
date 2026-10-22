@@ -5,10 +5,10 @@ import { formatInr } from "../lib/format";
 import { IconCheck } from "../components/icons";
 
 const STATUS_TIMELINE = [
-  { key: "CONFIRMED", label: "Order Confirmed", desc: "Your order has been logged into our artisan fulfillment queue." },
-  { key: "PROCESSING", label: "Artisan Processing", desc: "Objects are quality checked and eco-cushion packed." },
-  { key: "SHIPPED", label: "Shipped in Transit", desc: "Package dispatched via insured express courier." },
-  { key: "DELIVERED", label: "Delivered", desc: "Successfully delivered to your sanctuary." }
+  { key: "CONFIRMED", label: "Order Confirmed", desc: "Your order has been confirmed." },
+  { key: "PROCESSING", label: "Processing", desc: "Your order is being prepared." },
+  { key: "SHIPPED", label: "Shipped", desc: "Your package has been dispatched." },
+  { key: "DELIVERED", label: "Delivered", desc: "Your order has been delivered." }
 ];
 
 export default function TrackOrder() {

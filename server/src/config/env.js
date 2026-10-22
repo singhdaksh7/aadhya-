@@ -65,7 +65,7 @@ export const env = {
     port: Number(process.env.SMTP_PORT || 587),
     user: process.env.SMTP_USER || "",
     pass: process.env.SMTP_PASS || "",
-    from: process.env.SMTP_FROM || "Aadya Society <no-reply@aadyasociety.example>",
+    from: process.env.SMTP_FROM || "Aadya <no-reply@localhost>",
     get isConfigured() {
       return Boolean(process.env.SMTP_HOST);
     },

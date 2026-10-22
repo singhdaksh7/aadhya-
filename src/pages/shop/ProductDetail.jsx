@@ -358,7 +358,9 @@ export default function ProductDetail() {
                 ) : stockQty <= 5 ? (
                   <span className="store-primary font-semibold">Low Stock — Only {stockQty} remaining</span>
                 ) : (
-                  <span className="text-sage font-semibold">In Stock • Express Dispatch</span>
+                  <span className="text-sage font-semibold">
+                    In Stock{commercialContext(siteSettings).dispatchEstimate ? ` • Dispatched within ${commercialContext(siteSettings).dispatchEstimate}` : ""}
+                  </span>
                 )}
               </p>
             </div>
@@ -548,7 +550,11 @@ export default function ProductDetail() {
                 <div><dt className="font-semibold store-text">Materials:</dt><dd>{product.materials || "Natural Raw Materials"}</dd></div>
                 <div><dt className="font-semibold store-text">Dimensions:</dt><dd>{product.dimensions || "Standard Size"}</dd></div>
                 <div><dt className="font-semibold store-text">Weight:</dt><dd>{product.weight || "N/A"}</dd></div>
-                <div><dt className="font-semibold store-text">Origin:</dt><dd>Master Artisan Workshops, India</dd></div>
+                {Object.entries(product.specifications && typeof product.specifications === "object" ? product.specifications : {})
+                  .filter(([, value]) => typeof value === "string" && value.trim())
+                  .map(([label, value]) => (
+                    <div key={label}><dt className="font-semibold store-text">{label}:</dt><dd>{value}</dd></div>
+                  ))}
               </dl>
             )}
             {activeTab === "care" && (

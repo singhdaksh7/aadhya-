@@ -40,18 +40,18 @@ export default function BlogList() {
 
   return (
     <div className="store-bg min-h-screen py-12 px-5 sm:px-8 space-y-12 max-w-7xl mx-auto animate-fade-in">
-      <title>Living & Craft Stories — Aadya Lifestyle Journal</title>
+      <title>Journal — Aadya</title>
       <meta
         name="description"
-        content="Artisanal inspirations, slow living philosophy, decor edits, and home styling guides curated by Aadya."
+        content="News and stories from Aadya."
       />
       <link rel="canonical" href={canonicalUrl("/blog")} />
       {/* Header Section */}
       <div className="text-center max-w-2xl mx-auto space-y-3">
-        <span className="text-xs font-semibold uppercase tracking-widest store-primary">Aadya Lifestyle Journal</span>
-        <h1 className="font-serif-display text-4xl sm:text-5xl store-text">Living & Craft Stories</h1>
+        <span className="text-xs font-semibold uppercase tracking-widest store-primary">Journal</span>
+        <h1 className="font-serif-display text-4xl sm:text-5xl store-text">Journal</h1>
         <p className="text-sm store-muted leading-relaxed">
-          Explore artisanal inspirations, slow living philosophy, decor edits, and home styling guides curated by Aadya.
+          News and stories from Aadya.
         </p>
       </div>
 

@@ -72,9 +72,9 @@ function buildContent(invoice, images) {
   // --- Header ---
   const logoBox = company.logoUrl ? image("logo", MARGIN, y + 6, 140, 60) : null;
   if (company.logoUrl && !logoBox) text(MARGIN, y, `[Logo: ${company.logoUrl}]`, { size: 7 });
-  text(PAGE_W - MARGIN - 120, y, "TAX INVOICE", { size: 16, font: "F2" });
+  text(PAGE_W - MARGIN - 120, y, tax.enabled && company.gstin ? "TAX INVOICE" : "INVOICE", { size: 16, font: "F2" });
   y -= 20;
-  text(MARGIN, y, company.legalName || "Registered Business", { size: 13, font: "F2" });
+  if (company.legalName) { text(MARGIN, y, company.legalName, { size: 13, font: "F2" }); }
   y -= 14;
   if (company.address) { text(MARGIN, y, company.address, { size: 9 }); y -= 12; }
   const contactBits = [company.email, company.phone].filter(Boolean).join("  |  ");

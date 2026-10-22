@@ -1,3 +1,4 @@
+import { getStoreName } from "../../lib/storeName.js";
 import crypto from "node:crypto";
 import { prisma } from "../../lib/prisma.js";
 import { ApiError } from "../../utils/ApiError.js";
@@ -70,14 +71,15 @@ export async function createRazorpayOrderForOrder(orderId, requestingCustomerId)
 
 async function buildCheckoutOptions(order, payment) {
   const config = await (await import("./razorpay.client.js")).getRazorpayConfig();
+  const storeName = await getStoreName();
   return {
     keyId: config?.keyId,
     razorpayOrderId: payment.providerOrderId,
     amount: rupeesToPaise(order.totalAmount),
     currency: order.currency,
     orderNumber: order.orderNumber,
-    name: "Aadya Society",
-    description: `Aadya Society Order ${order.orderNumber}`,
+    name: storeName,
+    description: `${storeName} Order ${order.orderNumber}`,
     prefill: {
       name: order.customerName,
       email: order.customerEmail,

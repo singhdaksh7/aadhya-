@@ -1,6 +1,7 @@
 import nodemailer from "nodemailer";
 import { env } from "../../config/env.js";
 import { prisma } from "../../lib/prisma.js";
+import { getStoreName } from "../../lib/storeName.js";
 import { readInvoicePdf } from "../invoices/invoice.storage.js";
 import { ApiError } from "../../utils/ApiError.js";
 
@@ -18,7 +19,7 @@ function getTransporter() {
   return transporter;
 }
 
-function renderOrderConfirmationHtml(order) {
+function renderOrderConfirmationHtml(order, storeName = "Aadya") {
   const rows = order.items
     .map(
       (item) => `
@@ -34,7 +35,7 @@ function renderOrderConfirmationHtml(order) {
   return `
   <div style="font-family:Georgia,'Times New Roman',serif;max-width:560px;margin:0 auto;color:#2b2723;">
     <h1 style="font-size:22px;">Thank you, ${escapeHtml(order.customerName)}!</h1>
-    <p>Your Aadya Society order <strong>${order.orderNumber}</strong> is confirmed.</p>
+    <p>Your ${escapeHtml(storeName)} order <strong>${order.orderNumber}</strong> is confirmed.</p>
     <table style="width:100%;border-collapse:collapse;margin:16px 0;">${rows}</table>
     <table style="width:100%;border-top:1px solid #ddd;padding-top:8px;">
       <tr><td>Subtotal</td><td style="text-align:right;">₹${Number(order.subtotal).toLocaleString("en-IN")}</td></tr>
@@ -60,7 +61,7 @@ export async function sendPasswordResetEmail({ customer, token }) {
   if (!mailer) return { sent: false, reason: "smtp_not_configured" };
   const resetUrl = `${env.frontendUrl.replace(/\/$/, "")}/reset-password?token=${encodeURIComponent(token)}`;
   try {
-    await mailer.sendMail({ from: env.smtp.from, to: customer.email, subject: "Reset your Aadya Society password", html: `<div style="font-family:Georgia,serif;max-width:560px;margin:auto;color:#2b2723"><h1>Reset your password</h1><p>Hello ${escapeHtml(customer.name || "there")},</p><p>We received a request to reset your Aadya Society account password. This link expires in one hour.</p><p><a href="${resetUrl}" style="display:inline-block;padding:12px 20px;background:#3c4a3a;color:#fff;text-decoration:none;border-radius:6px">Reset password</a></p><p>If you did not request this, you can safely ignore this email.</p></div>` });
+    await mailer.sendMail({ from: env.smtp.from, to: customer.email, subject: `Reset your ${await getStoreName()} password`, html: `<div style="font-family:Georgia,serif;max-width:560px;margin:auto;color:#2b2723"><h1>Reset your password</h1><p>Hello ${escapeHtml(customer.name || "there")},</p><p>We received a request to reset your Aadya Society account password. This link expires in one hour.</p><p><a href="${resetUrl}" style="display:inline-block;padding:12px 20px;background:#3c4a3a;color:#fff;text-decoration:none;border-radius:6px">Reset password</a></p><p>If you did not request this, you can safely ignore this email.</p></div>` });
     return { sent: true };
   } catch (err) { console.error("[email] failed to send password reset email:", err.message); return { sent: false, reason: "send_failed" }; }
 }
@@ -91,8 +92,8 @@ export async function sendOrderConfirmationEmail(orderId, { resend = false, admi
     const info = await mailer.sendMail({
       from: env.smtp.from,
       to: order.customerEmail,
-      subject: `Your Aadya Society order ${order.orderNumber} is confirmed`,
-      html: `${renderOrderConfirmationHtml(order)}${order.customer ? `<p style="text-align:center"><a href="${env.frontendUrl.replace(/\/$/, "")}/account/orders/${encodeURIComponent(order.orderNumber)}">View your order</a></p>` : ""}`,
+      subject: `Your ${await getStoreName()} order ${order.orderNumber} is confirmed`,
+      html: `${renderOrderConfirmationHtml(order, await getStoreName())}${order.customer ? `<p style="text-align:center"><a href="${env.frontendUrl.replace(/\/$/, "")}/account/orders/${encodeURIComponent(order.orderNumber)}">View your order</a></p>` : ""}`,
     });
     try {
       await prisma.emailLog.create({ data: { type: "ORDER_CONFIRMATION", recipient: order.customerEmail, orderId, status: "SENT", providerMessageId: info.messageId || null, sentAt: new Date() } });
@@ -238,8 +239,8 @@ export async function sendTestEmail(recipient, adminId) {
     const info = await mailer.sendMail({
       from: env.smtp.from,
       to: recipient,
-      subject: "Aadya Society — test email",
-      html: `<div style="font-family:Georgia,serif;max-width:480px;margin:auto;color:#2b2723"><h1>SMTP test successful</h1><p>This is a test message sent from the Aadya Society admin panel to confirm outgoing email is working correctly.</p></div>`,
+      subject: `${await getStoreName()} — test email`,
+      html: `<div style="font-family:Georgia,serif;max-width:480px;margin:auto;color:#2b2723"><h1>SMTP test successful</h1><p>This is a test message sent from the admin panel to confirm outgoing email is working correctly.</p></div>`,
     });
     await prisma.emailLog.create({ data: { type: "TEST_EMAIL", recipient, status: "SENT", providerMessageId: info.messageId || null, sentAt: new Date() } });
     if (adminId) await prisma.adminAuditLog.create({ data: { adminId, action: "EMAIL_TEST_SENT", provider: "email", metadata: { recipient } } });
