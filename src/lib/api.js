@@ -412,6 +412,23 @@ export function adminCashfreeVerifySetup() { return api.post("/admin/integration
 export function adminCashfreeWebhookEvents(limit = 25) { return api.get(`/admin/integrations/cashfree/webhook-events?limit=${limit}`, { auth: "admin" }); }
 export function adminSyncRefund(refundId) { return api.post(`/admin/returns/refunds/${refundId}/sync`, {}, { auth: "admin" }); }
 
+export function adminListEmailTemplates() { return api.get("/admin/email/templates", { auth: "admin" }); }
+export function adminSaveEmailTemplate(key, data) { return api.put(`/admin/email/templates/${key}`, data, { auth: "admin" }); }
+export function adminToggleEmailTemplate(key, enabled) { return api.patch(`/admin/email/templates/${key}/enabled`, { enabled }, { auth: "admin" }); }
+export function adminPreviewEmailTemplate(key, draft) { return api.post(`/admin/email/templates/${key}/preview`, draft || {}, { auth: "admin" }); }
+export function adminResetEmailTemplate(key) { return api.post(`/admin/email/templates/${key}/reset`, {}, { auth: "admin" }); }
+export function adminSendTemplateTest(key, recipient) { return api.post(`/admin/email/templates/${key}/send-test`, { recipient }, { auth: "admin" }); }
+export function adminListEmailNotifications(params = {}) {
+  const query = new URLSearchParams(Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== ""))).toString();
+  return api.get(`/admin/email/notifications${query ? `?${query}` : ""}`, { auth: "admin" });
+}
+export function adminRetryNotification(id) { return api.post(`/admin/email/notifications/${id}/retry`, {}, { auth: "admin" }); }
+export function adminShiprocketSummary() { return api.get("/admin/integrations/shiprocket/summary", { auth: "admin" }); }
+export function adminShiprocketGenerateToken() { return api.post("/admin/integrations/shiprocket/webhook-token/generate", {}, { auth: "admin" }); }
+export function adminShiprocketRemoveToken() { return api.delete("/admin/integrations/shiprocket/webhook-token", { auth: "admin" }); }
+export function adminShiprocketVerifySetup() { return api.post("/admin/integrations/shiprocket/verify-setup", {}, { auth: "admin" }); }
+export function adminShiprocketWebhookEvents(limit = 25) { return api.get(`/admin/integrations/shiprocket/webhook-events?limit=${limit}`, { auth: "admin" }); }
+
 export function adminGetEmailStatus() { return api.get("/admin/email/status", { auth: "admin" }); }
 export function adminSendTestEmail(recipient) { return api.post("/admin/email/test", { recipient }, { auth: "admin" }); }
 export function adminGetEmailHealth() { return api.get("/admin/email/health", { auth: "admin" }); }

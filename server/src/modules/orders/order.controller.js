@@ -57,7 +57,7 @@ export const getAdminOrder = asyncHandler(async (req, res) => {
 
 export const updateAdminOrderStatus = asyncHandler(async (req, res) => {
   const { status, note } = updateOrderStatusSchema.parse(req.body);
-  const order = await orderService.updateOrderStatus(req.params.id, status, note);
+  const order = await orderService.updateOrderStatus(req.params.id, status, note, req.admin?.id || null);
   ok(res, order);
 });
 

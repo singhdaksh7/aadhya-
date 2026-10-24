@@ -4,6 +4,7 @@ const TONE_MAP = {
   DELIVERED: "success",
   ACTIVE: "success",
   SHIPPED: "info",
+  OUT_FOR_DELIVERY: "info",
   PROCESSING: "info",
   PENDING: "neutral",
   FAILED: "danger",

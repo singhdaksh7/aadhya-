@@ -11,6 +11,9 @@ const ENCRYPTION_OPTIONS = [
 const DEFAULT_PORT = { STARTTLS: 587, SSL_TLS: 465, NONE: 25 };
 const SOURCE_LABEL = { admin: "These saved settings are in use", env: "Server environment variables (SMTP_*) are in use", none: "No SMTP is configured - emails are not being sent" };
 
+// Hostinger business/email hosting: the mailbox's full address is the username; port 465 uses SSL/TLS.
+const HOSTINGER_PRESET = { host: "smtp.hostinger.com", port: 465, encryption: "SSL_TLS" };
+
 const empty = { enabled: true, host: "", port: 587, encryption: "STARTTLS", user: "", password: "", fromName: "", fromEmail: "", replyTo: "" };
 
 // Admin-managed SMTP. The password is write-only: it is encrypted at rest and never sent back to the browser;
@@ -36,6 +39,9 @@ export default function SmtpSettingsForm({ onSaved }) {
     const encryption = e.target.value;
     setForm((f) => ({ ...f, encryption, port: Object.values(DEFAULT_PORT).includes(Number(f.port)) ? DEFAULT_PORT[encryption] : f.port }));
   };
+
+  const useHostingerPreset = () =>
+    setForm((f) => ({ ...f, ...HOSTINGER_PRESET, user: f.user || f.fromEmail, fromEmail: f.fromEmail || f.user, fromName: f.fromName || "Tushaqsa" }));
 
   const save = async (e) => {
     e.preventDefault();
@@ -79,6 +85,11 @@ export default function SmtpSettingsForm({ onSaved }) {
       </div>
       {message && <p role="status" className="mb-3 rounded-xl bg-sage-light px-3 py-2 text-sm text-green-deep">{message}</p>}
       {error && <p role="alert" className="mb-3 rounded-xl bg-terracotta/10 px-3 py-2 text-sm text-terracotta">{error}</p>}
+
+      <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-charcoal-soft">
+        <button type="button" className="admin-btn admin-btn--ghost" onClick={useHostingerPreset}>Use Hostinger settings</button>
+        <span>Fills host smtp.hostinger.com, port 465, SSL/TLS. Then enter your mailbox address and its password.</span>
+      </div>
 
       <div className="admin-form-grid sm:grid-cols-2">
         <label className="admin-label sm:col-span-2 flex items-center gap-2">

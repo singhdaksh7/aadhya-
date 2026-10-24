@@ -21,7 +21,8 @@ const ALLOWED_TRANSITIONS = {
   PENDING: ["CONFIRMED", "CANCELLED"],
   CONFIRMED: ["PROCESSING", "CANCELLED"],
   PROCESSING: ["SHIPPED", "CANCELLED"],
-  SHIPPED: ["DELIVERED"],
+  SHIPPED: ["OUT_FOR_DELIVERY", "DELIVERED"],
+  OUT_FOR_DELIVERY: ["DELIVERED"],
   DELIVERED: [],
   CANCELLED: [],
 };
@@ -395,8 +396,9 @@ export default function AdminOrderDetail() {
               <ul className="space-y-1.5 text-xs text-charcoal-soft">
                 {order.statusHistory.map((h) => (
                   <li key={h.id}>
-                    {new Date(h.changedAt).toLocaleString("en-IN")} — {h.fromStatus || "created"} → {h.toStatus}
+                    {new Date(h.changedAt).toLocaleString("en-IN")} — {String(h.fromStatus || "created").replaceAll("_", " ")} → {String(h.toStatus).replaceAll("_", " ")}
                     {h.note ? ` (${h.note})` : ""}
+                    {h.source ? ` · by ${h.source === "ADMIN" ? "Admin" : h.source === "SHIPROCKET" ? "Shiprocket" : h.source === "PAYMENT" ? "payment" : "system"}` : ""}
                   </li>
                 ))}
               </ul>

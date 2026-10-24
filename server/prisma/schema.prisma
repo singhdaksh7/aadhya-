@@ -27,6 +27,7 @@ enum OrderStatus {
   CONFIRMED
   PROCESSING
   SHIPPED
+  OUT_FOR_DELIVERY
   DELIVERED
   CANCELLED
 }
@@ -549,6 +550,11 @@ model OrderStatusHistory {
   toStatus   OrderStatus
   changedAt  DateTime    @default(now())
   note       String?
+  // Who/what caused the change: ADMIN | SHIPROCKET | PAYMENT | SYSTEM (internal; never shown to customers).
+  source          String  @default("SYSTEM")
+  adminId         String?
+  shipmentId      String?
+  providerEventId String?
 
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
@@ -669,6 +675,11 @@ model EmailLog {
   sentAt            DateTime?
   failureMessage    String?
   createdAt         DateTime @default(now())
+  // Transactional notification metadata (never the body or any code/secret).
+  event             String?
+  subject           String?
+  source            String?
+  notificationId    String?
   invoice           Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
 
   @@index([orderId])
@@ -1361,4 +1372,42 @@ model CustomerLoginOtp {
   customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   @@index([customerId, createdAt])
+}
+
+// One row per customer-facing notification that must be sent at most once (for example "your order
+// shipped"). The unique dedupeKey is the idempotency guard: the same event reaching us from an Admin
+// click, a Shiprocket webhook and a retry still produces one email.
+model NotificationEvent {
+  id              String    @id @default(uuid())
+  dedupeKey       String    @unique
+  event           String
+  orderId         String?
+  customerId      String?
+  recipient       String
+  source          String
+  providerEventId String?
+  status          String    @default("PENDING") // PENDING | SENT | FAILED
+  attempts        Int       @default(0)
+  lastError       String?
+  nextRetryAt     DateTime?
+  sentAt          DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([orderId])
+  @@index([status, nextRetryAt])
+}
+
+// Admin-editable wording for a transactional email. Layout, order summary and safety rules stay in
+// code; only subject, heading and message text (with whitelisted {{placeholders}}) are editable.
+model EmailTemplate {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  subject     String
+  heading     String
+  body        String
+  enabled     Boolean  @default(true)
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

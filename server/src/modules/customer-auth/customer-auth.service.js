@@ -1,3 +1,4 @@
+import { notifyAccountCreated } from "../mailer/mailer.service.js";
 import crypto from "node:crypto";
 import { env } from "../../config/env.js";
 import { prisma } from "../../lib/prisma.js";
@@ -46,6 +47,8 @@ export async function register(input, userAgent) {
         prisma.customer.create({ data: { id: customerId, name: input.name, email: input.email, phone: input.phone || null, passwordHash, passwordSetAt: new Date() } }),
         prisma.customerRefreshSession.create({ data: { ...refresh.data, customerId } }),
       ]);
+      // Welcome email: once per account, never blocks or fails registration.
+      await notifyAccountCreated(customer, { guest: false });
       return { accessToken: signCustomerAccessToken(customer), refreshToken: refresh.refreshToken, customer: safe(customer) };
     } catch (error) {
       if (isUniqueViolation(error, "email")) throw ApiError.conflict("An account with this email already exists.");

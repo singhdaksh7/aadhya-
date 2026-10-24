@@ -3,6 +3,7 @@ import { ApiError } from "../../utils/ApiError.js";
 import { getCashfreeConfig, createCashfreeRefund, fetchCashfreeRefund, CashfreeError } from "../payments/cashfree.client.js";
 import { round2 } from "../../utils/money.js";
 import { sendReturnStatusEmail } from "../email/email.service.js";
+import { notifyOrderEvent } from "../mailer/mailer.service.js";
 
 const DEFAULT_RETURN_SETTINGS = {
   enabled: true,
@@ -383,7 +384,8 @@ export async function issueRefund(id, adminId, { amount, method, reference, note
   });
 
   await auditLog(adminId, "RETURN_REFUND_ISSUED", { returnRequestId: id, amount, method, providerRefundId, confirmed });
-  if (confirmed) sendReturnStatusEmail(returnRequest.orderId, result.returnRequest, "Refunded").catch(() => {});
+  // One email per refund: "initiated" now, "completed" once the money movement is confirmed.
+  await notifyOrderEvent(returnRequest.orderId, confirmed ? "REFUND_COMPLETED" : "REFUND_INITIATED", { source: "ADMIN", dedupeSuffix: result.refund?.id, extra: { refundAmount: amount } });
   return result;
 }
 
@@ -424,7 +426,7 @@ export async function syncCashfreeRefund(refundRowId, adminId) {
     });
     if (result) {
       await auditLog(adminId, "RETURN_REFUND_CONFIRMED", { refundId: refund.id, providerRefundId: refund.providerRefundId });
-      if (result.id) sendReturnStatusEmail(refund.orderId, result, "Refunded").catch(() => {});
+      await notifyOrderEvent(refund.orderId, "REFUND_COMPLETED", { source: "ADMIN", dedupeSuffix: refund.id, extra: { refundAmount: Number(refund.amount) } });
     }
     return { refund: await prisma.refund.findUnique({ where: { id: refund.id } }), changed: Boolean(result) };
   }

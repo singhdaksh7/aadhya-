@@ -29,7 +29,7 @@ function fulfilmentLabel(order) {
   if (order.shipment?.trackingNumber || order.shipment?.carrier) {
     return order.shipment.status || "Shipped";
   }
-  if (["SHIPPED", "DELIVERED"].includes(order.status)) return order.status;
+  if (["SHIPPED", "OUT_FOR_DELIVERY", "DELIVERED"].includes(order.status)) return order.status;
   return "Unfulfilled";
 }
 
