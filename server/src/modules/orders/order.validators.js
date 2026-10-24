@@ -73,7 +73,7 @@ export const createOrderSchema = checkoutItemsSchema.extend({
   couponCode: z.string().trim().max(40).optional().nullable(),
   savedAddressId: z.string().uuid().optional(),
   billingSavedAddressId: z.string().uuid().optional(),
-  paymentMethod: z.enum(["razorpay", "cod"]).optional().default("razorpay"),
+  paymentMethod: z.enum(["cashfree", "razorpay", "cod"]).optional().default("cashfree").transform((m) => (m === "razorpay" ? "cashfree" : m)),
   ...utmSchema,
 });
 

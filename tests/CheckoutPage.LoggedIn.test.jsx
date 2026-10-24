@@ -48,14 +48,14 @@ vi.mock("../src/lib/api", () => ({
   fetchProductBySlug: vi.fn(() => Promise.resolve({ data: product })),
   checkoutPreview: vi.fn(() => Promise.resolve(previewResponse)),
   createOrder: vi.fn(() => Promise.resolve({ data: { orderId: "order-1", orderNumber: "AAD-2026-000001", accessToken: "tok123" } })),
-  createRazorpayOrder: vi.fn(() => Promise.resolve({ data: { keyId: "rzp_test_x", razorpayOrderId: "order_rzp_1", amount: 108900, currency: "INR", name: "Tushaqsa", description: "d", prefill: {} } })),
-  verifyRazorpayPayment: vi.fn(() => Promise.resolve({ data: { orderNumber: "AAD-2026-000001" } })),
+  createCashfreeSession: vi.fn(() => Promise.resolve({ data: { keyId: "rzp_test_x", razorpayOrderId: "order_rzp_1", amount: 108900, currency: "INR", name: "Tushaqsa", description: "d", prefill: {} } })),
+  verifyCashfreePayment: vi.fn(() => Promise.resolve({ data: { orderNumber: "AAD-2026-000001" } })),
   accountAddresses: vi.fn(() => Promise.resolve({ data: [HOME, WORK] })),
   createAddress: vi.fn(() => Promise.resolve({ data: { id: "addr-new" } })),
   ApiRequestError: class ApiRequestError extends Error {},
 }));
 
-vi.mock("../src/lib/razorpay", () => ({ loadRazorpayScript: vi.fn(() => Promise.resolve(true)) }));
+vi.mock("../src/lib/cashfree", () => ({ loadCashfreeScript: vi.fn(() => Promise.resolve(true)) }));
 
 function seedCart() {
   localStorage.setItem("aadya.cart.v1", JSON.stringify([{ slug: "test-basket", quantity: 1 }]));

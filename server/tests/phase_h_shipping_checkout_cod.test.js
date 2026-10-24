@@ -6,7 +6,7 @@ import { prisma } from "../src/lib/prisma.js";
 import { env } from "../src/config/env.js";
 import { canTransition, assertTransition } from "../src/modules/orders/orderStatus.js";
 import { checkCodEligibility, computeShippingAmount, findZoneForAddress } from "../src/modules/shipping/shipping.service.js";
-import { verifyRazorpaySignature } from "../src/modules/payments/payment.service.js";
+import { verifyCashfreeWebhookSignature } from "../src/modules/payments/payment.service.js";
 import crypto from "node:crypto";
 
 const app = createApp();
@@ -263,30 +263,23 @@ describe("admin shipment tracking", () => {
   });
 });
 
-describe("Razorpay signature verification", () => {
-  it("accepts a signature computed with the configured webhook/key secret", async () => {
-    const orderId = "order_test123";
-    const paymentId = "pay_test456";
-    const secret = env.razorpay.keySecret || "test-secret-for-signature-check";
-    const originalSecret = env.razorpay.keySecret;
-    env.razorpay.keySecret = secret;
+describe("Cashfree webhook signature verification", () => {
+  const sign = (secret, ts, body) => crypto.createHmac("sha256", secret).update(ts + body).digest("base64");
 
-    const signature = crypto.createHmac("sha256", secret).update(`${orderId}|${paymentId}`).digest("hex");
-    const valid = await verifyRazorpaySignature({ razorpayOrderId: orderId, razorpayPaymentId: paymentId, razorpaySignature: signature });
-    expect(valid).toBe(true);
-
-    env.razorpay.keySecret = originalSecret;
+  it("accepts Base64(HMAC-SHA256(secret, timestamp + rawBody))", () => {
+    const body = '{"type":"PAYMENT_SUCCESS_WEBHOOK","data":{"payment":{"payment_amount":170.00}}}';
+    expect(verifyCashfreeWebhookSignature(Buffer.from(body), "1700000000000", sign("secret_a", "1700000000000", body), "secret_a")).toBe(true);
   });
 
-  it("rejects a tampered signature", async () => {
-    const secret = "another-test-secret";
-    const originalSecret = env.razorpay.keySecret;
-    env.razorpay.keySecret = secret;
-
-    const signature = crypto.createHmac("sha256", secret).update("order_a|pay_a").digest("hex");
-    const valid = await verifyRazorpaySignature({ razorpayOrderId: "order_a", razorpayPaymentId: "pay_b", razorpaySignature: signature });
-    expect(valid).toBe(false);
-
-    env.razorpay.keySecret = originalSecret;
+  it("rejects a wrong secret, a changed timestamp, a changed body, and missing parts", () => {
+    const body = '{"a":1}';
+    const sig = sign("secret_a", "111", body);
+    expect(verifyCashfreeWebhookSignature(Buffer.from(body), "111", sig, "secret_b")).toBe(false);
+    expect(verifyCashfreeWebhookSignature(Buffer.from(body), "112", sig, "secret_a")).toBe(false);
+    expect(verifyCashfreeWebhookSignature(Buffer.from('{"a":2}'), "111", sig, "secret_a")).toBe(false);
+    expect(verifyCashfreeWebhookSignature(Buffer.from(body), "111", "", "secret_a")).toBe(false);
+    expect(verifyCashfreeWebhookSignature(Buffer.from(body), "", sig, "secret_a")).toBe(false);
+    expect(verifyCashfreeWebhookSignature(Buffer.from(body), "111", sig, "")).toBe(false);
+    expect(verifyCashfreeWebhookSignature(Buffer.from(body), "111", sig.slice(0, -2), "secret_a")).toBe(false);
   });
 });

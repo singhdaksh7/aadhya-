@@ -77,7 +77,7 @@ export const DEFAULT_SITE_SETTINGS = {
     contactDetails: true,
     socialLinksVisibility: true,
     socialHeading: "Connect With Us",
-    paymentIcons: ["Visa", "Mastercard", "RuPay", "UPI", "Razorpay", "COD"],
+    paymentIcons: ["Visa", "Mastercard", "RuPay", "UPI", "COD"],
     footerColumns: [
       {
         id: "fc-1",
@@ -184,9 +184,9 @@ export const DEFAULT_SITE_SETTINGS = {
     shippingEnabled: true,
   },
   payments: {
-    razorpayEnabled: true,
+    cashfreeEnabled: true,
     codEnabled: true,
-    razorpayDisplayLabel: "Pay Online via Razorpay (UPI, Cards, NetBanking)",
+    cashfreeDisplayLabel: "Pay Online (UPI, Cards, NetBanking)",
     codDisplayLabel: "Cash on Delivery (COD)",
   },
   checkout: {

@@ -3,11 +3,12 @@ import { prisma } from "../../lib/prisma.js";
 const RETENTION_DAYS = 90;
 const REJECTED_CAP_PER_HOUR = 200;
 
-// Events Tushaqsa's Razorpay handler genuinely acts on. Anything else is accepted
-// (200) and recorded as IGNORED. Keep this list in sync with webhook.controller.js.
-export const SUPPORTED_RAZORPAY_EVENTS = [
-  { event: "payment.captured", effect: "Marks the payment and order as paid, confirms the order and sends the invoice. Safe to receive more than once." },
-  { event: "payment.failed", effect: "Records the failed payment attempt so the order stays unpaid and can be retried." },
+// Events Tushaqsa's Cashfree handler genuinely acts on. Anything else is accepted (200) and
+// recorded as IGNORED. Keep this list in sync with webhook.controller.js.
+export const SUPPORTED_CASHFREE_EVENTS = [
+  { event: "PAYMENT_SUCCESS_WEBHOOK", effect: "Re-checks the payment with Cashfree, then marks the order paid, confirms it and sends the invoice. Safe to receive more than once." },
+  { event: "PAYMENT_FAILED_WEBHOOK", effect: "Records the failed payment attempt so the order stays unpaid and can be retried." },
+  { event: "PAYMENT_USER_DROPPED_WEBHOOK", effect: "Records that the customer left the payment page without paying; the order stays unpaid and can be retried." },
 ];
 
 // Best-effort: logging must never break webhook handling. Stores no payloads,

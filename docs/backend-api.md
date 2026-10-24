@@ -21,7 +21,7 @@ Base URL: `/api`. All successful responses use `{ "success": true, "data": …, 
 - `GET /account/orders`, `GET /account/orders/:id`
 - `GET /cart`; `POST /cart/items`; `PATCH|DELETE /cart/items/:productId`; `DELETE /cart`; `POST /cart/merge`
 - `POST /checkout/preview`, `POST /orders`, `POST /orders/track`
-- `POST /payments/razorpay/verify`; `POST /webhooks/razorpay`
+- `POST /payments/cashfree/verify`; `POST /webhooks/cashfree`
 
 Customer endpoints require an `Authorization: Bearer <customer access token>` header where applicable. Refresh tokens are HTTP-only cookies. Never send a client-calculated total to checkout: the server calculates it from current products.
 
@@ -37,7 +37,7 @@ All admin routes require an admin-audience JWT.
 - `GET|PUT /admin/settings` — only the documented, allow-listed commerce and presentation keys are accepted.
 - `GET /admin/orders`, `GET /admin/orders/:id`, `PATCH /admin/orders/:id/status`
 
-Payment status cannot be set to `PAID` by admin order-status endpoints. Razorpay server verification/webhooks are the payment authority.
+Payment status cannot be set to `PAID` by admin order-status endpoints. Cashfree server-side verification (order status API) and signed webhooks are the payment authority.
 # Backend additions: variants, merchandising, and operations
 
 All responses use `{ success, data, meta? }`; errors use `{ success:false, error:{ message, details? } }`. Admin endpoints require `Authorization: Bearer <admin access token>`; customer tokens are rejected. Paginated lists use `meta: { page, limit, total, totalPages }`.

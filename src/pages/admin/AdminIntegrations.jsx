@@ -14,7 +14,7 @@ import {
   adminRetryEmailLog,
 } from "../../lib/api";
 import { PageHeader, AdminCard, StatusBadge } from "../../components/admin/ui";
-import RazorpayPanel from "../../components/admin/integrations/RazorpayPanel";
+import CashfreePanel from "../../components/admin/integrations/CashfreePanel";
 import SmtpSettingsForm from "../../components/admin/integrations/SmtpSettingsForm";
 
 const initialBusiness = {
@@ -177,7 +177,7 @@ export default function AdminIntegrations() {
         </p>
       )}
 
-      <RazorpayPanel onChanged={load} />
+      <CashfreePanel onChanged={load} />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <ProviderCard

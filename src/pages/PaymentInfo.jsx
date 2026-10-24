@@ -7,8 +7,8 @@ import SystemPage from "./SystemPage";
 function EnabledMethods() {
   const payments = useSiteSettings()?.payments || {};
   const methods = [];
-  if (payments.razorpayEnabled !== false) {
-    methods.push({ id: "online", label: payments.razorpayDisplayLabel || "Pay online (UPI, cards, net banking)", note: "Processed securely by our payment provider, Razorpay." });
+  if (payments.cashfreeEnabled !== false && payments.cashfreeAvailable !== false) {
+    methods.push({ id: "online", label: payments.cashfreeDisplayLabel || "Pay online (UPI, cards, net banking)", note: "Online payments are securely processed through Cashfree Payments." });
   }
   if (payments.codEnabled) {
     methods.push({ id: "cod", label: payments.codDisplayLabel || "Cash on Delivery", note: "Offered on eligible orders; it is shown at checkout only when it is available for your order." });

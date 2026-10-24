@@ -12,7 +12,7 @@ import { listProductsQuerySchema } from "../modules/products/product.validators.
 import { requireAdmin } from "../middleware/adminAuth.js";
 import { prisma } from "../lib/prisma.js";
 import { checkoutRouter, publicOrderRouter, adminOrderRouter } from "../modules/orders/order.routes.js";
-import { orderPaymentRouter, razorpayVerifyRouter } from "../modules/payments/payment.routes.js";
+import { orderPaymentRouter, cashfreeVerifyRouter } from "../modules/payments/payment.routes.js";
 import { getOrderDashboardStats } from "../modules/orders/order.service.js";
 import { publicCollectionRouter, adminCollectionRouter } from "../modules/collections/collection.routes.js";
 import { publicSettingsRouter, adminSettingsRouter } from "../modules/settings/settings.routes.js";
@@ -92,14 +92,14 @@ router.use("/account/notifications", notificationRouter);
 router.use("/account", profileRouter);
 router.use("/account", accountRouter);
 router.use("/cart", cartRouter);
-router.use("/payments/razorpay", razorpayVerifyRouter);
+router.use("/payments/cashfree", cashfreeVerifyRouter);
 router.use("/downloads", publicDownloadRouter);
 router.use("/account/downloads", customerDownloadRouter);
 router.use("/orders/downloads", guestDownloadRouter);
 router.use("/account/returns", customerReturnRouter);
 router.use("/account/invoices", customerInvoiceRouter);
 router.use("/orders/invoices", guestInvoiceRouter);
-// POST /api/webhooks/razorpay is mounted directly on the app in app.js,
+// POST /api/webhooks/cashfree is mounted directly on the app in app.js,
 // ahead of express.json(), because signature verification needs the raw body.
 
 // Admin APIs.

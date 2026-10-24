@@ -99,7 +99,7 @@ function RefundModal({ open, onClose, returnRequest, onSubmitted }) {
     try {
       const payload = cod
         ? { amount: numericAmount, method: "manual", reference: reference.trim(), note: note || undefined }
-        : { amount: numericAmount, method: "razorpay", note: note || undefined };
+        : { amount: numericAmount, method: "cashfree", note: note || undefined };
       await adminIssueReturnRefund(returnRequest.id, payload);
       onSubmitted();
     } catch (err) {
@@ -159,7 +159,7 @@ function RefundModal({ open, onClose, returnRequest, onSubmitted }) {
           </>
         ) : (
           <p className="text-xs text-charcoal-soft">
-            This will be issued via Razorpay to the original payment method (method: razorpay).
+            This will be issued through Cashfree to the original payment method. It is only marked refunded once Cashfree confirms it; a pending refund can be re-checked from the order's payment details.
           </p>
         )}
 

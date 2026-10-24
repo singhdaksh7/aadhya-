@@ -1055,23 +1055,23 @@ export default function AdminSettings() {
               <label className="flex items-center gap-2 text-sm font-semibold text-charcoal cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={settings.payments?.razorpayEnabled !== false}
+                  checked={settings.payments?.cashfreeEnabled !== false}
                   onChange={(e) =>
                     setSettings((s) => ({
                       ...s,
-                      payments: { ...s.payments, razorpayEnabled: e.target.checked },
+                      payments: { ...s.payments, cashfreeEnabled: e.target.checked },
                     }))
                   }
                 />
-                Enable Razorpay Online Payment Gateway
+                Enable Online Payment (Cashfree)
               </label>
               <input
-                placeholder="Razorpay Option Display Label"
-                value={settings.payments?.razorpayDisplayLabel || ""}
+                placeholder="Online payment option label, e.g. Pay Online (UPI, Cards, NetBanking)"
+                value={settings.payments?.cashfreeDisplayLabel || ""}
                 onChange={(e) =>
                   setSettings((s) => ({
                     ...s,
-                    payments: { ...s.payments, razorpayDisplayLabel: e.target.value },
+                    payments: { ...s.payments, cashfreeDisplayLabel: e.target.value },
                   }))
                 }
                 className={inputCls}

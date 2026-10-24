@@ -2,7 +2,7 @@
 
 How to stand up a second independent store (e.g. a jewellery or clothing brand) from
 this codebase. Each store is a fully separate deployment — its own database, its own
-`.env`, its own Razorpay/Shiprocket/SMTP accounts. This is NOT multi-tenancy: there is
+`.env`, its own Cashfree/Shiprocket/SMTP accounts. This is NOT multi-tenancy: there is
 no shared database or shared admin between stores.
 
 1. **Clone the repo** into a new working copy per store (or a new deploy branch if you
@@ -12,7 +12,7 @@ no shared database or shared admin between stores.
 2. **Env setup**: copy `server/.env.example` → `server/.env` and `.env.example` →
    `.env`/`.env.production` at the repo root. Fill in every value — see `.env.example`
    for the full documented list (Database, Auth/JWT, Encryption, Uploads/Storage,
-   Shipping defaults, Razorpay, Shiprocket via the admin UI post-deploy, SMTP).
+   Shipping defaults, Cashfree, Shiprocket via the admin UI post-deploy, SMTP).
 
 3. **Database**: provision a fresh PostgreSQL database. Set `DATABASE_URL`. Do not point
    two stores at the same database.
@@ -37,8 +37,8 @@ no shared database or shared admin between stores.
    logo and authorized-signature images (now rendered as real embedded images in the PDF
    when stored on local disk — see the S3 caveat in `.env.example`).
 
-9. **Razorpay**: Admin → Integrations — enter live/test key ID, key secret, webhook
-   secret. Configure the Razorpay dashboard webhook URL to point at this deployment.
+9. **Cashfree**: Admin → Integrations — enter the TEST/LIVE App ID and Secret Key. Add the
+   shown webhook URL in the Cashfree dashboard (Developers → Webhooks).
 
 10. **Shiprocket**: Admin → Integrations — enter Shiprocket account email/password,
     environment, webhook secret. Use "Test Connection" to verify before going live.

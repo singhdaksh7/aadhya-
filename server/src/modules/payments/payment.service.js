@@ -1,9 +1,16 @@
-import { getStoreName } from "../../lib/storeName.js";
 import crypto from "node:crypto";
 import { prisma } from "../../lib/prisma.js";
+import { env } from "../../config/env.js";
 import { ApiError } from "../../utils/ApiError.js";
 import { rupeesToPaise } from "../../utils/money.js";
-import { getRazorpayClient, isRazorpayConfigured } from "./razorpay.client.js";
+import {
+  getCashfreeConfig,
+  createCashfreeOrder,
+  fetchCashfreeOrder,
+  fetchCashfreePayments,
+  CashfreeError,
+  CHECKOUT_MODE,
+} from "./cashfree.client.js";
 import { sendOrderConfirmationEmail } from "../email/email.service.js";
 import { ensureAccountForOrder } from "../customer-auth/guest-account.service.js";
 import { recordPurchaseEvent } from "../analytics/analytics.service.js";
@@ -13,13 +20,47 @@ import { ensureInvoiceForOrder } from "../invoices/invoice.service.js";
 import { sendInvoiceEmail } from "../email/email.service.js";
 import { attemptAutomaticShipment } from "../shipping/fulfilment.service.js";
 
-// POST /api/orders/:orderId/payment — creates (or reuses) the Razorpay order
-// for an internal order. Idempotent: calling it twice for the same pending
-// order returns the same provider order id instead of creating a second one.
-export async function createRazorpayOrderForOrder(orderId, requestingCustomerId) {
+const ORDER_EXPIRY_MINUTES = 60;
+
+// Cashfree needs a 10-digit mobile number. Real checkout data only: nothing is invented, and a
+// missing/invalid number is reported to the customer instead of being papered over.
+export function normalizeIndianPhone(raw) {
+  const digits = String(raw || "").replace(/\D/g, "");
+  const national = digits.length > 10 && digits.startsWith("91") ? digits.slice(-10) : digits.replace(/^0+/, "");
+  return /^\d{10}$/.test(national) ? national : null;
+}
+
+// Cashfree customer_id: 3-50 alphanumeric characters. Account holders use their account id; guests a
+// stable hash of their email so repeat purchases map to the same Cashfree customer.
+export function cashfreeCustomerId(order) {
+  if (order.customerId) {
+    const id = String(order.customerId).replace(/[^a-zA-Z0-9]/g, "").slice(0, 50);
+    if (id.length >= 3) return id;
+  }
+  return `guest${crypto.createHash("sha256").update(String(order.customerEmail || order.id).toLowerCase()).digest("hex").slice(0, 24)}`;
+}
+
+function sessionResponse(order, cfOrder, config) {
+  return {
+    provider: "cashfree",
+    paymentSessionId: cfOrder.payment_session_id,
+    cashfreeOrderId: cfOrder.order_id,
+    mode: CHECKOUT_MODE[config.environment],
+    environment: config.environment,
+    orderNumber: order.orderNumber,
+    amount: Number(order.totalAmount),
+    currency: order.currency,
+  };
+}
+
+// POST /api/orders/:orderId/payment — creates (or reuses) the Cashfree order for an internal order.
+// The amount comes from the stored order total (computed server-side at checkout); the browser never
+// supplies amount, currency or ownership. Idempotent: an order that already has a live Cashfree order
+// gets the same payment session back instead of a second order.
+export async function createCashfreeOrderForOrder(orderId, requestingCustomerId, { fresh = false } = {}) {
   const paymentSettingRow = await prisma.siteSetting.findUnique({ where: { key: "payments" } });
-  if (paymentSettingRow?.value?.razorpayEnabled === false) {
-    throw ApiError.badRequest("Online payment via Razorpay is currently disabled.");
+  if (paymentSettingRow?.value?.cashfreeEnabled === false) {
+    throw ApiError.badRequest("Online payment is currently disabled.");
   }
 
   const order = await prisma.order.findUnique({
@@ -27,95 +68,148 @@ export async function createRazorpayOrderForOrder(orderId, requestingCustomerId)
     include: { payments: { orderBy: { createdAt: "desc" }, take: 1 } },
   });
   if (!order) throw ApiError.notFound("Order not found");
-  // If this order is tied to an account, only that account may initiate/
-  // retry payment on it — otherwise a guessed/leaked order id would let
-  // anyone mint Razorpay checkout options (and see order amount) for
-  // someone else's order. Guest (no customerId) orders are unauthenticated
-  // by design at this step since checkout itself is guest-accessible.
+  // An order tied to an account can only have payment initiated/retried by that account.
   if (order.customerId && order.customerId !== requestingCustomerId) {
     throw ApiError.notFound("Order not found");
   }
 
   const payment = order.payments[0];
   if (!payment) throw ApiError.badRequest("This order has no payment record.");
+  if (payment.provider === "cod") throw ApiError.badRequest("This is a Cash on Delivery order.");
+  if (order.paymentStatus === "PAID") throw ApiError.conflict("This order has already been paid.");
 
-  if (order.paymentStatus === "PAID") {
-    throw ApiError.conflict("This order has already been paid.");
-  }
-  if (payment.providerOrderId) {
-    // Already has a live provider order — reuse it rather than mint another.
-    return await buildCheckoutOptions(order, payment);
-  }
-
-  if (!(await isRazorpayConfigured())) {
-    throw ApiError.badRequest(
-      "Payments are not configured on this server yet (RAZORPAY_KEY_ID/RAZORPAY_KEY_SECRET missing)."
-    );
+  const config = await getCashfreeConfig();
+  if (!config) {
+    throw ApiError.badRequest("Online payment is not available right now. Please choose Cash on Delivery or try again later.");
   }
 
-  const razorpay = await getRazorpayClient();
-  const amountPaise = rupeesToPaise(order.totalAmount);
-  const providerOrder = await razorpay.orders.create({
-    amount: amountPaise,
-    currency: order.currency,
-    receipt: order.orderNumber,
-    notes: { orderId: order.id, orderNumber: order.orderNumber },
-  });
+  if (payment.providerOrderId && !fresh) {
+    let existing = null;
+    try {
+      existing = await fetchCashfreeOrder(config, payment.providerOrderId);
+    } catch {
+      existing = null; // missing/expired on Cashfree's side: create a fresh order below
+    }
+    if (existing?.order_status === "PAID") {
+      await syncCashfreePayment(payment.providerOrderId);
+      throw ApiError.conflict("This order has already been paid.");
+    }
+    if (existing?.order_status === "ACTIVE" && existing.payment_session_id) return sessionResponse(order, existing, config);
+  }
 
-  const updatedPayment = await prisma.payment.update({
-    where: { id: payment.id },
-    data: { providerOrderId: providerOrder.id },
-  });
+  const phone = normalizeIndianPhone(order.customerPhone);
+  if (!phone) throw ApiError.badRequest("A valid 10-digit mobile number is required for online payment. Please update your phone number.");
 
-  return await buildCheckoutOptions(order, updatedPayment);
-}
-
-async function buildCheckoutOptions(order, payment) {
-  const config = await (await import("./razorpay.client.js")).getRazorpayConfig();
-  const storeName = await getStoreName();
-  return {
-    keyId: config?.keyId,
-    razorpayOrderId: payment.providerOrderId,
-    amount: rupeesToPaise(order.totalAmount),
-    currency: order.currency,
-    orderNumber: order.orderNumber,
-    name: storeName,
-    description: `${storeName} Order ${order.orderNumber}`,
-    prefill: {
-      name: order.customerName,
-      email: order.customerEmail,
-      contact: order.customerPhone,
+  const retrySuffix = payment.providerOrderId || fresh ? `-${Date.now().toString(36)}` : "";
+  const cashfreeOrderId = `${order.orderNumber}${retrySuffix}`.slice(0, 45);
+  const base = env.apiPublicUrl;
+  const payload = {
+    order_id: cashfreeOrderId,
+    order_amount: Number(order.totalAmount),
+    order_currency: order.currency || "INR",
+    customer_details: {
+      customer_id: cashfreeCustomerId(order),
+      customer_phone: phone,
+      ...(order.customerName ? { customer_name: String(order.customerName).slice(0, 100) } : {}),
+      ...(order.customerEmail ? { customer_email: order.customerEmail } : {}),
     },
+    order_meta: {
+      return_url: `${env.frontendUrl.replace(/\/$/, "")}/payment/return?order_id={order_id}`,
+      ...(base.startsWith("https://") ? { notify_url: `${base}/api/webhooks/cashfree` } : {}),
+    },
+    order_expiry_time: new Date(Date.now() + ORDER_EXPIRY_MINUTES * 60_000).toISOString(),
+    order_note: `Order ${order.orderNumber}`.slice(0, 200),
   };
+
+  let cfOrder;
+  try {
+    cfOrder = await createCashfreeOrder(config, payload);
+  } catch (err) {
+    if (err instanceof CashfreeError && err.status === 409) {
+      cfOrder = await fetchCashfreeOrder(config, cashfreeOrderId);
+    } else if (err instanceof CashfreeError && err.status >= 400 && err.status < 500) {
+      throw ApiError.badRequest(
+        err.status === 401 || err.status === 403
+          ? "Online payment is not available right now. Please try Cash on Delivery or contact us."
+          : `Payment could not be started: ${err.message}`
+      );
+    } else {
+      throw ApiError.badRequest("The payment provider is temporarily unavailable. Please retry in a moment.");
+    }
+  }
+
+  const providerOrderId = cfOrder.order_id || cashfreeOrderId;
+  await prisma.payment.updateMany({
+    where: { id: payment.id, status: { not: "PAID" } },
+    data: { provider: "cashfree", providerOrderId },
+  });
+  return sessionResponse(order, { ...cfOrder, order_id: providerOrderId }, config);
 }
 
-export async function verifyRazorpaySignature({ razorpayOrderId, razorpayPaymentId, razorpaySignature }) {
-  const config = await (await import("./razorpay.client.js")).getRazorpayConfig();
-  if (!config?.keySecret) return false;
-  const expected = crypto
-    .createHmac("sha256", config.keySecret)
-    .update(`${razorpayOrderId}|${razorpayPaymentId}`)
-    .digest("hex");
-
-  return (
-    expected.length === razorpaySignature.length &&
-    crypto.timingSafeEqual(Buffer.from(expected, "hex"), Buffer.from(razorpaySignature, "hex"))
-  );
+// Cashfree webhook signature: Base64( HMAC-SHA256( client secret, x-webhook-timestamp + rawBody ) ).
+// The raw bytes must be used - re-serialising parsed JSON changes decimals and breaks the signature.
+export function verifyCashfreeWebhookSignature(rawBody, timestamp, signature, secret) {
+  if (!secret || !timestamp || typeof signature !== "string" || !signature) return false;
+  const expected = crypto.createHmac("sha256", secret).update(String(timestamp) + Buffer.from(rawBody).toString("utf8")).digest("base64");
+  const a = Buffer.from(expected);
+  const b = Buffer.from(signature);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
-export async function verifyRazorpayWebhookSignature(rawBody, signatureHeader) {
-  if (!signatureHeader) return false;
-  const config = await (await import("./razorpay.client.js")).getRazorpayConfig();
-  if (!config?.webhookSecret) return false;
-  const expected = crypto.createHmac("sha256", config.webhookSecret).update(rawBody).digest("hex");
-  // Razorpay signatures are 64 hex chars. Anything else is rejected up front so a
-  // malformed header can never reach timingSafeEqual (which throws on length mismatch).
-  if (typeof signatureHeader !== "string" || !/^[0-9a-f]{64}$/i.test(signatureHeader)) return false;
-  return crypto.timingSafeEqual(Buffer.from(expected, "hex"), Buffer.from(signatureHeader, "hex"));
+// Authoritative status check against Cashfree's API (never the browser's word, never a query param).
+// Called by the customer verify endpoint and by verified webhooks; funnels into the single idempotent
+// finalizePaidPayment. Returns { status, orderNumber } where status is PAID | PENDING | FAILED | EXPIRED.
+export async function syncCashfreePayment(cashfreeOrderId) {
+  const payment = await prisma.payment.findFirst({ where: { providerOrderId: cashfreeOrderId }, include: { order: true } });
+  if (!payment) throw ApiError.notFound("No order matches this payment.");
+  const orderNumber = payment.order.orderNumber;
+  if (payment.status === "PAID") return { status: "PAID", orderNumber };
+
+  const config = await getCashfreeConfig();
+  if (!config) throw ApiError.badRequest("Online payment is not configured.");
+
+  let cfOrder;
+  try {
+    cfOrder = await fetchCashfreeOrder(config, cashfreeOrderId);
+  } catch (err) {
+    if (err instanceof CashfreeError) {
+      throw ApiError.badRequest("Could not confirm the payment with the provider. If money was deducted, contact us with your order number.");
+    }
+    throw err;
+  }
+
+  if (cfOrder.order_status === "PAID") {
+    if (cfOrder.order_currency && cfOrder.order_currency !== payment.currency) throw ApiError.badRequest("Paid currency does not match the order.");
+    const attempts = await fetchCashfreePayments(config, cashfreeOrderId).catch(() => []);
+    const success = attempts.find((p) => p.payment_status === "SUCCESS");
+    const cfPaymentId = success?.cf_payment_id != null ? String(success.cf_payment_id) : null;
+    await finalizePaidPayment({
+      providerOrderId: cashfreeOrderId,
+      providerPaymentId: cfPaymentId,
+      method: success?.payment_group || "cashfree",
+      rawReference: cfPaymentId,
+      amountPaise: rupeesToPaise(cfOrder.order_amount),
+    });
+    return { status: "PAID", orderNumber };
+  }
+
+  if (["EXPIRED", "TERMINATED", "TERMINATION_REQUESTED"].includes(cfOrder.order_status)) {
+    await markPaymentFailed({ providerOrderId: cashfreeOrderId });
+    return { status: "EXPIRED", orderNumber };
+  }
+
+  // ACTIVE: look at the individual attempts.
+  const attempts = await fetchCashfreePayments(config, cashfreeOrderId).catch(() => []);
+  if (attempts.some((p) => p.payment_status === "PENDING")) return { status: "PENDING", orderNumber };
+  if (attempts.some((p) => ["FAILED", "USER_DROPPED", "CANCELLED", "VOID"].includes(p.payment_status))) {
+    await markPaymentFailed({ providerOrderId: cashfreeOrderId });
+    return { status: "FAILED", orderNumber };
+  }
+  return { status: "PENDING", orderNumber };
 }
 
 // The single idempotent path from "payment succeeded" to "order confirmed".
-// Both the client-facing verify endpoint and the Razorpay webhook call this
+// Both the client-facing verify endpoint and the payment webhook call this
 // — whichever arrives first wins, the other becomes a safe no-op. The
 // compare-and-swap is the `updateMany` with `status: { not: "PAID" }` below,
 // which takes its row lock atomically inside the transaction.
@@ -125,7 +219,7 @@ export async function finalizePaidPayment({ providerOrderId, providerPaymentId, 
 
   // Server-authoritative amount check: if the caller (webhook payload or
   // verify request) supplied the amount actually paid, it must match the
-  // amount we recorded when the Razorpay order was created. A mismatch
+  // amount we recorded when the payment order was created. A mismatch
   // means the payment does not cover what the order actually costs, so it
   // is rejected rather than silently trusted.
   if (amountPaise != null && amountPaise !== rupeesToPaise(payment.amount)) {
@@ -242,9 +336,9 @@ export async function markPaymentFailed({ providerOrderId }) {
   return { found: true, noop: false };
 }
 
-// Lets a customer retry after a failed/abandoned payment: clears the old
-// provider order id so createRazorpayOrderForOrder mints a fresh Razorpay
-// order, and resets both payment and order back to PENDING. Refuses to
+// Lets a customer retry after a failed/abandoned payment: resets the
+// payment so a fresh Cashfree order is minted, resets both payment and order back to PENDING. Refuses to
+
 // touch anything that is already PAID.
 export async function retryFailedPayment(orderId, requestingCustomerId) {
   const order = await prisma.order.findUnique({
@@ -260,10 +354,17 @@ export async function retryFailedPayment(orderId, requestingCustomerId) {
   const payment = order.payments[0];
   if (!payment) throw ApiError.badRequest("This order has no payment record.");
 
+  // Settle against Cashfree first: a payment that actually went through must never be retried, and an
+  // order that is still live on Cashfree's side is reused rather than replaced (no double charge).
+  if (payment.providerOrderId) {
+    const current = await syncCashfreePayment(payment.providerOrderId).catch(() => null);
+    if (current?.status === "PAID") throw ApiError.conflict("This order has already been paid.");
+  }
+
   await prisma.$transaction([
     prisma.payment.updateMany({
       where: { id: payment.id, status: { not: "PAID" } },
-      data: { status: "PENDING", providerOrderId: null, providerPaymentId: null },
+      data: { status: "PENDING" },
     }),
     prisma.order.updateMany({
       where: { id: orderId, paymentStatus: { not: "PAID" } },
@@ -271,5 +372,6 @@ export async function retryFailedPayment(orderId, requestingCustomerId) {
     }),
   ]);
 
-  return createRazorpayOrderForOrder(orderId, requestingCustomerId);
+  // Reuses the existing Cashfree session while it is ACTIVE, otherwise mints a fresh order.
+  return createCashfreeOrderForOrder(orderId, requestingCustomerId);
 }

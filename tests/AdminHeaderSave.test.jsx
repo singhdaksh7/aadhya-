@@ -37,7 +37,7 @@ const buildServerSettings = () => ({
   appearance: { colors: { primary: "#B8674A" } },
   shipping: { freeShippingThreshold: 2499, standardShippingAmount: 150 },
   footer: { brandDescription: "Footer text" },
-  payments: { razorpayEnabled: true },
+  payments: { cashfreeEnabled: true },
   heroBanners: [{ id: "legacy", desktopImage: "" }],
   header: {
     showUtilityBar: true,

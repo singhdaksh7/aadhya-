@@ -1,7 +1,6 @@
 import { z } from "zod";
 
+// Cashfree order ids are 3-45 chars of letters, digits, underscore and hyphen.
 export const verifyPaymentSchema = z.object({
-  razorpay_order_id: z.string().trim().min(1),
-  razorpay_payment_id: z.string().trim().min(1),
-  razorpay_signature: z.string().trim().min(1),
+  cashfreeOrderId: z.string().trim().min(3).max(45).regex(/^[A-Za-z0-9_-]+$/),
 });

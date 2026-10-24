@@ -185,13 +185,25 @@ export default function AdminOrderDetail() {
           </AdminCard>
 
           <AdminCard title="Payment">
-            <ul className="space-y-2 text-sm text-charcoal-soft">
+            <ul className="space-y-3 text-sm text-charcoal-soft" data-testid="admin-payments">
               {order.payments.map((p) => (
-                <li key={p.id} className="flex flex-wrap items-center justify-between gap-2">
-                  <span>
-                    {p.provider} · {p.providerPaymentId || p.providerOrderId || "no provider reference yet"}
-                  </span>
-                  <StatusBadge value={p.status} />
+                <li key={p.id} className="space-y-1 rounded-xl border border-charcoal/10 p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="font-semibold text-charcoal">
+                      {p.provider === "cashfree" ? "Cashfree" : p.provider === "cod" ? "Cash on Delivery" : p.provider}
+                      {p.method && p.provider !== "cod" ? ` · ${p.method}` : ""}
+                    </span>
+                    <StatusBadge value={p.status} />
+                  </div>
+                  <dl className="grid grid-cols-1 gap-x-4 gap-y-1 text-xs sm:grid-cols-2">
+                    <div><dt className="inline font-medium">Amount: </dt><dd className="inline">₹{Number(p.amount).toLocaleString("en-IN")} {p.currency}</dd></div>
+                    {p.providerOrderId && <div><dt className="inline font-medium">Provider order ID: </dt><dd className="inline font-mono">{p.providerOrderId}</dd></div>}
+                    {p.providerPaymentId && <div><dt className="inline font-medium">Payment ID: </dt><dd className="inline font-mono">{p.providerPaymentId}</dd></div>}
+                    {Number(p.refundedAmount) > 0 && <div><dt className="inline font-medium">Refunded: </dt><dd className="inline">₹{Number(p.refundedAmount).toLocaleString("en-IN")}</dd></div>}
+                    <div><dt className="inline font-medium">Created: </dt><dd className="inline">{new Date(p.createdAt).toLocaleString("en-IN")}</dd></div>
+                    <div><dt className="inline font-medium">Updated: </dt><dd className="inline">{new Date(p.updatedAt).toLocaleString("en-IN")}</dd></div>
+                  </dl>
+                  {!p.providerOrderId && p.provider !== "cod" && <p className="text-xs">No provider reference yet.</p>}
                 </li>
               ))}
             </ul>

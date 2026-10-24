@@ -52,7 +52,7 @@ export async function createOrder({
   customerId,
   savedAddressId,
   billingSavedAddressId,
-  paymentMethod = "razorpay",
+  paymentMethod = "cashfree",
   utmSource,
   utmMedium,
   utmCampaign,
@@ -61,17 +61,17 @@ export async function createOrder({
 }) {
   const paymentSettingRow = await prisma.siteSetting.findUnique({ where: { key: "payments" } });
   const paymentSettings = paymentSettingRow?.value || {};
-  const razorpayEnabled = paymentSettings.razorpayEnabled ?? true;
+  const onlineEnabled = paymentSettings.cashfreeEnabled ?? true;
   const codEnabled = paymentSettings.codEnabled ?? true;
 
-  if (!razorpayEnabled && !codEnabled) {
+  if (!onlineEnabled && !codEnabled) {
     throw ApiError.badRequest("No payment methods are currently available for checkout.");
   }
   if (paymentMethod === "cod" && !codEnabled) {
     throw ApiError.badRequest("Cash on Delivery is currently disabled.");
   }
-  if (paymentMethod === "razorpay" && !razorpayEnabled) {
-    throw ApiError.badRequest("Online payment via Razorpay is currently disabled.");
+  if (paymentMethod === "cashfree" && !onlineEnabled) {
+    throw ApiError.badRequest("Online payment is currently disabled.");
   }
 
   const pricedItems = await priceCartItemsOrThrow(items);
@@ -185,7 +185,7 @@ export async function createOrder({
         shippingZoneId: totals.shippingZoneId,
         billingSameAsShipping,
         // COD orders skip the online-payment step entirely, so they go
-        // straight to CONFIRMED; Razorpay orders wait in PENDING until the
+        // straight to CONFIRMED; online-payment orders wait in PENDING until the
         // signature/webhook path finalizes them (payment.service.js).
         status: paymentMethod === "cod" ? "CONFIRMED" : "PENDING",
       },
@@ -259,7 +259,7 @@ export async function createOrder({
       tx.payment.create({
         data: {
           orderId: created.id,
-          provider: paymentMethod === "cod" ? "cod" : "razorpay",
+          provider: paymentMethod === "cod" ? "cod" : "cashfree",
           status: "PENDING",
           amount: grandTotal,
           currency: totals.currency,
@@ -277,7 +277,7 @@ export async function createOrder({
 
     // COD orders have no online-payment finalize step to hang stock
     // decrement off of, so it happens here — once, guarded by the same
-    // exactly-once helper used by the Razorpay payment path.
+    // exactly-once helper used by the online payment path.
     if (paymentMethod === "cod") {
       const full = await tx.order.findUnique({ where: { id: updated.id }, include: { items: true } });
       if (!full.stockDecrementedAt) {

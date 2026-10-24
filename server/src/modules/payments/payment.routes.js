@@ -11,6 +11,6 @@ export const orderPaymentRouter = Router();
 orderPaymentRouter.post("/:orderId/payment", checkoutLimiter, optionalCustomer, createPaymentOrder);
 orderPaymentRouter.post("/:orderId/payment/retry", checkoutLimiter, optionalCustomer, retryPayment);
 
-// Mounted at /api/payments/razorpay — POST /api/payments/razorpay/verify
-export const razorpayVerifyRouter = Router();
-razorpayVerifyRouter.post("/verify", checkoutLimiter, verifyPayment);
+// Mounted at /api/payments/cashfree — POST /api/payments/cashfree/verify
+export const cashfreeVerifyRouter = Router();
+cashfreeVerifyRouter.post("/verify", checkoutLimiter, verifyPayment);
