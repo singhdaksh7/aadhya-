@@ -48,6 +48,37 @@ function summaryBlock(order) {
     ${addressHtml}`;
 }
 
+// Internal order snapshot for Admin notification emails: who, what, how much, where. No payment credentials.
+function adminOrderBlock(vars, order) {
+  const kv = (k, v) => (v ? `<tr><td style="padding:6px 0;font-size:13px;color:${COLORS.muted};vertical-align:top;width:38%;">${esc(k)}</td><td style="padding:6px 0;font-size:14px;color:${COLORS.ink};">${esc(v)}</td></tr>` : "");
+  const items = (order?.items || [])
+    .map((i) => `<tr><td style="padding:7px 0;border-bottom:1px solid ${COLORS.line};font-size:14px;color:${COLORS.ink};">${esc(i.productNameSnapshot)}<span style="color:${COLORS.muted};"> × ${esc(i.quantity)}</span></td><td style="padding:7px 0;border-bottom:1px solid ${COLORS.line};font-size:14px;text-align:right;white-space:nowrap;color:${COLORS.ink};">${money(i.lineTotal)}</td></tr>`)
+    .join("");
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:4px 0 12px;border-collapse:collapse;">
+      ${kv("Order", vars.orderNumber)}${kv("Placed", `${vars.orderDate}`)}${kv("Customer", vars.customerName)}${kv("Email", vars.customerEmail)}${kv("Phone", vars.customerPhone)}${kv("Payment", `${vars.paymentMethod}${vars.paymentStatus ? ` — ${vars.paymentStatus}` : ""}`)}${kv("Order status", vars.orderStatus)}${kv("Deliver to", vars.shippingLocation)}
+    </table>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0;border-collapse:collapse;">${items}
+      <tr><td style="padding:10px 0 0;font-size:15px;font-weight:bold;color:${COLORS.ink};">Total</td><td style="padding:10px 0 0;font-size:15px;font-weight:bold;text-align:right;color:${COLORS.ink};">${esc(vars.orderTotal)}</td></tr>
+    </table>`;
+}
+function adminOrderText(vars, order) {
+  return [
+    `Order: ${vars.orderNumber}`,
+    `Placed: ${vars.orderDate}`,
+    `Customer: ${vars.customerName}`,
+    vars.customerEmail && `Email: ${vars.customerEmail}`,
+    vars.customerPhone && `Phone: ${vars.customerPhone}`,
+    `Payment: ${vars.paymentMethod}${vars.paymentStatus ? ` - ${vars.paymentStatus}` : ""}`,
+    vars.orderStatus && `Order status: ${vars.orderStatus}`,
+    vars.shippingLocation && `Deliver to: ${vars.shippingLocation}`,
+    "",
+    ...(order?.items || []).map((i) => `${i.productNameSnapshot} x ${i.quantity}  ${money(i.lineTotal)}`),
+    `Total: ${vars.orderTotal}`,
+  ]
+    .filter((l) => l !== undefined && l !== false && l !== null)
+    .join("\n");
+}
+
 function trackingBlock(vars) {
   const rows = [
     vars.courierName ? ["Courier", vars.courierName] : null,
@@ -115,12 +146,19 @@ export function composeEmail({ key, vars, override = null, order = null, code = 
     } else if (block === "code" && code) {
       htmlBlocks.push(codeBlock(code));
       textBlocks.push(`Your code: ${code}`);
+    } else if (block === "adminOrder" && order) {
+      htmlBlocks.push(adminOrderBlock(vars, order));
+      textBlocks.push(adminOrderText(vars, order));
+    } else if (block === "returnReason" && vars.returnReason) {
+      htmlBlocks.push(`<p style="margin:12px 0 14px;font-size:14px;line-height:1.6;color:${COLORS.ink};"><strong>Return reason:</strong> ${esc(vars.returnReason)}</p>`);
+      textBlocks.push(`Return reason: ${vars.returnReason}`);
     } else if (block === "cancellationReason" && vars.cancellationReason) {
       htmlBlocks.push(`<p style="margin:0 0 14px;font-size:14px;line-height:1.6;color:${COLORS.ink};"><strong>Reason:</strong> ${esc(vars.cancellationReason)}</p>`);
       textBlocks.push(`Reason: ${vars.cancellationReason}`);
     }
   }
 
+  const isAdmin = def.audience === "admin";
   const ctaUrl = def.cta ? httpsOnly(vars[def.cta.url]) : "";
   const supportLine = brand.supportEmail ? `Need help? Write to <a href="mailto:${esc(brand.supportEmail)}" style="color:${COLORS.accent};">${esc(brand.supportEmail)}</a>${brand.supportPhone ? ` or call ${esc(brand.supportPhone)}` : ""}.` : "";
 
@@ -139,12 +177,12 @@ export function composeEmail({ key, vars, override = null, order = null, code = 
       ${paragraphsHtml(bodyText)}
       ${htmlBlocks.join("\n")}
       ${ctaUrl ? ctaButton(def.cta.label, ctaUrl) : ""}
-      <p style="margin:22px 0 4px;font-size:15px;color:${COLORS.ink};">Team ${esc(brand.name)}</p>
+      ${isAdmin ? "" : `<p style="margin:22px 0 4px;font-size:15px;color:${COLORS.ink};">Team ${esc(brand.name)}</p>`}
     </td></tr>
     <tr><td style="padding:16px 28px 24px;border-top:1px solid ${COLORS.line};font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.6;color:${COLORS.muted};">
-      ${supportLine ? `<div>${supportLine}</div>` : ""}
+      ${supportLine && !isAdmin ? `<div>${supportLine}</div>` : ""}
       <div>${esc(brand.name)} - Home Decor and Lifestyle Products</div>
-      <div style="margin-top:6px;">You are receiving this message because of activity on your ${esc(brand.name)} account or order.</div>
+      <div style="margin-top:6px;">${isAdmin ? `Internal notification for ${esc(brand.name)} staff. Change who receives these in Admin → Settings → Notifications.` : `You are receiving this message because of activity on your ${esc(brand.name)} account or order.`}</div>
     </td></tr>
   </table>
 </td></tr></table>
@@ -157,8 +195,7 @@ export function composeEmail({ key, vars, override = null, order = null, code = 
     ...textBlocks.filter(Boolean).flatMap((b) => ["", b]),
     ...(ctaUrl ? ["", `${def.cta.label}: ${ctaUrl}`] : []),
     "",
-    `Team ${brand.name}`,
-    ...(brand.supportEmail ? [brand.supportEmail] : []),
+    ...(isAdmin ? [] : [`Team ${brand.name}`, ...(brand.supportEmail ? [brand.supportEmail] : [])]),
     `${brand.name} - Home Decor and Lifestyle Products`,
   ].join("\n");
 

@@ -7,8 +7,8 @@ import { prisma } from "../../lib/prisma.js";
 import { ApiError } from "../../utils/ApiError.js";
 import { getEmailStatus, sendTestEmail, getEmailHealthSummary, retryEmailLog, getSmtpConfig } from "./email.service.js";
 import { getCredentialRaw, saveCredential, deleteCredential } from "../integrations/credential.service.js";
-import { EMAIL_TEMPLATES, TEMPLATE_VARIABLES } from "../mailer/templates.js";
-import { listTemplates, previewTemplate, validateTemplateInput, retryNotification, getBrand, loadTemplate } from "../mailer/mailer.service.js";
+import { EMAIL_TEMPLATES, TEMPLATE_VARIABLES, ADMIN_EVENTS } from "../mailer/templates.js";
+import { listTemplates, previewTemplate, validateTemplateInput, retryNotification, getBrand, loadTemplate, getAdminNotificationSettings, saveAdminNotificationEvents } from "../mailer/mailer.service.js";
 import { composeEmail } from "../mailer/render.js";
 import { deliverEmail } from "./email.service.js";
 
@@ -20,6 +20,7 @@ const logsQuerySchema = z.object({
   status: z.enum(["SENT", "FAILED", "SKIPPED"]).optional(),
   type: z.string().max(50).optional(),
   orderId: z.string().max(64).optional(),
+  audience: z.enum(["CUSTOMER", "ADMIN"]).optional(),
   page: z.coerce.number().int().min(1).optional(),
   pageSize: z.coerce.number().int().min(1).max(100).optional(),
 });
@@ -105,8 +106,8 @@ adminEmailRouter.get("/health", asyncHandler(async (_req, res) => ok(res, await 
 adminEmailRouter.get(
   "/logs",
   asyncHandler(async (req, res) => {
-    const { status, type, orderId, page = 1, pageSize = 25 } = logsQuerySchema.parse(req.query);
-    const where = { ...(status ? { status } : {}), ...(type ? { type } : {}), ...(orderId ? { orderId } : {}) };
+    const { status, type, orderId, audience, page = 1, pageSize = 25 } = logsQuerySchema.parse(req.query);
+    const where = { ...(status ? { status } : {}), ...(type ? { type } : {}), ...(orderId ? { orderId } : {}), ...(audience ? { audience } : {}) };
     const [total, items] = await Promise.all([
       prisma.emailLog.count({ where }),
       prisma.emailLog.findMany({
@@ -116,7 +117,11 @@ adminEmailRouter.get(
         take: pageSize,
       }),
     ]);
-    ok(res, { items, total, page, pageSize });
+    // Show the order number next to the order id so the log is readable without opening each order.
+    const orderIds = [...new Set(items.map((i) => i.orderId).filter(Boolean))];
+    const orders = orderIds.length ? await prisma.order.findMany({ where: { id: { in: orderIds } }, select: { id: true, orderNumber: true } }) : [];
+    const numberById = Object.fromEntries(orders.map((o) => [o.id, o.orderNumber]));
+    ok(res, { items: items.map((i) => ({ ...i, orderNumber: i.orderId ? numberById[i.orderId] || null : null })), total, page, pageSize });
   })
 );
 
@@ -229,16 +234,81 @@ adminEmailRouter.post(
   })
 );
 
+// ---------------------------------------------------------------------------------------------------
+// Admin notifications: who is emailed (recipients) and about which events. SUPER_ADMIN only (router-level
+// guard above). The list is never exposed publicly and sending reuses the SMTP integration above.
+// ---------------------------------------------------------------------------------------------------
+const recipientEmail = z.string().trim().toLowerCase().email("Enter a valid email address").max(254);
+
+async function describeAdminNotifications() {
+  const [recipients, { events }] = await Promise.all([
+    prisma.adminNotificationRecipient.findMany({ orderBy: { createdAt: "asc" }, select: { id: true, email: true, enabled: true, createdAt: true } }),
+    getAdminNotificationSettings(),
+  ]);
+  return {
+    recipients,
+    events: Object.entries(ADMIN_EVENTS).map(([key, d]) => ({ key, label: d.label, help: d.help, enabled: events[key], defaultOn: d.defaultOn })),
+    smtpConfigured: (await getSmtpConfig()).configured,
+  };
+}
+
+adminEmailRouter.get("/admin-notifications", asyncHandler(async (_req, res) => ok(res, await describeAdminNotifications())));
+
+adminEmailRouter.put(
+  "/admin-notifications/events",
+  asyncHandler(async (req, res) => {
+    const { events } = z.object({ events: z.record(z.string(), z.boolean()) }).parse(req.body);
+    const unknown = Object.keys(events).filter((k) => !ADMIN_EVENTS[k]);
+    if (unknown.length) throw ApiError.badRequest(`Unknown notification type: ${unknown.join(", ")}`);
+    await saveAdminNotificationEvents(events);
+    await prisma.adminAuditLog.create({ data: { adminId: req.admin.id, action: "ADMIN_NOTIFICATION_EVENTS_UPDATED", provider: "email", metadata: { events } } });
+    ok(res, await describeAdminNotifications());
+  })
+);
+
+adminEmailRouter.post(
+  "/admin-notifications/recipients",
+  asyncHandler(async (req, res) => {
+    const { email } = z.object({ email: recipientEmail }).parse(req.body);
+    if (await prisma.adminNotificationRecipient.findUnique({ where: { email } })) throw ApiError.conflict("That email address is already on the list.");
+    if ((await prisma.adminNotificationRecipient.count()) >= 20) throw ApiError.badRequest("You can add up to 20 recipients.");
+    await prisma.adminNotificationRecipient.create({ data: { email } });
+    await prisma.adminAuditLog.create({ data: { adminId: req.admin.id, action: "ADMIN_NOTIFICATION_RECIPIENT_ADDED", provider: "email", metadata: { email } } });
+    ok(res, await describeAdminNotifications());
+  })
+);
+
+adminEmailRouter.patch(
+  "/admin-notifications/recipients/:id",
+  asyncHandler(async (req, res) => {
+    const { enabled } = z.object({ enabled: z.boolean() }).parse(req.body);
+    const updated = await prisma.adminNotificationRecipient.updateMany({ where: { id: req.params.id }, data: { enabled } });
+    if (!updated.count) throw ApiError.notFound("Recipient not found.");
+    ok(res, await describeAdminNotifications());
+  })
+);
+
+adminEmailRouter.delete(
+  "/admin-notifications/recipients/:id",
+  asyncHandler(async (req, res) => {
+    const existing = await prisma.adminNotificationRecipient.findUnique({ where: { id: req.params.id } });
+    if (!existing) throw ApiError.notFound("Recipient not found.");
+    await prisma.adminNotificationRecipient.delete({ where: { id: existing.id } });
+    await prisma.adminAuditLog.create({ data: { adminId: req.admin.id, action: "ADMIN_NOTIFICATION_RECIPIENT_REMOVED", provider: "email", metadata: { email: existing.email } } });
+    ok(res, await describeAdminNotifications());
+  })
+);
+
 // ---- notification ledger: what was sent for an order, what failed, manual retry ---------------------------
 adminEmailRouter.get(
   "/notifications",
   asyncHandler(async (req, res) => {
-    const q = z.object({ orderId: z.string().max(64).optional(), status: z.enum(["PENDING", "SENT", "FAILED"]).optional(), limit: z.coerce.number().int().min(1).max(100).optional() }).parse(req.query);
+    const q = z.object({ orderId: z.string().max(64).optional(), status: z.enum(["PENDING", "SENT", "FAILED"]).optional(), audience: z.enum(["CUSTOMER", "ADMIN"]).optional(), limit: z.coerce.number().int().min(1).max(100).optional() }).parse(req.query);
     const items = await prisma.notificationEvent.findMany({
-      where: { ...(q.orderId ? { orderId: q.orderId } : {}), ...(q.status ? { status: q.status } : {}) },
+      where: { ...(q.orderId ? { orderId: q.orderId } : {}), ...(q.status ? { status: q.status } : {}), ...(q.audience ? { audience: q.audience } : {}) },
       orderBy: { createdAt: "desc" },
       take: q.limit || 50,
-      select: { id: true, event: true, orderId: true, recipient: true, source: true, status: true, attempts: true, lastError: true, nextRetryAt: true, sentAt: true, createdAt: true },
+      select: { id: true, event: true, audience: true, orderId: true, recipient: true, source: true, status: true, attempts: true, lastError: true, nextRetryAt: true, sentAt: true, createdAt: true },
     });
     ok(res, { items });
   })

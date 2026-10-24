@@ -3,7 +3,7 @@ import { ApiError } from "../../utils/ApiError.js";
 import { getCashfreeConfig, createCashfreeRefund, fetchCashfreeRefund, CashfreeError } from "../payments/cashfree.client.js";
 import { round2 } from "../../utils/money.js";
 import { sendReturnStatusEmail } from "../email/email.service.js";
-import { notifyOrderEvent } from "../mailer/mailer.service.js";
+import { notifyOrderEvent, notifyAdminEvent } from "../mailer/mailer.service.js";
 
 const DEFAULT_RETURN_SETTINGS = {
   enabled: true,
@@ -105,6 +105,7 @@ export async function createReturnRequest({ orderNumber, customerId, reason, det
   });
 
   sendReturnStatusEmail(order.id, returnRequest, "Requested").catch((err) => console.error("Return status email failed:", err.message));
+  await notifyAdminEvent(order.id, "RETURN_REQUESTED", { source: "SYSTEM", dedupeSuffix: returnRequest.id, extra: { returnReason: reason } });
 
   return returnRequest;
 }

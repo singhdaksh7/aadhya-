@@ -1,0 +1,1 @@
+Inter typeface (c) The Inter Project Authors (https://github.com/rsms/inter), licensed under the SIL Open Font License 1.1 (https://openfontlicense.org). Embedded in invoice PDFs so the rupee sign and other glyphs render correctly.

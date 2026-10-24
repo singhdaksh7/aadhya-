@@ -23,6 +23,15 @@ export const TEMPLATE_VARIABLES = {
   expiresInMinutes: "Minutes until the login code expires",
   resetUrl: "Password reset link",
   refundAmount: "Refund amount",
+  // Admin notification emails only
+  eventLabel: "What happened (e.g. New order received)",
+  customerEmail: "Customer's email address (Admin emails only)",
+  customerPhone: "Customer's phone number (Admin emails only)",
+  paymentStatus: "Payment status",
+  orderStatus: "Order status",
+  shippingLocation: "Delivery city and state",
+  adminOrderUrl: "Link to open the order in Admin (Admin emails only)",
+  returnReason: "Reason given for a return request (Admin emails only)",
 };
 export const ALLOWED_VARIABLES = new Set(Object.keys(TEMPLATE_VARIABLES));
 
@@ -165,6 +174,91 @@ export const EMAIL_TEMPLATES = {
     blocks: [],
     cta: { label: "View my order", url: "orderUrl" },
   },
+
+  // ---- Admin notification emails: sent to the internal recipients configured in Admin, never to customers.
+  // Which events send an email is controlled per event (ADMIN_EVENTS below), not by the template toggle.
+  ADMIN_NEW_ORDER: {
+    label: "Admin: New order received",
+    audience: "admin",
+    locked: true,
+    defaultEnabled: true,
+    subject: "New order received — {{orderNumber}}",
+    heading: "New order {{orderNumber}}",
+    body: "A new order was placed on {{brandName}} on {{orderDate}}. Total {{orderTotal}}, payment: {{paymentMethod}} ({{paymentStatus}}).",
+    blocks: ["adminOrder"],
+    cta: { label: "Open order in Admin", url: "adminOrderUrl" },
+  },
+  ADMIN_PAYMENT_STATUS: {
+    label: "Admin: Payment update",
+    audience: "admin",
+    locked: true,
+    defaultEnabled: true,
+    subject: "{{eventLabel}} — {{orderNumber}}",
+    heading: "{{eventLabel}}",
+    body: "Payment update for order {{orderNumber}} ({{orderTotal}}, {{customerName}}). Payment status is now {{paymentStatus}}.",
+    blocks: ["adminOrder"],
+    cta: { label: "Open order in Admin", url: "adminOrderUrl" },
+  },
+  ADMIN_SHIPMENT_STATUS: {
+    label: "Admin: Shipment update",
+    audience: "admin",
+    locked: true,
+    defaultEnabled: true,
+    subject: "{{eventLabel}} — {{orderNumber}}",
+    heading: "{{eventLabel}}",
+    body: "Order {{orderNumber}} for {{customerName}} is now {{orderStatus}}.",
+    blocks: ["adminOrder", "tracking"],
+    cta: { label: "Open order in Admin", url: "adminOrderUrl" },
+  },
+  ADMIN_ORDER_UPDATE: {
+    label: "Admin: Cancellation, return and refund update",
+    audience: "admin",
+    locked: true,
+    defaultEnabled: true,
+    subject: "{{eventLabel}} — {{orderNumber}}",
+    heading: "{{eventLabel}}",
+    body: "Update for order {{orderNumber}} ({{customerName}}): {{eventLabel}}.",
+    blocks: ["adminOrder", "cancellationReason", "returnReason"],
+    cta: { label: "Open order in Admin", url: "adminOrderUrl" },
+  },
+};
+
+// Events an Admin can choose to be emailed about. `template` is the ADMIN_* template used, `defaultOn` the
+// recommended default (the noisy shipment milestones and refunds are off until the owner opts in).
+export const ADMIN_EVENTS = {
+  NEW_ORDER: { label: "New order", help: "Every new order. Online orders are announced once payment is confirmed, so this email already shows payment as Paid.", template: "ADMIN_NEW_ORDER", defaultOn: true },
+  PAYMENT_SUCCESS: { label: "Online payment successful", help: "Sent only when New order is switched off, because the New order email already covers a successful online payment.", template: "ADMIN_PAYMENT_STATUS", defaultOn: true },
+  PAYMENT_FAILED: { label: "Payment failed", help: "An online payment attempt failed.", template: "ADMIN_PAYMENT_STATUS", defaultOn: true },
+  ORDER_CANCELLED: { label: "Order cancelled", help: "An order was cancelled by Admin or the customer.", template: "ADMIN_ORDER_UPDATE", defaultOn: true },
+  ORDER_SHIPPED: { label: "Order shipped", help: "Once per order, whether Admin or the courier marked it shipped.", template: "ADMIN_SHIPMENT_STATUS", defaultOn: false },
+  OUT_FOR_DELIVERY: { label: "Out for delivery", help: "The courier is out for delivery.", template: "ADMIN_SHIPMENT_STATUS", defaultOn: false },
+  DELIVERED: { label: "Delivered", help: "The order was delivered.", template: "ADMIN_SHIPMENT_STATUS", defaultOn: false },
+  RETURN_REQUESTED: { label: "Return requested", help: "A customer asked to return items.", template: "ADMIN_ORDER_UPDATE", defaultOn: true },
+  REFUND_INITIATED: { label: "Refund initiated", help: "A refund was started.", template: "ADMIN_ORDER_UPDATE", defaultOn: false },
+  REFUND_COMPLETED: { label: "Refund completed", help: "A refund was completed.", template: "ADMIN_ORDER_UPDATE", defaultOn: false },
+};
+export const ADMIN_EVENT_LABELS = {
+  NEW_ORDER: "New order received",
+  PAYMENT_SUCCESS: "Online payment successful",
+  PAYMENT_FAILED: "Payment failed",
+  ORDER_CANCELLED: "Order cancelled",
+  ORDER_SHIPPED: "Order shipped",
+  OUT_FOR_DELIVERY: "Order out for delivery",
+  DELIVERED: "Order delivered",
+  RETURN_REQUESTED: "Return requested",
+  REFUND_INITIATED: "Refund initiated",
+  REFUND_COMPLETED: "Refund completed",
+};
+// Customer email event -> Admin event (the customer-side events already fire from every source: checkout,
+// payment confirmation, Admin status change, courier webhook, refunds).
+export const ADMIN_EVENT_FOR_CUSTOMER_EVENT = {
+  ORDER_PLACED: "NEW_ORDER",
+  ORDER_CANCELLED: "ORDER_CANCELLED",
+  ORDER_SHIPPED: "ORDER_SHIPPED",
+  ORDER_OUT_FOR_DELIVERY: "OUT_FOR_DELIVERY",
+  ORDER_DELIVERED: "DELIVERED",
+  REFUND_INITIATED: "REFUND_INITIATED",
+  REFUND_COMPLETED: "REFUND_COMPLETED",
 };
 
 export const TEMPLATE_KEYS = Object.keys(EMAIL_TEMPLATES);
@@ -210,4 +304,12 @@ export const SAMPLE_VARIABLES = {
   expiresInMinutes: "10",
   resetUrl: "https://example.com/reset-password?token=sample",
   refundAmount: "₹500",
+  eventLabel: "New order received",
+  customerEmail: "asha@example.com",
+  customerPhone: "+91 98765 43210",
+  paymentStatus: "Pending (pay on delivery)",
+  orderStatus: "Shipped",
+  shippingLocation: "Jaipur, Rajasthan",
+  adminOrderUrl: "https://example.com/admin/orders/sample",
+  returnReason: "Item arrived damaged",
 };

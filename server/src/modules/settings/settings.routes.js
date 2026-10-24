@@ -840,7 +840,7 @@ async function getMergedSettings() {
 export const publicSettingsRouter = Router();
 // Keys stored in SiteSetting that must never be served to anonymous visitors (invoice settings
 // hold the seller GSTIN/PAN, address and bank details).
-export const PRIVATE_SETTING_KEYS = ["invoice"];
+export const PRIVATE_SETTING_KEYS = ["invoice", "adminNotifications"];
 export function toPublicSettings(settings) {
   const pub = { ...settings };
   for (const key of PRIVATE_SETTING_KEYS) delete pub[key];

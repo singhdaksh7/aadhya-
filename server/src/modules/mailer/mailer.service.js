@@ -2,7 +2,7 @@ import { prisma } from "../../lib/prisma.js";
 import { env } from "../../config/env.js";
 import { getStoreName } from "../../lib/storeName.js";
 import { deliverEmail, getSmtpConfig } from "../email/email.service.js";
-import { EMAIL_TEMPLATES, EVENT_FOR_ORDER_STATUS, SAMPLE_VARIABLES, unknownPlaceholders } from "./templates.js";
+import { EMAIL_TEMPLATES, EVENT_FOR_ORDER_STATUS, SAMPLE_VARIABLES, unknownPlaceholders, ADMIN_EVENTS, ADMIN_EVENT_LABELS, ADMIN_EVENT_FOR_CUSTOMER_EVENT } from "./templates.js";
 import { composeEmail } from "./render.js";
 
 // ONE place that decides whether a customer email is sent. Every trigger (Admin status change, courier
@@ -119,7 +119,7 @@ async function dispatch(row, build) {
     await prisma.notificationEvent.update({ where: { id: row.id }, data: { status: "FAILED", lastError: `render: ${String(err.message).slice(0, 200)}`, nextRetryAt: null } }).catch(() => {});
     return { sent: false, reason: "render_failed" };
   }
-  const result = await deliverEmail({ to: row.recipient, subject: mail.subject, html: mail.html, text: mail.text, type: row.event, event: row.event, orderId: row.orderId, source: row.source, notificationId: row.id });
+  const result = await deliverEmail({ to: row.recipient, subject: mail.subject, html: mail.html, text: mail.text, type: row.event, event: row.event, orderId: row.orderId, source: row.source, notificationId: row.id, audience: row.audience || "CUSTOMER" });
   if (result.sent) {
     await prisma.notificationEvent.update({ where: { id: row.id }, data: { status: "SENT", sentAt: new Date(), lastError: null, nextRetryAt: null } }).catch(() => {});
     return { sent: true };
@@ -141,8 +141,17 @@ async function claim(data) {
 
 const orderInclude = { items: true, address: true, customer: true, shipment: true };
 
+// One entry point for every order event. The customer email and the internal Admin notification are two
+// independent sends off the same event: a disabled customer template never blocks the Admin email (and the
+// other way round), and neither ever throws into the order/payment/shipment flow.
+export async function notifyOrderEvent(orderId, event, opts = {}) {
+  const result = await sendCustomerOrderEmail(orderId, event, opts);
+  await notifyAdminForCustomerEvent(orderId, event, opts);
+  return result;
+}
+
 // Customer email for an order event (placed / processing / shipped / ... / refunds).
-export async function notifyOrderEvent(orderId, event, { source = "SYSTEM", providerEventId = null, extra = {}, dedupeSuffix = "" } = {}) {
+async function sendCustomerOrderEmail(orderId, event, { source = "SYSTEM", providerEventId = null, extra = {}, dedupeSuffix = "" } = {}) {
   try {
     const def = EMAIL_TEMPLATES[event];
     if (!def || def.audience !== "order") return { sent: false, reason: "unknown_event" };
@@ -239,9 +248,112 @@ export async function sendPasswordResetEmail({ customer, token }) {
   }
 }
 
+// --- Admin notification emails ----------------------------------------------------------------------
+// Internal recipients (Admin -> Settings -> Notifications) are emailed about the events the owner switched
+// on. Same SMTP, same ledger and dedupe as customer mail; one row per (order, event, recipient) so a
+// manual "Shipped" followed by the courier's "Shipped" produces a single Admin email.
+
+const ADMIN_SETTING_KEY = "adminNotifications";
+
+export async function getAdminNotificationSettings() {
+  const row = await prisma.siteSetting.findUnique({ where: { key: ADMIN_SETTING_KEY } }).catch(() => null);
+  const saved = row?.value?.events || {};
+  const events = Object.fromEntries(Object.entries(ADMIN_EVENTS).map(([k, d]) => [k, typeof saved[k] === "boolean" ? saved[k] : d.defaultOn]));
+  return { events };
+}
+
+export async function saveAdminNotificationEvents(events) {
+  const next = { ...(await getAdminNotificationSettings()).events };
+  for (const [k, v] of Object.entries(events || {})) if (ADMIN_EVENTS[k] && typeof v === "boolean") next[k] = v;
+  await prisma.siteSetting.upsert({ where: { key: ADMIN_SETTING_KEY }, create: { key: ADMIN_SETTING_KEY, value: { events: next } }, update: { value: { events: next } } });
+  return next;
+}
+
+const adminPaymentStatus = (order) => {
+  if (order.paymentStatus === "PAID") return "Paid";
+  if (order.paymentStatus === "FAILED") return "Failed";
+  if (order.paymentStatus === "REFUNDED") return "Refunded";
+  if (order.paymentStatus === "PARTIALLY_REFUNDED") return "Partially refunded";
+  return order.paymentMethod === "cod" ? "Pending (pay on delivery)" : "Pending";
+};
+const titleCase = (s) => String(s || "").toLowerCase().replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
+
+async function buildAdminMail(orderId, adminEvent, extra = {}) {
+  const cfg = ADMIN_EVENTS[adminEvent];
+  if (!cfg) return null;
+  const order = await prisma.order.findUnique({ where: { id: orderId }, include: orderInclude });
+  if (!order) return null;
+  const [tpl, brand] = await Promise.all([loadTemplate(cfg.template), getBrand()]);
+  const vars = {
+    ...orderVariables(order, brand, extra),
+    paymentMethod: order.paymentMethod === "cod" ? "Cash on Delivery" : "Online payment",
+    eventLabel: ADMIN_EVENT_LABELS[adminEvent],
+    customerEmail: order.customerEmail || "",
+    customerPhone: order.customerPhone || order.address?.phone || "",
+    paymentStatus: adminPaymentStatus(order),
+    orderStatus: titleCase(order.status),
+    shippingLocation: order.address ? [order.address.city, order.address.state].filter(Boolean).join(", ") : "",
+    adminOrderUrl: `${base()}/admin/orders/${encodeURIComponent(order.id)}`,
+    returnReason: extra.returnReason || "",
+  };
+  const shaped = { ...order, orderDateLabel: vars.orderDate, paymentLabel: vars.paymentMethod };
+  return composeEmail({ key: cfg.template, vars, override: tpl.override, order: shaped, brand });
+}
+
+// Emails every enabled internal recipient about `adminEvent`. Never throws.
+export async function notifyAdminEvent(orderId, adminEvent, { source = "SYSTEM", providerEventId = null, extra = {}, dedupeSuffix = "" } = {}) {
+  try {
+    if (!ADMIN_EVENTS[adminEvent]) return { sent: 0, reason: "unknown_event" };
+    const { events } = await getAdminNotificationSettings();
+    if (!events[adminEvent]) return { sent: 0, reason: "disabled" };
+    // An online order is announced once, at payment confirmation, by the New order email (it shows Paid).
+    if (adminEvent === "PAYMENT_SUCCESS" && events.NEW_ORDER) return { sent: 0, reason: "covered_by_new_order" };
+    const recipients = await prisma.adminNotificationRecipient.findMany({ where: { enabled: true }, orderBy: { createdAt: "asc" } });
+    if (!recipients.length) return { sent: 0, reason: "no_recipients" };
+    let sent = 0;
+    let mail = null;
+    for (const r of recipients) {
+      const claimed = await claim({
+        dedupeKey: `admin:${orderId}:${adminEvent}${dedupeSuffix ? `:${dedupeSuffix}` : ""}:${r.email.toLowerCase()}`,
+        event: `ADMIN_${adminEvent}`,
+        audience: "ADMIN",
+        orderId,
+        customerId: null,
+        recipient: r.email,
+        source,
+        providerEventId,
+      });
+      if (!claimed.ok) continue;
+      const result = await dispatch(claimed.row, async () => {
+        mail ||= await buildAdminMail(orderId, adminEvent, extra);
+        if (!mail) throw new Error("order not found");
+        return mail;
+      });
+      if (result.sent) sent += 1;
+    }
+    return { sent };
+  } catch (err) {
+    console.error(`[notify] admin ${adminEvent} for order ${orderId} failed:`, err.message);
+    return { sent: 0, reason: "error" };
+  }
+}
+
+async function notifyAdminForCustomerEvent(orderId, event, opts) {
+  const adminEvent = ADMIN_EVENT_FOR_CUSTOMER_EVENT[event];
+  if (!adminEvent) return;
+  await notifyAdminEvent(orderId, adminEvent, opts);
+  // Online orders: the payment confirmation is also the "payment successful" moment.
+  if (event === "ORDER_PLACED" && opts?.source === "PAYMENT") await notifyAdminEvent(orderId, "PAYMENT_SUCCESS", opts);
+}
+
 // --- retries ----------------------------------------------------------------------------------------
 
 async function resendRow(row) {
+  if (row.audience === "ADMIN" && row.orderId) {
+    const built = await buildAdminMail(row.orderId, String(row.event).replace(/^ADMIN_/, ""));
+    if (!built) return { sent: false, reason: "order_not_found" };
+    return dispatch(row, async () => built);
+  }
   if (row.orderId) {
     const order = await prisma.order.findUnique({ where: { id: row.orderId }, include: orderInclude });
     if (!order) return { sent: false, reason: "order_not_found" };
@@ -335,6 +447,7 @@ export async function listTemplates() {
     return {
       key,
       label: def.label,
+      audience: def.audience,
       locked: Boolean(def.locked),
       enabled: def.locked ? true : row ? row.enabled : def.defaultEnabled,
       customized: Boolean(row),
