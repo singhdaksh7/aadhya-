@@ -36,7 +36,7 @@ import {
   accountReturn,
 } from "../../lib/api";
 import { formatInr } from "../../lib/format";
-import { StatusPill, SectionCard, EmptyPanel, SkeletonRows, OrderProgress, ItemThumb, formatDate } from "../../components/account/AccountUI";
+import { ORDER_STATUS_LABELS, StatusPill, SectionCard, EmptyPanel, SkeletonRows, OrderProgress, ItemThumb, formatDate } from "../../components/account/AccountUI";
 
 const blank = {
   label: "Home",
@@ -103,8 +103,11 @@ function AccountHeader({ title, description }) {
 
 function AddressForm({ form, setForm, onSubmit, label }) {
   return (
-    <form onSubmit={onSubmit} className="rounded-3xl border border-[var(--theme-border)]/10 bg-ivory-dark/30 p-6 space-y-4">
-      <h3 className="font-serif-display text-lg store-text">{label}</h3>
+    <form onSubmit={onSubmit} className="space-y-4 rounded-3xl border border-[var(--theme-border)]/10 store-bg p-6 shadow-sm sm:p-7">
+      <div>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] store-primary">Delivery</p>
+        <h2 className="mt-1 font-serif-display text-2xl store-text">{label}</h2>
+      </div>
       <div className="grid gap-3 sm:grid-cols-2">
         {fields.map((k) => (
           <input
@@ -337,7 +340,7 @@ function SummaryCard({ title, detail, action, to }) {
 function OrderSummary({ orders, loading, error }) {
   return <section className="rounded-3xl border border-[var(--theme-border)]/10 store-bg p-6 shadow-sm sm:p-7" aria-labelledby="recent-orders-heading">
     <div className="flex items-baseline justify-between gap-4"><div><p className="text-[10px] font-semibold uppercase tracking-[0.16em] store-primary">Purchases</p><h2 id="recent-orders-heading" className="mt-1 font-serif-display text-2xl store-text">Recent Orders</h2></div><Link to="/account/orders" className="shrink-0 text-xs font-semibold store-primary hover:underline">View all orders →</Link></div>
-    {loading ? <div className="mt-6 space-y-3"><div className="h-16 animate-pulse rounded-2xl bg-ivory-dark/60" /><div className="h-16 animate-pulse rounded-2xl bg-ivory-dark/60" /></div> : error ? <p className="mt-6 rounded-xl store-bg-primary-soft p-4 text-sm store-primary">We couldn’t load your orders. Please try again later.</p> : orders.length ? <div className="mt-6 divide-y divide-[var(--theme-border)]/10">{orders.slice(0, 3).map((order) => <div key={order.id || order.orderNumber} className="flex flex-col gap-3 py-4 first:pt-0 sm:flex-row sm:items-center sm:justify-between"><div><Link to={`/account/orders/${order.orderNumber}`} className="font-medium store-text hover:text-[var(--theme-primary-hover)]">{order.orderNumber}</Link><p className="mt-1 text-xs store-muted">{order.createdAt ? new Date(order.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "Order date unavailable"} · {order.status} · {order.paymentStatus}</p></div><div className="flex items-center justify-between gap-4"><span className="font-semibold store-text">{formatInr(Number(order.totalAmount))}</span><Link to={`/account/orders/${order.orderNumber}`} className="text-xs font-semibold store-primary hover:underline">View order</Link></div></div>)}</div> : <div className="mt-6 rounded-2xl bg-ivory-dark/55 p-6"><p className="font-medium store-text">No orders yet.</p><p className="mt-1 text-sm store-muted">Your purchases and order status will appear here.</p><Link to="/shop" className="mt-4 inline-block text-xs font-semibold store-primary hover:underline">Explore the Store →</Link></div>}
+    {loading ? <div className="mt-6 space-y-3"><div className="h-16 animate-pulse rounded-2xl bg-ivory-dark/60" /><div className="h-16 animate-pulse rounded-2xl bg-ivory-dark/60" /></div> : error ? <p className="mt-6 rounded-xl store-bg-primary-soft p-4 text-sm store-primary">We couldn’t load your orders. Please try again later.</p> : orders.length ? <div className="mt-6 divide-y divide-[var(--theme-border)]/10">{orders.slice(0, 3).map((order) => <div key={order.id || order.orderNumber} className="flex flex-col gap-3 py-4 first:pt-0 sm:flex-row sm:items-center sm:justify-between"><div><Link to={`/account/orders/${order.orderNumber}`} className="font-medium store-text hover:text-[var(--theme-primary-hover)]">{order.orderNumber}</Link><p className="mt-1 text-xs store-muted">{order.createdAt ? new Date(order.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "Order date unavailable"} · {ORDER_STATUS_LABELS[order.status] || order.status}</p></div><div className="flex items-center justify-between gap-4"><span className="font-semibold store-text">{formatInr(Number(order.totalAmount))}</span><Link to={`/account/orders/${order.orderNumber}`} className="text-xs font-semibold store-primary hover:underline">View order</Link></div></div>)}</div> : <div className="mt-6 rounded-2xl bg-ivory-dark/55 p-6"><p className="font-medium store-text">No orders yet.</p><p className="mt-1 text-sm store-muted">Your purchases and order status will appear here.</p><Link to="/shop" className="mt-4 inline-block text-xs font-semibold store-primary hover:underline">Explore the Store →</Link></div>}
   </section>;
 }
 
@@ -486,7 +489,7 @@ export function Addresses() {
 
       <div className="grid gap-4 sm:grid-cols-2 pt-4">
         {items.map((a) => (
-          <article key={a.id} className="rounded-2xl border border-[var(--theme-border)]/10 store-bg p-5 space-y-2 shadow-sm">
+          <article key={a.id} className="space-y-2 rounded-3xl border border-[var(--theme-border)]/10 store-bg p-6 shadow-sm">
             <div className="flex justify-between items-center">
               <span className="font-serif-display text-base store-text">{a.label}</span>
               {a.isDefault && (
@@ -541,7 +544,7 @@ export function Addresses() {
             </div>
           </article>
         ))}
-        {!items.length && <p className="text-sm store-muted col-span-2">No saved addresses yet.</p>}
+        {!items.length && <div className="sm:col-span-2"><EmptyPanel title="No saved addresses yet." description="Add an address above to speed up checkout." /></div>}
       </div>
     </div>
   );
@@ -647,8 +650,8 @@ function ReturnRequestPanel({ orderNumber, order }) {
 
   if (!eligibility.eligible) {
     return (
-      <div className="rounded-3xl border border-[var(--theme-border)]/10 store-bg p-6">
-        <h3 className="font-serif-display text-lg store-text">Returns</h3>
+      <div className="rounded-3xl border border-[var(--theme-border)]/10 store-bg p-6 shadow-sm sm:p-7">
+        <div><p className="text-[10px] font-semibold uppercase tracking-[0.16em] store-primary">Help</p><h2 className="mt-1 font-serif-display text-2xl store-text">Returns</h2></div>
         <p className="mt-2 text-sm store-muted">{eligibility.reason || "This order is not eligible for return."}</p>
       </div>
     );
@@ -745,7 +748,7 @@ function ReturnRequestPanel({ orderNumber, order }) {
 
   if (success) {
     return (
-      <div className="rounded-3xl border border-[var(--theme-border)]/10 store-bg p-6">
+      <div className="rounded-3xl border border-[var(--theme-border)]/10 store-bg p-6 shadow-sm sm:p-7">
         <p role="status" className="rounded-xl bg-sage-light p-3 text-sm font-medium text-green-deep">
           Your return request has been submitted. Track its status under <Link className="underline" to="/account/returns">Returns</Link>.
         </p>
@@ -754,8 +757,8 @@ function ReturnRequestPanel({ orderNumber, order }) {
   }
 
   return (
-    <div className="rounded-3xl border border-[var(--theme-border)]/10 store-bg p-6 space-y-4">
-      <h3 className="font-serif-display text-lg store-text">Returns</h3>
+    <div className="rounded-3xl border border-[var(--theme-border)]/10 store-bg p-6 shadow-sm sm:p-7 space-y-4">
+      <div><p className="text-[10px] font-semibold uppercase tracking-[0.16em] store-primary">Help</p><h2 className="mt-1 font-serif-display text-2xl store-text">Returns</h2></div>
       {!showForm ? (
         <Button type="button" onClick={() => setShowForm(true)}>Request Return</Button>
       ) : (
@@ -1036,8 +1039,8 @@ const RETURN_STATUS_LABELS = {
 function ReturnStatusBadge({ status }) {
   const rejected = status === "REJECTED";
   const done = status === "REFUNDED" || status === "CLOSED";
-  const cls = rejected ? "bg-terracotta/10 text-terracotta" : done ? "bg-sage-light text-green-deep" : "bg-beige text-charcoal";
-  return <span className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider ${cls}`}>{RETURN_STATUS_LABELS[status] || status}</span>;
+  const cls = rejected ? "bg-red-50 text-red-700" : done ? "bg-sage-light text-green-deep" : "bg-beige store-text";
+  return <span className={`inline-flex whitespace-nowrap rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wider ${cls}`}>{RETURN_STATUS_LABELS[status] || status}</span>;
 }
 
 export function AccountReturns() {
@@ -1053,36 +1056,29 @@ export function AccountReturns() {
   }, []);
 
   return (
-    <div className="mx-auto max-w-6xl space-y-8 px-5 py-12 sm:px-8">
+    <div className="mx-auto max-w-6xl space-y-8 px-5 py-10 sm:px-8 sm:py-12">
       <AccountHeader title="Returns" description="Request a return and follow its progress." />
 
       {loading ? (
-        <p className="text-xs store-muted">Loading returns...</p>
+        <SkeletonRows rows={2} />
       ) : error ? (
-        <p className="rounded-xl store-bg-primary-soft p-4 text-sm store-primary">{error}</p>
+        <p role="alert" className="rounded-2xl store-bg-primary-soft p-4 text-sm store-primary">{error}</p>
       ) : !items.length ? (
-        <div className="rounded-3xl border border-dashed border-[var(--theme-border)]/20 bg-ivory-dark/30 p-12 text-center">
-          <p className="text-sm store-muted">You haven't requested any returns yet.</p>
-          <Link to="/account/orders" className="mt-4 inline-block text-xs font-semibold store-primary hover:underline">View your orders →</Link>
-        </div>
+        <EmptyPanel title="You haven't requested any returns yet." description="If something is not right with an order, you can request a return from the order page." actionLabel="View your orders" to="/account/orders" />
       ) : (
         <div className="space-y-4">
           {items.map((r) => (
             <Link
               key={r.id}
               to={`/account/returns/${r.id}`}
-              className="flex flex-col gap-3 rounded-2xl border border-[var(--theme-border)]/10 store-bg p-5 transition hover:border-[var(--theme-primary)]/30 hover:shadow-md sm:flex-row sm:items-center sm:justify-between"
+              className="group flex flex-col gap-3 rounded-3xl border border-[var(--theme-border)]/10 store-bg p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-[var(--theme-primary)]/35 hover:shadow-md sm:flex-row sm:items-center sm:justify-between sm:p-6"
             >
-              <div className="space-y-1">
-                <span className="font-serif-display text-base store-text block">Return #{r.id.slice(0, 8)}</span>
-                <p className="text-xs store-muted">
-                  Order: {r.order?.orderNumber || "—"} · Requested {r.createdAt ? new Date(r.createdAt).toLocaleDateString("en-IN") : "—"}
-                </p>
-                <p className="text-xs store-muted">
-                  {(r.items || []).map((ri) => `${ri.orderItem?.productNameSnapshot || "Item"} × ${ri.quantity}`).join(", ")}
-                </p>
+              <div className="min-w-0 space-y-1">
+                <span className="block font-serif-display text-lg store-text">Return #{r.id.slice(0, 8)}</span>
+                <p className="text-xs store-muted">Order: {r.order?.orderNumber || "—"} · Requested {r.createdAt ? formatDate(r.createdAt) : "—"}</p>
+                <p className="truncate text-xs store-muted">{(r.items || []).map((ri) => `${ri.orderItem?.productNameSnapshot || "Item"} × ${ri.quantity}`).join(", ")}</p>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex shrink-0 items-center gap-3">
                 {r.refundStatus && <span className="text-xs font-medium store-muted">Refund: {r.refundStatus}</span>}
                 <ReturnStatusBadge status={r.status} />
               </div>
@@ -1108,10 +1104,10 @@ const RETURN_TIMELINE_STEPS = [
 function ReturnTimeline({ returnRequest }) {
   if (returnRequest.status === "REJECTED") {
     return (
-      <div className="rounded-3xl border border-terracotta/30 bg-terracotta/5 p-6">
-        <p className="text-sm font-semibold text-terracotta">This return request was rejected.</p>
-        {returnRequest.rejectedAt && <p className="mt-1 text-xs text-charcoal-soft">Rejected on {new Date(returnRequest.rejectedAt).toLocaleString("en-IN")}</p>}
-        {returnRequest.details && <p className="mt-2 text-xs text-charcoal-soft whitespace-pre-line">{returnRequest.details}</p>}
+      <div className="rounded-3xl border border-red-200 bg-red-50 p-6">
+        <p className="text-sm font-semibold text-red-700">This return request was rejected.</p>
+        {returnRequest.rejectedAt && <p className="mt-1 text-xs store-muted">Rejected on {formatDate(returnRequest.rejectedAt, true)}</p>}
+        {returnRequest.details && <p className="mt-2 whitespace-pre-line text-xs store-muted">{returnRequest.details}</p>}
       </div>
     );
   }
@@ -1119,8 +1115,7 @@ function ReturnTimeline({ returnRequest }) {
   const currentIndex = RETURN_TIMELINE_STEPS.findIndex((s) => s.status === returnRequest.status);
 
   return (
-    <div className="rounded-3xl border border-charcoal/10 bg-white p-6">
-      <h3 className="font-serif-display text-lg text-charcoal mb-5">Status Timeline</h3>
+    <SectionCard eyebrow="Progress" title="Status Timeline" labelledBy="return-timeline-heading">
       <ol className="space-y-4">
         {RETURN_TIMELINE_STEPS.map((step, idx) => {
           const reached = currentIndex >= 0 && idx <= currentIndex;
@@ -1128,26 +1123,19 @@ function ReturnTimeline({ returnRequest }) {
           const ts = step.timestampKey ? returnRequest[step.timestampKey] : null;
           return (
             <li key={step.status} className="flex items-start gap-3">
-              <span
-                aria-hidden="true"
-                className={`mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full text-[10px] font-bold ${
-                  current ? "bg-terracotta text-white" : reached ? "bg-sage-light text-green-deep" : "bg-charcoal/10 text-charcoal-soft"
-                }`}
-              >
-                {reached ? "✓" : idx + 1}
-              </span>
+              <span aria-hidden="true" className={`mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full text-[10px] font-bold ${current ? "store-bg-primary text-ivory" : reached ? "bg-sage-light text-green-deep" : "bg-[var(--theme-border)]/10 store-muted"}`}>{reached ? "✓" : idx + 1}</span>
               <div>
-                <p className={`text-sm font-semibold ${current ? "text-terracotta" : reached ? "text-charcoal" : "text-charcoal-soft"}`}>
+                <p className={`text-sm font-semibold ${current ? "store-primary" : reached ? "store-text" : "store-muted"}`}>
                   {step.label}
-                  {current && <span className="ml-2 rounded-full bg-terracotta/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-terracotta">Current</span>}
+                  {current && <span className="ml-2 rounded-full store-bg-primary-soft px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider store-primary">Current</span>}
                 </p>
-                {ts && <p className="text-xs text-charcoal-soft">{new Date(ts).toLocaleString("en-IN")}</p>}
+                {ts && <p className="text-xs store-muted">{formatDate(ts, true)}</p>}
               </div>
             </li>
           );
         })}
       </ol>
-    </div>
+    </SectionCard>
   );
 }
 
@@ -1171,52 +1159,54 @@ export function AccountReturnDetail() {
 
   if (notFound) {
     return (
-      <div className="mx-auto max-w-3xl px-5 py-12 sm:px-8 space-y-6 text-center">
-        <SectionHeading eyebrow="Customer Account" title="Return Not Found" />
-        <p className="text-sm store-muted">We couldn't find that return request.</p>
+      <div className="mx-auto max-w-6xl space-y-6 px-5 py-10 sm:px-8 sm:py-12">
+        <AccountHeader title="Return Not Found" description="We couldn't find that return request." />
         <Link to="/account/returns" className="inline-block text-xs font-semibold uppercase tracking-wider store-primary hover:underline">← Back to Returns</Link>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-3xl px-5 py-12 sm:px-8 space-y-6">
+    <div className="mx-auto max-w-6xl space-y-8 px-5 py-10 sm:px-8 sm:py-12">
+      <Link to="/account/returns" className="inline-block text-xs font-semibold uppercase tracking-wider store-primary hover:underline">← Return to Returns</Link>
+      {error && <p role="alert" className="rounded-2xl store-bg-primary-soft p-4 text-sm font-medium store-primary">{error}</p>}
+      {!r && !error && <SkeletonRows rows={2} />}
       {r && (
-        <div className="space-y-6">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--theme-border)]/10 pb-4">
-            <div>
-              <span className="text-xs font-semibold uppercase tracking-widest store-primary">Return Request</span>
-              <h1 className="font-serif-display text-3xl store-text">#{r.id.slice(0, 8)}</h1>
-              <p className="mt-1 text-xs store-muted">Order: {r.order?.orderNumber || "—"}</p>
+        <>
+          <section className="rounded-3xl border border-[var(--theme-border)]/10 bg-ivory-dark/45 p-6 shadow-sm sm:p-8">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] store-primary">Return Request</p>
+                <h1 className="mt-2 font-serif-display text-3xl store-text sm:text-4xl">#{r.id.slice(0, 8)}</h1>
+                <p className="mt-2 text-sm store-muted">Order: {r.order?.orderNumber || "—"}</p>
+              </div>
+              <ReturnStatusBadge status={r.status} />
             </div>
-            <ReturnStatusBadge status={r.status} />
-          </div>
+          </section>
 
-          <div className="rounded-3xl border border-[var(--theme-border)]/10 store-bg p-6 space-y-4">
-            <h3 className="font-serif-display text-lg store-text">Returned Items</h3>
-            <ul className="divide-y divide-[var(--theme-border)]/5">
-              {(r.items || []).map((ri) => (
-                <li key={ri.id} className="flex justify-between py-3 text-xs">
-                  <span className="font-medium store-text">{ri.orderItem?.productNameSnapshot || "Item"} × {ri.quantity}</span>
-                </li>
-              ))}
-            </ul>
-            <div className="border-t border-[var(--theme-border)]/10 pt-4 text-sm">
-              <p><span className="font-semibold store-text">Reason: </span><span className="store-muted">{r.reason}</span></p>
-              {r.details && <p className="mt-1"><span className="font-semibold store-text">Details: </span><span className="store-muted whitespace-pre-line">{r.details}</span></p>}
-              {r.refundAmount != null && Number(r.refundAmount) > 0 && (
-                <p className="mt-1"><span className="font-semibold store-text">Refund amount: </span><span className="store-muted">{formatInr(Number(r.refundAmount))}{r.refundStatus ? ` (${r.refundStatus})` : ""}</span></p>
-              )}
+          <div className="grid gap-6 lg:grid-cols-3">
+            <div className="lg:col-span-2">
+              <SectionCard eyebrow="Your request" title="Returned Items" labelledBy="return-items-heading">
+                <ul className="divide-y divide-[var(--theme-border)]/10">
+                  {(r.items || []).map((ri) => (
+                    <li key={ri.id} className="flex justify-between py-3 text-sm first:pt-0">
+                      <span className="font-medium store-text">{ri.orderItem?.productNameSnapshot || "Item"} × {ri.quantity}</span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-4 space-y-1 rounded-2xl bg-ivory-dark/45 p-4 text-sm">
+                  <p><span className="font-semibold store-text">Reason: </span><span className="store-muted">{r.reason}</span></p>
+                  {r.details && <p><span className="font-semibold store-text">Details: </span><span className="whitespace-pre-line store-muted">{r.details}</span></p>}
+                  {r.refundAmount != null && Number(r.refundAmount) > 0 && (
+                    <p><span className="font-semibold store-text">Refund amount: </span><span className="store-muted">{formatInr(Number(r.refundAmount))}{r.refundStatus ? ` (${r.refundStatus})` : ""}</span></p>
+                  )}
+                </div>
+              </SectionCard>
             </div>
+            <ReturnTimeline returnRequest={r} />
           </div>
-
-          <ReturnTimeline returnRequest={r} />
-        </div>
+        </>
       )}
-      {error && <p className="text-sm font-medium store-primary store-bg-primary-soft p-4 rounded-xl">{error}</p>}
-      <Link to="/account/returns" className="inline-block text-xs font-semibold uppercase tracking-wider store-primary hover:underline">
-        ← Return to Returns
-      </Link>
     </div>
   );
 }
@@ -1261,9 +1251,9 @@ export function SetPassword() {
   };
 
   return (
-    <div className="mx-auto max-w-md px-5 py-16" data-testid="set-password">
-      <SectionHeading eyebrow="Welcome" title="Set your password" />
-      <form onSubmit={submit} className="mt-8 space-y-4 rounded-3xl border border-[var(--theme-border)]/10 bg-ivory-dark/40 p-6 sm:p-8 shadow-sm">
+    <div className="mx-auto max-w-6xl space-y-8 px-5 py-10 sm:px-8 sm:py-12" data-testid="set-password">
+      <AccountHeader title="Set your password" description="Secure your account so you can sign in faster next time." />
+      <form onSubmit={submit} className="max-w-xl space-y-4 rounded-3xl border border-[var(--theme-border)]/10 store-bg p-6 shadow-sm sm:p-8">
         <p className="text-sm store-muted">You signed in with a one-time code. Choose a password so you can sign in with it next time{user?.email ? ` (${user.email})` : ""}.</p>
         <div>
           <label htmlFor="set-password-new" className="mb-1 block text-xs font-semibold uppercase tracking-wider store-muted">New password</label>
@@ -1383,14 +1373,9 @@ export function AccountWishlist() {
       <AccountHeader title="My Wishlist" description="Products you have saved for later." />
 
       {loading ? (
-        <p className="text-xs store-muted">Loading wishlist...</p>
+        <SkeletonRows rows={2} />
       ) : wishlist.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-[var(--theme-border)]/20 bg-ivory-dark/30 p-12 text-center">
-          <p className="text-sm store-muted">Your wishlist is currently empty.</p>
-          <Link to="/shop" className="mt-4 inline-block rounded-full store-bg-primary px-6 py-2.5 text-xs font-semibold uppercase tracking-wider text-white">
-            Discover Objects
-          </Link>
-        </div>
+        <EmptyPanel title="Your wishlist is currently empty." description="Save products you love and find them here later." actionLabel="Discover Objects" to="/shop" />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {wishlist.map((item) => {
@@ -1410,11 +1395,12 @@ export function AccountWishlist() {
             const outOfStock = p.inStock === false || stockQty <= 0;
 
             return (
-              <div key={item.id} className="group relative flex flex-col overflow-hidden rounded-2xl border border-[var(--theme-border)]/10 store-bg p-4 transition hover:shadow-md">
+              <div key={item.id} className="group relative flex flex-col overflow-hidden rounded-3xl border border-[var(--theme-border)]/10 store-bg p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-[var(--theme-primary)]/35 hover:shadow-md">
                 <Link to={`/shop/${p.slug}`} className="relative aspect-square w-full overflow-hidden rounded-xl bg-ivory-dark/40 mb-3">
                   <img
                     src={p.images?.[0] || p.image || "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?q=80&w=800&auto=format&fit=crop"}
                     alt={p.name}
+                    onError={(e) => { e.currentTarget.style.visibility = "hidden"; }}
                     className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
                   />
                 </Link>
@@ -1446,14 +1432,14 @@ export function AccountWishlist() {
                       onClick={() => handleMoveToCart(item)}
                       disabled={outOfStock}
                       className={`flex-1 rounded-xl py-2 px-3 text-xs font-semibold uppercase tracking-wider text-white transition ${
-                        outOfStock ? "bg-charcoal/30 cursor-not-allowed" : "store-bg-primary store-primary-hover"
+                        outOfStock ? "bg-[var(--theme-border)]/30 cursor-not-allowed" : "store-bg-primary store-primary-hover"
                       }`}
                     >
                       {p.variants?.length > 0 && !item.variant ? "Select Option" : "Move to Cart"}
                     </button>
                     <button
                       onClick={() => removeFromWishlist(item.id)}
-                      className="rounded-xl border border-[var(--theme-border)]/20 px-3 py-2 text-xs font-semibold store-text hover:border-[var(--theme-primary)] hover:text-[var(--theme-primary-hover)] transition"
+                      className="rounded-xl border border-[var(--theme-border)]/20 px-3 py-2 text-xs font-semibold store-text transition hover:border-[var(--theme-primary)]/50"
                     >
                       Remove
                     </button>
@@ -1575,15 +1561,13 @@ export function AccountReviews() {
       )}
 
       {loading ? (
-        <p className="text-xs store-muted">Loading reviews...</p>
+        <SkeletonRows rows={2} />
       ) : reviews.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-[var(--theme-border)]/20 bg-ivory-dark/30 p-12 text-center">
-          <p className="text-sm store-muted">You haven't written any reviews yet.</p>
-        </div>
+        <EmptyPanel title="You haven't written any reviews yet." description="Reviews you write for products you have bought will appear here." />
       ) : (
         <div className="space-y-4">
           {reviews.map((r) => (
-            <div key={r.id} className="rounded-2xl border border-[var(--theme-border)]/10 store-bg p-5 space-y-3 shadow-xs">
+            <div key={r.id} className="space-y-3 rounded-3xl border border-[var(--theme-border)]/10 store-bg p-5 shadow-sm sm:p-6">
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--theme-border)]/5 pb-3">
                 <Link to={`/shop/${r.product?.slug}`} className="font-serif-display text-base font-bold store-text hover:text-[var(--theme-primary-hover)]">
                   {r.product?.name || "Product"}
@@ -1678,23 +1662,18 @@ export function AccountDownloads() {
       <AccountHeader title="My Downloads" description="Digital purchases available to download." />
 
       {loading ? (
-        <p className="text-xs store-muted">Loading downloads...</p>
+        <SkeletonRows rows={2} />
       ) : error ? (
-        <p className="rounded-xl store-bg-primary-soft p-4 text-sm store-primary">{error}</p>
+        <p role="alert" className="rounded-2xl store-bg-primary-soft p-4 text-sm store-primary">{error}</p>
       ) : downloads.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-[var(--theme-border)]/20 bg-ivory-dark/30 p-12 text-center">
-          <p className="text-sm store-muted">You don't have any digital books yet.</p>
-          <Link to="/books" className="mt-4 inline-block rounded-full store-bg-primary px-6 py-2.5 text-xs font-semibold uppercase tracking-wider text-white">
-            Browse Books
-          </Link>
-        </div>
+        <EmptyPanel title="You don't have any digital books yet." description="Digital purchases are available to download here once paid." actionLabel="Browse Books" to="/books" />
       ) : (
-        <div className="divide-y divide-[var(--theme-border)]/10 rounded-2xl border border-[var(--theme-border)]/10">
+        <div className="space-y-3">
           {downloads.map((d) => {
             const disabled = d.paymentStatus !== "PAID" || d.expired || d.exhausted;
             const reason = d.paymentStatus !== "PAID" ? "Payment pending" : d.expired ? "Link expired" : d.exhausted ? "Download limit reached" : null;
             return (
-              <div key={d.orderItemId || `${d.orderNumber}-${d.pdfFilename}`} className="flex flex-col gap-2 p-5 sm:flex-row sm:items-center sm:justify-between">
+              <div key={d.orderItemId || `${d.orderNumber}-${d.pdfFilename}`} className="flex flex-col gap-3 rounded-3xl border border-[var(--theme-border)]/10 store-bg p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6">
                 <div>
                   <p className="font-medium store-text">{d.productTitle}</p>
                   <p className="text-xs store-muted">{d.pdfFilename}</p>
@@ -1704,9 +1683,9 @@ export function AccountDownloads() {
                   </p>
                 </div>
                 <div className="shrink-0">
-                  <Button type="button" disabled={disabled || busyId} onClick={() => handleDownload(d)}>
+                  <button type="button" disabled={disabled || busyId} onClick={() => handleDownload(d)} className="rounded-full border border-[var(--theme-border)]/20 px-5 py-2.5 text-xs font-semibold uppercase tracking-wider store-text transition hover:border-[var(--theme-primary)]/50 disabled:opacity-50">
                     {busyId ? "Preparing…" : "Download"}
-                  </Button>
+                  </button>
                   {disabled && reason && <p className="mt-1 text-xs store-primary text-right">{reason}</p>}
                 </div>
               </div>
@@ -1771,36 +1750,34 @@ export function AccountNotifications() {
     <div className="mx-auto max-w-6xl px-5 py-12 sm:px-8 space-y-8">
       <AccountHeader title="Notifications" description="Updates about your orders and account." />
 
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <p className="text-xs font-semibold uppercase tracking-wider store-muted">
           {unreadCount > 0 ? `${unreadCount} unread` : "All caught up"}
         </p>
         {unreadCount > 0 && (
-          <Button type="button" onClick={handleMarkAllRead} disabled={markingAll}>
+          <button type="button" onClick={handleMarkAllRead} disabled={markingAll} className="rounded-full border border-[var(--theme-border)]/20 px-4 py-2 text-xs font-semibold uppercase tracking-wider store-text transition hover:border-[var(--theme-primary)]/50 disabled:opacity-50">
             {markingAll ? "Marking..." : "Mark all read"}
-          </Button>
+          </button>
         )}
       </div>
 
       {loading ? (
-        <p className="text-xs store-muted">Loading notifications...</p>
+        <SkeletonRows rows={3} />
       ) : error ? (
-        <p className="rounded-xl store-bg-primary-soft p-4 text-sm store-primary">{error}</p>
+        <p role="alert" className="rounded-2xl store-bg-primary-soft p-4 text-sm store-primary">{error}</p>
       ) : items.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-[var(--theme-border)]/20 bg-ivory-dark/30 p-12 text-center">
-          <p className="text-sm store-muted">You don't have any notifications yet.</p>
-        </div>
+        <EmptyPanel title="You don't have any notifications yet." description="Order and delivery updates will show up here." />
       ) : (
-        <div className="divide-y divide-[var(--theme-border)]/10 rounded-2xl border border-[var(--theme-border)]/10">
+        <div className="space-y-3">
           {items.map((n) => (
             <div
               key={n.id}
-              className={`flex flex-col gap-2 p-5 sm:flex-row sm:items-center sm:justify-between ${n.isRead ? "" : "store-bg-primary/5"}`}
+              className={`flex flex-col gap-3 rounded-3xl border p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6 ${n.isRead ? "border-[var(--theme-border)]/10 store-bg" : "border-[var(--theme-primary)]/25 store-bg-primary-soft"}`}
             >
               <div>
                 <p className="font-medium store-text">{n.title}</p>
                 <p className="text-xs store-muted">{n.message}</p>
-                <p className="mt-1 text-xs store-muted">{new Date(n.createdAt).toLocaleDateString("en-IN")}</p>
+                <p className="mt-1 text-xs store-muted">{formatDate(n.createdAt)}</p>
               </div>
               <div className="flex shrink-0 items-center gap-3">
                 {n.link && (
@@ -1809,9 +1786,9 @@ export function AccountNotifications() {
                   </Link>
                 )}
                 {!n.isRead && (
-                  <Button type="button" disabled={busyId === n.id} onClick={() => handleMarkRead(n.id)}>
+                  <button type="button" disabled={busyId === n.id} onClick={() => handleMarkRead(n.id)} className="rounded-full border border-[var(--theme-border)]/20 px-4 py-2 text-xs font-semibold uppercase tracking-wider store-text transition hover:border-[var(--theme-primary)]/50 disabled:opacity-50">
                     {busyId === n.id ? "..." : "Mark read"}
-                  </Button>
+                  </button>
                 )}
               </div>
             </div>
