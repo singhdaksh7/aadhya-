@@ -28,6 +28,19 @@ async function loadSettings() {
   return Object.fromEntries(rows.map((r) => [r.key, r.value || {}]));
 }
 
+// Public HTTPS origin of the API (uploaded logos live there). API_PUBLIC_URL wins; when it is not set, the
+// conventional https://api.<storefront domain> is used so emails can still show the logo.
+function apiOrigin() {
+  if (env.apiPublicUrl.startsWith("https://")) return env.apiPublicUrl;
+  try {
+    const u = new URL(env.frontendUrl);
+    if (u.protocol === "https:" && !/^api\./.test(u.hostname)) return `https://api.${u.hostname.replace(/^www\./, "")}`;
+  } catch {
+    /* no usable origin */
+  }
+  return "";
+}
+
 export async function getBrand() {
   const [name, settings] = await Promise.all([getStoreName(), loadSettings()]);
   let supportEmail = settings.general?.supportEmail || settings.general?.businessEmail || "";
@@ -37,7 +50,7 @@ export async function getBrand() {
     supportEmail = m ? m[1] : "";
   }
   let logo = settings.branding?.desktopLogo || "";
-  if (logo.startsWith("/") && env.apiPublicUrl.startsWith("https://")) logo = `${env.apiPublicUrl}${logo}`;
+  if (logo.startsWith("/") && apiOrigin()) logo = `${apiOrigin()}${logo}`;
   return { name, supportEmail, supportPhone: settings.general?.supportPhone || "", logoUrl: httpsUrl(logo) };
 }
 
