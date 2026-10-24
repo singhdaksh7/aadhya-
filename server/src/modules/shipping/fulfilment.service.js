@@ -1,6 +1,6 @@
 import { prisma } from "../../lib/prisma.js";
 import { getShippingProvider } from "./provider.service.js";
-import { sendShippingStatusEmail } from "../email/email.service.js";
+import { notifyOrderEvent } from "../notifications/notification.service.js";
 import { ApiError } from "../../utils/ApiError.js";
 
 // Required before any provider (non-MANUAL) shipment-create call is allowed
@@ -135,22 +135,55 @@ export async function refreshTrackingForShipment(shipmentId) {
     throw error;
   }
 }
-export async function applyTrackingUpdate({ provider, providerShipmentId, rawStatus, trackingNumber, trackingUrl, estimatedDelivery }) {
-  const shipment = await prisma.shipment.findFirst({ where: { provider, OR: [{ providerShipmentId }, { trackingNumber }] }, include: { order: { include: { items: true } } } });
-  if (!shipment || terminal.has(shipment.status)) return shipment;
+// Legacy/generic provider path (manual "refresh tracking", generic webhook): free-text status in, same
+// shared pipeline out.
+export async function applyTrackingUpdate({ provider, providerShipmentId, rawStatus, trackingNumber, trackingUrl, estimatedDelivery, source = "SYSTEM", providerEventId = null }) {
+  const shipment = await prisma.shipment.findFirst({ where: { provider, OR: [{ providerShipmentId }, { trackingNumber }] } });
+  if (!shipment) return shipment;
   const status = normalizeShippingStatus(rawStatus);
-  const updated = await prisma.shipment.update({ where: { id: shipment.id }, data: { status, rawProviderStatus: rawStatus != null ? String(rawStatus) : shipment.rawProviderStatus, trackingNumber: trackingNumber || shipment.trackingNumber, trackingUrl: trackingUrl || shipment.trackingUrl, estimatedDelivery: estimatedDelivery || shipment.estimatedDelivery, deliveredDate: status === "DELIVERED" ? new Date() : undefined } });
-  const orderStatus = status === "DELIVERED" ? "DELIVERED" : ["IN_TRANSIT", "OUT_FOR_DELIVERY", "PICKED_UP"].includes(status) ? "SHIPPED" : null;
-  if (orderStatus && shipment.order.status !== "DELIVERED") await prisma.order.update({ where: { id: shipment.orderId }, data: { status: orderStatus } });
-  if (["IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED"].includes(status)) await sendShippingStatusEmail(shipment.orderId, status);
-  if (status === "RTO_DELIVERED") {
-    // Restocks the order's items and opens a refund-eligible return for
-    // prepaid orders. Awaited (rather than fire-and-forget) so this
-    // completes before the webhook handler returns — a fire-and-forget
-    // version here left the promise running past the end of the request,
-    // racing subsequent DB writes (visible as cross-test pollution when
-    // this fires directly before another test's setup). Still never
-    // allowed to fail the webhook response.
+  const orderStatus = status === "DELIVERED" ? "DELIVERED" : status === "OUT_FOR_DELIVERY" ? "OUT_FOR_DELIVERY" : ["IN_TRANSIT", "PICKED_UP"].includes(status) ? "SHIPPED" : null;
+  return applyResolvedShipmentUpdate(shipment, {
+    shipmentStatus: status,
+    orderStatus,
+    event: status === "IN_TRANSIT" ? "ORDER_IN_TRANSIT" : null,
+    rawStatus,
+    trackingNumber,
+    trackingUrl,
+    estimatedDelivery,
+    source,
+    providerEventId,
+  });
+}
+
+// The shared pipeline every tracking update goes through (courier webhook, manual refresh, generic webhook):
+//   1. persist the shipment facts   2. move the ORDER status forward through the one status function
+//   3. let that function send the (deduplicated) customer email   4. handle return-to-origin restocking.
+// Terminal shipments are left alone, and the order status is forward-only, so out-of-order or repeated
+// courier events can never move an order backwards or email twice.
+export async function applyResolvedShipmentUpdate(shipment, { shipmentStatus, orderStatus, event, rawStatus, trackingNumber, trackingUrl, estimatedDelivery, source = "SYSTEM", providerEventId = null }) {
+  if (!shipment || terminal.has(shipment.status)) return shipment;
+  const data = { rawProviderStatus: rawStatus != null ? String(rawStatus).slice(0, 120) : shipment.rawProviderStatus };
+  if (shipmentStatus) data.status = shipmentStatus;
+  if (trackingNumber) {
+    data.trackingNumber = trackingNumber;
+    if (!shipment.awb) data.awb = trackingNumber;
+  }
+  if (trackingUrl) data.trackingUrl = trackingUrl;
+  if (estimatedDelivery) data.estimatedDelivery = estimatedDelivery;
+  if (shipmentStatus === "DELIVERED") data.deliveredDate = new Date();
+  if (["PICKED_UP", "IN_TRANSIT"].includes(shipmentStatus) && !shipment.shippedDate) data.shippedDate = new Date();
+  const updated = await prisma.shipment.update({ where: { id: shipment.id }, data });
+
+  const { changeOrderStatus } = await import("../orders/order.service.js");
+  if (orderStatus) {
+    await changeOrderStatus(shipment.orderId, orderStatus, { source, force: true, shipmentId: shipment.id, providerEventId }).catch((err) => console.error("Order status update from tracking failed:", err.message));
+  }
+  // Optional milestone emails that are not an order-status change (in transit, delivery attempt failed).
+  if (event) await notifyOrderEvent(shipment.orderId, event, { source, providerEventId });
+
+  if (shipmentStatus === "RTO_DELIVERED") {
+    // Restocks the order's items and opens a refund-eligible return for prepaid orders. Awaited so it
+    // finishes before the webhook handler returns; never allowed to fail the webhook response.
     const { handleRtoDelivered } = await import("../returns/returns.service.js");
     await handleRtoDelivered(shipment.orderId).catch((err) => console.error("RTO restock failed:", err.message));
   }

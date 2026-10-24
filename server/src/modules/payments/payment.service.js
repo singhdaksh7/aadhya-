@@ -11,7 +11,7 @@ import {
   CashfreeError,
   CHECKOUT_MODE,
 } from "./cashfree.client.js";
-import { sendOrderConfirmationEmail } from "../email/email.service.js";
+import { notifyOrderEvent } from "../notifications/notification.service.js";
 import { ensureAccountForOrder } from "../customer-auth/guest-account.service.js";
 import { recordPurchaseEvent } from "../analytics/analytics.service.js";
 import { decrementStockForOrder, runPendingLowStockChecks } from "../orders/stock.js";
@@ -245,7 +245,7 @@ export async function finalizePaidPayment({ providerOrderId, providerPaymentId, 
     });
 
     await tx.orderStatusHistory.create({
-      data: { orderId: order.id, fromStatus: "PENDING", toStatus: "CONFIRMED", note: "Payment verified" },
+      data: { orderId: order.id, fromStatus: "PENDING", toStatus: "CONFIRMED", note: "Payment verified", source: "PAYMENT" },
     });
 
     // Variant stock is authoritative for variant lines; base-product stock is
@@ -298,7 +298,9 @@ export async function finalizePaidPayment({ providerOrderId, providerPaymentId, 
     // state. This is the single, server-authoritative place a `purchase`
     // analytics event is ever recorded — it is never accepted from a client.
     await ensureAccountForOrder(result.order.id).catch((err) => console.error("Guest account creation failed:", err.message));
-    sendOrderConfirmationEmail(result.order.id).catch(() => {});
+    // One clean confirmation, sent only now that the payment is server-verified (ORDER_PLACED and
+    // "payment confirmed" are the same moment for online orders, so they are one email, not two).
+    await notifyOrderEvent(result.order.id, "ORDER_PLACED", { source: "PAYMENT" });
     try {
       const invoice = await ensureInvoiceForOrder(result.order.id);
       if (invoice) sendInvoiceEmail(invoice.id).catch((err) => console.error("Invoice email failed:", err.message));

@@ -55,130 +55,41 @@ async function getMailer() {
   return { mailer: cachedMailer };
 }
 
-function accountNoteHtml(order) {
-  const c = order.customer;
-  if (!c || !c.autoCreated || c.passwordSetAt) return "";
-  const loginUrl = `${env.frontendUrl.replace(/\/$/, "")}/login`;
-  return `<p style="margin-top:16px;padding:12px;border:1px solid #e5e0d8;border-radius:8px">We have created an account for <strong>${escapeHtml(c.email)}</strong> so you can follow this order. Open the <a href="${loginUrl}">login page</a>, choose <em>Email me a login code</em>, and set a password when asked.</p>`;
-}
-
-function renderOrderConfirmationHtml(order, storeName = "Tushaqsa") {
-  const rows = order.items
-    .map(
-      (item) => `
-      <tr>
-        <td style="padding:8px 0;">${escapeHtml(item.productNameSnapshot)} × ${item.quantity}</td>
-        <td style="padding:8px 0;text-align:right;">₹${Number(item.lineTotal).toLocaleString("en-IN")}</td>
-      </tr>`
-    )
-    .join("");
-
-  const addr = order.address;
-
-  return `
-  <div style="font-family:Georgia,'Times New Roman',serif;max-width:560px;margin:0 auto;color:#2b2723;">
-    <h1 style="font-size:22px;">Thank you, ${escapeHtml(order.customerName)}!</h1>
-    <p>Your ${escapeHtml(storeName)} order <strong>${order.orderNumber}</strong> is confirmed.</p>
-    <table style="width:100%;border-collapse:collapse;margin:16px 0;">${rows}</table>
-    <table style="width:100%;border-top:1px solid #ddd;padding-top:8px;">
-      <tr><td>Subtotal</td><td style="text-align:right;">₹${Number(order.subtotal).toLocaleString("en-IN")}</td></tr>
-      <tr><td>Shipping</td><td style="text-align:right;">₹${Number(order.shippingAmount).toLocaleString("en-IN")}</td></tr>
-      <tr><td style="font-weight:bold;">Total</td><td style="text-align:right;font-weight:bold;">₹${Number(order.totalAmount).toLocaleString("en-IN")}</td></tr>
-    </table>
-    ${
-      addr
-        ? `<h2 style="font-size:16px;margin-top:24px;">Shipping to</h2>
-    <p style="margin:0;">${escapeHtml(addr.fullName)}<br/>${escapeHtml(addr.addressLine1)}${addr.addressLine2 ? `<br/>${escapeHtml(addr.addressLine2)}` : ""}<br/>${escapeHtml(addr.city)}, ${escapeHtml(addr.state)} ${escapeHtml(addr.postalCode)}<br/>${escapeHtml(addr.country)}</p>`
-        : ""
+// The single low-level send used by every transactional email (see modules/notifications). Records one
+// EmailLog row per attempt: recipient, event, subject, outcome and a safe provider message id. It never
+// stores bodies, login codes, reset links or SMTP credentials, and never throws: callers decide what a
+// failed email means (order/payment/shipment state must never depend on it).
+export async function deliverEmail({ to, subject, html, text, type, event = null, orderId = null, source = null, notificationId = null }) {
+  const cfg = await getSmtpConfig();
+  const { mailer } = await getMailer();
+  const logBase = { type, event: event || type, recipient: to, orderId, subject: String(subject || "").slice(0, 200), source, notificationId };
+  const writeLog = async (data) => {
+    try {
+      await prisma.emailLog.create({ data: { ...logBase, ...data } });
+    } catch (writeErr) {
+      if (!isMissingParentRow(writeErr)) console.error("[email] could not write email log:", writeErr.message);
     }
-    <p style="margin-top:24px;color:#4a443d;">Order status: ${order.status}</p>
-    <p style="margin-top:24px;color:#4a443d">Team Tushaqsa</p>
-  </div>`;
+  };
+  if (!mailer) {
+    await writeLog({ status: "SKIPPED", failureMessage: "SMTP not configured" });
+    return { sent: false, reason: "smtp_not_configured", error: "SMTP not configured" };
+  }
+  try {
+    const info = await mailer.sendMail({ to, subject, html, text });
+    await writeLog({ status: "SENT", providerMessageId: info?.messageId || null, sentAt: new Date() });
+    return { sent: true, messageId: info?.messageId || null };
+  } catch (err) {
+    let message = String(err?.message || "send failed");
+    if (cfg.pass) message = message.split(cfg.pass).join("***");
+    message = message.slice(0, 300);
+    console.error(`[email] ${type} to ${to} failed:`, message);
+    await writeLog({ status: "FAILED", failureMessage: message });
+    return { sent: false, reason: "send_failed", error: message };
+  }
 }
 
 function escapeHtml(str) {
   return String(str).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-}
-
-export async function sendPasswordResetEmail({ customer, token }) {
-  const { mailer } = await getMailer();
-  if (!mailer) return { sent: false, reason: "smtp_not_configured" };
-  const resetUrl = `${env.frontendUrl.replace(/\/$/, "")}/reset-password?token=${encodeURIComponent(token)}`;
-  try {
-    await mailer.sendMail({ to: customer.email, subject: `Reset your ${await getStoreName()} password`, html: `<div style="font-family:Georgia,serif;max-width:560px;margin:auto;color:#2b2723"><h1>Reset your password</h1><p>Hello ${escapeHtml(customer.name || "there")},</p><p>We received a request to reset your Tushaqsa account password. This link expires in one hour.</p><p><a href="${resetUrl}" style="display:inline-block;padding:12px 20px;background:#3c4a3a;color:#fff;text-decoration:none;border-radius:6px">Reset password</a></p><p>If you did not request this, you can safely ignore this email.</p><p style="margin-top:24px;color:#4a443d">Team Tushaqsa</p></div>` });
-    return { sent: true };
-  } catch (err) { console.error("[email] failed to send password reset email:", err.message); return { sent: false, reason: "send_failed" }; }
-}
-
-export async function sendLoginOtpEmail({ customer, code }) {
-  const { mailer } = await getMailer();
-  const storeName = await getStoreName();
-  const log = async (status, extra = {}) => { try { await prisma.emailLog.create({ data: { type: "LOGIN_OTP", recipient: customer.email, status, ...extra } }); } catch { /* logging must never block login */ } };
-  if (!mailer) {
-    console.log("[email] SMTP not configured — login code email not sent");
-    await log("SKIPPED", { failureMessage: "SMTP not configured" });
-    return { sent: false, reason: "smtp_not_configured" };
-  }
-  try {
-    const info = await mailer.sendMail({
-      to: customer.email,
-      subject: `Your ${storeName} login code`,
-      html: `<div style="font-family:Georgia,serif;max-width:520px;margin:auto;color:#2b2723"><h1 style="font-size:22px">Your login code</h1><p>Hello ${escapeHtml(customer.name || "there")},</p><p>Use this code to sign in to ${escapeHtml(storeName)}:</p><p style="font-size:34px;letter-spacing:8px;font-weight:700;margin:20px 0">${escapeHtml(code)}</p><p>It expires in 10 minutes and can be used once. If you did not ask for it, you can safely ignore this email.</p><p style="margin-top:24px;color:#4a443d">Team Tushaqsa</p></div>`,
-    });
-    await log("SENT", { providerMessageId: info.messageId || null, sentAt: new Date() });
-    return { sent: true };
-  } catch (err) {
-    console.error("[email] failed to send login code:", err.message);
-    await log("FAILED", { failureMessage: String(err.message || "send failed").slice(0, 300) });
-    return { sent: false, reason: "send_failed" };
-  }
-}
-
-// Fire-and-forget by design: called after a payment is finalized, and must
-// never throw back into that transaction/webhook path. If SMTP isn't
-// configured (e.g. local dev), it logs and returns instead of failing.
-export async function sendOrderConfirmationEmail(orderId, { resend = false, adminId = null } = {}) {
-  const order = await prisma.order.findUnique({
-    where: { id: orderId },
-    include: { items: true, address: true, customer: true },
-  });
-  if (!order) return { sent: false, reason: "order_not_found" };
-
-  const { mailer } = await getMailer();
-  if (!mailer) {
-    // eslint-disable-next-line no-console
-    console.log(`[email] SMTP not configured — skipping confirmation email for ${order.orderNumber}`);
-    try {
-      await prisma.emailLog.create({ data: { type: "ORDER_CONFIRMATION", recipient: order.customerEmail, orderId, status: "SKIPPED", failureMessage: "SMTP not configured" } });
-    } catch (writeErr) {
-      if (!isMissingParentRow(writeErr)) throw writeErr;
-    }
-    return { sent: false, reason: "smtp_not_configured" };
-  }
-
-  try {
-    const info = await mailer.sendMail({
-      to: order.customerEmail,
-      subject: `Your ${await getStoreName()} order ${order.orderNumber} is confirmed`,
-      html: `${renderOrderConfirmationHtml(order, await getStoreName())}${accountNoteHtml(order)}${order.customer ? `<p style="text-align:center"><a href="${env.frontendUrl.replace(/\/$/, "")}/account/orders/${encodeURIComponent(order.orderNumber)}">View your order</a></p>` : ""}`,
-    });
-    try {
-      await prisma.emailLog.create({ data: { type: "ORDER_CONFIRMATION", recipient: order.customerEmail, orderId, status: "SENT", providerMessageId: info.messageId || null, sentAt: new Date() } });
-    } catch (writeErr) {
-      if (!isMissingParentRow(writeErr)) throw writeErr;
-    }
-    if (adminId && resend) await prisma.adminAuditLog.create({ data: { adminId, action: "ORDER_CONFIRMATION_RESEND", provider: "email", metadata: { orderId } } });
-    return { sent: true };
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error(`[email] failed to send confirmation for ${order.orderNumber}:`, err.message);
-    try {
-      await prisma.emailLog.create({ data: { type: "ORDER_CONFIRMATION", recipient: order.customerEmail, orderId, status: "FAILED", failureMessage: String(err.message || "send failed").slice(0, 500) } });
-    } catch (writeErr) {
-      if (!isMissingParentRow(writeErr)) throw writeErr;
-    }
-    return { sent: false, reason: "send_failed" };
-  }
 }
 
 // `emailedAt` is an atomic send claim for automatic mail. A webhook retry
@@ -234,29 +145,6 @@ export async function sendInvoiceEmail(invoiceId, { resend = false, adminId = nu
     }
     console.error("[email] invoice email failed:", err.message);
     return { sent: false, reason: "send_failed" };
-  }
-}
-
-export async function sendShippingStatusEmail(orderId, status, { resend = false, adminId = null } = {}) {
-  const order = await prisma.order.findUnique({ where: { id: orderId }, include: { shipment: true, customer: true, items: true } });
-  if (!order || !["IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED"].includes(status)) return { sent: false };
-  const type = `${status}_EMAIL`;
-  if (!resend) {
-    const exists = await prisma.emailLog.findFirst({ where: { orderId, type, status: "SENT" } });
-    if (exists) return { sent: false, reason: "already_sent" };
-  }
-  const subject = status === "DELIVERED" ? "Your Tushaqsa order has been delivered" : status === "OUT_FOR_DELIVERY" ? "Your Tushaqsa order is out for delivery" : "Your Tushaqsa order has shipped";
-  const { mailer } = await getMailer();
-  if (!mailer) return { sent: false, reason: "smtp_not_configured" };
-  try {
-    await mailer.sendMail({ to: order.customerEmail, subject, html: `<p>Hello ${escapeHtml(order.customerName)},</p><p>Your order <strong>${escapeHtml(order.orderNumber)}</strong> is ${escapeHtml(status.replaceAll("_", " ").toLowerCase())}.</p><p>Carrier: ${escapeHtml(order.shipment?.carrier || "")}${order.shipment?.trackingNumber ? `<br/>Tracking: ${escapeHtml(order.shipment.trackingNumber)}` : ""}</p><p><a href="${env.frontendUrl.replace(/\/$/, "")}/account/orders/${encodeURIComponent(order.orderNumber)}">View your order</a></p>` });
-    await prisma.emailLog.create({ data: { type, recipient: order.customerEmail, orderId, status: "SENT", sentAt: new Date() } });
-    if (order.customerId && !resend) await prisma.customerNotification.create({ data: { customerId: order.customerId, type: `ORDER_${status}`, title: status === "DELIVERED" ? "Delivered" : status === "OUT_FOR_DELIVERY" ? "Out for delivery" : "Shipped", message: `Your order ${order.orderNumber} is ${status.replaceAll("_", " ").toLowerCase()}.`, link: `/account/orders/${order.orderNumber}` } });
-    if (adminId && resend) await prisma.adminAuditLog.create({ data: { adminId, action: "SHIPPING_EMAIL_RESEND", provider: "email", metadata: { orderId, status } } });
-    return { sent: true };
-  } catch (err) {
-    await prisma.emailLog.create({ data: { type, recipient: order.customerEmail, orderId, status: "FAILED", failureMessage: String(err.message).slice(0, 500) } });
-    return { sent: false };
   }
 }
 
@@ -333,30 +221,25 @@ export async function getEmailHealthSummary({ recentLimit = 10 } = {}) {
   return { smtpConfigured: status.configured, lastTestAt: status.lastTestAt, lastTestStatus: status.lastTestStatus, failedCount, recentFailures };
 }
 
-const RESENDABLE_TYPES = new Set(["ORDER_CONFIRMATION", "INVOICE", "INVOICE_RESEND", "IN_TRANSIT_EMAIL", "OUT_FOR_DELIVERY_EMAIL", "DELIVERED_EMAIL"]);
+const RESENDABLE_TYPES = new Set(["INVOICE", "INVOICE_RESEND"]);
 
 /**
- * Explicit, admin-initiated retry of one failed/skipped transactional email
- * identified by its EmailLog id. Never triggered automatically — this is the
- * only path that resends a previously failed customer email.
+ * Explicit, admin-initiated retry of one failed/skipped transactional email identified by its EmailLog
+ * id. Notification emails (order/account events) are re-sent through the notification service, which
+ * keeps the at-most-once ledger consistent; invoice emails are re-sent by the invoice path.
  */
 export async function retryEmailLog(emailLogId, adminId) {
   const log = await prisma.emailLog.findUnique({ where: { id: emailLogId } });
   if (!log) throw ApiError.notFound("Email log entry not found.");
   if (!["FAILED", "SKIPPED"].includes(log.status)) throw ApiError.badRequest("Only a failed or skipped email can be retried.");
-  if (!RESENDABLE_TYPES.has(log.type)) throw ApiError.badRequest(`Emails of type ${log.type} cannot be retried from here.`);
 
-  if (log.type === "ORDER_CONFIRMATION") {
-    if (!log.orderId) throw ApiError.badRequest("This log entry has no associated order.");
-    return sendOrderConfirmationEmail(log.orderId, { resend: true, adminId });
+  if (log.notificationId) {
+    const { retryNotification } = await import("../notifications/notification.service.js");
+    return retryNotification(log.notificationId, adminId);
   }
-  if (log.type === "INVOICE" || log.type === "INVOICE_RESEND") {
-    if (!log.invoiceId) throw ApiError.badRequest("This log entry has no associated invoice.");
-    return sendInvoiceEmail(log.invoiceId, { resend: true, adminId });
-  }
-  const status = log.type.replace(/_EMAIL$/, "");
-  if (!log.orderId) throw ApiError.badRequest("This log entry has no associated order.");
-  return sendShippingStatusEmail(log.orderId, status, { resend: true, adminId });
+  if (!RESENDABLE_TYPES.has(log.type)) throw ApiError.badRequest(`Emails of type ${log.type} cannot be retried from here.`);
+  if (!log.invoiceId) throw ApiError.badRequest("This log entry has no associated invoice.");
+  return sendInvoiceEmail(log.invoiceId, { resend: true, adminId });
 }
 
 // Fire-and-forget notification for a return/refund status change. Never

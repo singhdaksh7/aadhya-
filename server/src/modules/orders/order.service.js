@@ -2,13 +2,14 @@ import { prisma } from "../../lib/prisma.js";
 import { ApiError } from "../../utils/ApiError.js";
 import { priceCartItemsOrThrow, computeTotals, isDigitalOnly } from "./checkout.service.js";
 import { generateToken, hashToken, safeCompareHex } from "../../utils/secureToken.js";
-import { assertTransition } from "./orderStatus.js";
+import { assertTransition, STATUS_RANK } from "./orderStatus.js";
 import { assertCodEligible } from "../shipping/shipping.service.js";
 import { decrementStockForOrder, restoreStockForOrder, runPendingLowStockChecks } from "./stock.js";
 import { round2 } from "../../utils/money.js";
 import crypto from "node:crypto";
 import { ensureInvoiceForOrder } from "../invoices/invoice.service.js";
-import { sendInvoiceEmail, sendOrderConfirmationEmail } from "../email/email.service.js";
+import { sendInvoiceEmail } from "../email/email.service.js";
+import { notifyOrderEvent, notifyOrderStatus } from "../notifications/notification.service.js";
 import { ensureAccountForOrder } from "../customer-auth/guest-account.service.js";
 import { getShippingProvider } from "../shipping/provider.service.js";
 import { attemptAutomaticShipment, assertPickupConfigured, generateAwbForShipment, schedulePickupForShipment, getLabelForShipment, refreshTrackingForShipment, sanitizeProviderError } from "../shipping/fulfilment.service.js";
@@ -294,7 +295,7 @@ export async function createOrder({
     // COD orders are confirmed at checkout: create/link the customer account and send the confirmation
     // email (best effort; neither may ever affect the order).
     await ensureAccountForOrder(order.id).catch((err) => console.error("Guest account creation failed:", err.message));
-    sendOrderConfirmationEmail(order.id).catch(() => {});
+    await notifyOrderEvent(order.id, "ORDER_PLACED", { source: "SYSTEM" });
     try {
       const invoice = await ensureInvoiceForOrder(order.id);
       if (invoice) sendInvoiceEmail(invoice.id).catch((err) => console.error("Invoice email failed:", err.message));
@@ -385,23 +386,35 @@ export async function getAdminOrderById(id) {
   return sanitizeOrder(order);
 }
 
-// Operational status only — paymentStatus is never writable here, so the
-// admin UI has no path to "mark PAID" outside the real payment workflow.
-// Every transition is validated against orderStatus.js's state machine and
-// recorded in OrderStatusHistory; cancelling restores stock exactly once.
-export async function updateOrderStatus(id, nextStatus, note) {
+// THE single place an order's status changes, whoever asks: Admin clicking a status, the courier
+// webhook (Shiprocket), the payment workflow or the system. Persisting, history (with the source),
+// stock handling and the customer email all happen here, so the behaviour is identical for every source
+// and the same transition can never email twice (the notification ledger dedupes by order + event).
+//
+// force = courier/system driven: forward-only, never touches CANCELLED/DELIVERED/unpaid(PENDING) orders
+// and silently ignores anything that is not an advance, instead of raising like a manual change would.
+export async function changeOrderStatus(id, nextStatus, { source = "SYSTEM", adminId = null, note = null, shipmentId = null, providerEventId = null, force = false } = {}) {
   const order = await prisma.order.findUnique({ where: { id }, include: { items: true } });
   if (!order) throw ApiError.notFound("Order not found");
 
-  assertTransition(order.status, nextStatus);
+  if (force) {
+    const ignore = () => ({ order: null, changed: false, previousStatus: order.status });
+    if (["CANCELLED", "DELIVERED", "PENDING"].includes(order.status)) return ignore();
+    if ((STATUS_RANK[nextStatus] ?? -1) <= (STATUS_RANK[order.status] ?? 99)) return ignore();
+  } else {
+    assertTransition(order.status, nextStatus);
+  }
 
   const data = { status: nextStatus };
   if (nextStatus === "CANCELLED") data.cancelledAt = new Date();
 
   const updated = await prisma.$transaction(async (tx) => {
-    const saved = await tx.order.update({ where: { id }, data, include: ADMIN_INCLUDE });
+    // Compare-and-swap on the status we read: two writers (Admin + webhook) cannot both apply the same hop.
+    const cas = await tx.order.updateMany({ where: { id, status: order.status }, data });
+    if (cas.count === 0) return null;
+    const saved = await tx.order.findUnique({ where: { id }, include: ADMIN_INCLUDE });
     await tx.orderStatusHistory.create({
-      data: { orderId: id, fromStatus: order.status, toStatus: nextStatus, note: note || null },
+      data: { orderId: id, fromStatus: order.status, toStatus: nextStatus, note: note || null, source, adminId, shipmentId, providerEventId },
     });
 
     if (nextStatus === "CANCELLED" && order.stockDecrementedAt && !order.stockRestoredAt) {
@@ -410,23 +423,20 @@ export async function updateOrderStatus(id, nextStatus, note) {
 
     return saved;
   });
+  if (!updated) return { order: null, changed: false, previousStatus: order.status };
 
-  if (order.customerId && nextStatus !== order.status) {
+  if (order.customerId) {
     try {
       const existingNotif = await prisma.customerNotification.findFirst({
-        where: {
-          customerId: order.customerId,
-          type: `ORDER_${nextStatus}`,
-          link: `/account/orders/${order.orderNumber}`,
-        },
+        where: { customerId: order.customerId, type: `ORDER_${nextStatus}`, link: `/account/orders/${order.orderNumber}` },
       });
       if (!existingNotif) {
         await prisma.customerNotification.create({
           data: {
             customerId: order.customerId,
             type: `ORDER_${nextStatus}`,
-            title: `Order ${nextStatus.charAt(0) + nextStatus.slice(1).toLowerCase()}`,
-            message: `Your order ${order.orderNumber} is now ${nextStatus.toLowerCase()}.`,
+            title: `Order ${nextStatus.charAt(0) + nextStatus.slice(1).toLowerCase().replaceAll("_", " ")}`,
+            message: `Your order ${order.orderNumber} is now ${nextStatus.toLowerCase().replaceAll("_", " ")}.`,
             link: `/account/orders/${order.orderNumber}`,
           },
         });
@@ -445,7 +455,22 @@ export async function updateOrderStatus(id, nextStatus, note) {
     }
   }
 
-  return sanitizeOrder(updated);
+  // Customer email: after the status is safely committed. Never throws, never rolls anything back.
+  const notifyOpts = { source, providerEventId, extra: { reason: nextStatus === "CANCELLED" ? note : null } };
+  if (force && nextStatus === "OUT_FOR_DELIVERY" && (STATUS_RANK[order.status] ?? 0) < STATUS_RANK.SHIPPED) {
+    await notifyOrderStatus(id, "SHIPPED", { source, providerEventId }); // the courier skipped "shipped": send it first
+  }
+  await notifyOrderStatus(id, nextStatus, notifyOpts);
+
+  return { order: sanitizeOrder(updated), changed: true, previousStatus: order.status };
+}
+
+// Operational status only — paymentStatus is never writable here, so the admin UI has no path to "mark
+// PAID" outside the real payment workflow. Every transition is validated against orderStatus.js.
+export async function updateOrderStatus(id, nextStatus, note, adminId = null) {
+  const { order } = await changeOrderStatus(id, nextStatus, { source: "ADMIN", adminId, note });
+  if (!order) throw ApiError.conflict("The order status changed while you were updating it. Refresh and try again.");
+  return order;
 }
 
 export async function getOrderDashboardStats() {

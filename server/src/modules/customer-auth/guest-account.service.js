@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { prisma } from "../../lib/prisma.js";
 import { hashPassword } from "../../utils/password.js";
 import { normalizeIndianPhone } from "./customer-auth.validators.js";
+import { notifyAccountCreated } from "../notifications/notification.service.js";
 
 const isUniqueViolation = (error) => error?.code === "P2002";
 
@@ -43,5 +44,7 @@ export async function ensureAccountForOrder(orderId) {
   }
   if (!customer || !customer.isActive) return { linked: false, created };
   await prisma.order.updateMany({ where: { id: order.id, customerId: null }, data: { customerId: customer.id } });
+  // Never lets an email problem affect the order: notifyAccountCreated does not throw.
+  if (created) await notifyAccountCreated(customer, { guest: true });
   return { linked: true, created, customerId: customer.id };
 }

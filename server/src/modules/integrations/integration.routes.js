@@ -17,10 +17,11 @@ import {
   recordSecretAudit,
 } from "./credential.service.js";
 import { getShippingProvider } from "../shipping/provider.service.js";
+import { shiprocketWebhookSummary, generateShiprocketWebhookToken, removeShiprocketWebhookToken, shiprocketWebhookEvents, verifyShiprocketWebhookSetup } from "./shiprocket-webhook.service.js";
 import { cashfreeSummary, testCashfreeConnection, verifyWebhookSetup, cashfreeWebhookEvents, validateCashfreePatch, webhookUrlFor } from "./cashfree-integration.service.js";
 
 // RAZORPAY stays in the enum only so that retired credentials can still be disabled/deleted from the API.
-const provider = z.enum(["CASHFREE", "RAZORPAY", "SHIPROCKET", "DELHIVERY", "CUSTOM"]);
+const provider = z.enum(["CASHFREE", "RAZORPAY", "SHIPROCKET", "SHIPROCKET_WEBHOOK", "DELHIVERY", "CUSTOM"]);
 const env = z.enum(["TEST", "LIVE", "DEFAULT"]);
 const cfEnv = z.enum(["TEST", "LIVE"]);
 // Envelope only — "environment" must never be duplicated inside `data`, so
@@ -84,6 +85,15 @@ adminIntegrationRouter.post(
     ok(res, await cashfreeSummary(req));
   })
 );
+
+// --- Shiprocket tracking webhook (credentials themselves use the generic endpoints below) ---------------
+adminIntegrationRouter.get("/shiprocket/summary", asyncHandler(async (req, res) => ok(res, await shiprocketWebhookSummary(req))));
+adminIntegrationRouter.get("/shiprocket/webhook-events", asyncHandler(async (req, res) => ok(res, { items: await shiprocketWebhookEvents(Number(req.query.limit) || 25) })));
+adminIntegrationRouter.post("/shiprocket/verify-setup", asyncHandler(async (req, res) => ok(res, await verifyShiprocketWebhookSetup(req))));
+// The token is generated here, stored encrypted and returned exactly once: paste it into Shiprocket's
+// webhook "Security Token" field. There is no endpoint that reads it back.
+adminIntegrationRouter.post("/shiprocket/webhook-token/generate", asyncHandler(async (req, res) => ok(res, await generateShiprocketWebhookToken(req.admin.id))));
+adminIntegrationRouter.delete("/shiprocket/webhook-token", asyncHandler(async (req, res) => ok(res, await removeShiprocketWebhookToken(req.admin.id))));
 
 // --- Generic provider endpoints (Shiprocket etc.) ---
 adminIntegrationRouter.put(

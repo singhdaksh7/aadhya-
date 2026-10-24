@@ -9,6 +9,7 @@ import { notFoundHandler, errorHandler } from "./middleware/errorHandler.js";
 import { uploadRootDir } from "./modules/uploads/storage.js";
 import routes from "./routes/index.js";
 import { handleCashfreeWebhook } from "./modules/payments/webhook.controller.js";
+import { handleShipmentStatusWebhook } from "./modules/shipping/shipment-status.webhook.js";
 import { handleShippingWebhook } from "./modules/shipping/webhook.controller.js";
 
 export function createApp() {
@@ -27,6 +28,8 @@ export function createApp() {
   // bytes, so this one route is registered with a raw-body parser ahead of
   // the global express.json() below — every other route gets parsed JSON.
   app.post("/api/webhooks/cashfree", express.raw({ type: "application/json", limit: "1mb" }), handleCashfreeWebhook);
+  // Courier tracking updates (neutral path: Shiprocket rejects URLs containing its own name or "sr"/"kr").
+  app.post("/api/webhooks/shipment-status", express.raw({ type: "*/*", limit: "1mb" }), handleShipmentStatusWebhook);
   app.post("/api/webhooks/shipping/:provider", express.raw({ type: "application/json", limit: "1mb" }), handleShippingWebhook);
 
   app.use(express.json({ limit: "1mb" }));
