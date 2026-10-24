@@ -32,7 +32,7 @@ describe("order creation", () => {
   it("creates an order with a human-friendly, year-prefixed order number", async () => {
     const { res } = await placeOrder();
     expect(res.status).toBe(201);
-    expect(res.body.data.orderNumber).toMatch(/^AAD-\d{4}-\d{6}$/);
+    expect(res.body.data.orderNumber).toMatch(/^TUS-\d{4}-\d{6}$/);
     expect(res.body.data.accessToken).toHaveLength(48);
   });
 
@@ -67,7 +67,7 @@ describe("order creation", () => {
     const results = await Promise.all(requests);
     const orderNumbers = results.map((r) => r.body.data.orderNumber);
     expect(new Set(orderNumbers).size).toBe(orderNumbers.length);
-    orderNumbers.forEach((n) => expect(n).toMatch(/^AAD-\d{4}-\d{6}$/));
+    orderNumbers.forEach((n) => expect(n).toMatch(/^TUS-\d{4}-\d{6}$/));
   });
 
   it("does NOT decrement stock at order-creation time — only after payment", async () => {
