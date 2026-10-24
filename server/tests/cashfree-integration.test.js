@@ -249,6 +249,7 @@ describe("webhook with real stored credentials", () => {
 describe("COD is independent of Cashfree configuration", () => {
   it("creates a COD order with no Cashfree credentials at all", async () => {
     const p = await seedTestProduct({ price: 500, stockQuantity: 5 });
+    await prisma.shippingZone.create({ data: { name: "KA", states: ["Karnataka"], postalCodes: [], codSupported: true } }).catch(() => {});
     const res = await request(app).post("/api/orders").send({ customer: VALID_CUSTOMER, shippingAddress: VALID_ADDRESS, items: [{ slug: p.slug, quantity: 1 }], paymentMethod: "cod" });
     expect(res.status).toBe(201);
     expect(await getCashfreeConfig()).toBeNull();

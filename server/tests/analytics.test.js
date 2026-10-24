@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import request from "supertest";
 import { resetDb, seedTestProduct, seedTestAdmin, VALID_CUSTOMER, VALID_ADDRESS } from "./helpers.js";
 import { prisma } from "../src/lib/prisma.js";
+import { env } from "../src/config/env.js";
 
 import { vi } from "vitest";
 import { resetCashfree, cfPay } from "./fakes/cashfree.js";

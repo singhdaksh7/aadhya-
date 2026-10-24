@@ -163,6 +163,8 @@ describe("Cashfree not configured / disabled (COD must keep working)", () => {
 
   it("COD checkout works with Cashfree unconfigured", async () => {
     cf.configured = false;
+    await prisma.shippingZone.create({ data: { name: "KA", states: ["Karnataka"], postalCodes: [], codSupported: true } }).catch(() => {});
+
     const { res, product } = await placeOrder({ paymentMethod: "cod", quantity: 1 });
     expect(res.status).toBe(201);
     const order = await prisma.order.findUnique({ where: { id: res.body.data.orderId } });
@@ -173,6 +175,7 @@ describe("Cashfree not configured / disabled (COD must keep working)", () => {
   });
 
   it("COD checkout works when online payment is switched off", async () => {
+    await prisma.shippingZone.create({ data: { name: "KA", states: ["Karnataka"], postalCodes: [], codSupported: true } }).catch(() => {});
     await prisma.siteSetting.upsert({ where: { key: "payments" }, create: { key: "payments", value: { cashfreeEnabled: false, codEnabled: true } }, update: { value: { cashfreeEnabled: false, codEnabled: true } } });
     const { res } = await placeOrder({ paymentMethod: "cod", quantity: 1 });
     expect(res.status).toBe(201);
