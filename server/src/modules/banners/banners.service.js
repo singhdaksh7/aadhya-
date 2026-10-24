@@ -1,14 +1,14 @@
 import { prisma } from "../../lib/prisma.js";
 import { ApiError } from "../../utils/ApiError.js";
 
-// Default seed banners matching approved Aadya storefront hero banners
+// Default seed banners matching approved Tushaqsa storefront hero banners
 const DEFAULT_SEED_BANNERS = [
   {
     name: "Hero Banner 1 - Decor that Feels Like Home",
     placement: "HOME_HERO",
     desktopImage: "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?q=80&w=1800&auto=format&fit=crop",
     mobileImage: "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?q=80&w=800&auto=format&fit=crop",
-    eyebrow: "Aadya Home & Lifestyle",
+    eyebrow: "Tushaqsa Home & Lifestyle",
     title: "Decor that",
     highlightText: "Feels Like Home",
     subtitle: "Discover handcrafted oil lamps, unglazed clay vessels, linen textiles, and slow design objects created for peaceful sanctuaries.",

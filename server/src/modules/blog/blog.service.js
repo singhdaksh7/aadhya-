@@ -128,7 +128,7 @@ export async function createBlogPost(data) {
       excerpt: data.excerpt || null,
       featuredImage: data.featuredImage || null,
       content: sanitizedContent,
-      author: data.author || "Aadya Editorial",
+      author: data.author || "Tushaqsa Editorial",
       category: data.category || "General",
       tags: data.tags || [],
       isFeatured: Boolean(data.isFeatured),

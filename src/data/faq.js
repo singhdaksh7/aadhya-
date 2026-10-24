@@ -56,7 +56,7 @@ export const faqs = [
   },
   {
     category: "General",
-    question: "How can I get in touch with Aadya Society?",
+    question: "How can I get in touch with Tushaqsa?",
     answer:
       "You can reach out using the Contact page form, and our team will get back to you regarding your enquiry.",
   },

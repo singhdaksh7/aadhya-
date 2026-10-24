@@ -39,7 +39,7 @@ describe("applyThemeVariables", () => {
     expect(getVar("--theme-secondary-soft")).toMatch(/^#[0-9A-F]{6}$/);
   });
 
-  it("uses Aadya defaults when settings are empty", () => {
+  it("uses Tushaqsa defaults when settings are empty", () => {
     applyThemeVariables({ colors: {} });
 
     expect(getVar("--theme-primary")).toBe(DEFAULT_THEME_COLORS.primary);
@@ -76,7 +76,7 @@ describe("applyThemeVariables", () => {
     expect(getVar("--theme-secondary")).toBe("#8A9A82");
   });
 
-  it("resets to defaults when reapplied with empty settings (reset-to-Aadya-defaults behavior)", () => {
+  it("resets to defaults when reapplied with empty settings (reset-to-Tushaqsa-defaults behavior)", () => {
     applyThemeVariables({ colors: { primary: "#FF0000", secondary: "#00FF00" } });
     expect(getVar("--theme-primary")).toBe("#FF0000");
 

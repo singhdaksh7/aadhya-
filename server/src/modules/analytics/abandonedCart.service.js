@@ -82,7 +82,7 @@ export async function listAbandonedCarts({ thresholdMs = ABANDONED_THRESHOLD_MS 
 export function composeRecoveryEmail({ customer, items, value }) {
   const itemLines = items.map((i) => `- ${i.productName}${i.variantName ? ` (${i.variantName})` : ""} x${i.quantity}`).join("\n");
   const subject = "You left something in your cart";
-  const text = `Hi ${customer?.name || "there"},\n\nYou still have items waiting in your Aadya cart:\n\n${itemLines}\n\nCart value: ₹${value}\n\nComplete your order before these items sell out.`;
+  const text = `Hi ${customer?.name || "there"},\n\nYou still have items waiting in your Tushaqsa cart:\n\n${itemLines}\n\nCart value: ₹${value}\n\nComplete your order before these items sell out.`;
   return { subject, text, to: customer?.email };
 }
 

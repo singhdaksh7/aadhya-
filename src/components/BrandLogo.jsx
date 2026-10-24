@@ -4,17 +4,17 @@ import { resolveMediaUrl } from "../lib/api";
 /**
  * Renders a site-settings-driven logo (header logo, footer logo, dark/light
  * variant, ...) with the ONE shared media URL normalization path and a
- * graceful fallback to the Aadya text wordmark if the image fails to load
+ * graceful fallback to the store-name text wordmark if the image fails to load
  * (broken key, deleted media asset, storage misconfiguration, etc.) instead
  * of a broken-image icon. Every consumer (Navbar, Footer) should render logos
  * through this component rather than reinventing URL resolution + <img>.
  */
 export default function BrandLogo({
   src,
-  alt = "Aadya",
-  fallbackText = "Aadya",
+  alt = "Tushaqsa",
+  fallbackText = "Tushaqsa",
   widthPx,
-  maxHeightPx,
+  heightPx,
   className = "",
   textClassName = "font-serif-display text-2xl tracking-tight text-charcoal sm:text-3xl font-bold",
 }) {
@@ -32,14 +32,15 @@ export default function BrandLogo({
     return <span className={textClassName}>{fallbackText}</span>;
   }
 
-  // Width comes from the admin-controlled logo-width setting; height is only
-  // ever CAPPED (maxHeight), never fixed, so a tall/wide/square source image
-  // keeps its own aspect ratio instead of being squashed or clipped into a
-  // fixed box. object-fit: contain + object-position: center handle the rest.
+  // Admin-controlled sizing, no design-level caps: width only -> height auto,
+  // height only -> width auto, both -> both honored (object-fit: contain means
+  // the artwork is letterboxed, never cropped or stretched). maxWidth: 100% is
+  // purely structural so a large logo can never overflow its container.
+  const w = Number(widthPx);
+  const h = Number(heightPx);
   const style = {
-    ...(widthPx ? { width: `${widthPx}px` } : undefined),
-    ...(maxHeightPx ? { maxHeight: `${maxHeightPx}px` } : undefined),
-    // never wider than the space the layout gives it, whatever width the admin configured
+    ...(w > 0 ? { width: `${w}px` } : undefined),
+    ...(h > 0 ? { height: `${h}px` } : undefined),
     maxWidth: "100%",
   };
 

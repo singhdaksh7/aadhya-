@@ -1,0 +1,7 @@
+{
+  "name": "Tushaqsa - Home Decor and Lifestyle Products",
+  "short_name": "Tushaqsa",
+  "start_url": "/",
+  "display": "browser",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

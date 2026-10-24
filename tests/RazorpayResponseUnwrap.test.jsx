@@ -53,7 +53,7 @@ vi.mock("../src/context/CustomerAuthContext", () => ({
 
 vi.mock("../src/hooks/useSiteSettings", () => ({
   useSiteSettings: () => ({
-    general: { storeName: "Aadya" },
+    general: { storeName: "Tushaqsa" },
     payments: { razorpayEnabled: true, codEnabled: true },
     shipping: { freeShippingThreshold: 1000 },
   }),
@@ -118,7 +118,7 @@ describe("Razorpay Response Unwrapping & Defensive Validation", () => {
       razorpayOrderId: "order_rzp_999",
       amount: 150000,
       currency: "INR",
-      name: "Aadya Storefront",
+      name: "Tushaqsa",
       description: "Order #AAD-2026-999",
     });
 

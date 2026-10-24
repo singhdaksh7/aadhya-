@@ -130,7 +130,7 @@ describe("guest order tracking", () => {
   it("rejects an unknown order number with the same generic message", async () => {
     const track = await request(app)
       .post("/api/orders/track")
-      .send({ orderNumber: "AAD-2026-999999", email: VALID_CUSTOMER.email });
+      .send({ orderNumber: "TUS-2026-999999", email: VALID_CUSTOMER.email });
     expect(track.status).toBe(404);
   });
 });

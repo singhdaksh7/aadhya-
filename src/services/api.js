@@ -1,4 +1,4 @@
-// Aadya Storefront API Service Layer
+// Tushaqsa API Service Layer
 //
 // Thin adapter over the real backend (src/lib/api.js), preserving the
 // function names/shapes this layer originally exposed over mock data so the

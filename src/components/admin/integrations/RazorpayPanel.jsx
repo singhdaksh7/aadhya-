@@ -265,7 +265,7 @@ export default function RazorpayPanel({ onChanged }) {
         </form>
       </AdminCard>
 
-      <AdminCard title="Webhook Setup" subtitle="Lets Razorpay tell Aadya when a payment succeeds or fails.">
+      <AdminCard title="Webhook Setup" subtitle="Lets Razorpay tell Tushaqsa when a payment succeeds or fails.">
         <div className="space-y-4">
           <div>
             <p className="text-xs font-medium text-charcoal">Webhook URL (generated automatically)</p>
@@ -322,7 +322,7 @@ export default function RazorpayPanel({ onChanged }) {
                   <input readOnly aria-label="Generated webhook secret" value={generated.secret} className="admin-input min-w-0 flex-1 font-mono text-xs" onFocus={(e) => e.target.select()} />
                   <button type="button" className="admin-btn admin-btn--ghost" onClick={() => copy(generated.secret, "secret")}>{copied === "secret" ? "Copied" : "Copy"}</button>
                 </div>
-                <p className="mt-2 text-xs text-charcoal-soft">It is already saved to Aadya ({generated.environment}). Paste it into the Razorpay webhook now.</p>
+                <p className="mt-2 text-xs text-charcoal-soft">It is already saved to Tushaqsa ({generated.environment}). Paste it into the Razorpay webhook now.</p>
                 <button type="button" className="admin-btn admin-btn--ghost mt-2" onClick={() => setGenerated(null)}>I have copied it</button>
               </div>
             )}
@@ -333,7 +333,7 @@ export default function RazorpayPanel({ onChanged }) {
               <button type="button" className="admin-btn admin-btn--ghost" disabled={busy === "verify"} onClick={() => run("verify", async () => setVerify((await adminRazorpayVerifySetup()).data))}>
                 {busy === "verify" ? "Verifying…" : "Verify Setup"}
               </button>
-              <span className="text-xs text-charcoal-soft">Checks Aadya's side only. Razorpay cannot send a test event on demand, so a real signed event is still needed.</span>
+              <span className="text-xs text-charcoal-soft">Checks Tushaqsa's side only. Razorpay cannot send a test event on demand, so a real signed event is still needed.</span>
             </div>
             {verify && (
               <div className="mt-2 rounded-xl bg-sage-light/60 p-3 text-sm" aria-live="polite">

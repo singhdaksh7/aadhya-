@@ -15,13 +15,13 @@ import { applyThemeVariables, DEFAULT_SITE_SETTINGS, refreshSiteSettings } from 
 // Renders the logo exactly as <BrandLogo> renders it in the real Navbar
 // (same width + max-height + object-fit:contain), so the admin sees the true
 // navbar result instead of a raw, uncropped preview thumbnail.
-function HeaderLogoPreview({ src, widthPx, maxHeightPx, label }) {
+function HeaderLogoPreview({ src, widthPx, heightPx, label }) {
   if (!src) return null;
   return (
     <div className="flex items-center gap-3 rounded-xl border border-dashed border-charcoal/15 bg-ivory-dark/30 px-4 py-3">
       <span className="text-[10px] font-semibold uppercase tracking-wider text-charcoal-soft shrink-0">{label}</span>
-      <div className="flex items-center rounded-lg border border-charcoal/10 bg-white px-3 py-2">
-        <BrandLogo src={src} widthPx={widthPx} maxHeightPx={maxHeightPx} className="w-auto" />
+      <div className="flex min-w-0 items-center overflow-x-auto rounded-lg border border-charcoal/10 bg-white px-3 py-2">
+        <BrandLogo src={src} widthPx={widthPx} heightPx={heightPx} className="block" />
       </div>
     </div>
   );
@@ -84,7 +84,7 @@ export default function AdminSettings() {
   };
 
   const handleResetAppearance = async () => {
-    if (!window.confirm("Reset all appearance and theme colors to Aadya defaults?")) return;
+    if (!window.confirm("Reset all appearance and theme colors to Tushaqsa defaults?")) return;
     setError(null);
     setSaved(false);
     setSaving(true);
@@ -371,7 +371,7 @@ export default function AdminSettings() {
             <HeaderLogoPreview
               src={settings.branding?.desktopLogo}
               widthPx={settings.branding?.logoWidthDesktop || 140}
-              maxHeightPx={settings.branding?.logoMaxHeightDesktop || 60}
+              heightPx={settings.branding?.logoHeightDesktop}
               label="Desktop navbar preview"
             />
 
@@ -390,7 +390,7 @@ export default function AdminSettings() {
             <HeaderLogoPreview
               src={settings.branding?.mobileLogo || settings.branding?.desktopLogo}
               widthPx={settings.branding?.logoWidthMobile || 110}
-              maxHeightPx={settings.branding?.logoMaxHeightMobile || 44}
+              heightPx={settings.branding?.logoHeightMobile}
               label="Mobile navbar preview"
             />
 
@@ -435,61 +435,65 @@ export default function AdminSettings() {
                 <label className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Logo Width Desktop (px)</label>
                 <input
                   type="number"
-                  min={40}
-                  max={400}
-                  value={settings.branding?.logoWidthDesktop || 140}
+                  min={1}
+                  step="any"
+                  value={settings.branding?.logoWidthDesktop || ""}
+                  placeholder="140"
                   onChange={(e) => {
-                    const clamped = Math.min(400, Math.max(40, Number(e.target.value) || 140));
-                    setSettings((s) => ({ ...s, branding: { ...s.branding, logoWidthDesktop: clamped } }));
+                    const n = Number(e.target.value);
+                    setSettings((s) => ({ ...s, branding: { ...s.branding, logoWidthDesktop: Number.isFinite(n) && n > 0 ? n : 140 } }));
                   }}
                   className={inputCls}
                 />
-                <p className="mt-1 text-[11px] text-charcoal-soft">Constrained 40–400px so the header can't be broken.</p>
+                <p className="mt-1 text-[11px] text-charcoal-soft">Any size you like. Height follows automatically unless you set one.</p>
+              </div>
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Logo Height Desktop (px)</label>
+                <input
+                  type="number"
+                  min={1}
+                  step="any"
+                  value={settings.branding?.logoHeightDesktop || ""}
+                  placeholder="Auto"
+                  onChange={(e) => {
+                    const n = Number(e.target.value);
+                    setSettings((s) => ({ ...s, branding: { ...s.branding, logoHeightDesktop: Number.isFinite(n) && n > 0 ? n : 0 } }));
+                  }}
+                  className={inputCls}
+                />
+                <p className="mt-1 text-[11px] text-charcoal-soft">Leave empty for auto. Set both width and height to fix both; the logo is never cropped.</p>
               </div>
               <div>
                 <label className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Logo Width Mobile (px)</label>
                 <input
                   type="number"
-                  min={30}
-                  max={300}
-                  value={settings.branding?.logoWidthMobile || 110}
+                  min={1}
+                  step="any"
+                  value={settings.branding?.logoWidthMobile || ""}
+                  placeholder="110"
                   onChange={(e) => {
-                    const clamped = Math.min(300, Math.max(30, Number(e.target.value) || 110));
-                    setSettings((s) => ({ ...s, branding: { ...s.branding, logoWidthMobile: clamped } }));
+                    const n = Number(e.target.value);
+                    setSettings((s) => ({ ...s, branding: { ...s.branding, logoWidthMobile: Number.isFinite(n) && n > 0 ? n : 110 } }));
                   }}
                   className={inputCls}
                 />
-                <p className="mt-1 text-[11px] text-charcoal-soft">Constrained 30–300px so the mobile header can't be broken.</p>
+                <p className="mt-1 text-[11px] text-charcoal-soft">Shrinks only if the phone screen is narrower than this.</p>
               </div>
               <div>
-                <label className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Logo Max Height Desktop (px)</label>
+                <label className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Logo Height Mobile (px)</label>
                 <input
                   type="number"
-                  min={32}
-                  max={96}
-                  value={settings.branding?.logoMaxHeightDesktop || 60}
+                  min={1}
+                  step="any"
+                  value={settings.branding?.logoHeightMobile || ""}
+                  placeholder="Auto"
                   onChange={(e) => {
-                    const clamped = Math.min(96, Math.max(32, Number(e.target.value) || 60));
-                    setSettings((s) => ({ ...s, branding: { ...s.branding, logoMaxHeightDesktop: clamped } }));
+                    const n = Number(e.target.value);
+                    setSettings((s) => ({ ...s, branding: { ...s.branding, logoHeightMobile: Number.isFinite(n) && n > 0 ? n : 0 } }));
                   }}
                   className={inputCls}
                 />
-                <p className="mt-1 text-[11px] text-charcoal-soft">Height is only ever capped, never stretched — a tall or wide logo keeps its own proportions within this limit (suggested 56–64px).</p>
-              </div>
-              <div>
-                <label className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Logo Max Height Mobile (px)</label>
-                <input
-                  type="number"
-                  min={24}
-                  max={72}
-                  value={settings.branding?.logoMaxHeightMobile || 44}
-                  onChange={(e) => {
-                    const clamped = Math.min(72, Math.max(24, Number(e.target.value) || 44));
-                    setSettings((s) => ({ ...s, branding: { ...s.branding, logoMaxHeightMobile: clamped } }));
-                  }}
-                  className={inputCls}
-                />
-                <p className="mt-1 text-[11px] text-charcoal-soft">Suggested 42–48px on mobile.</p>
+                <p className="mt-1 text-[11px] text-charcoal-soft">Leave empty for auto. The header grows to fit the logo.</p>
               </div>
             </div>
           </div>
@@ -643,7 +647,7 @@ export default function AdminSettings() {
             <div className="flex items-center justify-between border-b border-charcoal/10 pb-4">
               <h2 className="font-serif text-lg font-bold text-charcoal">Theme &amp; Appearance Colors</h2>
               <Button type="button" onClick={handleResetAppearance} className="bg-charcoal/10 text-charcoal hover:bg-terracotta hover:text-white text-xs">
-                Reset to Aadya Defaults
+                Reset to Tushaqsa Defaults
               </Button>
             </div>
 

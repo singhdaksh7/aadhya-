@@ -5,5 +5,5 @@ const app = createApp();
 
 app.listen(env.port, () => {
   // eslint-disable-next-line no-console
-  console.log(`Aadya commerce API listening on http://localhost:${env.port}`);
+  console.log(`Tushaqsa commerce API listening on http://localhost:${env.port}`);
 });

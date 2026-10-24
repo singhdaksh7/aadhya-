@@ -21,8 +21,8 @@ export default function CategoryStorefront() {
 
   return (
     <>
-      <title>{`${title} — Aadya`}</title>
-      <meta name="description" content={`Shop ${title} from Aadya.`} />
+      <title>{`${title} | Tushaqsa`}</title>
+      <meta name="description" content={`Shop ${title} from Tushaqsa.`} />
       <link rel="canonical" href={canonicalUrl(`/shop/category/${slug}`)} />
       <script type="application/ld+json" {...jsonLdProps(breadcrumbJsonLd)} />
       <ProductCatalog

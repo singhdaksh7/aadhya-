@@ -5,7 +5,7 @@ import TopUtilityBar from "../src/components/TopUtilityBar";
 import Navbar from "../src/components/Navbar";
 
 let mockSettings = {
-  general: { storeName: "Aadya" },
+  general: { storeName: "Tushaqsa" },
   branding: {},
   header: { showUtilityBar: true, stickyHeader: true, showCategoryCircles: true },
   shipping: { freeShippingThreshold: 2499 },

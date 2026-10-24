@@ -18,7 +18,7 @@ const CATEGORIES = [
   cat("li", "Lighting", "lighting"), cat("lamps", "Table Lamps", "table-lamps", "li"),
   cat("hd", "Home Decor", "home-decor"), cat("vases", "Vases", "vases", "hd"),
 ];
-const book = (id, name, categoryId, extra = {}) => ({ id, name, slug: id, categoryId, productType: "BOOK", price: 600, images: [{ url: "/c.jpg" }], createdAt: "2026-10-01T00:00:00Z", bookDetail: { author: "Aadya Editorial (Demo Sample)", language: "English", publisher: "Aadya Sample Press" }, bookFormats: [{ format: "PHYSICAL" }], isActive: true, ...extra });
+const book = (id, name, categoryId, extra = {}) => ({ id, name, slug: id, categoryId, productType: "BOOK", price: 600, images: [{ url: "/c.jpg" }], createdAt: "2026-10-01T00:00:00Z", bookDetail: { author: "Tushaqsa Editorial (Demo Sample)", language: "English", publisher: "Tushaqsa Sample Press" }, bookFormats: [{ format: "PHYSICAL" }], isActive: true, ...extra });
 const BOOKS = [
   book("bk1", "Quiet Spaces", "b-int", { isFeatured: true, createdAt: "2026-10-05T00:00:00Z", shortDescription: "A calm look at rooms." }),
   book("bk2", "The Warm Home", "b-int", { isNewArrival: true, createdAt: "2026-10-04T00:00:00Z", bookDetail: { author: "Meera Sample", language: "Hindi" }, bookFormats: [{ format: "PDF" }] }),
@@ -101,7 +101,7 @@ describe("books showcase (demo-ready bookstore modules)", () => {
   it("book cards show cover, title, author (without the demo suffix) and one price", () => {
     wrap(<BookCard product={BOOKS[0]} />);
     expect(screen.getByAltText("Quiet Spaces cover")).toBeInTheDocument();
-    expect(screen.getByTestId("book-author").textContent).toBe("Aadya Editorial");
+    expect(screen.getByTestId("book-author").textContent).toBe("Tushaqsa Editorial");
     expect(screen.getByTestId("card-price").textContent).toMatch(/600/);
   });
 

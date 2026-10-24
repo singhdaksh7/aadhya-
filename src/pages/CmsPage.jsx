@@ -56,12 +56,12 @@ export default function CmsPage({ overrideSlug }) {
 
   return (
     <div className="mx-auto max-w-4xl px-5 py-16 sm:px-8 space-y-8 animate-fade-in">
-      <title>{`${page.name} — Aadya`}</title>
+      <title>{`${page.name} | Tushaqsa`}</title>
       <meta name="description" content={metaDescription} />
       <link rel="canonical" href={canonicalUrl(`/pages/${page.slug || slug}`)} />
       {/* Page Header */}
       <div className="space-y-3 border-b store-border pb-6">
-        <span className="text-xs font-semibold uppercase tracking-widest store-primary">Aadya Storefront</span>
+        <span className="text-xs font-semibold uppercase tracking-widest store-primary">Tushaqsa</span>
         <h1 className="font-serif-display text-3xl sm:text-5xl store-text leading-tight">{page.name}</h1>
         {page.excerpt && (
           <p className="text-sm sm:text-base store-muted leading-relaxed max-w-2xl">

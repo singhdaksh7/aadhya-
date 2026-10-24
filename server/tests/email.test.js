@@ -35,7 +35,7 @@ describe("password reset email", () => {
     expect(sendMailMock).toHaveBeenCalledTimes(1);
     const call = sendMailMock.mock.calls[0][0];
     expect(call.to).toBe(customer.email);
-    expect(call.subject).toBe("Reset your Aadya password");
+    expect(call.subject).toBe("Reset your Tushaqsa password");
     expect(call.html).toContain("/reset-password?token=");
     expect(call.html).toContain("expires in one hour");
   });

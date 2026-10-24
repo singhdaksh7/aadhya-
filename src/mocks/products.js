@@ -1,4 +1,4 @@
-// Centralized Mock Catalog for Aadya Storefront
+// Centralized Mock Catalog for Tushaqsa
 // Image URLs use high quality, warm, editorial lifestyle photos from Unsplash.
 
 export const MOCK_PRODUCTS = [
@@ -767,9 +767,9 @@ export const MOCK_PRODUCTS = [
     weight: "1.4kg",
     shortDescription: "A visual coffee-table exploration of slow craftsmanship, indigenous materials, and home rituals across India.",
     story: "Featuring over 250 high-resolution editorial photographs and in-depth profiles of rural master weavers, metal smiths, and potters. Printed on heavy 170gsm matte art paper.",
-    author: "Radhika Sharma & Aadya Heritage Collective",
+    author: "Radhika Sharma & Tushaqsa Heritage Collective",
     isbn: "978-81-945201-0-4",
-    publisher: "Aadya Editorial Press",
+    publisher: "Tushaqsa Editorial Press",
     language: "English",
     pages: 312,
     edition: "First Collector's Edition (Hardcover)",
@@ -806,7 +806,7 @@ export const MOCK_PRODUCTS = [
     story: "Examines how natural light, unvarnished woods, raw stone, and botanical elements shape mental well-being and daily tranquility inside contemporary homes.",
     author: "Ananya Mehta",
     isbn: "978-81-945201-1-1",
-    publisher: "Aadya Editorial Press",
+    publisher: "Tushaqsa Editorial Press",
     language: "English",
     pages: 240,
     edition: "Standard Edition",
@@ -843,7 +843,7 @@ export const MOCK_PRODUCTS = [
     story: "Decodes the mathematical symmetry and spiritual symbolism embedded within classical temple architecture, kolam threshold art, and sacred metalwork.",
     author: "Dr. Vikramaditya Roy",
     isbn: "978-81-945201-2-8",
-    publisher: "Aadya Editorial Press",
+    publisher: "Tushaqsa Editorial Press",
     language: "English",
     pages: 196,
     edition: "Illustrated Softcover",
@@ -880,7 +880,7 @@ export const MOCK_PRODUCTS = [
     story: "From Chanderi silks and Jamdani muslins to Toda embroideries and Pashmina weaves, this book documents endangered textile arts and the weaver communities keeping them alive.",
     author: "Sunita Deshmukh",
     isbn: "978-81-945201-3-5",
-    publisher: "Aadya Editorial Press",
+    publisher: "Tushaqsa Editorial Press",
     language: "English",
     pages: 280,
     edition: "Deluxe Hardcover Edition",
@@ -917,7 +917,7 @@ export const MOCK_PRODUCTS = [
     story: "A compact bedside companion exploring botanical infusions, artisanal teaware, and mindfulness practices around hot tea ritual.",
     author: "Meera Krishnan",
     isbn: "978-81-945201-4-2",
-    publisher: "Aadya Editorial Press",
+    publisher: "Tushaqsa Editorial Press",
     language: "English",
     pages: 144,
     edition: "Gift Edition",
@@ -954,7 +954,7 @@ export const MOCK_PRODUCTS = [
     story: "Covers light requirements, organic soil blending, terracotta pot matching, and styling plants alongside home decor objects.",
     author: "Karan Johar",
     isbn: "978-81-945201-5-9",
-    publisher: "Aadya Editorial Press",
+    publisher: "Tushaqsa Editorial Press",
     language: "English",
     pages: 176,
     edition: "Standard Hardcover",

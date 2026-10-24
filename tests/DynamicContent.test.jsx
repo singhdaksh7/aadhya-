@@ -22,7 +22,7 @@ const FAQ = (await import("../src/pages/FAQ")).default;
 const TopUtilityBar = (await import("../src/components/TopUtilityBar")).default;
 
 const baseSettings = (over = {}) => ({
-  general: { storeName: "Aadya" },
+  general: { storeName: "Tushaqsa" },
   shipping: { freeShippingThreshold: 2499, standardShippingAmount: 150, dispatchEstimate: "1-2 business days", deliveryEstimate: "3-7 business days" },
   returns: { enabled: true, windowDays: 7 },
   checkout: { pricesIncludeTax: true },
@@ -148,7 +148,7 @@ describe("system pages (About / Shipping / Returns / Privacy / Terms) load from 
   const page = (slug, name, content, extra = {}) => ({ data: { slug, name, content, excerpt: "", featuredImage: null, ...extra } });
 
   it.each([
-    ["about", "About Aadya", "<p>Aadya is a home and lifestyle store.</p>"],
+    ["about", "About Tushaqsa", "<p>Tushaqsa is a home and lifestyle store.</p>"],
     ["shipping", "Shipping & Delivery", "<p>We dispatch orders in time.</p>"],
     ["returns", "Returns & Exchanges", "<p>Contact us to start a return.</p>"],
     ["privacy", "Privacy Policy", "<p>We collect only what an order needs.</p>"],

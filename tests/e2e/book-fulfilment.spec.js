@@ -130,14 +130,14 @@ test("BOTH-format book: both Physical and PDF options are offered and price upda
 test("PDF-only book: only the PDF format is available, checkout skips shipping, COD is rejected", async ({ page }) => {
   await customerLogin(page);
   await page.goto("/shop/aadya-home-styling-guide");
-  await expect(page.locator("h1")).toContainText("Aadya Home Styling Guide");
+  await expect(page.locator("h1")).toContainText("Tushaqsa Home Styling Guide");
 
   // PDF-only: the format selector doesn't even render (only one format,
   // auto-selected) — just confirm the PDP shows the PDF nature and add it.
   await page.locator('button:has-text("Add to Cart")').first().click();
 
   await page.goto("/cart");
-  await expect(page.locator("body")).toContainText("Aadya Home Styling Guide");
+  await expect(page.locator("body")).toContainText("Tushaqsa Home Styling Guide");
 
   await page.locator('a:has-text("Proceed to Checkout"), button:has-text("Proceed to Checkout")').first().click();
   await expect(page).toHaveURL(/\/checkout/);
@@ -249,7 +249,7 @@ test("PDF download flow: after payment finalizes, /account/downloads shows a wor
 
   await page.goto("/account/downloads");
   await expect(page.locator("h1, h2")).toContainText("My Downloads");
-  await expect(page.locator("text=Aadya Home Styling Guide")).toBeVisible({ timeout: 10000 });
+  await expect(page.locator("text=Tushaqsa Home Styling Guide")).toBeVisible({ timeout: 10000 });
   const downloadBtn = page.locator('button:has-text("Download")').first();
   await expect(downloadBtn).toBeEnabled();
 });

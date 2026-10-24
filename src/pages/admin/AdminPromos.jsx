@@ -266,7 +266,7 @@ export default function AdminPromos() {
                 <label className="text-xs font-semibold text-charcoal-soft">Coupon Code (Display / Copy Only)</label>
                 <input
                   type="text"
-                  placeholder="e.g. AADYA500"
+                  placeholder="e.g. TUSHAQSA500"
                   value={form.couponCode}
                   onChange={(e) => setForm((f) => ({ ...f, couponCode: e.target.value.toUpperCase() }))}
                   className="w-full font-mono uppercase rounded-xl border border-charcoal/20 px-4 py-2.5 text-sm focus:border-terracotta focus:outline-none mt-1"

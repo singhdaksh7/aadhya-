@@ -9,7 +9,7 @@ import { canonicalUrl } from "../lib/seo";
 export default function FAQ() {
   const settings = useSiteSettings();
   const commercial = commercialContext(settings);
-  const storeName = settings.general?.storeName || "Aadya";
+  const storeName = settings.general?.storeName || "Tushaqsa";
   const [categories, setCategories] = useState([]);
   const [activeCategory, setActiveCategory] = useState("All");
   const [openId, setOpenId] = useState(null);

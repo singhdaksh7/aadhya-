@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import HomepageRenderer from "../components/HomepageRenderer";
 import { fetchHomepage } from "../lib/api";
-import { canonicalUrl } from "../lib/seo";
+import { canonicalUrl, jsonLdProps } from "../lib/seo";
 
 export default function Home() {
   const [sections, setSections] = useState([]);
@@ -38,7 +38,7 @@ export default function Home() {
       <div className="store-bg min-h-[60vh] flex items-center justify-center">
         <div className="text-center py-16">
           <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[var(--theme-primary)] border-r-transparent align-[-0.125em]" />
-          <p className="mt-4 text-xs font-semibold uppercase tracking-wider store-muted">Loading Aadya...</p>
+          <p className="mt-4 text-xs font-semibold uppercase tracking-wider store-muted">Loading Tushaqsa...</p>
         </div>
       </div>
     );
@@ -63,12 +63,22 @@ export default function Home() {
 
   return (
     <>
-      <title>Aadya — Handcrafted Home Decor & Slow Living</title>
+      <title>Tushaqsa - Home Decor and Lifestyle Products</title>
       <meta
         name="description"
-        content="Aadya: handcrafted oil lamps, unglazed ceramic vessels, linen runners, and slow-living monographs curated for thoughtful homes."
+        content="Tushaqsa - Home Decor and Lifestyle Products. Handcrafted oil lamps, ceramic vessels, linen runners and more, curated for thoughtful homes."
       />
       <link rel="canonical" href={canonicalUrl("/")} />
+      <script
+        type="application/ld+json"
+        {...jsonLdProps({
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          name: "Tushaqsa",
+          description: "Home Decor and Lifestyle Products",
+          url: canonicalUrl("/"),
+        })}
+      />
       <HomepageRenderer sections={sections} />
     </>
   );

@@ -9,7 +9,7 @@ import AdminHeaderSettings from "../src/pages/admin/AdminHeaderSettings";
 import { DEFAULT_HEADER_CMS_SETTINGS, normalizeHeaderSettings } from "../src/lib/headerCmsHelpers";
 
 let mockSettings = {
-  general: { storeName: "Aadya" },
+  general: { storeName: "Tushaqsa" },
   branding: {},
   header: {},
   shipping: { freeShippingThreshold: 2499 },
@@ -61,7 +61,7 @@ describe("Storefront Header CMS Frontend Tests", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockSettings = {
-      general: { storeName: "Aadya" },
+      general: { storeName: "Tushaqsa" },
       branding: {},
       header: {},
       shipping: { freeShippingThreshold: 2499 },

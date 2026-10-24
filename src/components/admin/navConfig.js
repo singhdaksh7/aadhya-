@@ -1,5 +1,5 @@
 /**
- * Larkon-inspired grouped admin navigation, mapped to real Aadya routes.
+ * Larkon-inspired grouped admin navigation, mapped to real Tushaqsa routes.
  * Nested `children` render as expandable groups in the sidebar.
  */
 export const adminNavGroups = [

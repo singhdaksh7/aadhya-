@@ -25,7 +25,7 @@ describe("Phase F — Dynamic Storefront & Store Settings Integration", () => {
       const res = await request.get("/api/settings");
       expect(res.status).toBe(200);
       expect(res.body.data.general).toBeDefined();
-      expect(res.body.data.general.storeName).toBe("Aadya");
+      expect(res.body.data.general.storeName).toBe("Tushaqsa");
       expect(res.body.data.shipping.freeShippingThreshold).toBe(2499);
       expect(res.body.data.payments.razorpayEnabled).toBe(true);
       expect(res.body.data.appearance.colors.primary).toBe("#B8674A");
@@ -55,14 +55,14 @@ describe("Phase F — Dynamic Storefront & Store Settings Integration", () => {
         .put("/api/admin/settings")
         .set("Authorization", `Bearer ${adminToken}`)
         .send({
-          general: { storeName: "Aadya Living Edit" },
+          general: { storeName: "Tushaqsa Living Edit" },
           shipping: { freeShippingThreshold: 5000, standardShippingAmount: 200 },
           appearance: {
             colors: { primary: "#CC5533" },
           },
         });
       expect(updateRes.status).toBe(200);
-      expect(updateRes.body.data.general.storeName).toBe("Aadya Living Edit");
+      expect(updateRes.body.data.general.storeName).toBe("Tushaqsa Living Edit");
       expect(updateRes.body.data.shipping.freeShippingThreshold).toBe(5000);
       expect(updateRes.body.data.appearance.colors.primary).toBe("#CC5533");
     });
@@ -83,7 +83,7 @@ describe("Phase F — Dynamic Storefront & Store Settings Integration", () => {
       expect(res.status).toBe(200);
     });
 
-    it("POST /api/admin/settings/reset-appearance restores appearance to Aadya defaults", async () => {
+    it("POST /api/admin/settings/reset-appearance restores appearance to Tushaqsa defaults", async () => {
       // Custom color
       await request
         .put("/api/admin/settings")

@@ -23,7 +23,7 @@ describe("useSiteSettings", () => {
       expect(result.current.branding.desktopLogo).toBe("/uploads/products/logo.png");
     });
     // Defaults not touched by the response should still be present.
-    expect(result.current.general.storeName).toBe("Aadya");
+    expect(result.current.general.storeName).toBe("Tushaqsa");
   });
 
   it("refreshSiteSettings() pushes fresh data to already-mounted subscribers without a page reload", async () => {

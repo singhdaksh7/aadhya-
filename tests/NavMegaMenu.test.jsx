@@ -8,7 +8,7 @@ import { adminUpdateSiteSettings } from "../src/lib/api";
 
 let mockSettings;
 const baseSettings = () => ({
-  general: { storeName: "Aadya" },
+  general: { storeName: "Tushaqsa" },
   branding: {},
   header: {},
   shipping: { freeShippingThreshold: 2499 },

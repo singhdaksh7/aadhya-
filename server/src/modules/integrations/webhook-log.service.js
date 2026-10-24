@@ -3,7 +3,7 @@ import { prisma } from "../../lib/prisma.js";
 const RETENTION_DAYS = 90;
 const REJECTED_CAP_PER_HOUR = 200;
 
-// Events Aadya's Razorpay handler genuinely acts on. Anything else is accepted
+// Events Tushaqsa's Razorpay handler genuinely acts on. Anything else is accepted
 // (200) and recorded as IGNORED. Keep this list in sync with webhook.controller.js.
 export const SUPPORTED_RAZORPAY_EVENTS = [
   { event: "payment.captured", effect: "Marks the payment and order as paid, confirms the order and sends the invoice. Safe to receive more than once." },

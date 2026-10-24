@@ -93,7 +93,7 @@ export default function AdminHeaderSettings() {
   };
 
   const handleResetDefaults = () => {
-    if (window.confirm("Reset all Header CMS settings to Aadya defaults?")) {
+    if (window.confirm("Reset all Header CMS settings to Tushaqsa defaults?")) {
       setHeaderCms(JSON.parse(JSON.stringify(DEFAULT_HEADER_CMS_SETTINGS)));
     }
   };
@@ -691,7 +691,7 @@ export default function AdminHeaderSettings() {
                 }
                 className="w-full rounded-xl border border-charcoal/20 p-2.5 text-xs"
               >
-                <option value="center">Centered Logo (Aadya Signature Layout)</option>
+                <option value="center">Centered Logo (Tushaqsa Signature Layout)</option>
                 <option value="left">Left Aligned Logo</option>
               </select>
             </div>
@@ -1203,9 +1203,9 @@ export default function AdminHeaderSettings() {
                 )}
                 <BrandLogo
                   src={fullSettings.branding?.desktopLogo}
-                  fallbackText={fullSettings.general?.storeName || "Aadya"}
-                  widthPx={120}
-                  maxHeightPx={40}
+                  fallbackText={fullSettings.general?.storeName || "Tushaqsa"}
+                  widthPx={fullSettings.branding?.logoWidthDesktop || 120}
+                  heightPx={fullSettings.branding?.logoHeightDesktop}
                 />
                 <div className="flex gap-3 text-xs font-bold text-stone-700">
                   {headerCms.mainHeader.showAccount !== false && <span>Login</span>}

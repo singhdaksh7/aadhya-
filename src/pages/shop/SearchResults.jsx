@@ -68,7 +68,7 @@ export default function SearchResults() {
 
       {!query.trim() && (
         <EmptyState
-          title="Search Aadya"
+          title="Search Tushaqsa"
           description="Type a product name, category, collection, brand, or author to get started."
           actionLink="/shop"
           actionText="Browse Shop"

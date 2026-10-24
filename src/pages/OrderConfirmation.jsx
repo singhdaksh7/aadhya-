@@ -42,7 +42,7 @@ export default function OrderConfirmation() {
 
   return (
     <div className="mx-auto max-w-2xl px-5 py-16 sm:px-8">
-      <title>{`Order ${order.orderNumber} — Aadya`}</title>
+      <title>{`Order ${order.orderNumber} | Tushaqsa`}</title>
 
       <SectionHeading
         eyebrow="Order Confirmed"

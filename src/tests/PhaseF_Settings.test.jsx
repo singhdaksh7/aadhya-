@@ -13,7 +13,7 @@ vi.mock("../hooks/useSiteSettings", async () => {
     useSiteSettings: () => ({
       ...actual.DEFAULT_SITE_SETTINGS,
       general: {
-        storeName: "Aadya Test Store",
+        storeName: "Tushaqsa Test Store",
         shortDescription: "Custom Artisan Home Decor Store",
         supportEmail: "support@aadyatest.com",
         supportPhone: "+91 99999 88888",

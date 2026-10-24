@@ -268,8 +268,8 @@ async function seedExpandedDemo() {
         data: {
           name,
           slug,
-          brand: "Aadya Craft",
-          shortDescription: `Demo ${name} for Aadya merchandising.`,
+          brand: "Tushaqsa Craft",
+          shortDescription: `Demo ${name} for Tushaqsa merchandising.`,
           description: `Demo-only ${name}; safe placeholder catalog content.`,
           productType: "PHYSICAL",
           categoryId: categories.get(categoryName).id,
@@ -289,7 +289,7 @@ async function seedExpandedDemo() {
           careInstructions: "Wipe with damp cloth",
           whatsIncluded: "1x Decor Piece",
           shippingInformation: "Dispatched in 24 hours",
-          attributes: { material: "Demo material", collection: "Aadya demo" },
+          attributes: { material: "Demo material", collection: "Tushaqsa demo" },
         },
       });
     }
@@ -326,7 +326,7 @@ async function seedExpandedDemo() {
           isBestSeller: i % 3 === 0,
           isNewArrival: i % 2 === 0,
           isTrending: i % 2 === 1,
-          bookDetail: { create: { author: "Aadya Demo Author", language: "English", pageCount: 160 + i * 8 } },
+          bookDetail: { create: { author: "Tushaqsa Demo Author", language: "English", pageCount: 160 + i * 8 } },
         },
       });
     }
@@ -362,7 +362,7 @@ async function seedExpandedDemo() {
 }
 
 // ---------------------------------------------------------------------------
-// Phase-seed demo catalog: 3 physical Aadya-style home-goods products and
+// Phase-seed demo catalog: 3 physical Tushaqsa-style home-goods products and
 // 3 book products (physical-only / PDF-only / both), with generated
 // placeholder SVG cover/product images and 2 generated placeholder PDF
 // files for the digital-capable books. Everything below is idempotent —
@@ -380,7 +380,7 @@ function placeholderSvg(label, color) {
     `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">` +
       `<rect width="800" height="600" fill="${color}"/>` +
       `<text x="400" y="300" font-family="sans-serif" font-size="36" fill="#ffffff" text-anchor="middle" dominant-baseline="middle">${safeLabel}</text>` +
-      `<text x="400" y="350" font-family="sans-serif" font-size="18" fill="#ffffffcc" text-anchor="middle">Aadya demo placeholder image</text>` +
+      `<text x="400" y="350" font-family="sans-serif" font-size="18" fill="#ffffffcc" text-anchor="middle">Tushaqsa demo placeholder image</text>` +
       `</svg>`,
     "utf-8"
   );
@@ -395,7 +395,7 @@ async function uploadPlaceholderImage(label, color) {
 // pdfkit is not installed in this project). Content is clearly marked as
 // placeholder demo text, never real book content.
 function buildPlaceholderPdf(title) {
-  const text = `Aadya Demo Digital Book - ${title} - This is placeholder content for demonstration and testing purposes only.`;
+  const text = `Tushaqsa Demo Digital Book - ${title} - This is placeholder content for demonstration and testing purposes only.`;
   const escaped = text.replace(/([()\\])/g, "\\$1");
   const contentStream = `BT /F1 16 Tf 50 700 Td (${escaped}) Tj ET`;
 
@@ -549,24 +549,24 @@ async function seedPhaseSeedDemoCatalog() {
       price: 599,
       description:
         "A gentle, demo-only guide to unhurried daily rituals — placeholder book content for catalogue and checkout testing.",
-      author: "Aadya Editorial Collective (Demo Author)",
+      author: "Tushaqsa Editorial Collective (Demo Author)",
       isbn: "DEMO-ISBN-0000000001",
-      publisher: "Aadya Press (Demo Publisher)",
+      publisher: "Tushaqsa Press (Demo Publisher)",
       language: "English",
       pages: 184,
       color: "#3d4a63",
     },
     {
       slug: "aadya-home-styling-guide",
-      name: "Aadya Home Styling Guide",
+      name: "Tushaqsa Home Styling Guide",
       sku: "SEED-BOOK-PDF-002",
       mode: "PDF_ONLY",
       price: 349,
       description:
         "A demo-only digital styling guide covering seasonal home-decor arrangements — placeholder content for PDF fulfilment testing.",
-      author: "Aadya Editorial Collective (Demo Author)",
+      author: "Tushaqsa Editorial Collective (Demo Author)",
       isbn: "DEMO-ISBN-0000000002",
-      publisher: "Aadya Press (Demo Publisher)",
+      publisher: "Tushaqsa Press (Demo Publisher)",
       language: "English",
       pages: 96,
       color: "#6b4f80",
@@ -579,9 +579,9 @@ async function seedPhaseSeedDemoCatalog() {
       price: 699,
       description:
         "A demo-only photo-essay style volume on calm interiors, available in physical and PDF formats — placeholder content for fulfilment testing.",
-      author: "Aadya Editorial Collective (Demo Author)",
+      author: "Tushaqsa Editorial Collective (Demo Author)",
       isbn: "DEMO-ISBN-0000000003",
-      publisher: "Aadya Press (Demo Publisher)",
+      publisher: "Tushaqsa Press (Demo Publisher)",
       language: "English",
       pages: 220,
       color: "#8a5a44",

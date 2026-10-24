@@ -140,7 +140,7 @@ async function resolveBlogSection(section) {
   return posts.map(({ content, ...post }) => ({ ...post, readingMinutes: estimateReadingMinutes(content) }));
 }
 
-// Default seed sections for Aadya Storefront in approved visual order
+// Default seed sections for Tushaqsa in approved visual order
 const DEFAULT_HOMEPAGE_SECTIONS = [
   { type: "CIRCULAR_CATEGORY_NAV", name: "Circular Category Navigation", sortOrder: 1, settings: { featuredOnly: false, limit: 10 } },
   // `speed` is animation duration in seconds; larger values move more slowly.
@@ -162,7 +162,7 @@ const DEFAULT_HOMEPAGE_SECTIONS = [
 // (an admin who dislikes one should disable it rather than delete it).
 const SUPPLEMENTAL_SECTIONS = [
   { type: "TESTIMONIALS", name: "Customer Reviews", before: ["NEWSLETTER"] },
-  { type: "BLOG_PREVIEW", name: "Stories from Aadya", before: ["NEWSLETTER"] },
+  { type: "BLOG_PREVIEW", name: "Stories from Tushaqsa", before: ["NEWSLETTER"] },
 ];
 
 let supplementInFlight = null; // serialises concurrent first visits so a section is never inserted twice
@@ -195,12 +195,12 @@ export async function ensureDefaultHomepage() {
   if (!homePage) {
     homePage = await prisma.page.create({
       data: {
-        name: "Aadya Storefront Homepage",
+        name: "Tushaqsa Homepage",
         slug: "home",
         pageType: "HOME",
         status: "PUBLISHED",
         publishedAt: new Date(),
-        seoTitle: "Aadya — Handcrafted Home Decor, Ceramics & Monographs",
+        seoTitle: "Tushaqsa - Home Decor and Lifestyle Products",
         seoDescription: "Discover handcrafted oil lamps, unglazed clay vessels, linen textiles, and slow design objects for peaceful sanctuaries.",
         sections: {
           create: DEFAULT_HOMEPAGE_SECTIONS.map((sec) => ({

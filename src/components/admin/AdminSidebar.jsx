@@ -110,7 +110,7 @@ export default function AdminSidebar({
       <aside className={`admin-sidebar ${open ? "is-open" : ""} ${collapsed ? "is-collapsed" : ""}`}>
         <div className="admin-sidebar__brand">
           <div className="min-w-0">
-            <p className="admin-sidebar__logo">Aadya</p>
+            <p className="admin-sidebar__logo">Tushaqsa</p>
             {!collapsed && <p className="admin-sidebar__sub">Admin Panel</p>}
           </div>
           <button type="button" className="admin-sidebar__close md:hidden" onClick={onClose} aria-label="Close menu">

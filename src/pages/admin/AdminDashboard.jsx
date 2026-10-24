@@ -56,7 +56,7 @@ export default function AdminDashboard() {
       <PageHeader
         eyebrow="Overview"
         title="Dashboard"
-        description="Live store performance from Aadya orders, catalog, and customers."
+        description="Live store performance from Tushaqsa orders, catalog, and customers."
         actions={
           <Link to="/admin/products/new" className="admin-btn admin-btn--primary">
             Add Product

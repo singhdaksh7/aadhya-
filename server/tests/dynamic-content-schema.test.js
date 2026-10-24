@@ -61,9 +61,9 @@ describe("return policy + tax display settings", () => {
 
 describe("public settings privacy", () => {
   it("never exposes the invoice settings (GSTIN, PAN, address, bank details)", () => {
-    const pub = toPublicSettings({ general: { storeName: "Aadya" }, invoice: { gstin: "X", bankAccountNumber: "123" }, returns: { windowDays: 7 } });
+    const pub = toPublicSettings({ general: { storeName: "Tushaqsa" }, invoice: { gstin: "X", bankAccountNumber: "123" }, returns: { windowDays: 7 } });
     expect(pub.invoice).toBeUndefined();
-    expect(pub.general.storeName).toBe("Aadya");
+    expect(pub.general.storeName).toBe("Tushaqsa");
     expect(pub.returns.windowDays).toBe(7);
   });
 });

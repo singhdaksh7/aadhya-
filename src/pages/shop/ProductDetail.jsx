@@ -201,7 +201,7 @@ export default function ProductDetail() {
   const activeCoupon = activeCoupons[0] || null;
 
   const pdpUrl = canonicalUrl(`/shop/${product.slug}`);
-  const metaDescription = (product.shortDescription || product.story || `${product.name} — handcrafted by Aadya.`).slice(0, 155);
+  const metaDescription = (product.shortDescription || product.story || `${product.name} — handcrafted by Tushaqsa.`).slice(0, 155);
   const productJsonLd = {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -255,7 +255,7 @@ export default function ProductDetail() {
 
   return (
     <div className="store-bg store-text py-10 pb-20">
-      <title>{`${product.name} — Aadya`}</title>
+      <title>{`${product.name} | Tushaqsa`}</title>
       <meta name="description" content={metaDescription} />
       <link rel="canonical" href={pdpUrl} />
       <script type="application/ld+json" {...jsonLdProps(productJsonLd)} />
