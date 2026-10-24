@@ -36,6 +36,7 @@ import {
   accountReturn,
 } from "../../lib/api";
 import { formatInr } from "../../lib/format";
+import { StatusPill, SectionCard, EmptyPanel, SkeletonRows, OrderProgress, ItemThumb, formatDate } from "../../components/account/AccountUI";
 
 const blank = {
   label: "Home",
@@ -84,6 +85,19 @@ function AccountNav() {
         return <Link key={item.path} to={item.path} className={`shrink-0 border-b-2 px-1 pb-3 transition ${active ? "border-[var(--theme-primary)] store-primary" : "border-transparent store-muted hover:text-[var(--theme-primary-hover)]"}`}>{item.label}</Link>;
       })}
     </div>
+  );
+}
+
+function AccountHeader({ title, description }) {
+  return (
+    <>
+      <section className="rounded-3xl border border-[var(--theme-border)]/10 bg-ivory-dark/45 p-6 shadow-sm sm:p-8">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] store-primary">Customer Account</p>
+        <h1 className="mt-2 font-serif-display text-3xl store-text sm:text-4xl">{title}</h1>
+        {description && <p className="mt-3 max-w-xl text-sm leading-relaxed store-muted">{description}</p>}
+      </section>
+      <AccountNav />
+    </>
   );
 }
 
@@ -464,9 +478,8 @@ export function Addresses() {
   };
 
   return (
-    <div className="mx-auto max-w-4xl px-5 py-12 sm:px-8 space-y-8">
-      <SectionHeading eyebrow="Customer Account" title="Saved Addresses" />
-      <AccountNav />
+    <div className="mx-auto max-w-6xl px-5 py-12 sm:px-8 space-y-8">
+      <AccountHeader title="Saved Addresses" description="Manage where we deliver your orders." />
 
       <AddressForm form={form} setForm={setForm} onSubmit={save} label={editing ? "Save address" : "Add address"} />
       {error && <p className="text-xs font-medium store-primary store-bg-primary-soft p-3 rounded-xl">{error}</p>}
@@ -534,44 +547,77 @@ export function Addresses() {
   );
 }
 
+const ORDER_FILTERS = [
+  ["all", "All orders", () => true],
+  ["active", "In progress", (o) => !["DELIVERED", "CANCELLED"].includes(o.status)],
+  ["delivered", "Delivered", (o) => o.status === "DELIVERED"],
+  ["cancelled", "Cancelled", (o) => o.status === "CANCELLED"],
+];
+
+function itemsLine(items = []) {
+  if (!items.length) return "";
+  const first = `${items[0].productNameSnapshot}${items[0].quantity > 1 ? ` × ${items[0].quantity}` : ""}`;
+  return items.length > 1 ? `${first} + ${items.length - 1} more` : first;
+}
+
 export function Orders() {
   const [items, setItems] = useState([]);
+  const [state, setState] = useState("loading");
+  const [filter, setFilter] = useState("all");
 
   useEffect(() => {
-    accountOrders().then((r) => setItems(r.data || []));
+    accountOrders()
+      .then((r) => { setItems(r.data || []); setState("ready"); })
+      .catch(() => setState("error"));
   }, []);
 
-  return (
-    <div className="mx-auto max-w-4xl px-5 py-12 sm:px-8 space-y-8">
-      <SectionHeading eyebrow="Customer Account" title="Order History" />
-      <AccountNav />
+  const active = ORDER_FILTERS.find(([key]) => key === filter) || ORDER_FILTERS[0];
+  const visible = items.filter(active[2]);
 
-      <div className="space-y-4">
-        {items.map((o) => (
-          <Link
-            className="flex flex-col sm:flex-row sm:items-center justify-between rounded-2xl border border-[var(--theme-border)]/10 store-bg p-5 transition hover:border-[var(--theme-primary)]/30 hover:shadow-md"
-            key={o.id}
-            to={`/account/orders/${o.orderNumber}`}
-          >
-            <div className="space-y-1">
-              <span className="font-serif-display text-base store-text block">{o.orderNumber}</span>
-              <p className="text-xs store-muted">Status: <span className="font-semibold store-primary">{o.status}</span> • Payment: {o.paymentStatus}</p>
-            </div>
-            <div className="mt-3 sm:mt-0 flex items-center justify-between sm:justify-end gap-4">
-              <span className="text-base font-bold store-primary">{formatInr(Number(o.totalAmount))}</span>
-              <span className="text-xs font-semibold uppercase tracking-wider store-text underline">View Details →</span>
-            </div>
-          </Link>
-        ))}
-        {!items.length && (
-          <div className="rounded-3xl border border-dashed border-[var(--theme-border)]/20 bg-ivory-dark/30 p-12 text-center">
-            <p className="text-sm store-muted">No account orders yet.</p>
-            <Link to="/shop" className="mt-4 inline-block rounded-full store-bg-primary px-6 py-2.5 text-xs font-semibold uppercase tracking-wider text-ivory">
-              Browse Storefront
+  return (
+    <div className="mx-auto max-w-6xl px-5 py-10 sm:px-8 sm:py-12 space-y-8">
+      <AccountHeader title="Order History" description="Track your purchases, delivery progress and invoices." />
+
+      {state === "loading" && <SkeletonRows />}
+      {state === "error" && <p role="alert" className="rounded-2xl store-bg-primary-soft p-4 text-sm store-primary">We couldn’t load your orders. Please try again in a moment.</p>}
+
+      {state === "ready" && items.length > 0 && (
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Filter orders">
+          {ORDER_FILTERS.map(([key, label, test]) => {
+            const count = items.filter(test).length;
+            const on = key === filter;
+            return <button key={key} type="button" aria-pressed={on} onClick={() => setFilter(key)} className={`rounded-full border px-4 py-2 text-xs font-semibold transition ${on ? "store-bg-primary border-transparent text-ivory" : "border-[var(--theme-border)]/15 store-bg store-text hover:border-[var(--theme-primary)]/40"}`}>{label} <span className={on ? "opacity-80" : "store-muted"}>({count})</span></button>;
+          })}
+        </div>
+      )}
+
+      {state === "ready" && (
+        <div className="space-y-4">
+          {visible.map((o) => (
+            <Link key={o.id} to={`/account/orders/${o.orderNumber}`} className="group block rounded-3xl border border-[var(--theme-border)]/10 store-bg p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-[var(--theme-primary)]/35 hover:shadow-md sm:p-6">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-serif-display text-lg store-text">{o.orderNumber}</p>
+                  {o.createdAt && <p className="mt-1 text-xs store-muted">Placed on {formatDate(o.createdAt)}</p>}
+                </div>
+                <div className="flex flex-wrap gap-2"><StatusPill value={o.status} /><StatusPill kind="payment" value={o.paymentStatus} /></div>
+              </div>
+              {o.items?.length > 0 && (
+                <div className="mt-4 flex items-center gap-3">
+                  <div className="flex -space-x-2">{o.items.slice(0, 4).map((it) => <span key={it.id} className="rounded-xl ring-2 ring-[var(--theme-background)]"><ItemThumb src={it.imageSnapshot} name={it.productNameSnapshot} size="h-12 w-12" /></span>)}</div>
+                  <p className="min-w-0 truncate text-sm store-muted">{itemsLine(o.items)}</p>
+                </div>
+              )}
+              <div className="mt-5 flex items-center justify-between gap-4 border-t border-[var(--theme-border)]/10 pt-4">
+                <span className="text-base font-bold store-primary">{formatInr(Number(o.totalAmount))}</span>
+                <span className="text-xs font-semibold uppercase tracking-wider store-text group-hover:text-[var(--theme-primary-hover)]">View details <span aria-hidden="true">→</span></span>
+              </div>
             </Link>
-          </div>
-        )}
-      </div>
+          ))}
+          {items.length > 0 && visible.length === 0 && <EmptyPanel title="No orders in this view" description="Try another filter to see your other orders." />}
+          {!items.length && <EmptyPanel title="No account orders yet." description="When you place an order it will appear here with live delivery progress." actionLabel="Browse the store" to="/shop" />}
+        </div>
+      )}
     </div>
   );
 }
@@ -777,10 +823,26 @@ function ReturnRequestPanel({ orderNumber, order }) {
   );
 }
 
+const TIMELINE_LABELS = {
+  PENDING: "Order received",
+  CONFIRMED: "Order placed",
+  PROCESSING: "We started preparing your order",
+  SHIPPED: "Shipped",
+  OUT_FOR_DELIVERY: "Out for delivery",
+  DELIVERED: "Delivered",
+  CANCELLED: "Order cancelled",
+};
+const paymentMethodText = (o) => (o.paymentMethod === "cod" ? "Cash on Delivery" : "Online payment");
+
+function PriceRow({ label, value, strong = false }) {
+  return <div className={`flex justify-between gap-4 ${strong ? "border-t border-[var(--theme-border)]/10 pt-3 text-base font-bold store-text" : "text-sm store-muted"}`}><span>{label}</span><span className={strong ? "store-primary" : "store-text"}>{value}</span></div>;
+}
+
 export function OrderDetail() {
   const { orderNumber } = useParams();
   const [o, set] = useState(null);
   const [error, setError] = useState("");
+  const [invoiceError, setInvoiceError] = useState("");
 
   useEffect(() => {
     accountOrder(orderNumber)
@@ -788,62 +850,176 @@ export function OrderDetail() {
       .catch((e) => setError(e.message));
   }, [orderNumber]);
 
+  const downloadInvoice = async () => {
+    setInvoiceError("");
+    try {
+      const blob = await downloadAccountInvoice(o.invoice.id);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${o.invoice.invoiceNumber}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setInvoiceError(e.message || "Could not download the invoice.");
+    }
+  };
+
+  const num = (v) => Number(v || 0);
+  const addr = o?.address;
+  const shipment = o?.shipment;
+  const timeline = (o?.timeline || []).filter((t) => TIMELINE_LABELS[t.status]);
+
   return (
-    <div className="mx-auto max-w-3xl px-5 py-12 sm:px-8 space-y-8">
+    <div className="mx-auto max-w-6xl px-5 py-10 sm:px-8 sm:py-12 space-y-8">
+      <Link to="/account/orders" className="inline-block text-xs font-semibold uppercase tracking-wider store-primary hover:underline">← Return to Order History</Link>
+      {error && <p role="alert" className="rounded-2xl store-bg-primary-soft p-4 text-sm font-medium store-primary">{error}</p>}
+      {!o && !error && <SkeletonRows rows={2} />}
       {o && (
-        <div className="space-y-6">
-          <div className="flex flex-wrap items-center justify-between border-b border-[var(--theme-border)]/10 pb-4">
-            <div>
-              <span className="text-xs font-semibold uppercase tracking-widest store-primary">Order Summary</span>
-              <h1 className="font-serif-display text-3xl store-text">{o.orderNumber}</h1>
+        <>
+          <section className="rounded-3xl border border-[var(--theme-border)]/10 bg-ivory-dark/45 p-6 shadow-sm sm:p-8">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] store-primary">Order Summary</p>
+                <h1 className="mt-2 font-serif-display text-3xl store-text sm:text-4xl">{o.orderNumber}</h1>
+                {o.createdAt && <p className="mt-2 text-sm store-muted">Placed on {formatDate(o.createdAt, true)}</p>}
+              </div>
+              <div className="flex flex-wrap gap-2"><StatusPill value={o.status} /><StatusPill kind="payment" value={o.paymentStatus} /></div>
             </div>
-            <div className="flex gap-2">
-              <span className="rounded-full bg-sage-light px-3 py-1 text-xs font-semibold uppercase tracking-wider text-green-deep">
-                {o.status}
-              </span>
-              <span className="rounded-full bg-beige px-3 py-1 text-xs font-semibold uppercase tracking-wider store-text">
-                {o.paymentStatus}
-              </span>
+            <div className="mt-7"><OrderProgress status={o.status} /></div>
+          </section>
+
+          <div className="grid gap-6 lg:grid-cols-3">
+            <div className="space-y-6 lg:col-span-2">
+              <SectionCard eyebrow="Your order" title="Purchased Items" labelledBy="order-items-heading">
+                <ul className="divide-y divide-[var(--theme-border)]/10">
+                  {(o.items || []).map((i) => (
+                    <li key={i.id} className="flex items-center gap-4 py-4 first:pt-0">
+                      <ItemThumb src={i.imageSnapshot} name={i.productNameSnapshot} size="h-16 w-16" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium store-text">{i.productNameSnapshot}</p>
+                        <p className="mt-1 text-xs store-muted">Qty {i.quantity}{i.unitPrice != null ? ` · ${formatInr(num(i.unitPrice))} each` : ""}</p>
+                      </div>
+                      <span className="text-sm font-semibold store-text">{formatInr(num(i.lineTotal))}</span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-5 space-y-2 rounded-2xl bg-ivory-dark/45 p-4">
+                  {o.subtotal != null && <PriceRow label="Subtotal" value={formatInr(num(o.subtotal))} />}
+                  {num(o.discountAmount) > 0 && <PriceRow label="Discount" value={`− ${formatInr(num(o.discountAmount))}`} />}
+                  {o.shippingAmount != null && <PriceRow label="Shipping" value={num(o.shippingAmount) === 0 ? "Free" : formatInr(num(o.shippingAmount))} />}
+                  {num(o.taxAmount) > 0 && <PriceRow label="Tax" value={formatInr(num(o.taxAmount))} />}
+                  <PriceRow label="Total Amount" value={formatInr(num(o.totalAmount))} strong />
+                </div>
+              </SectionCard>
+
+              {timeline.length > 0 && (
+                <SectionCard eyebrow="Updates" title="Order Timeline" labelledBy="order-timeline-heading">
+                  <ol className="relative space-y-5 border-l border-[var(--theme-border)]/15 pl-6">
+                    {[...timeline].reverse().map((t, idx) => (
+                      <li key={`${t.status}-${t.at}`} className="relative">
+                        <span aria-hidden="true" className={`absolute -left-[31px] top-1 h-3 w-3 rounded-full ring-4 ring-[var(--theme-background)] ${idx === 0 ? "store-bg-primary" : "bg-[var(--theme-border)]/30"}`} />
+                        <p className="text-sm font-medium store-text">{TIMELINE_LABELS[t.status]}</p>
+                        <p className="mt-0.5 text-xs store-muted">{formatDate(t.at, true)}</p>
+                      </li>
+                    ))}
+                  </ol>
+                </SectionCard>
+              )}
+
+              <ReturnRequestPanel orderNumber={o.orderNumber} order={o} />
+            </div>
+
+            <div className="space-y-6">
+              {shipment && (
+                <SectionCard eyebrow="Delivery" title="Shipment" labelledBy="order-shipment-heading">
+                  <dl className="space-y-3 text-sm">
+                    <div><dt className="text-xs font-semibold uppercase tracking-wider store-muted">Status</dt><dd className="mt-1 store-text">{String(shipment.status || "").replaceAll("_", " ") || "Preparing"}</dd></div>
+                    {shipment.carrier && <div><dt className="text-xs font-semibold uppercase tracking-wider store-muted">Courier</dt><dd className="mt-1 store-text">{shipment.carrier}</dd></div>}
+                    {shipment.trackingNumber && <div><dt className="text-xs font-semibold uppercase tracking-wider store-muted">Tracking number</dt><dd className="mt-1 break-all store-text">{shipment.trackingNumber}</dd></div>}
+                    {shipment.estimatedDelivery && <div><dt className="text-xs font-semibold uppercase tracking-wider store-muted">Estimated delivery</dt><dd className="mt-1 store-text">{formatDate(shipment.estimatedDelivery)}</dd></div>}
+                  </dl>
+                  {shipment.trackingUrl && /^https?:\/\//i.test(shipment.trackingUrl) && <a className="mt-4 inline-block rounded-full store-bg-primary px-5 py-2 text-xs font-semibold uppercase tracking-wider text-ivory" href={shipment.trackingUrl} target="_blank" rel="noreferrer">Track shipment</a>}
+                </SectionCard>
+              )}
+
+              {addr && (
+                <SectionCard eyebrow="Delivery" title="Shipping Address" labelledBy="order-address-heading">
+                  <address className="text-sm not-italic leading-relaxed store-muted">
+                    <p className="font-medium store-text">{addr.fullName}</p>
+                    <p>{addr.addressLine1}{addr.addressLine2 ? `, ${addr.addressLine2}` : ""}</p>
+                    <p>{[addr.city, addr.state].filter(Boolean).join(", ")}{addr.postalCode ? ` – ${addr.postalCode}` : ""}</p>
+                    {addr.phone && <p className="mt-2">Phone: {addr.phone}</p>}
+                  </address>
+                </SectionCard>
+              )}
+
+              <SectionCard eyebrow="Billing" title="Payment" labelledBy="order-payment-heading">
+                <dl className="space-y-3 text-sm">
+                  <div className="flex justify-between gap-3"><dt className="store-muted">Method</dt><dd className="font-medium store-text">{paymentMethodText(o)}</dd></div>
+                  <div className="flex items-center justify-between gap-3"><dt className="store-muted">Status</dt><dd><StatusPill kind="payment" value={o.paymentStatus} /></dd></div>
+                </dl>
+                {o.invoice && <button type="button" onClick={downloadInvoice} className="mt-5 w-full rounded-full border border-[var(--theme-border)]/20 px-4 py-2.5 text-xs font-semibold uppercase tracking-wider store-text transition hover:border-[var(--theme-primary)]/50">Download Invoice</button>}
+                {invoiceError && <p role="alert" className="mt-3 text-xs store-primary">{invoiceError}</p>}
+              </SectionCard>
             </div>
           </div>
-
-          <div className="rounded-3xl border border-[var(--theme-border)]/10 store-bg p-6 space-y-4">
-            <h3 className="font-serif-display text-lg store-text">Purchased Items</h3>
-            <ul className="divide-y divide-[var(--theme-border)]/5">
-              {o.items.map((i) => (
-                <li key={i.id} className="flex justify-between py-3 text-xs">
-                  <span className="font-medium store-text">
-                    {i.productNameSnapshot} × {i.quantity}
-                  </span>
-                  <span className="font-semibold store-primary">{formatInr(Number(i.lineTotal))}</span>
-                </li>
-              ))}
-            </ul>
-
-            <div className="flex justify-between border-t border-[var(--theme-border)]/10 pt-4 text-sm font-bold store-text">
-              <span>Total Amount</span>
-              <span className="store-primary text-lg">{formatInr(Number(o.totalAmount))}</span>
-            </div>
-            {o.invoice && <button type="button" onClick={async () => { const blob = await downloadAccountInvoice(o.invoice.id); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `${o.invoice.invoiceNumber}.pdf`; a.click(); URL.revokeObjectURL(url); }} className="rounded-full border border-[var(--theme-border)]/20 px-4 py-2 text-xs font-semibold store-text">Download Invoice</button>}
-          </div>
-          {o.shipment && <div className="rounded-3xl border border-[var(--theme-border)]/10 store-bg p-6"><h3 className="font-serif-display text-lg store-text">Delivery tracking</h3><p className="mt-2 text-sm store-muted">{o.shipment.status.replaceAll("_", " ")} {o.shipment.carrier ? `· ${o.shipment.carrier}` : ""}</p>{o.shipment.trackingNumber && <p className="mt-1 text-sm store-muted">Tracking: {o.shipment.trackingNumber}</p>}{o.shipment.estimatedDelivery && <p className="mt-1 text-sm store-muted">Estimated delivery: {new Date(o.shipment.estimatedDelivery).toLocaleDateString("en-IN")}</p>}{o.shipment.trackingUrl && <a className="mt-3 inline-block text-xs font-semibold store-primary" href={o.shipment.trackingUrl} target="_blank" rel="noreferrer">Track shipment</a>}</div>}
-          <ReturnRequestPanel orderNumber={o.orderNumber} order={o} />
-        </div>
+        </>
       )}
-      {error && <p className="text-sm font-medium store-primary store-bg-primary-soft p-4 rounded-xl">{error}</p>}
-      <Link to="/account/orders" className="inline-block text-xs font-semibold uppercase tracking-wider store-primary hover:underline">
-        ← Return to Order History
-      </Link>
     </div>
   );
 }
 
+
 export function AccountInvoices() {
-  const [items, setItems] = useState([]); const [error, setError] = useState("");
-  useEffect(() => { accountInvoices().then((r) => setItems(r.data || [])).catch((e) => setError(e.message)); }, []);
-  const download = async (item) => { try { const blob = await downloadAccountInvoice(item.id); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `${item.invoiceNumber}.pdf`; a.click(); URL.revokeObjectURL(url); } catch (e) { setError(e.message); } };
-  return <div className="mx-auto max-w-4xl space-y-8 px-5 py-12 sm:px-8"><SectionHeading eyebrow="Customer Account" title="Invoices" /><AccountNav />{error && <p className="rounded-xl store-bg-primary-soft p-3 text-sm store-primary">{error}</p>}<div className="overflow-x-auto rounded-2xl border border-[var(--theme-border)]/10"><table className="min-w-full text-left text-sm"><thead className="bg-ivory-dark/50 text-xs store-muted"><tr><th className="p-4">Invoice</th><th className="p-4">Date</th><th className="p-4">Order</th><th className="p-4">Amount</th><th className="p-4"></th></tr></thead><tbody>{items.map((i)=><tr key={i.id} className="border-t border-[var(--theme-border)]/10"><td className="p-4 font-medium">{i.invoiceNumber}</td><td className="p-4">{new Date(i.invoiceDate).toLocaleDateString("en-IN")}</td><td className="p-4">{i.order.orderNumber}</td><td className="p-4">{formatInr(i.totalAmount)}</td><td className="p-4"><button onClick={()=>download(i)} className="text-xs font-semibold store-primary">Download</button></td></tr>)}</tbody></table>{!items.length && <p className="p-6 text-sm store-muted">No invoices are available yet.</p>}</div></div>;
+  const [items, setItems] = useState([]);
+  const [state, setState] = useState("loading");
+  const [error, setError] = useState("");
+  useEffect(() => {
+    accountInvoices().then((r) => { setItems(r.data || []); setState("ready"); }).catch((e) => { setError(e.message); setState("ready"); });
+  }, []);
+  const download = async (item) => {
+    setError("");
+    try {
+      const blob = await downloadAccountInvoice(item.id);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${item.invoiceNumber}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError(e.message);
+    }
+  };
+  return (
+    <div className="mx-auto max-w-6xl px-5 py-10 sm:px-8 sm:py-12 space-y-8">
+      <AccountHeader title="Invoices" description="Download the invoice for every order you have paid for." />
+      {error && <p role="alert" className="rounded-2xl store-bg-primary-soft p-4 text-sm store-primary">{error}</p>}
+      {state === "loading" && <SkeletonRows rows={2} />}
+      {state === "ready" && items.length === 0 && <EmptyPanel title="No invoices are available yet." description="An invoice is created once your order is confirmed and paid." />}
+      {items.length > 0 && (
+        <SectionCard eyebrow="Billing" title="Your Invoices" labelledBy="invoices-heading">
+          <ul className="divide-y divide-[var(--theme-border)]/10">
+            {items.map((i) => (
+              <li key={i.id} className="flex flex-wrap items-center justify-between gap-3 py-4 first:pt-0 last:pb-0">
+                <div className="min-w-0">
+                  <p className="font-medium store-text">{i.invoiceNumber}</p>
+                  <p className="mt-1 text-xs store-muted">{formatDate(i.invoiceDate)} · Order {i.order?.orderNumber}</p>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className="text-sm font-semibold store-text">{formatInr(i.totalAmount)}</span>
+                  <button type="button" onClick={() => download(i)} className="rounded-full border border-[var(--theme-border)]/20 px-4 py-2 text-xs font-semibold uppercase tracking-wider store-text transition hover:border-[var(--theme-primary)]/50">Download</button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </SectionCard>
+      )}
+    </div>
+  );
 }
+
 
 const RETURN_STATUS_LABELS = {
   REQUESTED: "Requested",
@@ -877,9 +1053,8 @@ export function AccountReturns() {
   }, []);
 
   return (
-    <div className="mx-auto max-w-4xl space-y-8 px-5 py-12 sm:px-8">
-      <SectionHeading eyebrow="Customer Account" title="Returns" />
-      <AccountNav />
+    <div className="mx-auto max-w-6xl space-y-8 px-5 py-12 sm:px-8">
+      <AccountHeader title="Returns" description="Request a return and follow its progress." />
 
       {loading ? (
         <p className="text-xs store-muted">Loading returns...</p>
@@ -1204,9 +1379,8 @@ export function AccountWishlist() {
   };
 
   return (
-    <div className="mx-auto max-w-4xl px-5 py-12 sm:px-8 space-y-8">
-      <SectionHeading eyebrow="Customer Account" title="My Wishlist" />
-      <AccountNav />
+    <div className="mx-auto max-w-6xl px-5 py-12 sm:px-8 space-y-8">
+      <AccountHeader title="My Wishlist" description="Products you have saved for later." />
 
       {loading ? (
         <p className="text-xs store-muted">Loading wishlist...</p>
@@ -1343,9 +1517,8 @@ export function AccountReviews() {
   };
 
   return (
-    <div className="mx-auto max-w-4xl px-5 py-12 sm:px-8 space-y-8">
-      <SectionHeading eyebrow="Customer Account" title="My Reviews" />
-      <AccountNav />
+    <div className="mx-auto max-w-6xl px-5 py-12 sm:px-8 space-y-8">
+      <AccountHeader title="My Reviews" description="Reviews you have written for products." />
 
       {notice && <div className="rounded-xl bg-sage-light p-4 text-xs font-semibold text-green-deep">{notice}</div>}
       {error && <div className="rounded-xl store-bg-primary-soft p-4 text-xs font-semibold store-primary">{error}</div>}
@@ -1501,9 +1674,8 @@ export function AccountDownloads() {
   };
 
   return (
-    <div className="mx-auto max-w-4xl px-5 py-12 sm:px-8 space-y-8">
-      <SectionHeading eyebrow="Customer Account" title="My Downloads" />
-      <AccountNav />
+    <div className="mx-auto max-w-6xl px-5 py-12 sm:px-8 space-y-8">
+      <AccountHeader title="My Downloads" description="Digital purchases available to download." />
 
       {loading ? (
         <p className="text-xs store-muted">Loading downloads...</p>
@@ -1596,9 +1768,8 @@ export function AccountNotifications() {
   };
 
   return (
-    <div className="mx-auto max-w-4xl px-5 py-12 sm:px-8 space-y-8">
-      <SectionHeading eyebrow="Customer Account" title="Notifications" />
-      <AccountNav />
+    <div className="mx-auto max-w-6xl px-5 py-12 sm:px-8 space-y-8">
+      <AccountHeader title="Notifications" description="Updates about your orders and account." />
 
       <div className="flex items-center justify-between">
         <p className="text-xs font-semibold uppercase tracking-wider store-muted">

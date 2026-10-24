@@ -680,10 +680,12 @@ model EmailLog {
   subject           String?
   source            String?
   notificationId    String?
+  audience          String   @default("CUSTOMER") // CUSTOMER | ADMIN
   invoice           Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
 
   @@index([orderId])
   @@index([invoiceId])
+  @@index([audience])
 }
 
 model AdminAuditLog {
@@ -1386,6 +1388,7 @@ model NotificationEvent {
   recipient       String
   source          String
   providerEventId String?
+  audience        String    @default("CUSTOMER") // CUSTOMER | ADMIN (internal notification)
   status          String    @default("PENDING") // PENDING | SENT | FAILED
   attempts        Int       @default(0)
   lastError       String?
@@ -1410,4 +1413,14 @@ model EmailTemplate {
   updatedById String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+// Internal recipients of Admin notification emails (new order, payment, shipment events). Which events
+// are emailed is stored in the private `adminNotifications` site setting; sending reuses the SMTP integration.
+model AdminNotificationRecipient {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

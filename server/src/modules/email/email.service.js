@@ -59,10 +59,10 @@ async function getMailer() {
 // EmailLog row per attempt: recipient, event, subject, outcome and a safe provider message id. It never
 // stores bodies, login codes, reset links or SMTP credentials, and never throws: callers decide what a
 // failed email means (order/payment/shipment state must never depend on it).
-export async function deliverEmail({ to, subject, html, text, type, event = null, orderId = null, source = null, notificationId = null }) {
+export async function deliverEmail({ to, subject, html, text, type, event = null, orderId = null, source = null, notificationId = null, audience = "CUSTOMER" }) {
   const cfg = await getSmtpConfig();
   const { mailer } = await getMailer();
-  const logBase = { type, event: event || type, recipient: to, orderId, subject: String(subject || "").slice(0, 200), source, notificationId };
+  const logBase = { type, event: event || type, recipient: to, orderId, subject: String(subject || "").slice(0, 200), source, notificationId, audience };
   const writeLog = async (data) => {
     try {
       await prisma.emailLog.create({ data: { ...logBase, ...data } });

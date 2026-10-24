@@ -6,6 +6,7 @@ import { resetDb, seedTestProduct, seedTestAdmin } from "./helpers.js";
 import { prisma } from "../src/lib/prisma.js";
 import { env } from "../src/config/env.js";
 import { renderInvoicePdf } from "../src/modules/invoices/invoice.pdf.js";
+import { extractPdfText } from "./pdf-text.js";
 import { decodeImageForPdf, decodePngForPdf, decodeJpegForPdf } from "../src/modules/invoices/invoice.image.js";
 import { uploadRootDir, PUBLIC_UPLOAD_PREFIX } from "../src/modules/uploads/storage.js";
 
@@ -129,9 +130,7 @@ describe("invoice PDF: logo/signature embedding", () => {
     };
     const pdf = await renderInvoicePdf(invoice);
     const text = pdf.toString("latin1");
-    expect(text).toContain("/Im1"); // logo XObject referenced in content stream
-    expect(text).toContain("/Subtype /Image");
-    expect(text).not.toContain("[Logo:"); // real image used, not the text fallback
+    expect(text).toContain("/Subtype /Image"); // the logo is a real image XObject
   });
 
   it("falls back to text (no exception, invoice creation still succeeds) when logoUrl is missing/unresolvable", async () => {
@@ -155,8 +154,10 @@ describe("invoice PDF: logo/signature embedding", () => {
     await expect(renderInvoicePdf(invoice)).resolves.toBeTruthy();
     const pdf = await renderInvoicePdf(invoice);
     const text = pdf.toString("latin1");
-    expect(text).toContain("[Logo: /uploads/products/does-not-exist.png]");
     expect(text).not.toContain("/Subtype /Image");
+    const { text: visible } = await extractPdfText(pdf);
+    expect(visible).toContain("Tushaqsa"); // the brand name stands in for the missing logo
+    expect(visible).not.toContain("does-not-exist"); // and no path/URL leaks onto the invoice
   });
 
   it("falls back to text when the logo file exists but is corrupt/undecodable", async () => {
@@ -180,8 +181,8 @@ describe("invoice PDF: logo/signature embedding", () => {
     };
     const pdf = await renderInvoicePdf(invoice);
     const text = pdf.toString("latin1");
-    expect(text).toContain(`[Logo: ${url}]`);
     expect(text).not.toContain("/Subtype /Image");
+    expect((await extractPdfText(pdf)).text).not.toContain(url);
   });
 
   it("embeds a real signature image XObject when companySnapshot.signatureUrl resolves, falls back to signatoryName text when missing", async () => {
@@ -205,13 +206,12 @@ describe("invoice PDF: logo/signature embedding", () => {
 
     const withSig = await renderInvoicePdf({ ...base, companySnapshot: { legalName: "Test Co", signatureUrl: url, signatoryName: "Jane Doe" } });
     const withSigText = withSig.toString("latin1");
-    expect(withSigText).toContain("/Im2"); // signature XObject (Im1 slot reserved for logo)
-    expect(withSigText).not.toContain("[Signature:");
+    expect(withSigText).toContain("/Subtype /Image"); // signature image embedded
 
     const withoutSig = await renderInvoicePdf({ ...base, companySnapshot: { legalName: "Test Co", signatureUrl: null, signatoryName: "Jane Doe" } });
     const withoutSigText = withoutSig.toString("latin1");
-    expect(withoutSigText).toContain("Jane Doe"); // fallback text (signatoryName)
     expect(withoutSigText).not.toContain("/Subtype /Image");
+    expect((await extractPdfText(withoutSig)).text).toContain("Jane Doe"); // fallback text (signatoryName)
   });
 
   it("end-to-end: an order-based invoice with a real logo embeds without throwing and produces a larger PDF than the no-logo case", async () => {
@@ -252,7 +252,7 @@ describe("invoice PDF: GST summary grouped by rate", () => {
       order: {},
     };
     const pdf = await renderInvoicePdf(invoice);
-    const text = pdf.toString("latin1");
+    const { text } = await extractPdfText(pdf);
     expect(text).toContain("5%");
     expect(text).toContain("18%");
   });
@@ -276,9 +276,14 @@ describe("invoice PDF: GST summary grouped by rate", () => {
       order: {},
     };
     const pdf = await renderInvoicePdf(invoice);
-    const text = pdf.toString("latin1");
+    const { text } = await extractPdfText(pdf);
     expect(text).toContain("Inter-state supply");
     expect(text).toContain("IGST");
+    // No seller GSTIN on file: the existing legal rule keeps this a plain INVOICE, never a TAX INVOICE.
+    expect(text).not.toContain("TAX INVOICE");
+    const withGstin = await extractPdfText(await renderInvoicePdf({ ...invoice, companySnapshot: { legalName: "Test Co", gstin: "08ABCDE1234F1Z5" } }));
+    expect(withGstin.text).toContain("TAX INVOICE");
+    expect(withGstin.text).toContain("GSTIN: 08ABCDE1234F1Z5");
   });
 });
 

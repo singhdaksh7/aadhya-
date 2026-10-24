@@ -11,7 +11,7 @@ import {
   CashfreeError,
   CHECKOUT_MODE,
 } from "./cashfree.client.js";
-import { notifyOrderEvent } from "../mailer/mailer.service.js";
+import { notifyOrderEvent, notifyAdminEvent } from "../mailer/mailer.service.js";
 import { ensureAccountForOrder } from "../customer-auth/guest-account.service.js";
 import { recordPurchaseEvent } from "../analytics/analytics.service.js";
 import { decrementStockForOrder, runPendingLowStockChecks } from "../orders/stock.js";
@@ -334,6 +334,9 @@ export async function markPaymentFailed({ providerOrderId }) {
       data: { paymentStatus: "FAILED" },
     }),
   ]);
+
+  // Internal heads-up (best effort, never throws); one email per failed payment attempt.
+  await notifyAdminEvent(payment.orderId, "PAYMENT_FAILED", { source: "PAYMENT", dedupeSuffix: payment.id });
 
   return { found: true, noop: false };
 }

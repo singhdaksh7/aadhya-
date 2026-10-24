@@ -431,3 +431,58 @@ describe("forgot / reset password", () => {
     expect(await screen.findByText("This password reset link is invalid or expired.")).toBeInTheDocument();
   });
 });
+
+describe("orders redesign", () => {
+  const order = (over) => ({ id: "o1", orderNumber: "TUS-2026-000001", totalAmount: 1017, status: "SHIPPED", paymentStatus: "PENDING", createdAt: "2026-10-24T08:00:00Z", items: [{ id: "i1", productNameSnapshot: "Brass Lamp", quantity: 2 }, { id: "i2", productNameSnapshot: "Jute Mat", quantity: 1 }], ...over });
+
+  it("lists orders with readable status, an items summary and filters that narrow the list", async () => {
+    api.customerRefresh.mockResolvedValue({ data: { accessToken: "tok", customer: CUSTOMER } });
+    api.accountOrders.mockResolvedValue({ data: [order(), order({ id: "o2", orderNumber: "TUS-2026-000002", status: "DELIVERED", paymentStatus: "PAID" }), order({ id: "o3", orderNumber: "TUS-2026-000003", status: "CANCELLED" })] });
+    const user = userEvent.setup();
+    render(<AuthedRoutes initialEntries={["/account/orders"]} />);
+    expect(await screen.findByText("TUS-2026-000001")).toBeInTheDocument();
+    expect(screen.getAllByText("Brass Lamp × 2 + 1 more")).toHaveLength(3);
+    expect(screen.getByRole("button", { name: /In progress \(1\)/ })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Delivered \(1\)/ }));
+    expect(screen.getByText("TUS-2026-000002")).toBeInTheDocument();
+    expect(screen.queryByText("TUS-2026-000001")).not.toBeInTheDocument();
+  });
+
+  it("shows a friendly error when orders cannot be loaded", async () => {
+    api.customerRefresh.mockResolvedValue({ data: { accessToken: "tok", customer: CUSTOMER } });
+    api.accountOrders.mockRejectedValue(new Error("offline"));
+    render(<AuthedRoutes initialEntries={["/account/orders"]} />);
+    expect(await screen.findByText(/couldn’t load your orders/i)).toBeInTheDocument();
+  });
+
+  it("order detail shows progress, address, payment, shipment, totals and a customer-safe timeline", async () => {
+    api.customerRefresh.mockResolvedValue({ data: { accessToken: "tok", customer: CUSTOMER } });
+    api.accountOrder.mockResolvedValue({
+      data: order({
+        subtotal: 918, shippingAmount: 99, discountAmount: 0, paymentMethod: "cod",
+        items: [{ id: "i1", productNameSnapshot: "Brass Lamp", quantity: 1, unitPrice: 918, lineTotal: 918 }],
+        address: { fullName: "Asha Verma", addressLine1: "12 MG Road", city: "Bengaluru", state: "Karnataka", postalCode: "560038", phone: "9876543210" },
+        shipment: { status: "IN_TRANSIT", carrier: "Delhivery", trackingNumber: "AWB123", trackingUrl: "https://track.example/AWB123" },
+        timeline: [{ status: "CONFIRMED", at: "2026-10-24T08:00:00Z" }, { status: "SHIPPED", at: "2026-10-25T08:00:00Z" }],
+      }),
+    });
+    render(<AuthedRoutes initialEntries={["/account/orders/TUS-2026-000001"]} />);
+    expect(await screen.findByText("TUS-2026-000001")).toBeInTheDocument();
+    expect(screen.getByRole("list", { name: "Order progress" })).toBeInTheDocument();
+    expect(screen.getByText("Cash on Delivery")).toBeInTheDocument();
+    expect(screen.getByText("12 MG Road")).toBeInTheDocument();
+    expect(screen.getByText("Delhivery")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Track shipment" })).toHaveAttribute("href", "https://track.example/AWB123");
+    expect(screen.getByText("Order timeline", { exact: false })).toBeInTheDocument();
+    expect(screen.getByText("₹99")).toBeInTheDocument(); // shipping line
+    expect(screen.queryByText(/ADMIN|SHIPROCKET/)).not.toBeInTheDocument();
+  });
+
+  it("a cancelled order shows the cancelled notice instead of a progress bar", async () => {
+    api.customerRefresh.mockResolvedValue({ data: { accessToken: "tok", customer: CUSTOMER } });
+    api.accountOrder.mockResolvedValue({ data: order({ status: "CANCELLED", items: [] }) });
+    render(<AuthedRoutes initialEntries={["/account/orders/TUS-2026-000001"]} />);
+    expect(await screen.findByText("This order was cancelled.")).toBeInTheDocument();
+    expect(screen.queryByRole("list", { name: "Order progress" })).not.toBeInTheDocument();
+  });
+});

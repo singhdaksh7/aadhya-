@@ -3,6 +3,18 @@ import { ApiError } from "../../utils/ApiError.js";
 import { renderInvoicePdf } from "./invoice.pdf.js";
 import { writeInvoicePdf, readInvoicePdf } from "./invoice.storage.js";
 import { round2 } from "../../utils/money.js";
+import { env } from "../../config/env.js";
+import { getStoreName } from "../../lib/storeName.js";
+
+// Host shown in the invoice footer: the live storefront domain, without scheme/www (blank on local/dev hosts).
+function publicWebsiteHost() {
+  try {
+    const u = new URL(env.frontendUrl);
+    return u.protocol === "https:" && !/^(localhost|127\.)/.test(u.hostname) ? u.hostname.replace(/^www\./, "") : "";
+  } catch {
+    return "";
+  }
+}
 
 const DEFAULTS = {
   prefix: "TUS",
@@ -342,10 +354,10 @@ export async function ensureInvoiceForOrder(orderId, { forceCod = false } = {}) 
 }
 
 export async function regenerateInvoicePdf(invoiceId) {
-  const invoice = await prisma.invoice.findUnique({ where: { id: invoiceId }, include: { order: { select: { orderNumber: true, paymentMethod: true, paymentStatus: true } } } });
+  const invoice = await prisma.invoice.findUnique({ where: { id: invoiceId }, include: { order: { select: { orderNumber: true, paymentMethod: true, paymentStatus: true, status: true } } } });
   if (!invoice) throw ApiError.notFound("Invoice not found");
   const key = `invoice-${invoice.id}.pdf`;
-  await writeInvoicePdf(key, await renderInvoicePdf(invoice));
+  await writeInvoicePdf(key, await renderInvoicePdf(invoice, { brandName: await getStoreName(), website: publicWebsiteHost() }));
   return prisma.invoice.update({ where: { id: invoice.id }, data: { pdfStorageKey: key } });
 }
 export async function getInvoiceFile(invoiceId) {
