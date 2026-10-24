@@ -148,9 +148,9 @@ describe("status emails: manual Admin changes", () => {
     expect(manual.every((h) => h.adminId === adminId)).toBe(true);
     expect(manual[0].fromStatus).toBe("PROCESSING");
 
-    const logs = await prisma.emailLog.findMany({ where: { orderId: order.id, status: "SENT" } });
+    const logs = await prisma.emailLog.findMany({ where: { orderId: order.id, status: "SENT", notificationId: { not: null } } });
     expect(logs.map((l) => l.event).sort()).toEqual(expect.arrayContaining(["ORDER_DELIVERED", "ORDER_OUT_FOR_DELIVERY", "ORDER_SHIPPED", "ORDER_PLACED"]));
-    expect(logs.every((l) => l.subject && l.recipient && l.notificationId !== undefined)).toBe(true);
+    expect(logs.every((l) => l.subject && l.recipient && l.notificationId && l.source)).toBe(true);
   });
 
   it("Cancelled email says the order was cancelled, includes the Admin's reason, and invents none otherwise", async () => {

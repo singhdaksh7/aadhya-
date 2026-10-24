@@ -14,14 +14,14 @@ import {
 } from "../../components/admin/ui";
 import { FilterInput, FilterSelect } from "../../components/admin/ui/FilterBar";
 
-const ORDER_STATUSES = ["PENDING", "CONFIRMED", "PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED"];
+const ORDER_STATUSES = ["PENDING", "CONFIRMED", "PROCESSING", "SHIPPED", "OUT_FOR_DELIVERY", "DELIVERED", "CANCELLED"];
 const PAYMENT_STATUSES = ["PENDING", "PAID", "FAILED", "REFUNDED", "PARTIALLY_REFUNDED"];
 
 function fulfilmentLabel(order) {
   if (order.shipment?.trackingNumber || order.shipment?.carrier) {
     return order.shipment.status || "Shipped";
   }
-  if (["SHIPPED", "DELIVERED"].includes(order.status)) return order.status;
+  if (["SHIPPED", "OUT_FOR_DELIVERY", "DELIVERED"].includes(order.status)) return order.status;
   return "Unfulfilled";
 }
 

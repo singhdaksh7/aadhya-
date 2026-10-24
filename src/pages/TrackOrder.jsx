@@ -8,6 +8,7 @@ const STATUS_TIMELINE = [
   { key: "CONFIRMED", label: "Order Confirmed", desc: "Your order has been confirmed." },
   { key: "PROCESSING", label: "Processing", desc: "Your order is being prepared." },
   { key: "SHIPPED", label: "Shipped", desc: "Your package has been dispatched." },
+  { key: "OUT_FOR_DELIVERY", label: "Out for delivery", desc: "Your package is out for delivery today." },
   { key: "DELIVERED", label: "Delivered", desc: "Your order has been delivered." }
 ];
 
@@ -38,7 +39,8 @@ export default function TrackOrder() {
 
   const getStepIndex = (currentStatus) => {
     const s = (currentStatus || "").toUpperCase();
-    if (s === "DELIVERED") return 3;
+    if (s === "DELIVERED") return 4;
+    if (s === "OUT_FOR_DELIVERY") return 3;
     if (s === "SHIPPED") return 2;
     if (s === "PROCESSING") return 1;
     return 0; // CONFIRMED

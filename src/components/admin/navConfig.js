@@ -64,6 +64,7 @@ export const adminNavGroups = [
     items: [
       { to: "/admin/shipping", label: "Shipping" },
       { to: "/admin/integrations", label: "Integrations" },
+      { to: "/admin/email-templates", label: "Email Templates" },
     ],
   },
   {
@@ -96,6 +97,7 @@ export function pageTitleFromPath(pathname) {
     "/admin/customers": "Customers",
     "/admin/reviews": "Reviews",
     "/admin/homepage-builder": "Homepage Builder",
+    "/admin/email-templates": "Email Templates",
     "/admin/header-settings": "Header & Navigation",
     "/admin/storefront/header": "Header & Navigation",
     "/admin/banners": "Banners",
