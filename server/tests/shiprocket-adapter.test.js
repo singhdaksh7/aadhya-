@@ -603,7 +603,7 @@ describe("RTO handling: exactly-once restock and prepaid/COD split", () => {
         items: { create: [{ productId: product.id, productNameSnapshot: "Book", productSlugSnapshot: product.slug, productTypeSnapshot: "BOOK", quantity: 2, unitPrice: 300, lineTotal: 600, bookFormatSnapshot: "PHYSICAL" }] },
         payments: paymentMethod === "cod"
           ? undefined
-          : { create: [{ provider: "razorpay", providerPaymentId: "pay_1", amount: 300, status: "PAID" }] },
+          : { create: [{ provider: "cashfree", providerPaymentId: "pay_1", amount: 300, status: "PAID" }] },
       },
     });
     const shipment = await prisma.shipment.create({ data: { orderId: order.id, provider: "SHIPROCKET", providerShipmentId: "999", status: "IN_TRANSIT" } });

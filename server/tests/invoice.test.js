@@ -534,7 +534,7 @@ describe("invoice generation lifecycle race (regression for the awaited-invoice 
     await expect(resetDb()).resolves.not.toThrow();
   });
 
-  it("the invoice row exists synchronously right after a Razorpay payment verification returns", async () => {
+  it("the invoice row exists synchronously right after an online payment verification returns", async () => {
     const { orderId } = await placeOrder();
     const payment = await prisma.payment.findFirst({ where: { orderId } });
     await prisma.payment.update({ where: { id: payment.id }, data: { providerOrderId: `rp_${payment.id}` } });

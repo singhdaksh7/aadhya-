@@ -1,33 +1,32 @@
 import crypto from "node:crypto";
 import { asyncHandler } from "../../utils/asyncHandler.js";
 import { prisma } from "../../lib/prisma.js";
-import { verifyRazorpayWebhookSignature, finalizePaidPayment, markPaymentFailed } from "./payment.service.js";
-import { getRazorpayConfig } from "./razorpay.client.js";
+import { verifyCashfreeWebhookSignature, syncCashfreePayment, markPaymentFailed } from "./payment.service.js";
+import { getCashfreeConfig } from "./cashfree.client.js";
 import { logWebhookDelivery } from "../integrations/webhook-log.service.js";
 
-const log = (entry) => logWebhookDelivery({ provider: "razorpay", ...entry });
+const log = (entry) => logWebhookDelivery({ provider: "cashfree", ...entry });
 
-// Razorpay webhooks arrive with a JSON body but signature verification
-// needs the exact raw bytes — app.js mounts this route with express.raw()
-// ahead of the global express.json() so req.body is a Buffer here.
-export const handleRazorpayWebhook = asyncHandler(async (req, res) => {
+// Cashfree signs the exact raw bytes: app.js mounts this route with express.raw() ahead of the global
+// express.json(), so req.body is a Buffer here.
+//
+// Trust model: the signature proves the request came from Cashfree, and then the payment state is
+// re-read from Cashfree's API (syncCashfreePayment) before anything is marked paid. A payload alone
+// never changes an order.
+export const handleCashfreeWebhook = asyncHandler(async (req, res) => {
   const rawBody = req.body; // Buffer
+  const signature = req.headers["x-webhook-signature"];
+  const timestamp = req.headers["x-webhook-timestamp"];
 
-  if (!(await getRazorpayConfig())?.webhookSecret) {
-    // Not configured yet — acknowledge so Razorpay doesn't hammer retries,
-    // but do nothing. Logged, not silently swallowed.
-    // eslint-disable-next-line no-console
-    console.warn("[webhook] Razorpay webhook secret not configured — ignoring incoming webhook");
-    await log({ signatureResult: "NOT_CONFIGURED", result: "IGNORED", errorSummary: "Webhook secret is not configured" });
-    return res.status(200).json({ received: true, processed: false });
+  const config = Buffer.isBuffer(rawBody) ? await getCashfreeConfig() : null;
+  if (!config?.secretKey) {
+    await log({ signatureResult: "NOT_CONFIGURED", result: "REJECTED", errorSummary: "Cashfree is not configured" });
+    return res.status(400).json({ success: false, error: { message: "Webhook not accepted" } });
   }
 
-  const signature = req.headers["x-razorpay-signature"];
-  if (!(await verifyRazorpayWebhookSignature(rawBody, signature))) {
-    // Logged without the signature/body value itself — an invalid signature
-    // is a security-relevant event (forged/replayed webhook attempt).
+  if (!verifyCashfreeWebhookSignature(rawBody, timestamp, signature, config.secretKey)) {
     // eslint-disable-next-line no-console
-    console.warn("[webhook] rejected Razorpay webhook: invalid signature", { ip: req.ip });
+    console.warn("[webhook] rejected Cashfree webhook: invalid signature", { ip: req.ip });
     await log({ signatureResult: "FAILED", result: "REJECTED", errorSummary: signature ? "Signature did not match" : "Signature header missing" });
     return res.status(400).json({ success: false, error: { message: "Invalid webhook signature" } });
   }
@@ -40,18 +39,19 @@ export const handleRazorpayWebhook = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, error: { message: "Malformed webhook payload" } });
   }
 
-  const eventType = payload.event;
-  const entity = payload.payload?.payment?.entity || payload.payload?.order?.entity || {};
-  const entityId = entity.id || crypto.createHash("sha256").update(rawBody).digest("hex").slice(0, 24);
-  const eventId = `${eventType}:${entityId}`;
-  const reference = entity.order_id || entity.id || null;
+  const eventType = payload.type;
+  const providerOrderId = payload.data?.order?.order_id || null;
+  const cfPaymentId = payload.data?.payment?.cf_payment_id != null ? String(payload.data.payment.cf_payment_id) : null;
+  const paymentStatus = payload.data?.payment?.payment_status || null;
+  // Cashfree's own idempotency header when present (webhook version 2025-01-01+), else a stable
+  // fingerprint of the event so a redelivery is recognised as a duplicate.
+  const headerKey = req.headers["x-idempotency-key"] || req.headers["x-idempotency-header"];
+  const eventId = headerKey
+    ? String(headerKey).slice(0, 120)
+    : `${eventType}:${providerOrderId}:${cfPaymentId}:${paymentStatus}:${crypto.createHash("sha256").update(rawBody).digest("hex").slice(0, 16)}`;
+  const reference = providerOrderId || cfPaymentId;
 
-  // Idempotency fast path — checked before insert to avoid a logged
-  // constraint-violation on every ordinary retry. The insert is still
-  // wrapped below as a safety net for the rare simultaneous-delivery race.
-  const existing = await prisma.webhookEvent.findUnique({
-    where: { provider_eventId: { provider: "razorpay", eventId } },
-  });
+  const existing = await prisma.webhookEvent.findUnique({ where: { provider_eventId: { provider: "cashfree", eventId } } });
   if (existing) {
     await log({ eventType, eventId, signatureResult: "VERIFIED", result: "DUPLICATE", reference });
     return res.status(200).json({ received: true, processed: false, duplicate: true });
@@ -60,15 +60,7 @@ export const handleRazorpayWebhook = asyncHandler(async (req, res) => {
   let eventRow;
   try {
     eventRow = await prisma.webhookEvent.create({
-      data: {
-        provider: "razorpay",
-        eventId,
-        eventType,
-        metadata: {
-          orderId: entity.order_id || null,
-          paymentId: entity.id || null,
-        },
-      },
+      data: { provider: "cashfree", eventId, eventType: eventType || "UNKNOWN", metadata: { orderId: providerOrderId, paymentId: cfPaymentId } },
     });
   } catch {
     await log({ eventType, eventId, signatureResult: "VERIFIED", result: "DUPLICATE", reference });
@@ -77,41 +69,26 @@ export const handleRazorpayWebhook = asyncHandler(async (req, res) => {
 
   try {
     let result = "IGNORED";
-    if (eventType === "payment.captured") {
-      const providerOrderId = entity.order_id;
-      if (providerOrderId) {
-        await finalizePaidPayment({
-          providerOrderId,
-          providerPaymentId: entity.id,
-          method: entity.method,
-          rawReference: entity.id,
-          amountPaise: typeof entity.amount === "number" ? entity.amount : undefined,
-        });
-        result = "PROCESSED";
-      }
-    } else if (eventType === "payment.failed") {
-      const providerOrderId = entity.order_id;
-      if (providerOrderId) {
-        // eslint-disable-next-line no-console
-        console.error("[webhook] payment.failed", { providerOrderId, reason: entity.error_description || entity.error_code || "unknown" });
-        await markPaymentFailed({ providerOrderId });
-        result = "PROCESSED";
-      }
+    if (providerOrderId && eventType === "PAYMENT_SUCCESS_WEBHOOK") {
+      // Confirmed against Cashfree's API inside; throws if Cashfree can't be reached so it is retried.
+      await syncCashfreePayment(providerOrderId);
+      result = "PROCESSED";
+    } else if (providerOrderId && (eventType === "PAYMENT_FAILED_WEBHOOK" || eventType === "PAYMENT_USER_DROPPED_WEBHOOK")) {
+      // eslint-disable-next-line no-console
+      console.error("[webhook] cashfree payment not completed", { providerOrderId, status: paymentStatus });
+      await markPaymentFailed({ providerOrderId });
+      result = "PROCESSED";
     }
-    // Other event types (e.g. refund.processed) are accepted but not acted on
-    // — refunds are explicitly out of scope.
     await log({ eventType, eventId, signatureResult: "VERIFIED", result, reference });
     return res.status(200).json({ received: true, processed: result === "PROCESSED" });
   } catch (err) {
     await log({ eventType, eventId, signatureResult: "VERIFIED", result: "FAILED", reference, errorSummary: err.message });
-    if (err.isApiError) {
-      // Business rejection (unknown order, amount mismatch): retrying cannot fix it,
-      // so keep the idempotency row and acknowledge.
+    // Unknown order: retrying cannot fix it, so keep the idempotency row and acknowledge.
+    if (err.isApiError && err.statusCode === 404) {
       return res.status(200).json({ received: true, processed: false });
     }
-    // Unexpected failure (DB blip etc.): release the idempotency row so Razorpay's
-    // retry is processed instead of being swallowed as a duplicate.
+    // Provider unreachable / unexpected failure: release the idempotency row so Cashfree's retry is processed.
     await prisma.webhookEvent.delete({ where: { id: eventRow.id } }).catch(() => {});
-    throw err;
+    return res.status(500).json({ success: false, error: { message: "Temporary failure, please retry" } });
   }
 });

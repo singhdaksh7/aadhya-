@@ -51,14 +51,6 @@ export const env = {
     freeThreshold: Number(process.env.FREE_SHIPPING_THRESHOLD ?? 2000),
     standardAmount: Number(process.env.STANDARD_SHIPPING_AMOUNT ?? 99),
   },
-  razorpay: {
-    keyId: process.env.RAZORPAY_KEY_ID || "",
-    keySecret: process.env.RAZORPAY_KEY_SECRET || "",
-    webhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET || "",
-    get isConfigured() {
-      return Boolean(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET);
-    },
-  },
   integrationEncryptionKey: process.env.INTEGRATION_ENCRYPTION_KEY || "",
   smtp: {
     host: process.env.SMTP_HOST || "",

@@ -1,7 +1,7 @@
 import { prisma } from "../../lib/prisma.js";
 import { ApiError } from "../../utils/ApiError.js";
-import { getRazorpayClient, isRazorpayConfigured } from "../payments/razorpay.client.js";
-import { rupeesToPaise, round2 } from "../../utils/money.js";
+import { getCashfreeConfig, createCashfreeRefund, fetchCashfreeRefund, CashfreeError } from "../payments/cashfree.client.js";
+import { round2 } from "../../utils/money.js";
 import { sendReturnStatusEmail } from "../email/email.service.js";
 
 const DEFAULT_RETURN_SETTINGS = {
@@ -263,7 +263,7 @@ export async function markReceived(id, adminId) {
 }
 
 // Idempotent refund: validates amount <= remaining refundable amount on the
-// payment, then either calls Razorpay (prepaid) or records a manual refund
+// payment, then either calls Cashfree (prepaid) or records a manual refund
 // (COD / admin-recorded). Never double-refunds: refundedAmount is only ever
 // advanced inside this same DB transaction that creates the Refund row, so a
 // retried request that would exceed the refundable balance is rejected
@@ -292,16 +292,32 @@ export async function issueRefund(id, adminId, { amount, method, reference, note
   }
 
   let providerRefundId = null;
-  if (method === "razorpay") {
-    if (isCod) throw ApiError.badRequest("This payment was not made via Razorpay.");
-    if (!(await isRazorpayConfigured())) throw ApiError.badRequest("Razorpay is not configured.");
-    if (!payment.providerPaymentId) throw ApiError.badRequest("This payment has no provider payment id to refund.");
-    const razorpay = await getRazorpayClient();
-    const providerRefund = await razorpay.payments.refund(payment.providerPaymentId, {
-      amount: rupeesToPaise(amount),
-      notes: { returnRequestId: id, orderId: returnRequest.orderId },
-    });
-    providerRefundId = providerRefund?.id || null;
+  // A Cashfree refund is only COMPLETED once Cashfree says SUCCESS. Anything else is recorded as
+  // PROCESSING (money reserved, nothing marked refunded) until Admin syncs the final status.
+  let confirmed = method === "manual";
+  if (method === "cashfree") {
+    if (isCod) throw ApiError.badRequest("This payment was not made online.");
+    const config = await getCashfreeConfig();
+    if (!config) throw ApiError.badRequest("Cashfree is not configured.");
+    if (!payment.providerOrderId) throw ApiError.badRequest("This payment has no Cashfree order to refund.");
+    const refundId = `RF-${id.replace(/[^A-Za-z0-9]/g, "").slice(0, 18)}-${Date.now().toString(36)}`.slice(0, 40);
+    let providerRefund;
+    try {
+      providerRefund = await createCashfreeRefund(config, payment.providerOrderId, {
+        refund_amount: amount,
+        refund_id: refundId,
+        refund_note: "Order return refund",
+        refund_speed: "STANDARD",
+      });
+    } catch (err) {
+      if (err instanceof CashfreeError) throw ApiError.badRequest(`Cashfree could not process the refund: ${err.message}`);
+      throw err;
+    }
+    if (["CANCELLED", "REJECTED"].includes(providerRefund?.refund_status)) {
+      throw ApiError.badRequest(`Cashfree did not accept the refund (${providerRefund.refund_status}).`);
+    }
+    providerRefundId = refundId;
+    confirmed = providerRefund?.refund_status === "SUCCESS";
   }
 
   const result = await prisma.$transaction(async (tx) => {
@@ -323,7 +339,7 @@ export async function issueRefund(id, adminId, { amount, method, reference, note
         orderId: returnRequest.orderId,
         amount,
         method,
-        status: "COMPLETED",
+        status: confirmed ? "COMPLETED" : "PROCESSING",
         providerRefundId,
         reference: reference || null,
         note: note || null,
@@ -333,6 +349,15 @@ export async function issueRefund(id, adminId, { amount, method, reference, note
 
     const newTotalRefunded = alreadyRefunded + amount;
     const fullyRefunded = newTotalRefunded >= paidAmount - 0.01;
+    if (!confirmed) {
+      // Money is reserved (refundedAmount advanced) but nothing is reported as refunded until Cashfree confirms.
+      const pendingReturn = await tx.returnRequest.update({
+        where: { id },
+        data: { status: "REFUND_PENDING", refundStatus: "PROCESSING", providerRefundId: providerRefundId || returnRequest.providerRefundId },
+        include: RETURN_INCLUDE,
+      });
+      return { refund, returnRequest: pendingReturn };
+    }
     await tx.payment.update({
       where: { id: payment.id },
       data: { status: fullyRefunded ? "REFUNDED" : "PARTIALLY_REFUNDED" },
@@ -357,9 +382,63 @@ export async function issueRefund(id, adminId, { amount, method, reference, note
     return { refund, returnRequest: updatedReturn };
   });
 
-  await auditLog(adminId, "RETURN_REFUND_ISSUED", { returnRequestId: id, amount, method, providerRefundId });
-  sendReturnStatusEmail(returnRequest.orderId, result.returnRequest, "Refunded").catch(() => {});
+  await auditLog(adminId, "RETURN_REFUND_ISSUED", { returnRequestId: id, amount, method, providerRefundId, confirmed });
+  if (confirmed) sendReturnStatusEmail(returnRequest.orderId, result.returnRequest, "Refunded").catch(() => {});
   return result;
+}
+
+// Re-reads a PROCESSING Cashfree refund from Cashfree and settles it: SUCCESS completes the refund and
+// marks the return/payment refunded; a terminal failure releases the reserved amount. Never marks
+// anything refunded on its own say-so.
+export async function syncCashfreeRefund(refundRowId, adminId) {
+  const refund = await prisma.refund.findUnique({ where: { id: refundRowId }, include: { payment: true } });
+  if (!refund || refund.method !== "cashfree") throw ApiError.notFound("Cashfree refund not found");
+  if (refund.status !== "PROCESSING") return { refund, changed: false };
+  const config = await getCashfreeConfig();
+  if (!config) throw ApiError.badRequest("Cashfree is not configured.");
+  let remote;
+  try {
+    remote = await fetchCashfreeRefund(config, refund.payment.providerOrderId, refund.providerRefundId);
+  } catch (err) {
+    if (err instanceof CashfreeError) throw ApiError.badRequest("Could not read the refund status from Cashfree.");
+    throw err;
+  }
+  const status = remote?.refund_status;
+  const amount = Number(refund.amount);
+  if (status === "SUCCESS") {
+    const result = await prisma.$transaction(async (tx) => {
+      const cas = await tx.refund.updateMany({ where: { id: refund.id, status: "PROCESSING" }, data: { status: "COMPLETED" } });
+      if (cas.count === 0) return null;
+      const payment = await tx.payment.findUnique({ where: { id: refund.paymentId } });
+      const fullyRefunded = Number(payment.refundedAmount) >= Number(payment.amount) - 0.01;
+      await tx.payment.update({ where: { id: payment.id }, data: { status: fullyRefunded ? "REFUNDED" : "PARTIALLY_REFUNDED" } });
+      await tx.order.update({ where: { id: refund.orderId }, data: { paymentStatus: fullyRefunded ? "REFUNDED" : "PARTIALLY_REFUNDED" } });
+      if (refund.returnRequestId) {
+        return tx.returnRequest.update({
+          where: { id: refund.returnRequestId },
+          data: { status: "REFUNDED", refundAmount: Number(payment.refundedAmount), refundStatus: "COMPLETED", completedAt: new Date() },
+          include: RETURN_INCLUDE,
+        });
+      }
+      return {};
+    });
+    if (result) {
+      await auditLog(adminId, "RETURN_REFUND_CONFIRMED", { refundId: refund.id, providerRefundId: refund.providerRefundId });
+      if (result.id) sendReturnStatusEmail(refund.orderId, result, "Refunded").catch(() => {});
+    }
+    return { refund: await prisma.refund.findUnique({ where: { id: refund.id } }), changed: Boolean(result) };
+  }
+  if (["CANCELLED", "REJECTED", "FAILED"].includes(status)) {
+    await prisma.$transaction(async (tx) => {
+      const cas = await tx.refund.updateMany({ where: { id: refund.id, status: "PROCESSING" }, data: { status: "FAILED" } });
+      if (cas.count === 0) return;
+      await tx.payment.update({ where: { id: refund.paymentId }, data: { refundedAmount: { decrement: amount } } });
+      if (refund.returnRequestId) await tx.returnRequest.update({ where: { id: refund.returnRequestId }, data: { refundStatus: "FAILED" } });
+    });
+    await auditLog(adminId, "RETURN_REFUND_FAILED", { refundId: refund.id, providerStatus: status });
+    return { refund: await prisma.refund.findUnique({ where: { id: refund.id } }), changed: true };
+  }
+  return { refund, changed: false };
 }
 
 export async function closeReturn(id, adminId) {

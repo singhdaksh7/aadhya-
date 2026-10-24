@@ -4,6 +4,7 @@ import { prisma } from "../../lib/prisma.js";
 import { requireAdmin } from "../../middleware/adminAuth.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
 import { ok } from "../../utils/apiResponse.js";
+import { isCashfreeConfigured } from "../payments/cashfree.client.js";
 import { decorationsSchema, DEFAULT_DECORATIONS } from "./decorations.js";
 
 // Hex color validator (#fff or #ffffff)
@@ -87,7 +88,7 @@ export const DEFAULT_SETTINGS = {
     contactDetails: true,
     socialLinksVisibility: true,
     socialHeading: "Connect With Us",
-    paymentIcons: ["Visa", "Mastercard", "RuPay", "UPI", "Razorpay", "COD"],
+    paymentIcons: ["Visa", "Mastercard", "RuPay", "UPI", "COD"],
     footerColumns: [
       {
         id: "fc-1",
@@ -204,9 +205,9 @@ export const DEFAULT_SETTINGS = {
     deliveryEstimate: "3-7 business days",
   },
   payments: {
-    razorpayEnabled: true,
+    cashfreeEnabled: true,
     codEnabled: true,
-    razorpayDisplayLabel: "Pay Online via Razorpay (UPI, Cards, NetBanking)",
+    cashfreeDisplayLabel: "Pay Online (UPI, Cards, NetBanking)",
     codDisplayLabel: "Cash on Delivery (COD)",
     codMinOrderValue: 0,
     codMaxOrderValue: 50000,
@@ -741,9 +742,9 @@ export const settingsValidationSchema = z.object({
   }).optional(),
 
   payments: z.object({
-    razorpayEnabled: z.boolean().optional(),
+    cashfreeEnabled: z.boolean().optional(),
     codEnabled: z.boolean().optional(),
-    razorpayDisplayLabel: z.string().max(150).optional(),
+    cashfreeDisplayLabel: z.string().max(150).optional(),
     codDisplayLabel: z.string().max(150).optional(),
     codMinOrderValue: z.number().nonnegative().max(1000000).optional(),
     codMaxOrderValue: z.number().nonnegative().max(1000000).optional(),
@@ -804,7 +805,7 @@ export const settingsValidationSchema = z.object({
   })).optional()
 }).passthrough();
 
-const FORBIDDEN_KEYS = ["jwtSecret", "razorpaySecret", "keySecret", "webhookSecret", "smtpPassword", "dbUrl", "databaseUrl"];
+const FORBIDDEN_KEYS = ["jwtSecret", "razorpaySecret", "cashfreeSecret", "secretKey", "keySecret", "webhookSecret", "smtpPassword", "dbUrl", "databaseUrl"];
 
 async function getMergedSettings() {
   const rows = await prisma.siteSetting.findMany();
@@ -827,6 +828,12 @@ async function getMergedSettings() {
     merged.standardShippingAmount = dbMap.standardShippingAmount;
   }
 
+  // Retired provider keys never leave the server, whatever an older save left behind.
+  if (merged.payments && typeof merged.payments === "object") {
+    const { razorpayEnabled: _a, razorpayDisplayLabel: _b, ...rest } = merged.payments;
+    merged.payments = rest;
+  }
+
   return merged;
 }
 
@@ -840,7 +847,10 @@ export function toPublicSettings(settings) {
   return pub;
 }
 publicSettingsRouter.get("/", asyncHandler(async (_req, res) => {
-  ok(res, toPublicSettings(await getMergedSettings()));
+  const pub = toPublicSettings(await getMergedSettings());
+  // Computed, never stored: the storefront only offers online payment when it can actually be completed.
+  pub.payments = { ...pub.payments, cashfreeAvailable: pub.payments?.cashfreeEnabled !== false && (await isCashfreeConfigured()) };
+  ok(res, pub);
 }));
 
 export const adminSettingsRouter = Router();

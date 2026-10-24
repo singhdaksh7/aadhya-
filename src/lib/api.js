@@ -355,13 +355,15 @@ export function createOrder(payload, authenticated = false) {
   return api.post("/orders", { ...utm, ...payload }, { auth: authenticated ? "customer" : false });
 }
 
-export async function createRazorpayOrder(orderId) {
+export async function createCashfreeSession(orderId) {
   const res = await api.post(`/orders/${orderId}/payment`);
   return res.data;
 }
 
-export function verifyRazorpayPayment(payload) {
-  return api.post("/payments/razorpay/verify", payload);
+// Asks the server to check the payment with Cashfree. The result is authoritative: it never comes from the browser.
+export async function verifyCashfreePayment(cashfreeOrderId) {
+  const res = await api.post("/payments/cashfree/verify", { cashfreeOrderId });
+  return res.data;
 }
 
 export function fetchOrderConfirmation(orderNumber, token) {
@@ -401,14 +403,14 @@ export function adminGetIntegrationStatus() { return api.get("/admin/integration
 export function adminSaveIntegration(data) { return api.put("/admin/integrations/credentials", data, { auth: "admin" }); }
 export function adminTestIntegration(provider, environment) { return api.post(`/admin/integrations/${provider}/${environment}/test`, {}, { auth: "admin" }); }
 export function adminDeleteIntegration(provider, environment) { return api.delete(`/admin/integrations/${provider}/${environment}`, { auth: "admin" }); }
-export function adminRazorpaySummary() { return api.get("/admin/integrations/razorpay/summary", { auth: "admin" }); }
-export function adminRazorpaySave(data) { return api.put("/admin/integrations/razorpay/credentials", data, { auth: "admin" }); }
-export function adminRazorpayTest(environment) { return api.post("/admin/integrations/razorpay/test", { environment }, { auth: "admin" }); }
-export function adminRazorpaySetMode(environment) { return api.post("/admin/integrations/razorpay/mode", { environment, confirm: true }, { auth: "admin" }); }
-export function adminRazorpayGenerateWebhookSecret(environment) { return api.post("/admin/integrations/razorpay/webhook-secret/generate", { environment }, { auth: "admin" }); }
-export function adminRazorpayRemoveWebhookSecret(environment) { return api.delete(`/admin/integrations/razorpay/webhook-secret?environment=${encodeURIComponent(environment)}`, { auth: "admin" }); }
-export function adminRazorpayVerifySetup() { return api.post("/admin/integrations/razorpay/verify-setup", {}, { auth: "admin" }); }
-export function adminRazorpayWebhookEvents(limit = 25) { return api.get(`/admin/integrations/razorpay/webhook-events?limit=${limit}`, { auth: "admin" }); }
+export function adminCashfreeSummary() { return api.get("/admin/integrations/cashfree/summary", { auth: "admin" }); }
+export function adminCashfreeSave(data) { return api.put("/admin/integrations/cashfree/credentials", data, { auth: "admin" }); }
+export function adminCashfreeRemove(environment) { return api.delete(`/admin/integrations/cashfree/credentials?environment=${encodeURIComponent(environment)}`, { auth: "admin" }); }
+export function adminCashfreeTest(environment) { return api.post("/admin/integrations/cashfree/test", { environment }, { auth: "admin" }); }
+export function adminCashfreeSetMode(environment) { return api.post("/admin/integrations/cashfree/mode", { environment, confirm: true }, { auth: "admin" }); }
+export function adminCashfreeVerifySetup() { return api.post("/admin/integrations/cashfree/verify-setup", {}, { auth: "admin" }); }
+export function adminCashfreeWebhookEvents(limit = 25) { return api.get(`/admin/integrations/cashfree/webhook-events?limit=${limit}`, { auth: "admin" }); }
+export function adminSyncRefund(refundId) { return api.post(`/admin/returns/refunds/${refundId}/sync`, {}, { auth: "admin" }); }
 
 export function adminGetEmailStatus() { return api.get("/admin/email/status", { auth: "admin" }); }
 export function adminSendTestEmail(recipient) { return api.post("/admin/email/test", { recipient }, { auth: "admin" }); }

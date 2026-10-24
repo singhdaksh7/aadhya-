@@ -53,26 +53,24 @@ vi.mock("../src/lib/api", () => ({
   createOrder: vi.fn(() =>
     Promise.resolve({ data: { orderId: "order-1", orderNumber: "AAD-2026-000001", accessToken: "tok123" } })
   ),
-  createRazorpayOrder: vi.fn(() =>
+  createCashfreeSession: vi.fn(() =>
     Promise.resolve({
-      data: {
-        keyId: "rzp_test_x",
-        razorpayOrderId: "order_rzp_1",
-        amount: 108900,
-        currency: "INR",
-        name: "Tushaqsa",
-        description: "Tushaqsa Order AAD-2026-000001",
-        prefill: {},
-      },
+      provider: "cashfree",
+      paymentSessionId: "session_abc",
+      cashfreeOrderId: "AAD-2026-000001",
+      mode: "sandbox",
+      orderNumber: "AAD-2026-000001",
+      amount: 1089,
+      currency: "INR",
     })
   ),
-  verifyRazorpayPayment: vi.fn(() => Promise.resolve({ data: { orderNumber: "AAD-2026-000001" } })),
+  verifyCashfreePayment: vi.fn(() => Promise.resolve({ status: "PAID", orderNumber: "AAD-2026-000001" })),
   validateCouponCode: vi.fn(),
   ApiRequestError: class ApiRequestError extends Error {},
 }));
 
-vi.mock("../src/lib/razorpay", () => ({
-  loadRazorpayScript: vi.fn(() => Promise.resolve(true)),
+vi.mock("../src/lib/cashfree", () => ({
+  loadCashfreeScript: vi.fn(() => Promise.resolve(true)),
 }));
 
 function seedCart() {
@@ -93,11 +91,12 @@ beforeEach(async () => {
   localStorage.clear();
   sessionStorage.clear();
   navigateMock.mockClear();
-  window.Razorpay = undefined;
+  window.Cashfree = undefined;
   const api = await import("../src/lib/api");
   api.createOrder.mockClear();
-  api.createRazorpayOrder.mockClear();
-  api.verifyRazorpayPayment.mockClear();
+  api.createCashfreeSession.mockClear();
+  api.verifyCashfreePayment.mockClear();
+  api.verifyCashfreePayment.mockResolvedValue({ status: "PAID", orderNumber: "AAD-2026-000001" });
   api.checkoutPreview.mockReset();
   api.checkoutPreview.mockResolvedValue(previewResponse);
   api.validateCouponCode.mockReset();
@@ -153,30 +152,22 @@ describe("CheckoutPage", () => {
     expect(createOrder).not.toHaveBeenCalled();
   });
 
-  it("clears the cart and navigates to confirmation after a verified payment", async () => {
+  it("clears the cart and navigates to confirmation only after the SERVER confirms the payment", async () => {
     seedCart();
     const user = userEvent.setup();
     render(<Harness />);
     await waitFor(() => expect(screen.getByText("₹1,089")).toBeInTheDocument());
     await fillValidForm(user);
 
-    let capturedHandler;
-    window.Razorpay = vi.fn().mockImplementation(function (opts) {
-      capturedHandler = opts.handler;
-      return { open: vi.fn(), on: vi.fn() };
-    });
+    const checkout = vi.fn().mockResolvedValue({ paymentDetails: { paymentMessage: "Transaction success" } });
+    window.Cashfree = vi.fn(() => ({ checkout }));
 
     await user.click(screen.getByRole("button", { name: /pay securely/i }));
-    await waitFor(() => expect(window.Razorpay).toHaveBeenCalled());
+    await waitFor(() => expect(checkout).toHaveBeenCalledWith({ paymentSessionId: "session_abc", redirectTarget: "_modal" }));
+    expect(window.Cashfree).toHaveBeenCalledWith({ mode: "sandbox" });
 
-    await act(async () => {
-      await capturedHandler({
-        razorpay_order_id: "order_rzp_1",
-        razorpay_payment_id: "pay_1",
-        razorpay_signature: "sig_1",
-      });
-    });
-
+    const { verifyCashfreePayment } = await import("../src/lib/api");
+    await waitFor(() => expect(verifyCashfreePayment).toHaveBeenCalledWith("AAD-2026-000001"));
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith(
       "/order/AAD-2026-000001/confirmation?token=tok123",
       { replace: true }
@@ -184,23 +175,52 @@ describe("CheckoutPage", () => {
     expect(localStorage.getItem("aadya.cart.v1")).toBe("[]");
   }, 10000);
 
-  it("keeps the cart intact when the payment modal is dismissed without paying", async () => {
+  it("does NOT confirm the order when the popup reports success but the server says the payment is not paid", async () => {
     seedCart();
     const user = userEvent.setup();
+    const { verifyCashfreePayment } = await import("../src/lib/api");
+    verifyCashfreePayment.mockResolvedValue({ status: "FAILED", orderNumber: "AAD-2026-000001" });
     render(<Harness />);
     await waitFor(() => expect(screen.getByText("₹1,089")).toBeInTheDocument());
     await fillValidForm(user);
 
-    let capturedDismiss;
-    window.Razorpay = vi.fn().mockImplementation(function (opts) {
-      capturedDismiss = opts.modal.ondismiss;
-      return { open: vi.fn(), on: vi.fn() };
-    });
-
+    window.Cashfree = vi.fn(() => ({ checkout: vi.fn().mockResolvedValue({ paymentDetails: { paymentMessage: "Transaction success" } }) }));
     await user.click(screen.getByRole("button", { name: /pay securely/i }));
-    await waitFor(() => expect(window.Razorpay).toHaveBeenCalled());
 
-    act(() => capturedDismiss());
+    expect(await screen.findByText(/payment didn't go through/i)).toBeInTheDocument();
+    expect(navigateMock).not.toHaveBeenCalled();
+    expect(JSON.parse(localStorage.getItem("aadya.cart.v1"))).toHaveLength(1);
+  });
+
+  it("tells the customer not to pay again when the payment is still pending", async () => {
+    seedCart();
+    const user = userEvent.setup();
+    const { verifyCashfreePayment } = await import("../src/lib/api");
+    verifyCashfreePayment.mockResolvedValue({ status: "PENDING", orderNumber: "AAD-2026-000001" });
+    render(<Harness />);
+    await waitFor(() => expect(screen.getByText("₹1,089")).toBeInTheDocument());
+    await fillValidForm(user);
+
+    window.Cashfree = vi.fn(() => ({ checkout: vi.fn().mockResolvedValue({ paymentDetails: {} }) }));
+    await user.click(screen.getByRole("button", { name: /pay securely/i }));
+
+    expect(await screen.findByTestId("payment-processing")).toHaveTextContent(/do not pay again/i);
+    expect(screen.queryByRole("button", { name: /Retry Payment/i })).not.toBeInTheDocument();
+    expect(navigateMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps the cart intact when the payment modal is dismissed without paying", async () => {
+    seedCart();
+    const user = userEvent.setup();
+    const { verifyCashfreePayment } = await import("../src/lib/api");
+    verifyCashfreePayment.mockResolvedValue({ status: "PENDING", orderNumber: "AAD-2026-000001" });
+    render(<Harness />);
+    await waitFor(() => expect(screen.getByText("₹1,089")).toBeInTheDocument());
+    await fillValidForm(user);
+
+    verifyCashfreePayment.mockResolvedValue({ status: "FAILED", orderNumber: "AAD-2026-000001" });
+    window.Cashfree = vi.fn(() => ({ checkout: vi.fn().mockResolvedValue({ error: { message: "user closed" } }) }));
+    await user.click(screen.getByRole("button", { name: /pay securely/i }));
 
     expect(await screen.findByText(/payment didn't go through/i)).toBeInTheDocument();
     expect(navigateMock).not.toHaveBeenCalled();
@@ -368,9 +388,9 @@ describe("CheckoutPage", () => {
     expect(await screen.findByText("Coupon is no longer valid.")).toBeInTheDocument();
   });
 
-  it("shows a Retry Payment action when Razorpay order creation fails", async () => {
-    const { createRazorpayOrder, ApiRequestError } = await import("../src/lib/api");
-    createRazorpayOrder.mockRejectedValueOnce(new ApiRequestError("Payment provider unavailable."));
+  it("shows a Retry Payment action when Cashfree order creation fails", async () => {
+    const { createCashfreeSession, ApiRequestError } = await import("../src/lib/api");
+    createCashfreeSession.mockRejectedValueOnce(new ApiRequestError("Payment provider unavailable."));
 
     const user = userEvent.setup();
     seedCart();
@@ -384,9 +404,9 @@ describe("CheckoutPage", () => {
     expect(screen.getByRole("button", { name: /Retry Payment/i })).toBeInTheDocument();
   });
 
-  it("shows a clear error when the Razorpay script fails to load", async () => {
-    const { loadRazorpayScript } = await import("../src/lib/razorpay");
-    loadRazorpayScript.mockResolvedValueOnce(false);
+  it("shows a clear error when the Cashfree script fails to load", async () => {
+    const { loadCashfreeScript } = await import("../src/lib/cashfree");
+    loadCashfreeScript.mockResolvedValueOnce(false);
 
     const user = userEvent.setup();
     seedCart();
@@ -397,12 +417,12 @@ describe("CheckoutPage", () => {
     await user.click(screen.getByRole("button", { name: /pay securely/i }));
 
     expect(
-      await screen.findByText(/Could not load Razorpay\. Check your connection and retry\./i)
+      await screen.findByText(/Could not load the secure payment window/i)
     ).toBeInTheDocument();
   });
 
-  it("places a COD order via a single createOrder call without touching any Razorpay code path", async () => {
-    const { createOrder, createRazorpayOrder } = await import("../src/lib/api");
+  it("places a COD order via a single createOrder call without touching any online-payment code path", async () => {
+    const { createOrder, createCashfreeSession } = await import("../src/lib/api");
     const user = userEvent.setup();
     seedCart();
     render(<Harness />);
@@ -417,6 +437,6 @@ describe("CheckoutPage", () => {
       { replace: true }
     ));
     expect(createOrder).toHaveBeenCalledTimes(1);
-    expect(createRazorpayOrder).not.toHaveBeenCalled();
+    expect(createCashfreeSession).not.toHaveBeenCalled();
   });
 });

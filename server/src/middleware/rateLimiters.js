@@ -16,7 +16,7 @@ const skipInTest = () => env.isTest || process.env.DISABLE_RATE_LIMIT === "true"
 // writes. A storefront page load alone issues ~10-15 read requests, and several people (e.g. a client
 // and their team in one office) can share a single IP, so reads and the chatty admin UI get a much
 // larger allowance. Login, refresh, checkout, track-order etc. keep their own stricter per-route
-// limiters below, and the Razorpay/shipping webhooks are mounted before any limiter.
+// limiters below, and the Cashfree/shipping webhooks are mounted before any limiter.
 const WINDOW_MS = 15 * 60 * 1000;
 export const isAdminApiRequest = (req) => req.path === "/admin" || req.path.startsWith("/admin/");
 export const isPublicReadRequest = (req) => (req.method === "GET" || req.method === "HEAD") && !isAdminApiRequest(req);

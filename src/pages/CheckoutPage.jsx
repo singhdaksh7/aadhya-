@@ -6,12 +6,12 @@ import { useCart } from "../context/CartContext";
 import { useCustomerAuth } from "../context/CustomerAuthContext";
 import { useSiteSettings } from "../hooks/useSiteSettings";
 import { formatInr } from "../lib/format";
-import { loadRazorpayScript } from "../lib/razorpay";
+import { loadCashfreeScript } from "../lib/cashfree";
 import {
   checkoutPreview as fetchCheckoutPreview,
   createOrder,
-  createRazorpayOrder,
-  verifyRazorpayPayment,
+  createCashfreeSession,
+  verifyCashfreePayment,
   accountAddresses,
   createAddress,
   ApiRequestError,
@@ -73,9 +73,10 @@ export default function CheckoutPage() {
   const { user } = useCustomerAuth();
   const { payments } = useSiteSettings();
 
-  const razorpayEnabled = payments?.razorpayEnabled ?? true;
+  // Online payment is offered only when it is switched on AND the server says it can actually be completed.
+  const onlineEnabled = (payments?.cashfreeEnabled ?? true) && payments?.cashfreeAvailable !== false;
   const codEnabled = payments?.codEnabled ?? true;
-  const [paymentMethod, setPaymentMethod] = useState("razorpay");
+  const [paymentMethod, setPaymentMethod] = useState("cashfree");
 
   const [form, setForm] = useState(emptyForm);
   const [errors, setErrors] = useState({});
@@ -83,8 +84,9 @@ export default function CheckoutPage() {
   const [previewStatus, setPreviewStatus] = useState("loading");
   const [previewError, setPreviewError] = useState(null);
   const [previewRetryToken, setPreviewRetryToken] = useState(0);
-  const [stage, setStage] = useState("form"); // form | placing | paying | payment_unavailable | failed
+  const [stage, setStage] = useState("form"); // form | placing | paying | processing | payment_unavailable | failed
   const [pendingOrder, setPendingOrder] = useState(null);
+  const [processingInfo, setProcessingInfo] = useState(null); // payment started but not yet settled: never offer a second payment
   const [serverError, setServerError] = useState(null);
   const [validationSummary, setValidationSummary] = useState(null);
   const [savedAddresses, setSavedAddresses] = useState([]);
@@ -96,12 +98,12 @@ export default function CheckoutPage() {
   const [saveBillingAddress, setSaveBillingAddress] = useState(false);
 
   useEffect(() => {
-    if (!razorpayEnabled && codEnabled) {
+    if (!onlineEnabled && codEnabled) {
       setPaymentMethod("cod");
-    } else if (razorpayEnabled) {
-      setPaymentMethod("razorpay");
+    } else if (onlineEnabled) {
+      setPaymentMethod("cashfree");
     }
-  }, [razorpayEnabled, codEnabled]);
+  }, [onlineEnabled, codEnabled]);
 
   useEffect(() => {
     if (user) {
@@ -193,7 +195,7 @@ export default function CheckoutPage() {
       ? "Placing your order…"
       : stage === "paying"
       ? "Opening secure payment…"
-      : !razorpayEnabled && !codEnabled
+      : !onlineEnabled && !codEnabled
       ? "No payment methods are currently available."
       : previewStatus === "loading"
       ? "Checking your order…"
@@ -215,11 +217,34 @@ export default function CheckoutPage() {
     if (sameAsShipping) setForm((f) => ({ ...f, fullName: billingAddress.fullName, addressPhone: billingAddress.phone, alternatePhone: billingAddress.alternatePhone, addressLine1: billingAddress.addressLine1, addressLine2: billingAddress.addressLine2, landmark: billingAddress.landmark, city: billingAddress.city, state: billingAddress.state, postalCode: billingAddress.postalCode, country: billingAddress.country, name: billingAddress.fullName || f.name, email: billingAddress.email || f.email, phone: billingAddress.phone || f.phone }));
   }, [sameAsShipping, billingAddress]);
 
+  // Asks OUR server (which asks Cashfree) what happened. Only PAID confirms the order.
+  const settlePayment = async ({ cashfreeOrderId, orderNumber, accessToken }) => {
+    try {
+      const result = await verifyCashfreePayment(cashfreeOrderId);
+      if (result.status === "PAID") {
+        try { sessionStorage.removeItem("tushaqsa.pendingPayment"); } catch { /* ignore */ }
+        clearCart();
+        navigate(`/order/${orderNumber}/confirmation?token=${accessToken}`, { replace: true });
+      } else if (result.status === "PENDING") {
+        setServerError(null);
+        setStage("processing");
+      } else {
+        setServerError("The payment was not completed. You can try again.");
+        setStage("failed");
+      }
+    } catch {
+      setServerError("We couldn't verify your payment. If money was deducted, contact us with your order number.");
+      setStage("failed");
+    }
+  };
+
+  // Customer pays on Cashfree's checkout; the result is then confirmed by OUR server asking Cashfree
+  // (never trusted from the browser). The order is only shown as paid once the server says PAID.
   const startPayment = async (orderId, orderNumber, accessToken) => {
     setStage("paying");
-    let rawOptions;
+    let session;
     try {
-      rawOptions = await createRazorpayOrder(orderId);
+      session = await createCashfreeSession(orderId);
     } catch (err) {
       if (err instanceof ApiRequestError) {
         setServerError(err.message);
@@ -228,64 +253,37 @@ export default function CheckoutPage() {
       return;
     }
 
-    const options = rawOptions?.data ? rawOptions.data : rawOptions;
-    const isValidOptions =
-      options &&
-      typeof options === "object" &&
-      Boolean(options.keyId || options.key) &&
-      Boolean(options.razorpayOrderId || options.order_id || options.id) &&
-      options.amount !== undefined &&
-      options.amount !== null &&
-      Boolean(options.currency);
-
-    if (!isValidOptions) {
+    if (!session?.paymentSessionId || !session?.cashfreeOrderId) {
       setServerError("Payment setup returned an invalid response. Please retry.");
       setStage("payment_unavailable");
       return;
     }
 
-    const scriptLoaded = await loadRazorpayScript();
-    if (!scriptLoaded || !window.Razorpay) {
-      setServerError("Could not load Razorpay. Check your connection and retry.");
+    const scriptLoaded = await loadCashfreeScript();
+    if (!scriptLoaded || !window.Cashfree) {
+      setServerError("Could not load the secure payment window. Check your connection and retry.");
       setStage("payment_unavailable");
       return;
     }
 
-    const key = options.keyId || options.key;
-    const order_id = options.razorpayOrderId || options.order_id || options.id;
+    // Remembered so the redirect fallback (in-app browsers) can finish the same flow.
+    try {
+      sessionStorage.setItem("tushaqsa.pendingPayment", JSON.stringify({ cashfreeOrderId: session.cashfreeOrderId, orderNumber, accessToken }));
+    } catch { /* storage unavailable: the modal flow below does not need it */ }
 
-    const razorpay = new window.Razorpay({
-      key,
-      amount: options.amount,
-      currency: options.currency,
-      name: options.name,
-      description: options.description,
-      order_id,
-      prefill: options.prefill,
-      handler: async (response) => {
-        try {
-          await verifyRazorpayPayment({
-            razorpay_order_id: response.razorpay_order_id,
-            razorpay_payment_id: response.razorpay_payment_id,
-            razorpay_signature: response.razorpay_signature,
-          });
-          clearCart();
-          navigate(`/order/${orderNumber}/confirmation?token=${accessToken}`, { replace: true });
-        } catch {
-          setServerError("We couldn't verify your payment. If money was deducted, contact us with your order number.");
-          setStage("failed");
-        }
-      },
-      modal: {
-        ondismiss: () => {
-          setStage("failed");
-        },
-      },
-      theme: { color: "#b8674a" },
-    });
+    const info = { cashfreeOrderId: session.cashfreeOrderId, orderNumber, accessToken };
+    setProcessingInfo(info);
+    const finish = () => settlePayment(info);
 
-    razorpay.on("payment.failed", () => setStage("failed"));
-    razorpay.open();
+    try {
+      const cashfree = window.Cashfree({ mode: session.mode === "production" ? "production" : "sandbox" });
+      const result = await cashfree.checkout({ paymentSessionId: session.paymentSessionId, redirectTarget: "_modal" });
+      if (result?.redirect) return; // customer is being redirected to the return page, which verifies server-side
+      await finish(); // popup closed or payment finished: ask the server for the real status
+    } catch {
+      setServerError("The payment window could not be opened. Please retry.");
+      setStage("payment_unavailable");
+    }
   };
 
   const onSubmit = async (e) => {
@@ -551,22 +549,22 @@ export default function CheckoutPage() {
 
               <fieldset className="space-y-4">
                 <legend className="mb-1 font-serif-display text-lg store-text font-bold">Payment Method</legend>
-                {!razorpayEnabled && !codEnabled ? (
+                {!onlineEnabled && !codEnabled ? (
                   <p className="text-xs font-semibold store-primary">No payment methods are currently available.</p>
                 ) : (
                   <div className="space-y-2 rounded-xl border store-border store-surface p-4 text-xs sm:text-sm">
-                    {razorpayEnabled && (
+                    {onlineEnabled && (
                       <label className="flex items-center gap-3 cursor-pointer">
                         <input
                           type="radio"
                           name="paymentMethod"
-                          value="razorpay"
-                          checked={paymentMethod === "razorpay"}
-                          onChange={() => setPaymentMethod("razorpay")}
+                          value="cashfree"
+                          checked={paymentMethod === "cashfree"}
+                          onChange={() => setPaymentMethod("cashfree")}
                           className="accent-[var(--theme-primary)]"
                         />
                         <span className="font-medium store-text">
-                          {payments?.razorpayDisplayLabel || "Pay Online via Razorpay (UPI, Cards, NetBanking)"}
+                          {payments?.cashfreeDisplayLabel || "Pay Online (UPI, Cards, NetBanking)"}
                         </span>
                       </label>
                     )}
@@ -595,7 +593,7 @@ export default function CheckoutPage() {
                 </p>
               )}
 
-              {serverError && stage !== "payment_unavailable" && stage !== "failed" && (
+              {serverError && stage !== "payment_unavailable" && stage !== "failed" && stage !== "processing" && (
                 <p role="status" aria-live="assertive" className="text-sm font-semibold text-terracotta">
                   {serverError}
                 </p>
@@ -618,6 +616,15 @@ export default function CheckoutPage() {
                       <li key={`${i.slug}-${idx}`}>{i.message || `"${i.slug}" is unavailable.`}</li>
                     ))}
                   </ul>
+                </div>
+              )}
+
+              {stage === "processing" && (
+                <div role="status" aria-live="polite" className="rounded-xl bg-sage-light px-4 py-3 text-sm text-green-deep space-y-2" data-testid="payment-processing">
+                  <p>Your payment is still being processed. Please do not pay again. We will confirm your order as soon as it completes.</p>
+                  <Button type="button" className="w-full" onClick={() => processingInfo && settlePayment(processingInfo)}>
+                    Check payment status
+                  </Button>
                 </div>
               )}
 
@@ -646,7 +653,7 @@ export default function CheckoutPage() {
                 </div>
               )}
 
-              {stage !== "failed" && stage !== "payment_unavailable" && (
+              {stage !== "failed" && stage !== "processing" && stage !== "payment_unavailable" && (
                 <>
                   {checkoutDisabledReason && (
                     <p role="status" aria-live="polite" className="text-xs font-medium store-muted">
@@ -664,7 +671,7 @@ export default function CheckoutPage() {
                         ? "Opening secure payment window, please wait"
                         : paymentMethod === "cod"
                         ? "Place order, cash on delivery"
-                        : "Pay securely via Razorpay"
+                        : "Pay securely online"
                     }
                     className="w-full rounded-full store-bg-primary py-4 text-xs font-semibold uppercase tracking-wider text-white shadow-xs transition store-primary-hover disabled:opacity-50"
                   >
@@ -676,7 +683,7 @@ export default function CheckoutPage() {
                       ? "Checking Order…"
                       : paymentMethod === "cod"
                       ? "Place Order (Cash on Delivery)"
-                      : "Pay Securely via Razorpay"}
+                      : "Pay Securely Online"}
                   </button>
                   <p className="text-center text-[11px] leading-relaxed store-muted" data-testid="checkout-policy-links">
                     Before you order, you can read our{" "}

@@ -27,7 +27,7 @@ describe("Phase F — Dynamic Storefront & Store Settings Integration", () => {
       expect(res.body.data.general).toBeDefined();
       expect(res.body.data.general.storeName).toBe("Tushaqsa");
       expect(res.body.data.shipping.freeShippingThreshold).toBe(2499);
-      expect(res.body.data.payments.razorpayEnabled).toBe(true);
+      expect(res.body.data.payments.cashfreeEnabled).toBe(true);
       expect(res.body.data.appearance.colors.primary).toBe("#B8674A");
     });
 
@@ -133,7 +133,7 @@ describe("Phase F — Dynamic Storefront & Store Settings Integration", () => {
         .put("/api/admin/settings")
         .set("Authorization", `Bearer ${adminToken}`)
         .send({
-          payments: { codEnabled: false, razorpayEnabled: true },
+          payments: { codEnabled: false, cashfreeEnabled: true },
         });
 
       const orderRes = await request
@@ -156,10 +156,10 @@ describe("Phase F — Dynamic Storefront & Store Settings Integration", () => {
       expect(orderRes.body.error.message).toContain("Cash on Delivery is currently disabled");
     });
 
-    it("rejects Razorpay payment order creation when Razorpay is disabled in settings", async () => {
+    it("rejects online payment order creation when online payment is disabled in settings", async () => {
       const p = await seedTestProduct({ price: 1000 });
 
-      // First create order when Razorpay enabled
+      // First create order when online payment enabled
       const orderRes = await request
         .post("/api/orders")
         .send({
@@ -173,23 +173,23 @@ describe("Phase F — Dynamic Storefront & Store Settings Integration", () => {
             postalCode: "560001",
           },
           items: [{ slug: p.slug, quantity: 1 }],
-          paymentMethod: "razorpay",
+          paymentMethod: "cashfree",
         });
       expect(orderRes.status).toBe(201);
       const orderId = orderRes.body.data.orderId;
 
-      // Disable Razorpay
+      // Disable online payment
       await request
         .put("/api/admin/settings")
         .set("Authorization", `Bearer ${adminToken}`)
         .send({
-          payments: { razorpayEnabled: false, codEnabled: true },
+          payments: { cashfreeEnabled: false, codEnabled: true },
         });
 
-      // Attempting to create Razorpay payment order should fail
+      // Attempting to create online payment payment order should fail
       const payRes = await request.post(`/api/orders/${orderId}/payment`);
       expect(payRes.status).toBe(400);
-      expect(payRes.body.error.message).toContain("Online payment via Razorpay is currently disabled");
+      expect(payRes.body.error.message).toContain("Online payment is currently disabled");
     });
   });
 });

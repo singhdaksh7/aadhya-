@@ -31,7 +31,7 @@ vi.mock("../hooks/useSiteSettings", async () => {
         brandDescription: "Dynamic Footer Brand Story Test Description",
         contactDetails: true,
         socialLinksVisibility: true,
-        paymentIcons: ["Visa", "Mastercard", "Razorpay"],
+        paymentIcons: ["Visa", "Mastercard", "Cashfree"],
       },
       social: {
         instagram: "https://instagram.com/aadyatest",
@@ -42,9 +42,9 @@ vi.mock("../hooks/useSiteSettings", async () => {
         standardShippingAmount: 200,
       },
       payments: {
-        razorpayEnabled: true,
+        cashfreeEnabled: true,
         codEnabled: true,
-        razorpayDisplayLabel: "Razorpay Online",
+        cashfreeDisplayLabel: "Online Payment",
         codDisplayLabel: "Cash on Delivery",
       },
     }),

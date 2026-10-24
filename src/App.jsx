@@ -32,6 +32,7 @@ import ProductDetail from "./pages/shop/ProductDetail";
 import CartPage from "./pages/CartPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import OrderConfirmation from "./pages/OrderConfirmation";
+import PaymentReturn from "./pages/PaymentReturn";
 import TrackOrder from "./pages/TrackOrder";
 
 import AdminLogin from "./pages/admin/AdminLogin";
@@ -115,6 +116,7 @@ function SiteLayout() {
                 <Route path="/cart" element={<CartPage />} />
                 <Route path="/checkout" element={<CheckoutPage />} />
                 <Route path="/order/:orderNumber/confirmation" element={<OrderConfirmation />} />
+                <Route path="/payment/return" element={<PaymentReturn />} />
                 <Route path="/track-order" element={<TrackOrder />} />
 
                 {/* Customer Account Routes */}

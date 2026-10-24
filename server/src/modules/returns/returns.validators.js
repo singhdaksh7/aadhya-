@@ -37,7 +37,7 @@ export const schedulePickupSchema = z.object({
 
 export const issueRefundSchema = z.object({
   amount: z.coerce.number().positive(),
-  method: z.enum(["razorpay", "manual"]),
+  method: z.enum(["cashfree", "manual"]),
   reference: z.string().max(200).optional(),
   note: z.string().max(1000).optional(),
 });

@@ -35,7 +35,7 @@ git clone https://github.com/singhdaksh7/aadhya- aadya
 cd aadya
 cp .env.production.example .env.production
 # edit .env.production: real DB password, JWT secrets, FRONTEND_URL,
-# ADMIN_*, Razorpay/SMTP keys if available, DOMAIN, TRAEFIK_* if applicable
+# ADMIN_*, SMTP keys if available, DOMAIN, TRAEFIK_* if applicable
 ```
 
 Generate strong secrets:
@@ -101,12 +101,12 @@ Then walk through the smoke test in the final report: homepage, shop,
 product page, cart, register/login, admin login + create product, storefront
 picks it up, checkout preview, order creation, track order, newsletter.
 
-## Webhook URL (Razorpay)
+## Webhook URL (Cashfree)
 
-Configure in the Razorpay dashboard once TEST (or live) keys are set:
+Configure in the Cashfree dashboard (Developers -> Webhooks) once TEST (or live) keys are set in Admin -> Integrations:
 
 ```
-https://api-store.<domain>/api/webhooks/razorpay
+https://api-store.<domain>/api/webhooks/cashfree
 ```
 
 ## Database backup / restore

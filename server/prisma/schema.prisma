@@ -495,7 +495,7 @@ model Order {
   paidAt          DateTime?
   cancelledAt     DateTime?
 
-  paymentMethod   String        @default("razorpay")
+  paymentMethod   String        @default("cashfree")
   codFeeAmount    Decimal       @db.Decimal(10, 2) @default(0)
   shippingZoneId  String?
   billingSameAsShipping Boolean @default(true)
@@ -781,7 +781,7 @@ model OrderAddress {
 model Payment {
   id                String        @id @default(uuid())
   orderId           String
-  provider          String        @default("razorpay")
+  provider          String        @default("cashfree")
   providerOrderId   String?
   providerPaymentId String?
   status            PaymentStatus @default(PENDING)

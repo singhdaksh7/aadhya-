@@ -6,16 +6,8 @@ import { prisma } from "../src/lib/prisma.js";
 import { generateToken, hashToken } from "../src/utils/secureToken.js";
 import { env } from "../src/config/env.js";
 
-let refundMock;
-vi.mock("../src/modules/payments/razorpay.client.js", () => ({
-  isRazorpayConfigured: () => true,
-  getRazorpayConfig: async () => ({ keyId: "key_test", keySecret: "secret_test" }),
-  getRazorpayClient: () => ({
-    payments: {
-      refund: (...args) => refundMock(...args),
-    },
-  }),
-}));
+import { cf, resetCashfree } from "./fakes/cashfree.js";
+vi.mock("../src/modules/payments/cashfree.client.js", async () => (await import("./fakes/cashfree.js")).cashfreeClientMock());
 
 vi.mock("nodemailer", () => ({
   default: { createTransport: () => ({ sendMail: vi.fn(async () => ({ messageId: "mock" })) }) },
@@ -26,7 +18,7 @@ const app = createApp();
 
 beforeEach(async () => {
   await resetDb();
-  refundMock = vi.fn(async () => ({ id: `rfnd_${Math.random().toString(36).slice(2)}` }));
+  resetCashfree();
 });
 
 afterAll(async () => {
@@ -41,14 +33,14 @@ async function seedOrder({
   customerId = null,
   status = "DELIVERED",
   paymentStatus = "PAID",
-  paymentMethod = "razorpay",
+  paymentMethod = "cashfree",
   amount = 1000,
   deliveredDaysAgo = 1,
   items,
 } = {}) {
   const product = await seedTestProduct({ price: amount, stockQuantity: 5 });
   const rawToken = generateToken();
-  const orderNumber = `AAD-TEST-${Math.random().toString(36).slice(2, 8)}`;
+  const orderNumber = `TUS-TEST-${Math.random().toString(36).slice(2, 8)}`;
 
   const order = await prisma.order.create({
     data: {
@@ -82,9 +74,9 @@ async function seedOrder({
       },
       payments: {
         create: {
-          provider: paymentMethod === "cod" ? "cod" : "razorpay",
-          providerOrderId: paymentMethod === "cod" ? null : `order_mock_${Math.random().toString(36).slice(2)}`,
-          providerPaymentId: paymentMethod === "cod" ? null : `pay_mock_${Math.random().toString(36).slice(2)}`,
+          provider: paymentMethod === "cod" ? "cod" : "cashfree",
+          providerOrderId: paymentMethod === "cod" ? null : `cf_order_${Math.random().toString(36).slice(2)}`,
+          providerPaymentId: paymentMethod === "cod" ? null : `cf_pay_${Math.random().toString(36).slice(2)}`,
           status: paymentStatus,
           amount,
         },
@@ -397,17 +389,17 @@ describe("admin return workflow", () => {
     expect(movements).toHaveLength(1);
   });
 
-  it("issues a full refund via razorpay", async () => {
+  it("issues a full refund via Cashfree once Cashfree confirms it", async () => {
     const { returnRequest } = await createReturn();
     await adminPost(`/${returnRequest.id}/approve`);
     await adminPost(`/${returnRequest.id}/schedule-pickup`);
     await adminPost(`/${returnRequest.id}/received`);
 
-    const res = await adminPost(`/${returnRequest.id}/refund`, { amount: 1000, method: "razorpay" });
+    const res = await adminPost(`/${returnRequest.id}/refund`, { amount: 1000, method: "cashfree" });
 
     expect(res.status).toBe(200);
     expect(res.body.data.returnRequest.status).toBe("REFUNDED");
-    expect(refundMock).toHaveBeenCalledTimes(1);
+    expect(cf.calls.createRefund).toBe(1);
 
     const order = await prisma.order.findUnique({ where: { id: returnRequest.orderId } });
     expect(order.paymentStatus).toBe("REFUNDED");
@@ -419,7 +411,7 @@ describe("admin return workflow", () => {
     await adminPost(`/${returnRequest.id}/schedule-pickup`);
     await adminPost(`/${returnRequest.id}/received`);
 
-    const res = await adminPost(`/${returnRequest.id}/refund`, { amount: 400, method: "razorpay" });
+    const res = await adminPost(`/${returnRequest.id}/refund`, { amount: 400, method: "cashfree" });
 
     expect(res.status).toBe(200);
     const order = await prisma.order.findUnique({ where: { id: returnRequest.orderId } });
@@ -432,17 +424,17 @@ describe("admin return workflow", () => {
     await adminPost(`/${returnRequest.id}/schedule-pickup`);
     await adminPost(`/${returnRequest.id}/received`);
 
-    const first = await adminPost(`/${returnRequest.id}/refund`, { amount: 1000, method: "razorpay" });
+    const first = await adminPost(`/${returnRequest.id}/refund`, { amount: 1000, method: "cashfree" });
     expect(first.status).toBe(200);
 
     // Second refund attempt on an already-fully-refunded return: it's no
     // longer in a refundable status, so the state-machine guard rejects it.
-    const second = await adminPost(`/${returnRequest.id}/refund`, { amount: 1000, method: "razorpay" });
+    const second = await adminPost(`/${returnRequest.id}/refund`, { amount: 1000, method: "cashfree" });
     expect(second.status).toBe(409);
-    expect(refundMock).toHaveBeenCalledTimes(1);
+    expect(cf.calls.createRefund).toBe(1);
   });
 
-  it("requires a manual refund method for COD orders and blocks razorpay", async () => {
+  it("requires a manual refund method for COD orders and blocks Cashfree refunds", async () => {
     const { accessToken, customer } = await customerAgent();
     const order = await seedOrder({ customerId: customer.id, status: "DELIVERED", paymentMethod: "cod", paymentStatus: "PAID" });
     const createRes = await request(app)
@@ -454,13 +446,70 @@ describe("admin return workflow", () => {
     await adminPost(`/${returnId}/schedule-pickup`);
     await adminPost(`/${returnId}/received`);
 
-    const blocked = await adminPost(`/${returnId}/refund`, { amount: 1000, method: "razorpay" });
+    const blocked = await adminPost(`/${returnId}/refund`, { amount: 1000, method: "cashfree" });
     expect(blocked.status).toBe(400);
 
     const manual = await adminPost(`/${returnId}/refund`, { amount: 1000, method: "manual", reference: "cash-handback-001" });
     expect(manual.status).toBe(200);
     expect(manual.body.data.refund.method).toBe("manual");
-    expect(refundMock).not.toHaveBeenCalled();
+    expect(cf.calls.createRefund).toBe(0);
+  });
+
+  it("does NOT mark a Cashfree refund as refunded while Cashfree reports it PENDING; syncing settles it", async () => {
+    cf.nextRefundStatus = "PENDING";
+    const { returnRequest } = await createReturn();
+    await adminPost(`/${returnRequest.id}/approve`);
+    await adminPost(`/${returnRequest.id}/schedule-pickup`);
+    await adminPost(`/${returnRequest.id}/received`);
+
+    const res = await adminPost(`/${returnRequest.id}/refund`, { amount: 1000, method: "cashfree" });
+    expect(res.status).toBe(200);
+    expect(res.body.data.refund.status).toBe("PROCESSING");
+    expect(res.body.data.returnRequest.status).toBe("REFUND_PENDING");
+    let order = await prisma.order.findUnique({ where: { id: returnRequest.orderId } });
+    expect(order.paymentStatus).toBe("PAID"); // nothing reported as refunded yet
+
+    // Cashfree still pending: syncing changes nothing.
+    let sync = await adminPost(`/refunds/${res.body.data.refund.id}/sync`);
+    expect(sync.body.data.changed).toBe(false);
+
+    // Cashfree confirms: now it completes.
+    const key = [...cf.refunds.keys()][0];
+    cf.refunds.get(key).refund_status = "SUCCESS";
+    sync = await adminPost(`/refunds/${res.body.data.refund.id}/sync`);
+    expect(sync.body.data.changed).toBe(true);
+    order = await prisma.order.findUnique({ where: { id: returnRequest.orderId } });
+    expect(order.paymentStatus).toBe("REFUNDED");
+    expect((await prisma.returnRequest.findUnique({ where: { id: returnRequest.id } })).status).toBe("REFUNDED");
+
+    // A repeated sync is a no-op.
+    expect((await adminPost(`/refunds/${res.body.data.refund.id}/sync`)).body.data.changed).toBe(false);
+  });
+
+  it("releases the reserved amount when Cashfree rejects a pending refund", async () => {
+    cf.nextRefundStatus = "PENDING";
+    const { returnRequest } = await createReturn();
+    await adminPost(`/${returnRequest.id}/approve`);
+    await adminPost(`/${returnRequest.id}/schedule-pickup`);
+    await adminPost(`/${returnRequest.id}/received`);
+    const res = await adminPost(`/${returnRequest.id}/refund`, { amount: 1000, method: "cashfree" });
+    const key = [...cf.refunds.keys()][0];
+    cf.refunds.get(key).refund_status = "REJECTED";
+    await adminPost(`/refunds/${res.body.data.refund.id}/sync`);
+    const payment = await prisma.payment.findFirst({ where: { orderId: returnRequest.orderId } });
+    expect(Number(payment.refundedAmount)).toBe(0);
+    expect((await prisma.refund.findUnique({ where: { id: res.body.data.refund.id } })).status).toBe("FAILED");
+  });
+
+  it("refuses a refund Cashfree rejects outright, recording nothing", async () => {
+    cf.nextRefundStatus = "REJECTED";
+    const { returnRequest } = await createReturn();
+    await adminPost(`/${returnRequest.id}/approve`);
+    await adminPost(`/${returnRequest.id}/schedule-pickup`);
+    await adminPost(`/${returnRequest.id}/received`);
+    const res = await adminPost(`/${returnRequest.id}/refund`, { amount: 1000, method: "cashfree" });
+    expect(res.status).toBe(400);
+    expect(await prisma.refund.count()).toBe(0);
   });
 
   it("closes a refunded return", async () => {
@@ -468,7 +517,7 @@ describe("admin return workflow", () => {
     await adminPost(`/${returnRequest.id}/approve`);
     await adminPost(`/${returnRequest.id}/schedule-pickup`);
     await adminPost(`/${returnRequest.id}/received`);
-    await adminPost(`/${returnRequest.id}/refund`, { amount: 1000, method: "razorpay" });
+    await adminPost(`/${returnRequest.id}/refund`, { amount: 1000, method: "cashfree" });
 
     const res = await adminPost(`/${returnRequest.id}/close`);
     expect(res.status).toBe(200);
@@ -479,7 +528,7 @@ describe("admin return workflow", () => {
 describe("RTO flow", () => {
   it("restocks on RTO delivered and opens a refund-pending return for a prepaid order", async () => {
     const { handleRtoDelivered } = await import("../src/modules/returns/returns.service.js");
-    const order = await seedOrder({ status: "SHIPPED", paymentStatus: "PAID", paymentMethod: "razorpay" });
+    const order = await seedOrder({ status: "SHIPPED", paymentStatus: "PAID", paymentMethod: "cashfree" });
     const before = await prisma.product.findUnique({ where: { id: order.items[0].productId } });
 
     const result = await handleRtoDelivered(order.id);

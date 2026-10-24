@@ -20,7 +20,7 @@ function ProductPolicyInfo({ product, settings }) {
   const ctx = commercialContext(settings);
   const payments = settings?.payments || {};
   const methods = [
-    payments.razorpayEnabled !== false ? "online (UPI, cards, net banking)" : "",
+    payments.cashfreeEnabled !== false && payments.cashfreeAvailable !== false ? "online (UPI, cards, net banking)" : "",
     payments.codEnabled ? "cash on delivery where available" : "",
   ].filter(Boolean);
   const returns = returnWindowLabel(ctx);

@@ -47,7 +47,7 @@ describe("GET /api/admin/health", () => {
     expect(res.body.data).toHaveProperty("storage.books");
     expect(res.body.data).toHaveProperty("storage.invoices");
     expect(res.body.data).toHaveProperty("email.smtpConfigured");
-    expect(res.body.data).toHaveProperty("integrations.razorpay.configured");
+    expect(res.body.data).toHaveProperty("integrations.cashfree.configured");
     expect(res.body.data).toHaveProperty("integrations.shiprocket.configured");
     expect(res.body.data).toHaveProperty("backup");
     expect(typeof res.body.data.storage.uploads).toBe("boolean");

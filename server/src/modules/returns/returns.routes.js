@@ -128,6 +128,14 @@ adminReturnRouter.post(
   })
 );
 
+// Settles a PROCESSING Cashfree refund against Cashfree's own status (:id is the refund row id).
+adminReturnRouter.post(
+  "/refunds/:refundId/sync",
+  asyncHandler(async (req, res) => {
+    ok(res, await returnsService.syncCashfreeRefund(req.params.refundId, req.admin.id));
+  })
+);
+
 adminReturnRouter.post(
   "/:id/close",
   asyncHandler(async (req, res) => {

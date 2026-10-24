@@ -1,36 +1,24 @@
 import { describe, it, expect, beforeEach, afterAll } from "vitest";
-import crypto from "node:crypto";
 import request from "supertest";
 import { resetDb, seedTestProduct, seedTestAdmin, VALID_CUSTOMER, VALID_ADDRESS } from "./helpers.js";
 import { prisma } from "../src/lib/prisma.js";
-import { env } from "../src/config/env.js";
 
-let orderCounter = 0;
 import { vi } from "vitest";
-vi.mock("../src/modules/payments/razorpay.client.js", () => ({
-  isRazorpayConfigured: () => true,
-  getRazorpayConfig: async () => ({ keyId: env.razorpay.keyId, keySecret: env.razorpay.keySecret, webhookSecret: env.razorpay.webhookSecret }),
-  getRazorpayClient: () => ({
-    orders: { create: vi.fn(async () => ({ id: `order_mock_${++orderCounter}` })) },
-  }),
-}));
+import { resetCashfree, cfPay } from "./fakes/cashfree.js";
+vi.mock("../src/modules/payments/cashfree.client.js", async () => (await import("./fakes/cashfree.js")).cashfreeClientMock());
 
 const { createApp } = await import("../src/app.js");
 const app = createApp();
 
 beforeEach(async () => {
   await resetDb();
-  orderCounter = 0;
+  resetCashfree();
 });
 
 afterAll(async () => {
   await resetDb();
   await prisma.$disconnect();
 });
-
-function signPayment(razorpayOrderId, razorpayPaymentId) {
-  return crypto.createHmac("sha256", env.razorpay.keySecret).update(`${razorpayOrderId}|${razorpayPaymentId}`).digest("hex");
-}
 
 async function placeAndPayOrder(overrides = {}) {
   const product = overrides.product || (await seedTestProduct({ price: 500, stockQuantity: 10 }));
@@ -44,14 +32,9 @@ async function placeAndPayOrder(overrides = {}) {
     });
   const { orderId, orderNumber } = created.body.data;
   const pay = await request(app).post(`/api/orders/${orderId}/payment`);
-  const razorpayOrderId = pay.body.data.razorpayOrderId;
-  const paymentId = `pay_${orderId}`;
-  const signature = signPayment(razorpayOrderId, paymentId);
-  await request(app).post("/api/payments/razorpay/verify").send({
-    razorpay_order_id: razorpayOrderId,
-    razorpay_payment_id: paymentId,
-    razorpay_signature: signature,
-  });
+  const { cashfreeOrderId } = pay.body.data;
+  cfPay(cashfreeOrderId);
+  await request(app).post("/api/payments/cashfree/verify").send({ cashfreeOrderId });
   return { orderId, orderNumber, product };
 }
 
@@ -102,13 +85,12 @@ describe("Purchase events are server-authoritative", () => {
       .send({ customer: VALID_CUSTOMER, shippingAddress: VALID_ADDRESS, items: [{ slug: product.slug, quantity: 1 }] });
     const { orderId } = created.body.data;
     const pay = await request(app).post(`/api/orders/${orderId}/payment`);
-    const razorpayOrderId = pay.body.data.razorpayOrderId;
-    const paymentId = "pay_dup";
-    const signature = signPayment(razorpayOrderId, paymentId);
-    const body = { razorpay_order_id: razorpayOrderId, razorpay_payment_id: paymentId, razorpay_signature: signature };
+    const { cashfreeOrderId } = pay.body.data;
+    cfPay(cashfreeOrderId);
+    const body = { cashfreeOrderId };
 
-    await request(app).post("/api/payments/razorpay/verify").send(body);
-    await request(app).post("/api/payments/razorpay/verify").send(body); // second call is a no-op
+    await request(app).post("/api/payments/cashfree/verify").send(body);
+    await request(app).post("/api/payments/cashfree/verify").send(body); // second call is a no-op
 
     const purchaseEvents = await prisma.analyticsEvent.findMany({ where: { type: "purchase", orderId } });
     expect(purchaseEvents).toHaveLength(1);

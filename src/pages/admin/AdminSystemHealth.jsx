@@ -77,7 +77,7 @@ export default function AdminSystemHealth() {
             <h2 className="text-sm font-semibold text-gray-500 uppercase">Integrations</h2>
             <div className="flex flex-wrap gap-2">
               <ConfigPill configured={health.email?.smtpConfigured} label="SMTP" />
-              <ConfigPill configured={health.integrations?.razorpay?.configured} label="Razorpay" />
+              <ConfigPill configured={health.integrations?.cashfree?.configured} label="Cashfree" />
               <ConfigPill configured={health.integrations?.shiprocket?.configured} label="Shiprocket" />
             </div>
           </section>

@@ -1,5 +1,5 @@
 // All money in the database and in service-layer math is Decimal rupees
-// (matching Product.price's existing convention). Razorpay's API speaks in
+// (matching Product.price's existing convention). Payment gateway APIs may speak in
 // integer paise, so these two helpers are the only place that boundary is
 // crossed — never do ad-hoc float math on money anywhere else.
 export function rupeesToPaise(rupees) {

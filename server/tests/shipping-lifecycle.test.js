@@ -66,16 +66,16 @@ function mockShipmentCreated(overrides = {}) {
 }
 
 // Places a physical-eligible order directly via the HTTP layer (mirrors the
-// real checkout flow), then marks its Razorpay payment "paid" by driving
+// real checkout flow), then marks its online payment "paid" by driving
 // finalizePaidPayment the same way the verify endpoint / webhook would.
 async function placePrepaidOrder(items, address = VALID_ADDRESS) {
   const res = await request(app)
     .post("/api/orders")
-    .send({ customer: VALID_CUSTOMER, shippingAddress: address, items, paymentMethod: "razorpay" });
+    .send({ customer: VALID_CUSTOMER, shippingAddress: address, items, paymentMethod: "cashfree" });
   expect(res.status).toBe(201);
   const orderId = res.body.data.orderId;
   const payment = await prisma.payment.findFirst({ where: { orderId } });
-  await prisma.payment.update({ where: { id: payment.id }, data: { providerOrderId: `rzp_order_${orderId}` } });
+  await prisma.payment.update({ where: { id: payment.id }, data: { providerOrderId: `cf_order_${orderId}` } });
   return orderId;
 }
 
@@ -83,8 +83,8 @@ async function payOrder(orderId) {
   const payment = await prisma.payment.findFirst({ where: { orderId } });
   return finalizePaidPayment({
     providerOrderId: payment.providerOrderId,
-    providerPaymentId: `rzp_pay_${orderId}`,
-    method: "razorpay",
+    providerPaymentId: `cf_pay_${orderId}`,
+    method: "upi",
   });
 }
 
@@ -115,7 +115,7 @@ afterAll(async () => {
 });
 
 describe("shipment lifecycle triggers", () => {
-  it("triggers an automatic shipment attempt when a prepaid (Razorpay) order is paid", async () => {
+  it("triggers an automatic shipment attempt when a prepaid (online) order is paid", async () => {
     await enableAutoShipment();
     const product = await seedTestProduct({ price: 500, stockQuantity: 10 });
     const orderId = await placePrepaidOrder([{ slug: product.slug, quantity: 1 }]);

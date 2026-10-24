@@ -113,12 +113,12 @@ export function get5xxCountLast5Min() {
 export async function getInternalHealth() {
   const targets = storageTargets();
 
-  const [dbOk, uploadsWritable, booksWritable, invoicesWritable, razorpay, shiprocket] = await Promise.all([
+  const [dbOk, uploadsWritable, booksWritable, invoicesWritable, cashfree, shiprocket] = await Promise.all([
     checkDatabase(),
     checkDirWritable(targets.uploads),
     checkDirWritable(targets.books),
     checkDirWritable(targets.invoices),
-    checkIntegration("RAZORPAY"),
+    checkIntegration("CASHFREE"),
     checkIntegration("SHIPROCKET"),
   ]);
 
@@ -149,7 +149,7 @@ export async function getInternalHealth() {
     },
     email: { smtpConfigured: (await getSmtpConfig()).configured },
     integrations: {
-      razorpay: { configured: env.razorpay.isConfigured || razorpay.configured, lastTestStatus: razorpay.lastTestStatus },
+      cashfree: { configured: cashfree.configured, lastTestStatus: cashfree.lastTestStatus },
       shiprocket: { configured: shiprocket.configured, lastTestStatus: shiprocket.lastTestStatus },
     },
     backup,
