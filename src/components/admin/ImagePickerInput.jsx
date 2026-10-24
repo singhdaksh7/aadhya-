@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import MediaPicker from "../cms/MediaPicker";
 import ImageCropModal from "./ImageCropModal";
 import { resolveProductImageUrl, adminUploadMedia } from "../../lib/api";
+import { recommendedImageSize } from "../../lib/imageSizeGuide";
 
 /**
  * Shared wrapper around the existing MediaPicker/Media Library component for
@@ -29,6 +30,8 @@ export default function ImagePickerInput({
   enableCrop = false,
   aspect = null,
   aspectOptions,
+  // Override the auto-derived recommendation (e.g. "1080 × 1080 px").
+  sizeHint,
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [cropOpen, setCropOpen] = useState(false);
@@ -54,6 +57,9 @@ export default function ImagePickerInput({
   return (
     <div>
       {label && <label className="text-xs font-semibold text-charcoal-soft">{label}</label>}
+      <p data-testid="image-size-hint" className="mt-0.5 text-[11px] text-charcoal-soft">
+        Recommended size: <span className="font-semibold">{sizeHint || recommendedImageSize(label)}</span>
+      </p>
       <div className="mt-1 flex items-center gap-3">
         {value ? (
           <img
