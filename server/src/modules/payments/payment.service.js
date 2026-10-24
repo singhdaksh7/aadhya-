@@ -11,7 +11,7 @@ import {
   CashfreeError,
   CHECKOUT_MODE,
 } from "./cashfree.client.js";
-import { notifyOrderEvent } from "../notifications/notification.service.js";
+import { notifyOrderEvent } from "../mailer/mailer.service.js";
 import { ensureAccountForOrder } from "../customer-auth/guest-account.service.js";
 import { recordPurchaseEvent } from "../analytics/analytics.service.js";
 import { decrementStockForOrder, runPendingLowStockChecks } from "../orders/stock.js";

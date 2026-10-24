@@ -234,7 +234,7 @@ export async function retryEmailLog(emailLogId, adminId) {
   if (!["FAILED", "SKIPPED"].includes(log.status)) throw ApiError.badRequest("Only a failed or skipped email can be retried.");
 
   if (log.notificationId) {
-    const { retryNotification } = await import("../notifications/notification.service.js");
+    const { retryNotification } = await import("../mailer/mailer.service.js");
     return retryNotification(log.notificationId, adminId);
   }
   if (!RESENDABLE_TYPES.has(log.type)) throw ApiError.badRequest(`Emails of type ${log.type} cannot be retried from here.`);

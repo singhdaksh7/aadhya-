@@ -7,9 +7,9 @@ import { prisma } from "../../lib/prisma.js";
 import { ApiError } from "../../utils/ApiError.js";
 import { getEmailStatus, sendTestEmail, getEmailHealthSummary, retryEmailLog, getSmtpConfig } from "./email.service.js";
 import { getCredentialRaw, saveCredential, deleteCredential } from "../integrations/credential.service.js";
-import { EMAIL_TEMPLATES, TEMPLATE_VARIABLES } from "../notifications/templates.js";
-import { listTemplates, previewTemplate, validateTemplateInput, retryNotification, getBrand, loadTemplate } from "../notifications/notification.service.js";
-import { composeEmail } from "../notifications/render.js";
+import { EMAIL_TEMPLATES, TEMPLATE_VARIABLES } from "../mailer/templates.js";
+import { listTemplates, previewTemplate, validateTemplateInput, retryNotification, getBrand, loadTemplate } from "../mailer/mailer.service.js";
+import { composeEmail } from "../mailer/render.js";
 import { deliverEmail } from "./email.service.js";
 
 export const adminEmailRouter = Router();

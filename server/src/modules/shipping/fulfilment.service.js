@@ -1,6 +1,6 @@
 import { prisma } from "../../lib/prisma.js";
 import { getShippingProvider } from "./provider.service.js";
-import { notifyOrderEvent } from "../notifications/notification.service.js";
+import { notifyOrderEvent } from "../mailer/mailer.service.js";
 import { ApiError } from "../../utils/ApiError.js";
 
 // Required before any provider (non-MANUAL) shipment-create call is allowed

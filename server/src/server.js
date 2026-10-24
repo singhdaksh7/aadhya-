@@ -1,6 +1,6 @@
 import { createApp } from "./app.js";
 import { env } from "./config/env.js";
-import { retryDueNotifications } from "./modules/notifications/notification.service.js";
+import { retryDueNotifications } from "./modules/mailer/mailer.service.js";
 
 const app = createApp();
 

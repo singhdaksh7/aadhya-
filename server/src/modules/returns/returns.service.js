@@ -3,7 +3,7 @@ import { ApiError } from "../../utils/ApiError.js";
 import { getCashfreeConfig, createCashfreeRefund, fetchCashfreeRefund, CashfreeError } from "../payments/cashfree.client.js";
 import { round2 } from "../../utils/money.js";
 import { sendReturnStatusEmail } from "../email/email.service.js";
-import { notifyOrderEvent } from "../notifications/notification.service.js";
+import { notifyOrderEvent } from "../mailer/mailer.service.js";
 
 const DEFAULT_RETURN_SETTINGS = {
   enabled: true,

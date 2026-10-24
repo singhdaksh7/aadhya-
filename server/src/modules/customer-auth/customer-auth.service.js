@@ -1,4 +1,4 @@
-import { notifyAccountCreated } from "../notifications/notification.service.js";
+import { notifyAccountCreated } from "../mailer/mailer.service.js";
 import crypto from "node:crypto";
 import { env } from "../../config/env.js";
 import { prisma } from "../../lib/prisma.js";

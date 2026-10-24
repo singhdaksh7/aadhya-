@@ -11,7 +11,8 @@ vi.mock("nodemailer", () => ({
 
 const { createApp } = await import("../src/app.js");
 const { prisma } = await import("../src/lib/prisma.js");
-const { sendOrderConfirmationEmail } = await import("../src/modules/email/email.service.js");
+const { notifyOrderEvent } = await import("../src/modules/mailer/mailer.service.js");
+const sendOrderConfirmationEmail = (orderId) => notifyOrderEvent(orderId, "ORDER_PLACED", { source: "SYSTEM" });
 const { resetDb, registerCustomer, seedTestProduct, VALID_ADDRESS } = await import("./helpers.js");
 
 const app = createApp();
@@ -31,13 +32,15 @@ afterAll(async () => {
 describe("password reset email", () => {
   it("sends to the correct recipient with the correct subject, reset URL, and expiry wording", async () => {
     const { customer, credentials } = await registerCustomer(app, { email: "reset-target@test.local" });
+    sendMailMock.mockClear(); // registration sends its own welcome email
     await request(app).post("/api/auth/forgot-password").send({ email: credentials.email });
     expect(sendMailMock).toHaveBeenCalledTimes(1);
     const call = sendMailMock.mock.calls[0][0];
     expect(call.to).toBe(customer.email);
     expect(call.subject).toBe("Reset your Tushaqsa password");
     expect(call.html).toContain("/reset-password?token=");
-    expect(call.html).toContain("expires in one hour");
+    expect(call.html).toContain("one hour");
+    expect(call.text).toContain("/reset-password?token=");
   });
 
   it("does not send an email for an unknown address (enumeration-safe)", async () => {
@@ -60,6 +63,9 @@ describe("order confirmation email", () => {
     const call = sendMailMock.mock.calls[0][0];
     expect(call.to).toBe(customer.email);
     expect(call.subject).toContain(order.body.data.orderNumber);
+    // sending the same confirmation again is a deduplicated no-op
+    await sendOrderConfirmationEmail(order.body.data.orderId);
+    expect(sendMailMock).toHaveBeenCalledTimes(1);
     expect(call.html).toContain(`/account/orders/${encodeURIComponent(order.body.data.orderNumber)}`);
   });
 

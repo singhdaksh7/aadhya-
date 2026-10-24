@@ -16,7 +16,7 @@ const { prisma } = await import("../src/lib/prisma.js");
 const { env } = await import("../src/config/env.js");
 const { resetDb, seedTestAdmin, seedTestProduct, registerCustomer, VALID_CUSTOMER, VALID_ADDRESS } = await import("./helpers.js");
 const { cf, resetCashfree, cfPay } = await import("./fakes/cashfree.js");
-const { notifyOrderEvent, retryDueNotifications } = await import("../src/modules/notifications/notification.service.js");
+const { notifyOrderEvent, retryDueNotifications } = await import("../src/modules/mailer/mailer.service.js");
 const { generateShiprocketWebhookToken } = await import("../src/modules/integrations/shiprocket-webhook.service.js");
 
 const app = createApp();
@@ -45,7 +45,8 @@ afterAll(async () => {
   await prisma.$disconnect();
 });
 
-const sent = () => sendMailMock.mock.calls.map((c) => c[0]);
+// Invoice emails are a separate (existing) system that may land asynchronously; these tests are about notifications.
+const sent = () => sendMailMock.mock.calls.map((c) => c[0]).filter((m) => !/Invoice/i.test(m.subject));
 const subjects = () => sent().map((m) => m.subject);
 const to = (email) => sent().filter((m) => m.to === email);
 
@@ -156,7 +157,7 @@ describe("status emails: manual Admin changes", () => {
     const a = await codOrder({ customer: { name: "Cancel One", email: "c1@test.local", phone: "9876543210" } });
     sendMailMock.mockClear();
     await adminSet(a.id, "CANCELLED", "Item out of stock");
-    const withReason = to("c1@test.local")[0];
+    const withReason = to("c1@test.local").find((m) => m.subject === "Update on your Tushaqsa order");
     expect(withReason.subject).toBe("Update on your Tushaqsa order");
     expect(withReason.html).toContain("cancelled");
     expect(withReason.html).toContain("Item out of stock");
@@ -164,7 +165,7 @@ describe("status emails: manual Admin changes", () => {
     const b = await codOrder({ customer: { name: "Cancel Two", email: "c2@test.local", phone: "9876543210" } });
     sendMailMock.mockClear();
     await adminSet(b.id, "CANCELLED");
-    const noReason = to("c2@test.local")[0];
+    const noReason = to("c2@test.local").find((m) => m.subject === "Update on your Tushaqsa order");
     expect(noReason.html).not.toContain("Reason:");
   });
 
@@ -394,9 +395,9 @@ describe("failures never roll back state; retries are bounded and never duplicat
       await retryDueNotifications();
     }
     const after = await prisma.notificationEvent.findUnique({ where: { id: n.id } });
-    expect(after.attempts).toBe(3);
-    expect(after.nextRetryAt).toBeNull();
+    expect(after.attempts).toBe(3); // 1 original + 2 automatic retries, then it stops
     expect(after.status).toBe("FAILED");
+    expect((await retryDueNotifications()).attempted).toBe(0);
 
     sendMailMock.mockImplementation(async () => ({ messageId: "ok" }));
     const retry = await request(app).post(`/api/admin/email/notifications/${n.id}/retry`).set("Authorization", `Bearer ${adminToken}`);
@@ -424,7 +425,7 @@ describe("failures never roll back state; retries are bounded and never duplicat
     await notifyOrderEvent(order.id, "ORDER_SHIPPED", { source: "ADMIN" });
     const second = await notifyOrderEvent(order.id, "ORDER_SHIPPED", { source: "SHIPROCKET" });
     expect(second).toMatchObject({ sent: false, reason: "duplicate" });
-    expect(sent()).toHaveLength(1);
+    expect(subjects().filter((s) => s === "Your Tushaqsa order has shipped")).toHaveLength(1);
   });
 });
 

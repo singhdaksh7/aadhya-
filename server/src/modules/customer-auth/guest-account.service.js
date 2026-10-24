@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import { prisma } from "../../lib/prisma.js";
 import { hashPassword } from "../../utils/password.js";
 import { normalizeIndianPhone } from "./customer-auth.validators.js";
-import { notifyAccountCreated } from "../notifications/notification.service.js";
+import { notifyAccountCreated } from "../mailer/mailer.service.js";
 
 const isUniqueViolation = (error) => error?.code === "P2002";
 

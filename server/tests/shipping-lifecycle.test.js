@@ -265,7 +265,7 @@ describe("shipment idempotency", () => {
     // No customerId on a guest COD order in this test, so no notification
     // rows are expected either way; the important assertion is the email.
     void notifications;
-    const emailLogs = await prisma.emailLog.findMany({ where: { orderId, type: "IN_TRANSIT_EMAIL", status: "SENT" } });
+    const emailLogs = await prisma.emailLog.findMany({ where: { orderId, type: "ORDER_SHIPPED", status: "SENT" } });
     expect(emailLogs).toHaveLength(1);
   });
 });
@@ -389,8 +389,8 @@ describe("shipping status customer communication", () => {
 
     expect(shippingStatusEmailCalls()).toHaveLength(3);
     const sentLogs = await prisma.emailLog.findMany({ where: { orderId, status: "SENT" } });
-    const shippingLogTypes = sentLogs.map((l) => l.type).filter((t) => t.endsWith("_EMAIL"));
-    expect(shippingLogTypes.sort()).toEqual(["DELIVERED_EMAIL", "IN_TRANSIT_EMAIL", "OUT_FOR_DELIVERY_EMAIL"]);
+    const shippingLogTypes = sentLogs.map((l) => l.type).filter((t) => ["ORDER_SHIPPED", "ORDER_OUT_FOR_DELIVERY", "ORDER_DELIVERED"].includes(t));
+    expect(shippingLogTypes.sort()).toEqual(["ORDER_DELIVERED", "ORDER_OUT_FOR_DELIVERY", "ORDER_SHIPPED"]);
   });
 
   it("does not send a second email or duplicate notification for a repeated webhook of the same status", async () => {
@@ -401,7 +401,7 @@ describe("shipping status customer communication", () => {
     await applyTrackingUpdate({ provider: "MOCK", providerShipmentId: shipment.providerShipmentId, rawStatus: "in_transit" });
 
     expect(shippingStatusEmailCalls()).toHaveLength(1);
-    const sentLogs = await prisma.emailLog.findMany({ where: { orderId, type: "IN_TRANSIT_EMAIL", status: "SENT" } });
+    const sentLogs = await prisma.emailLog.findMany({ where: { orderId, type: "ORDER_SHIPPED", status: "SENT" } });
     expect(sentLogs).toHaveLength(1);
   });
 });

@@ -9,7 +9,7 @@ import { round2 } from "../../utils/money.js";
 import crypto from "node:crypto";
 import { ensureInvoiceForOrder } from "../invoices/invoice.service.js";
 import { sendInvoiceEmail } from "../email/email.service.js";
-import { notifyOrderEvent, notifyOrderStatus } from "../notifications/notification.service.js";
+import { notifyOrderEvent, notifyOrderStatus } from "../mailer/mailer.service.js";
 import { ensureAccountForOrder } from "../customer-auth/guest-account.service.js";
 import { getShippingProvider } from "../shipping/provider.service.js";
 import { attemptAutomaticShipment, assertPickupConfigured, generateAwbForShipment, schedulePickupForShipment, getLabelForShipment, refreshTrackingForShipment, sanitizeProviderError } from "../shipping/fulfilment.service.js";

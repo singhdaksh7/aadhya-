@@ -84,6 +84,7 @@ describe("one-time email login code", () => {
     const created = await createGuestOrder(email);
     const order = await prisma.order.findUnique({ where: { orderNumber: created.orderNumber } });
     await ensureAccountForOrder(order.id);
+    sendMailMock.mockClear(); // the welcome email for the new account is covered in email-automation.test.js
     return prisma.customer.findUnique({ where: { email } });
   }
 
