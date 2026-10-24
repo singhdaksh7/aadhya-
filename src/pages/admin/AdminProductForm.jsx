@@ -372,6 +372,7 @@ export default function AdminProductForm() {
           {isEdit ? (
             <fieldset className="rounded-2xl border border-charcoal/10 p-4">
               <legend className="px-2 text-xs font-medium uppercase tracking-wide text-charcoal-soft">Product Images</legend>
+              <p className="mb-2 text-[11px] text-charcoal-soft">Recommended size: <span className="font-semibold">1080 × 1080 px (square)</span>, JPG, PNG or WebP.</p>
               <input type="file" accept="image/jpeg,image/png,image/webp" onChange={onUploadImage} className="text-sm" />
               {images.length > 0 && (
                 <ul className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-4">

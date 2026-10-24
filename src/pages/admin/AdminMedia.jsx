@@ -132,6 +132,7 @@ export default function AdminMedia() {
       {/* Upload Box */}
       <div className="bg-white p-5 rounded-2xl border border-charcoal/10 shadow-sm space-y-3">
         <h3 className="font-serif-display text-base text-charcoal">Upload New Image</h3>
+        <p className="text-[11px] text-charcoal-soft">Recommended size: <span className="font-semibold">1080 × 1080 px (square)</span>, JPG, PNG or WebP. Banners: 1920 × 700 px desktop, 1080 × 1350 px mobile.</p>
         <form onSubmit={handleUpload} className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
           <div>
             <label className="block text-[11px] font-semibold uppercase text-charcoal-soft mb-1">

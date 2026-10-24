@@ -237,6 +237,7 @@ export default function MediaPicker({ isOpen, onClose, onSelect, title = "Select
                 <label htmlFor="media-picker-file" className="block text-xs font-semibold uppercase tracking-wider text-charcoal-soft mb-2">
                   Select Image File (JPEG, PNG, WebP)
                 </label>
+                <p className="mb-2 text-[11px] text-charcoal-soft">Recommended size: <span className="font-semibold">1080 × 1080 px (square)</span>. Banners and other fields show their own size above the field.</p>
                 <input
                   id="media-picker-file"
                   type="file"
