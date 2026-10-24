@@ -158,3 +158,31 @@ describe("Footer developer credit", () => {
     expect(credit.textContent).not.toContain("Someone Else");
   });
 });
+
+describe("Footer logo sizing", () => {
+  const settingsWith = () => ({
+    ...mockSettings,
+    branding: {},
+    footer: { footerLogo: "/uploads/products/footer-logo.png", footerLogoWidth: 300, footerLogoHeight: 120, footerLogoWidthMobile: 200, footerLogoStyle: "WHITE_SILHOUETTE" },
+  });
+
+  it("honors admin desktop width/height, has no brightness filter, and applies the chosen style", () => {
+    mockSettings = settingsWith();
+    const { container } = renderFooter();
+    const img = container.querySelector("footer img");
+    expect(img.style.width).toBe("300px");
+    expect(img.style.height).toBe("120px");
+    expect(img.style.maxWidth).toBe("100%");
+    expect(img.className).not.toMatch(/brightness-200/);
+    expect(img.className).toMatch(/invert/);
+  });
+
+  it("uses the mobile size on small screens", () => {
+    mockSettings = settingsWith();
+    const orig = window.matchMedia;
+    window.matchMedia = () => ({ matches: false, addEventListener() {}, removeEventListener() {} });
+    const { container } = renderFooter();
+    window.matchMedia = orig;
+    expect(container.querySelector("footer img").style.width).toBe("200px");
+  });
+});

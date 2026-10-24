@@ -65,6 +65,12 @@ export const DEFAULT_SITE_SETTINGS = {
   footer: {
     brandDescription: "Tushaqsa is a premium Indian home decor and lifestyle brand. We create and curate objects for thoughtful living — celebrating slow craft, natural minerals, and artisan traditions.",
     footerLogo: "",
+    // Footer logo sizing (px, 0 = auto) and legibility on the dark footer.
+    footerLogoWidth: 0,
+    footerLogoHeight: 0,
+    footerLogoWidthMobile: 0,
+    footerLogoHeightMobile: 0,
+    footerLogoStyle: "ORIGINAL",
     newsletterVisibility: true,
     newsletterTitle: "Join the Tushaqsa Inner Circle",
     newsletterSubtitle: "Receive invitations to private seasonal edits, monograph previews, and artisan stories.",
