@@ -375,7 +375,9 @@ export default function AdminIntegrations() {
           <table className="admin-table w-full text-xs">
             <thead>
               <tr>
-                <th className="text-left">Type</th>
+                <th className="text-left">Audience</th>
+                <th className="text-left">Event</th>
+                <th className="text-left">Order</th>
                 <th className="text-left">Recipient</th>
                 <th className="text-left">Status</th>
                 <th className="text-left">Sent / created</th>
@@ -386,14 +388,16 @@ export default function AdminIntegrations() {
             <tbody>
               {emailLogs.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="py-3 text-charcoal-soft">
+                  <td colSpan={8} className="py-3 text-charcoal-soft">
                     No email activity yet.
                   </td>
                 </tr>
               )}
               {emailLogs.map((log) => (
                 <tr key={log.id}>
-                  <td>{log.type}</td>
+                  <td><StatusBadge value={log.audience === "ADMIN" ? "Admin" : "Customer"} tone={log.audience === "ADMIN" ? "info" : "neutral"} /></td>
+                  <td>{String(log.event || log.type).replace(/^ADMIN_/, "").replace(/_/g, " ")}</td>
+                  <td>{log.orderNumber || "—"}</td>
                   <td>{log.recipient}</td>
                   <td>
                     <StatusBadge
@@ -406,7 +410,7 @@ export default function AdminIntegrations() {
                     {log.failureMessage || "—"}
                   </td>
                   <td>
-                    {["FAILED", "SKIPPED"].includes(log.status) && ["ORDER_CONFIRMATION", "INVOICE", "INVOICE_RESEND", "IN_TRANSIT_EMAIL", "OUT_FOR_DELIVERY_EMAIL", "DELIVERED_EMAIL"].includes(log.type) ? (
+                    {["FAILED", "SKIPPED"].includes(log.status) && (log.notificationId || ["INVOICE", "INVOICE_RESEND"].includes(log.type)) ? (
                       <button
                         type="button"
                         className="admin-btn admin-btn--ghost"

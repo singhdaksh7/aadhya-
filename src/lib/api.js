@@ -436,6 +436,11 @@ export function adminGetEmailLogs(params = {}) {
   const query = new URLSearchParams(Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== ""))).toString();
   return api.get(`/admin/email/logs${query ? `?${query}` : ""}`, { auth: "admin" });
 }
+export function adminGetAdminNotifications() { return api.get("/admin/email/admin-notifications", { auth: "admin" }); }
+export function adminSaveAdminNotificationEvents(events) { return api.put("/admin/email/admin-notifications/events", { events }, { auth: "admin" }); }
+export function adminAddAdminNotificationRecipient(email) { return api.post("/admin/email/admin-notifications/recipients", { email }, { auth: "admin" }); }
+export function adminSetAdminNotificationRecipientEnabled(id, enabled) { return api.patch(`/admin/email/admin-notifications/recipients/${id}`, { enabled }, { auth: "admin" }); }
+export function adminRemoveAdminNotificationRecipient(id) { return api.delete(`/admin/email/admin-notifications/recipients/${id}`, { auth: "admin" }); }
 export function adminRetryEmailLog(id) { return api.post(`/admin/email/logs/${id}/retry`, {}, { auth: "admin" }); }
 export function adminGetShippingBusiness() { return api.get("/admin/shipping/business", { auth: "admin" }); }
 export function adminSaveShippingBusiness(data) { return api.put("/admin/shipping/business", data, { auth: "admin" }); }

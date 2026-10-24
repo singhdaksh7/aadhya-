@@ -94,7 +94,7 @@ export default function AdminEmailTemplates() {
       <div className="grid gap-5 lg:grid-cols-[260px_1fr]">
         <AdminCard title="Emails">
           <ul className="space-y-1" aria-label="Email templates">
-            {templates.map((t) => (
+            {[...templates].sort((a, b) => (a.audience === "admin") - (b.audience === "admin")).map((t) => (
               <li key={t.key}>
                 <button
                   type="button"
@@ -103,7 +103,7 @@ export default function AdminEmailTemplates() {
                   className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm ${t.key === selected ? "bg-charcoal text-white" : "hover:bg-charcoal/5"}`}
                 >
                   <span>{t.label}</span>
-                  <span className={`text-[10px] uppercase ${t.enabled ? "opacity-70" : "text-terracotta"}`}>{t.enabled ? (t.customized ? "edited" : "on") : "off"}</span>
+                  <span className={`text-[10px] uppercase ${t.enabled ? "opacity-70" : "text-terracotta"}`}>{t.audience === "admin" ? (t.customized ? "edited" : "internal") : t.enabled ? (t.customized ? "edited" : "on") : "off"}</span>
                 </button>
               </li>
             ))}
@@ -114,7 +114,7 @@ export default function AdminEmailTemplates() {
           <div className="space-y-5">
             <AdminCard
               title={current.label}
-              subtitle={current.locked ? "Security email: always sent" : undefined}
+              subtitle={current.audience === "admin" ? "Internal email to your alert recipients. Choose which events send it in Admin Email Alerts." : current.locked ? "Security email: always sent" : undefined}
               actions={<StatusBadge value={current.enabled ? "Enabled" : "Disabled"} tone={current.enabled ? "success" : "neutral"} />}
             >
               <div className="space-y-3">
@@ -142,7 +142,7 @@ export default function AdminEmailTemplates() {
                 <div className="flex flex-wrap gap-2">
                   <button type="button" className="admin-btn admin-btn--primary" onClick={save} disabled={busy === "save"}>Save</button>
                   <button type="button" className="admin-btn" onClick={refreshPreview} disabled={busy === "preview"}>Preview</button>
-                  {!current.locked && (
+                  {!current.locked && current.audience !== "admin" && (
                     <button type="button" className="admin-btn" onClick={toggle} disabled={busy === "toggle"}>
                       {current.enabled ? "Switch off" : "Switch on"}
                     </button>
