@@ -157,7 +157,7 @@ describe("POST /api/admin/email/logs/:id/retry", () => {
         billingAddress: { fullName: "Retry Buyer", addressLine1: "1 Test St", city: "Test City", state: "TS", postalCode: "000000", country: "IN" },
         subtotal: 500,
         totalAmount: 500,
-        companySnapshot: { name: "Aadya Society" },
+        companySnapshot: { name: "Tushaqsa" },
         itemsSnapshot: [{ name: "Test item", quantity: 1, lineTotal: 500 }],
       },
     });

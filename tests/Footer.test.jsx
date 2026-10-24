@@ -93,33 +93,33 @@ describe("Footer", () => {
 
   it("falls back to the primary logo when no dedicated footer logo is set", () => {
     mockSettings = {
-      general: { storeName: "Aadya" },
+      general: { storeName: "Tushaqsa" },
       footer: { socialHeading: "Connect With Us" },
       social: {},
       branding: { desktopLogo: "/uploads/products/logo.png" },
     };
     renderFooter();
 
-    const img = screen.getByAltText("Aadya");
+    const img = screen.getByAltText("Tushaqsa");
     expect(img.getAttribute("src")).toMatch(/\/uploads\/products\/logo\.png$/);
   });
 
   it("prefers a dedicated footer logo over the primary logo when both are set", () => {
     mockSettings = {
-      general: { storeName: "Aadya" },
+      general: { storeName: "Tushaqsa" },
       footer: { socialHeading: "Connect With Us", footerLogo: "/uploads/products/footer-logo.png" },
       social: {},
       branding: { desktopLogo: "/uploads/products/logo.png" },
     };
     renderFooter();
 
-    const img = screen.getByAltText("Aadya");
+    const img = screen.getByAltText("Tushaqsa");
     expect(img.getAttribute("src")).toMatch(/\/uploads\/products\/footer-logo\.png$/);
   });
 
   it("falls back to the text wordmark when neither logo is set", () => {
     mockSettings = {
-      general: { storeName: "Aadya" },
+      general: { storeName: "Tushaqsa" },
       footer: { socialHeading: "Connect With Us" },
       social: {},
       branding: {},

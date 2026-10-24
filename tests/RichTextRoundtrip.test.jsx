@@ -8,7 +8,7 @@ describe("Rich Text Editor Formatting Roundtrip Test", () => {
   it("verifies heading, bold, italic, underline, list, link, font size, alignment, image, and highlight survive roundtrip save/reload", async () => {
     // 1. Construct initial formatted rich text HTML with all required elements
     const initialFormattedHtml = `
-      <h1 style="text-align: center; color: #b8674a;">Aadya Design Manifesto</h1>
+      <h1 style="text-align: center; color: #b8674a;">Tushaqsa Design Manifesto</h1>
       <p style="text-align: justify;">
         <strong>Bold Craftsmanship</strong> meets <em>Italicized Elegance</em> and <u style="text-decoration: underline;">Underlined Quality</u>.
       </p>
@@ -32,7 +32,7 @@ describe("Rich Text Editor Formatting Roundtrip Test", () => {
     render(<RichTextRenderer content={savedHtml} />);
 
     // 4. Assert all elements survive roundtrip intact!
-    expect(screen.getByText("Aadya Design Manifesto")).toBeInTheDocument();
+    expect(screen.getByText("Tushaqsa Design Manifesto")).toBeInTheDocument();
     expect(screen.getByText("Bold Craftsmanship")).toBeInTheDocument();
     expect(screen.getByText("Italicized Elegance")).toBeInTheDocument();
     expect(screen.getByText("Underlined Quality")).toBeInTheDocument();

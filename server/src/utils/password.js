@@ -2,7 +2,7 @@ import argon2 from "argon2";
 import bcrypt from "bcryptjs";
 
 // Argon2id is resistant to GPU cracking and is the single password format
-// accepted by new Aadya installations.  Parameters are intentionally explicit
+// accepted by new Tushaqsa installations.  Parameters are intentionally explicit
 // so they can be reviewed rather than depending on package defaults.
 const OPTIONS = {
   type: argon2.argon2id,

@@ -15,7 +15,7 @@ const ALL_THEMES = [
 const EXISTING_LINKS = [
   { id: "l-all", label: "View All Books", enabled: true, destination: "/books" },
   { id: "l-1", label: "Spaces of Stillness", enabled: true, destination: "/shop/spaces-of-stillness" },
-  { id: "l-2", label: "Aadya Home Styling Guide", enabled: true, destination: "/shop/aadya-home-styling-guide" },
+  { id: "l-2", label: "Tushaqsa Home Styling Guide", enabled: true, destination: "/shop/aadya-home-styling-guide" },
   { id: "l-3", label: "The Art of Slow Living", enabled: true, destination: "/shop/the-art-of-slow-living" },
 ];
 const booksItem = { id: "n-books", label: "Books", enabled: true, destinationType: "BOOKS", destination: "/books", megaMenuMode: "MANUAL", manualColumns: [{ id: "col-books", enabled: true, links: EXISTING_LINKS }], promoCard: { enabled: true, image: "/uploads/books.jpg", title: "Reading Edit", eyebrow: "Staff Picks", ctaLabel: "SHOP NOW →", ctaUrl: "/books", altText: "Books promo" } };
@@ -30,7 +30,7 @@ describe("Books mega menu: secondary row", () => {
     renderMenu(booksModel([BOOKS, ...ALL_THEMES]));
     const row = screen.getByTestId("mega-secondary-row");
     expect(Array.from(row.children).map((c) => c.textContent)).toEqual(["New Releases", "Editor’s Picks", "Slow Living", "Journals & Guides"]);
-    ["View All Books", "Spaces of Stillness", "Aadya Home Styling Guide", "The Art of Slow Living"].forEach((t) => expect(screen.getByText(t)).toBeInTheDocument());
+    ["View All Books", "Spaces of Stillness", "Tushaqsa Home Styling Guide", "The Art of Slow Living"].forEach((t) => expect(screen.getByText(t)).toBeInTheDocument());
     expect(screen.getByTestId("mega-promo")).toBeInTheDocument();
   });
 

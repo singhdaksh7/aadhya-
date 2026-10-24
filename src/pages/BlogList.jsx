@@ -40,10 +40,10 @@ export default function BlogList() {
 
   return (
     <div className="store-bg min-h-screen py-12 px-5 sm:px-8 space-y-12 max-w-7xl mx-auto animate-fade-in">
-      <title>Journal — Aadya</title>
+      <title>Journal | Tushaqsa</title>
       <meta
         name="description"
-        content="News and stories from Aadya."
+        content="News and stories from Tushaqsa."
       />
       <link rel="canonical" href={canonicalUrl("/blog")} />
       {/* Header Section */}
@@ -51,7 +51,7 @@ export default function BlogList() {
         <span className="text-xs font-semibold uppercase tracking-widest store-primary">Journal</span>
         <h1 className="font-serif-display text-4xl sm:text-5xl store-text">Journal</h1>
         <p className="text-sm store-muted leading-relaxed">
-          News and stories from Aadya.
+          News and stories from Tushaqsa.
         </p>
       </div>
 
@@ -118,7 +118,7 @@ export default function BlogList() {
                   </p>
                 )}
                 <div className="flex items-center justify-between pt-2">
-                  <span className="text-xs store-text font-medium">By {featuredPost.author || "Aadya Editorial"}</span>
+                  <span className="text-xs store-text font-medium">By {featuredPost.author || "Tushaqsa Editorial"}</span>
                   <Link
                     to={`/blog/${featuredPost.slug}`}
                     className="rounded-xl store-bg-primary store-primary-hover px-5 py-2.5 text-xs font-semibold text-white shadow-sm transition"
@@ -166,7 +166,7 @@ export default function BlogList() {
                   </div>
 
                   <div className="pt-3 border-t border-charcoal/5 flex items-center justify-between">
-                    <span className="text-[11px] store-text font-medium">{post.author || "Aadya Editorial"}</span>
+                    <span className="text-[11px] store-text font-medium">{post.author || "Tushaqsa Editorial"}</span>
                     <Link to={`/blog/${post.slug}`} className="text-xs font-semibold store-primary hover:underline">
                       Read Story →
                     </Link>

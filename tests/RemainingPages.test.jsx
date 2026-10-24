@@ -23,7 +23,7 @@ const SystemPage = (await import("../src/pages/SystemPage")).default;
 const Contact = (await import("../src/pages/Contact")).default;
 const AdminPages = (await import("../src/pages/admin/AdminPages")).default;
 
-const LEGACY = /Dr\.\s?Aqsa|Tushaqsa|Aadya Society|Research Thinkpod/;
+const LEGACY = /Dr.s?Aqsa|bAadyab|Research Thinkpod/;
 const page = (slug, name, content, extra = {}) => ({ data: { slug, name, content, excerpt: "", featuredImage: null, ...extra } });
 const notFound = () => Object.assign(new Error("not found"), { status: 404 });
 const wrap = (ui) => render(<MemoryRouter>{ui}</MemoryRouter>);
@@ -31,7 +31,7 @@ const wrap = (ui) => render(<MemoryRouter>{ui}</MemoryRouter>);
 beforeEach(() => {
   mockFetchPage.mockReset(); mockAdminList.mockReset();
   mockSettings = {
-    general: { storeName: "Aadya", businessAddress: "12 Demo Street", city: "Jaipur", state: "Rajasthan", country: "India" },
+    general: { storeName: "Tushaqsa", businessAddress: "12 Demo Street", city: "Jaipur", state: "Rajasthan", country: "India" },
     supportEmail: "help@aadya.example", supportPhone: "+91 90000 00000",
     shipping: { freeShippingThreshold: 2499 }, returns: { enabled: true, windowDays: 7 },
   };
@@ -39,13 +39,13 @@ beforeEach(() => {
 
 describe("Contact page", () => {
   it("renders CMS title, intro and body, with SEO title from the page", async () => {
-    mockFetchPage.mockResolvedValue(page("contact", "Contact Us", "<p>Write to us about an order.</p>", { excerpt: "We are happy to help.", seoTitle: "Reach Aadya" }));
+    mockFetchPage.mockResolvedValue(page("contact", "Contact Us", "<p>Write to us about an order.</p>", { excerpt: "We are happy to help.", seoTitle: "Reach Tushaqsa" }));
     wrap(<Contact />);
     expect(await screen.findByRole("heading", { level: 1, name: "Contact Us" })).toBeInTheDocument();
     expect(screen.getByText("Write to us about an order.")).toBeInTheDocument();
     expect(screen.getByText("We are happy to help.")).toBeInTheDocument();
     expect(mockFetchPage).toHaveBeenCalledWith("contact");
-    expect(document.title || document.querySelector("title")?.textContent).toMatch(/Reach Aadya/);
+    expect(document.title || document.querySelector("title")?.textContent).toMatch(/Reach Tushaqsa/);
   });
 
   it("shows contact details from Store Settings (single source), and only configured ones", async () => {
@@ -58,7 +58,7 @@ describe("Contact page", () => {
   });
 
   it("hides the details block when nothing is configured (no 'to be added' filler)", async () => {
-    mockSettings = { general: { storeName: "Aadya" }, shipping: {}, returns: {} };
+    mockSettings = { general: { storeName: "Tushaqsa" }, shipping: {}, returns: {} };
     mockFetchPage.mockResolvedValue(page("contact", "Contact Us", "<p>Hi</p>"));
     wrap(<Contact />);
     await screen.findByRole("heading", { level: 1, name: "Contact Us" });

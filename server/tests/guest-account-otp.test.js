@@ -175,7 +175,7 @@ describe("Admin-managed SMTP settings", () => {
     const res = await request(app).post("/api/admin/auth/login").send({ email: env.admin.email, password: env.admin.password });
     return res.body.data.accessToken;
   }
-  const body = { host: "smtp.mail.test", port: 587, encryption: "STARTTLS", user: "orders@shop.test", password: "s3cret-smtp-pass", fromName: "Aadya", fromEmail: "orders@shop.test", replyTo: "help@shop.test", enabled: true };
+  const body = { host: "smtp.mail.test", port: 587, encryption: "STARTTLS", user: "orders@shop.test", password: "s3cret-smtp-pass", fromName: "Tushaqsa", fromEmail: "orders@shop.test", replyTo: "help@shop.test", enabled: true };
 
   it("saves settings encrypted, never returns the password, and keeps it when the field is left blank", async () => {
     const token = await loginAdmin();
@@ -202,7 +202,7 @@ describe("Admin-managed SMTP settings", () => {
     expect(res.body.data.sent).toBe(true);
     const [options, defaults] = createTransportMock.mock.calls.at(-1);
     expect(options).toMatchObject({ host: "smtp.mail.test", port: 587, secure: false, requireTLS: true, auth: { user: "orders@shop.test", pass: "s3cret-smtp-pass" } });
-    expect(defaults).toMatchObject({ from: '"Aadya" <orders@shop.test>', replyTo: "help@shop.test" });
+    expect(defaults).toMatchObject({ from: '"Tushaqsa" <orders@shop.test>', replyTo: "help@shop.test" });
 
     const del = await request(app).delete("/api/admin/email/settings").set("Authorization", `Bearer ${token}`);
     expect(del.status).toBe(200);

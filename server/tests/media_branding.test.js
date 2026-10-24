@@ -108,32 +108,26 @@ describe("Media upload -> branding settings integration", () => {
     expect(getRes.body.data.branding.logoWidthMobile).toBe(100);
   });
 
-  it("rejects a logo width outside the safe min/max bounds so header layout can't be broken", async () => {
-    const res = await request
-      .put("/api/admin/settings")
-      .set("Authorization", `Bearer ${adminToken}`)
-      .send({ branding: { logoWidthDesktop: 5000 } });
-    expect(res.status).toBe(400);
+  it("accepts large logo sizes (no design-level cap) but rejects negative, zero width, non-finite or absurd values", async () => {
+    const put = (branding) => request.put("/api/admin/settings").set("Authorization", `Bearer ${adminToken}`).send({ branding });
+    const big = await put({ logoWidthDesktop: 900, logoHeightDesktop: 400, logoWidthMobile: 500, logoHeightMobile: 200 });
+    expect(big.status).toBe(200);
+    expect(big.body.data.branding.logoWidthDesktop).toBe(900);
+    expect(big.body.data.branding.logoHeightDesktop).toBe(400);
+    expect(big.body.data.branding.logoHeightMobile).toBe(200);
+    const getRes = await request.get("/api/settings");
+    expect(getRes.body.data.branding.logoWidthMobile).toBe(500);
+
+    expect((await put({ logoWidthDesktop: -5 })).status).toBe(400);
+    expect((await put({ logoWidthDesktop: 0 })).status).toBe(400);
+    expect((await put({ logoHeightDesktop: -1 })).status).toBe(400);
+    expect((await put({ logoWidthDesktop: 1e9 })).status).toBe(400);
+    expect((await put({ logoWidthDesktop: "wide" })).status).toBe(400);
   });
 
-  it("saves and returns logo max-height settings, and rejects values outside the safe bounds", async () => {
-    const putRes = await request
-      .put("/api/admin/settings")
-      .set("Authorization", `Bearer ${adminToken}`)
-      .send({ branding: { logoMaxHeightDesktop: 64, logoMaxHeightMobile: 48 } });
-    expect(putRes.status).toBe(200);
-    expect(putRes.body.data.branding.logoMaxHeightDesktop).toBe(64);
-    expect(putRes.body.data.branding.logoMaxHeightMobile).toBe(48);
-
-    const getRes = await request.get("/api/settings");
-    expect(getRes.body.data.branding.logoMaxHeightDesktop).toBe(64);
-    expect(getRes.body.data.branding.logoMaxHeightMobile).toBe(48);
-
-    const tooTall = await request
-      .put("/api/admin/settings")
-      .set("Authorization", `Bearer ${adminToken}`)
-      .send({ branding: { logoMaxHeightDesktop: 500 } });
-    expect(tooTall.status).toBe(400);
+  it("treats height 0/null as auto", async () => {
+    const res = await request.put("/api/admin/settings").set("Authorization", `Bearer ${adminToken}`).send({ branding: { logoHeightDesktop: 0, logoHeightMobile: null } });
+    expect(res.status).toBe(200);
   });
 
   it("footer logo falls back to the primary logo when unset (contract for the storefront Footer)", async () => {

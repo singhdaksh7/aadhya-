@@ -64,7 +64,7 @@ export default function Footer() {
       id: "fc-3",
       title: "Company & Policies",
       links: [
-        { label: "About Aadya", url: "/about" },
+        { label: "About Tushaqsa", url: "/about" },
         { label: "Featured Collections", url: "/collections" },
         { label: "Privacy Policy", url: "/privacy" },
         { label: "Terms & Conditions", url: "/terms" },
@@ -88,8 +88,8 @@ export default function Footer() {
             <Link to="/" className="inline-block">
               <BrandLogo
                 src={footer?.footerLogo || branding?.desktopLogo}
-                alt={general?.storeName || "Aadya"}
-                fallbackText={general?.storeName || "Aadya"}
+                alt={general?.storeName || "Tushaqsa"}
+                fallbackText={general?.storeName || "Tushaqsa"}
                 className="h-8 object-contain brightness-200"
                 textClassName="font-serif-display text-3xl tracking-tight text-white font-bold"
               />
@@ -169,7 +169,7 @@ export default function Footer() {
 
         {/* Payment Icons & Copyright */}
         <div className="mt-14 border-t border-white/10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#FAF6F0]/60">
-          <p>© {new Date().getFullYear()} {general?.legalName || general?.storeName || "Aadya"}. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} {general?.legalName || general?.storeName || "Tushaqsa"}. All rights reserved.</p>
           
           {/* Payment Icons */}
           {hasBadges && <PaymentBadges badges={footer.paymentBadges} />}

@@ -62,7 +62,7 @@ function accountNoteHtml(order) {
   return `<p style="margin-top:16px;padding:12px;border:1px solid #e5e0d8;border-radius:8px">We have created an account for <strong>${escapeHtml(c.email)}</strong> so you can follow this order. Open the <a href="${loginUrl}">login page</a>, choose <em>Email me a login code</em>, and set a password when asked.</p>`;
 }
 
-function renderOrderConfirmationHtml(order, storeName = "Aadya") {
+function renderOrderConfirmationHtml(order, storeName = "Tushaqsa") {
   const rows = order.items
     .map(
       (item) => `
@@ -92,6 +92,7 @@ function renderOrderConfirmationHtml(order, storeName = "Aadya") {
         : ""
     }
     <p style="margin-top:24px;color:#4a443d;">Order status: ${order.status}</p>
+    <p style="margin-top:24px;color:#4a443d">Team Tushaqsa</p>
   </div>`;
 }
 
@@ -104,7 +105,7 @@ export async function sendPasswordResetEmail({ customer, token }) {
   if (!mailer) return { sent: false, reason: "smtp_not_configured" };
   const resetUrl = `${env.frontendUrl.replace(/\/$/, "")}/reset-password?token=${encodeURIComponent(token)}`;
   try {
-    await mailer.sendMail({ to: customer.email, subject: `Reset your ${await getStoreName()} password`, html: `<div style="font-family:Georgia,serif;max-width:560px;margin:auto;color:#2b2723"><h1>Reset your password</h1><p>Hello ${escapeHtml(customer.name || "there")},</p><p>We received a request to reset your Aadya Society account password. This link expires in one hour.</p><p><a href="${resetUrl}" style="display:inline-block;padding:12px 20px;background:#3c4a3a;color:#fff;text-decoration:none;border-radius:6px">Reset password</a></p><p>If you did not request this, you can safely ignore this email.</p></div>` });
+    await mailer.sendMail({ to: customer.email, subject: `Reset your ${await getStoreName()} password`, html: `<div style="font-family:Georgia,serif;max-width:560px;margin:auto;color:#2b2723"><h1>Reset your password</h1><p>Hello ${escapeHtml(customer.name || "there")},</p><p>We received a request to reset your Tushaqsa account password. This link expires in one hour.</p><p><a href="${resetUrl}" style="display:inline-block;padding:12px 20px;background:#3c4a3a;color:#fff;text-decoration:none;border-radius:6px">Reset password</a></p><p>If you did not request this, you can safely ignore this email.</p><p style="margin-top:24px;color:#4a443d">Team Tushaqsa</p></div>` });
     return { sent: true };
   } catch (err) { console.error("[email] failed to send password reset email:", err.message); return { sent: false, reason: "send_failed" }; }
 }
@@ -122,7 +123,7 @@ export async function sendLoginOtpEmail({ customer, code }) {
     const info = await mailer.sendMail({
       to: customer.email,
       subject: `Your ${storeName} login code`,
-      html: `<div style="font-family:Georgia,serif;max-width:520px;margin:auto;color:#2b2723"><h1 style="font-size:22px">Your login code</h1><p>Hello ${escapeHtml(customer.name || "there")},</p><p>Use this code to sign in to ${escapeHtml(storeName)}:</p><p style="font-size:34px;letter-spacing:8px;font-weight:700;margin:20px 0">${escapeHtml(code)}</p><p>It expires in 10 minutes and can be used once. If you did not ask for it, you can safely ignore this email.</p></div>`,
+      html: `<div style="font-family:Georgia,serif;max-width:520px;margin:auto;color:#2b2723"><h1 style="font-size:22px">Your login code</h1><p>Hello ${escapeHtml(customer.name || "there")},</p><p>Use this code to sign in to ${escapeHtml(storeName)}:</p><p style="font-size:34px;letter-spacing:8px;font-weight:700;margin:20px 0">${escapeHtml(code)}</p><p>It expires in 10 minutes and can be used once. If you did not ask for it, you can safely ignore this email.</p><p style="margin-top:24px;color:#4a443d">Team Tushaqsa</p></div>`,
     });
     await log("SENT", { providerMessageId: info.messageId || null, sentAt: new Date() });
     return { sent: true };
@@ -215,8 +216,8 @@ export async function sendInvoiceEmail(invoiceId, { resend = false, adminId = nu
     const attachment = invoice.pdfStorageKey ? await readInvoicePdf(invoice.pdfStorageKey) : null;
     const info = await mailer.sendMail({
       to: invoice.customerEmail,
-      subject: `Your Aadya Invoice — ${invoice.invoiceNumber}`,
-      html: `<div style="font-family:Georgia,serif;max-width:560px;margin:auto;color:#2b2723"><h1>Your Aadya invoice</h1><p>Hello ${escapeHtml(invoice.customerName)},</p><p>Invoice <strong>${escapeHtml(invoice.invoiceNumber)}</strong> for order <strong>${escapeHtml(invoice.order.orderNumber)}</strong> is attached.</p><p>Total: <strong>₹${Number(invoice.totalAmount).toLocaleString("en-IN")}</strong><br/>Payment method: ${escapeHtml(invoice.order.paymentMethod)}</p><p><a href="${env.frontendUrl.replace(/\/$/, "")}/account/orders/${encodeURIComponent(invoice.order.orderNumber)}">View your order</a></p></div>`,
+      subject: `Your Tushaqsa Invoice — ${invoice.invoiceNumber}`,
+      html: `<div style="font-family:Georgia,serif;max-width:560px;margin:auto;color:#2b2723"><h1>Your Tushaqsa invoice</h1><p>Hello ${escapeHtml(invoice.customerName)},</p><p>Invoice <strong>${escapeHtml(invoice.invoiceNumber)}</strong> for order <strong>${escapeHtml(invoice.order.orderNumber)}</strong> is attached.</p><p>Total: <strong>₹${Number(invoice.totalAmount).toLocaleString("en-IN")}</strong><br/>Payment method: ${escapeHtml(invoice.order.paymentMethod)}</p><p><a href="${env.frontendUrl.replace(/\/$/, "")}/account/orders/${encodeURIComponent(invoice.order.orderNumber)}">View your order</a></p><p style="margin-top:24px;color:#4a443d">Team Tushaqsa</p></div>`,
       attachments: attachment ? [{ filename: `${invoice.invoiceNumber.replace(/[^A-Za-z0-9._-]/g, "-")}.pdf`, content: attachment.stream, contentType: "application/pdf" }] : [],
     });
     if (resend) await prisma.invoice.update({ where: { id: invoiceId }, data: { emailedAt: invoice.emailedAt || new Date() } });
@@ -244,7 +245,7 @@ export async function sendShippingStatusEmail(orderId, status, { resend = false,
     const exists = await prisma.emailLog.findFirst({ where: { orderId, type, status: "SENT" } });
     if (exists) return { sent: false, reason: "already_sent" };
   }
-  const subject = status === "DELIVERED" ? "Your Aadya order has been delivered" : status === "OUT_FOR_DELIVERY" ? "Your Aadya order is out for delivery" : "Your Aadya order has shipped";
+  const subject = status === "DELIVERED" ? "Your Tushaqsa order has been delivered" : status === "OUT_FOR_DELIVERY" ? "Your Tushaqsa order is out for delivery" : "Your Tushaqsa order has shipped";
   const { mailer } = await getMailer();
   if (!mailer) return { sent: false, reason: "smtp_not_configured" };
   try {

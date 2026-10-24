@@ -5,7 +5,7 @@ import { writeInvoicePdf, readInvoicePdf } from "./invoice.storage.js";
 import { round2 } from "../../utils/money.js";
 
 const DEFAULTS = {
-  prefix: "AADYA",
+  prefix: "TUS",
   financialYearFormat: "YYYY-YY",
   nextInvoiceNumber: 1,
   legalName: "",
@@ -15,7 +15,7 @@ const DEFAULTS = {
   gstEnabled: false,
   defaultTaxRate: 0,
   footer: "This is a computer-generated invoice.",
-  terms: "Thank you for shopping with Aadya.",
+  terms: "Thank you for shopping with Tushaqsa.",
   codInvoiceAt: "CONFIRMED",
   // Global default pricing mode for products that don't define their own,
   // and GST handling for the shipping line item. These are settings-level

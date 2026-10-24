@@ -7,7 +7,7 @@ import { normalizeHeaderSettings, DEFAULT_HEADER_CMS_SETTINGS } from "../src/lib
 import { buildNavModel, buildCategoryStripModel, columnsFromAllCategories, buildCategoryTree } from "../src/lib/navModel";
 
 let mockSettings;
-const base = () => ({ general: { storeName: "Aadya" }, branding: {}, header: {}, shipping: { freeShippingThreshold: 2499 } });
+const base = () => ({ general: { storeName: "Tushaqsa" }, branding: {}, header: {}, shipping: { freeShippingThreshold: 2499 } });
 
 const categories = [
   { id: "c-books", name: "Books", slug: "books", isActive: true, parentId: null, image: "/uploads/books.jpg", desktopBanner: "/uploads/books-banner.jpg" },

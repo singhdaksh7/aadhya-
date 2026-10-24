@@ -44,10 +44,10 @@ export default function BooksStorefront() {
 
   return (
     <>
-      <title>Books &amp; Monographs — Aadya Storefront</title>
+      <title>Books &amp; Monographs | Tushaqsa</title>
       <meta
         name="description"
-        content="Browse editorial coffee-table books, art heritage monographs, and mindfulness guides from Aadya Editorial Press."
+        content="Browse editorial coffee-table books, art heritage monographs, and mindfulness guides from Tushaqsa Editorial Press."
       />
       <ProductCatalog
         eyebrow="Editorial Monographs"

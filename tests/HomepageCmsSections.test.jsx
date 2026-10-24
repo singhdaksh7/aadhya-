@@ -232,8 +232,8 @@ describe("reviews section", () => {
 
 describe("blog section", () => {
   const posts = [
-    { id: "b1", slug: "craft", title: "On Craft", excerpt: "Slow making", author: "Aadya Editorial", publishDate: "2026-09-01T00:00:00Z", readingMinutes: 4, featuredImage: "/blog.jpg" },
-    { id: "b2", slug: "light", title: "On Light", excerpt: "Warm glow", author: "Aadya Editorial", publishDate: "2026-08-01T00:00:00Z", readingMinutes: 2 },
+    { id: "b1", slug: "craft", title: "On Craft", excerpt: "Slow making", author: "Tushaqsa Editorial", publishDate: "2026-09-01T00:00:00Z", readingMinutes: 4, featuredImage: "/blog.jpg" },
+    { id: "b2", slug: "light", title: "On Light", excerpt: "Warm glow", author: "Tushaqsa Editorial", publishDate: "2026-08-01T00:00:00Z", readingMinutes: 2 },
   ];
   const section = (settings) => ({ id: "bl", type: "BLOG_PREVIEW", settings, posts });
 
@@ -241,7 +241,7 @@ describe("blog section", () => {
     wrap(<BlogPreviewSection section={section({ viewAllUrl: "/blog" })} />);
     expect(screen.getAllByTestId("blog-card")).toHaveLength(2);
     expect(screen.getByText("Slow making")).toBeInTheDocument();
-    expect(screen.getAllByText(/By Aadya Editorial/)).toHaveLength(2);
+    expect(screen.getAllByText(/By Tushaqsa Editorial/)).toHaveLength(2);
     expect(screen.getByText("4 min read")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Read Journal/ })).toHaveAttribute("href", "/blog");
   });
@@ -250,7 +250,7 @@ describe("blog section", () => {
     wrap(<BlogPreviewSection section={section({ limit: 1, showExcerpt: false, showAuthor: false, showReadingTime: false, showViewAll: false })} />);
     expect(screen.getAllByTestId("blog-card")).toHaveLength(1);
     expect(screen.queryByText("Slow making")).toBeNull();
-    expect(screen.queryByText(/By Aadya/)).toBeNull();
+    expect(screen.queryByText(/By Tushaqsa/)).toBeNull();
     expect(screen.queryByText(/min read/)).toBeNull();
     expect(screen.queryByRole("link", { name: /View All/ })).toBeNull();
   });
@@ -264,7 +264,7 @@ describe("blog section", () => {
 
   it("shows heading, empty-state message and a custom View All label with zero posts when enabled", () => {
     wrap(<BlogPreviewSection section={{ id: "bl", type: "BLOG_PREVIEW", settings: { showEmptyState: true, emptyStateMessage: "Stories coming soon.", subtitle: "Notes", viewAllLabel: "All Stories", viewAllUrl: "/blog" }, posts: [] }} />);
-    expect(screen.getByRole("heading", { name: "Stories from Aadya" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Stories from Tushaqsa" })).toBeInTheDocument();
     expect(screen.getByText("Notes")).toBeInTheDocument();
     expect(screen.getByTestId("blog-empty")).toHaveTextContent("Stories coming soon.");
     expect(screen.queryAllByTestId("blog-card")).toHaveLength(0);

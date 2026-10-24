@@ -16,7 +16,7 @@ function coverHtml(book) {
   return `<!doctype html><html><body style="margin:0"><div style="width:800px;height:1200px;background:${bg};color:${ink};position:relative;overflow:hidden;font-family:Georgia,'Times New Roman',serif">
     <div style="position:absolute;inset:44px;border:2px solid ${accent};opacity:.7"></div>
     <div style="position:absolute;left:0;top:0;bottom:0;width:26px;background:rgba(0,0,0,.18)"></div>
-    <div style="position:absolute;top:150px;left:110px;right:90px;font:600 22px Arial,sans-serif;letter-spacing:.42em;text-transform:uppercase;color:${accent}">Aadya Editions</div>
+    <div style="position:absolute;top:150px;left:110px;right:90px;font:600 22px Arial,sans-serif;letter-spacing:.42em;text-transform:uppercase;color:${accent}">Tushaqsa Editions</div>
     <div style="position:absolute;top:330px;left:110px;right:90px;font-size:104px;line-height:1.02;font-weight:300">${esc(book.title)}</div>
     <div style="position:absolute;top:760px;left:110px;width:90px;height:3px;background:${accent}"></div>
     <div style="position:absolute;top:800px;left:110px;right:90px;font-size:34px;font-style:italic;opacity:.9">${esc(book.subtitle)}</div>
@@ -65,10 +65,10 @@ async function main() {
       isBestSeller: book.flags.isBestSeller === true,
       isNewArrival: book.flags.isNewArrival === true,
       shortDescription: `${book.subtitle}. Demo sample title.`,
-      description: `${book.blurb} This is a demo / sample listing created to preview the Aadya bookshelf; it is not a real publication.`,
+      description: `${book.blurb} This is a demo / sample listing created to preview the Tushaqsa bookshelf; it is not a real publication.`,
       attributes: { Binding: book.binding },
       tags: ["demo", "sample-book"],
-      bookDetail: { author: book.author, publisher: DEMO_PUBLISHER, language: book.n % 5 === 0 ? "Hindi" : "English", pageCount: book.pages, edition: "Aadya demo/sample edition", isbn: `AADYA-DEMO-ISBN-${String(book.n + 100).padStart(4, "0")}` },
+      bookDetail: { author: book.author, publisher: DEMO_PUBLISHER, language: book.n % 5 === 0 ? "Hindi" : "English", pageCount: book.pages, edition: "Tushaqsa demo/sample edition", isbn: `AADYA-DEMO-ISBN-${String(book.n + 100).padStart(4, "0")}` },
     });
     const id = res.data.id;
     const page = await browser.newPage({ viewport: { width: 800, height: 1200 } });

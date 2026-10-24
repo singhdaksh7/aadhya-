@@ -71,7 +71,7 @@ export default function SearchModal({ isOpen, onClose }) {
         {/* Live Search Results / Quick Suggestions */}
         <div className="max-h-[60vh] overflow-y-auto p-6">
           {isLoading && (
-            <p className="text-center py-6 text-sm text-charcoal-soft">Searching Aadya collections...</p>
+            <p className="text-center py-6 text-sm text-charcoal-soft">Searching Tushaqsa collections...</p>
           )}
 
           {!isLoading && query.trim() && results.length === 0 && (

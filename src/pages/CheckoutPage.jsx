@@ -424,7 +424,7 @@ export default function CheckoutPage() {
   return (
     <div className="store-bg store-text py-12 pb-20">
       <div className="mx-auto max-w-5xl px-4 sm:px-8 space-y-8">
-        <title>Checkout — Aadya Storefront</title>
+        <title>Checkout | Tushaqsa</title>
         <SectionHeading eyebrow="Express Retail Checkout" title="Checkout" />
 
         {cartLoading ? (

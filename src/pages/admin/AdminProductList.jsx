@@ -61,7 +61,7 @@ export default function AdminProductList() {
       <PageHeader
         eyebrow="Catalog"
         title="Products"
-        description="Manage books and physical products in the Aadya catalog."
+        description="Manage books and physical products in the Tushaqsa catalog."
         actions={
           <Link to="/admin/products/new" className="admin-btn admin-btn--primary">
             Add Product

@@ -260,7 +260,7 @@ function buildContent(invoice, images) {
   // --- Declaration / terms + signatory ---
   text(MARGIN, y, "Declaration", { size: 8.5, font: "F2" });
   y -= 11;
-  text(MARGIN, y, (company.terms || "Thank you for shopping with Aadya.").slice(0, 130), { size: 8 });
+  text(MARGIN, y, (company.terms || "Thank you for shopping with Tushaqsa.").slice(0, 130), { size: 8 });
   y -= 24;
   const sigX = PAGE_W - MARGIN - 160;
   const sigBox = company.signatureUrl ? image("signature", sigX, y + 24, 120, 40) : null;

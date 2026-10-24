@@ -11,7 +11,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("../src/hooks/useSiteSettings", () => ({
-  useSiteSettings: () => ({ general: { storeName: "Aadya" }, branding: {}, header: {}, shipping: { freeShippingThreshold: 2499 } }),
+  useSiteSettings: () => ({ general: { storeName: "Tushaqsa" }, branding: {}, header: {}, shipping: { freeShippingThreshold: 2499 } }),
   refreshSiteSettings: vi.fn(() => Promise.resolve()),
   applyThemeVariables: vi.fn(),
 }));
@@ -33,7 +33,7 @@ vi.mock("../src/lib/api", () => ({
 // Settings as GET /admin/settings returns them: header is a LEGACY shape (no `utilityBar`,
 // `utilityBarItems` use `title`/`link`) and many unrelated keys are present.
 const buildServerSettings = () => ({
-  general: { storeName: "Aadya", supportEmail: "" },
+  general: { storeName: "Tushaqsa", supportEmail: "" },
   appearance: { colors: { primary: "#B8674A" } },
   shipping: { freeShippingThreshold: 2499, standardShippingAmount: 150 },
   footer: { brandDescription: "Footer text" },
@@ -203,7 +203,7 @@ describe("Admin Header CMS save flow", () => {
     expect(screen.queryByText(/unsaved changes/)).not.toBeInTheDocument();
   });
 
-  it("13. Defaults resets to Aadya defaults after confirmation", async () => {
+  it("13. Defaults resets to Tushaqsa defaults after confirmation", async () => {
     vi.spyOn(window, "confirm").mockReturnValue(true);
     renderPage();
     await openTab("Main Header");

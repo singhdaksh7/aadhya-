@@ -2,7 +2,7 @@
 // are original placeholders (no real book metadata). Authors carry the same "(Demo Sample)" suffix
 // the existing demo books use, so they are never mistaken for real publications.
 
-export const DEMO_PUBLISHER = "Aadya Sample Press";
+export const DEMO_PUBLISHER = "Tushaqsa Sample Press";
 
 // Subcategories of Books used by the "Browse by theme" chips and the Theme filter.
 export const THEME_CATEGORIES = [
@@ -14,7 +14,7 @@ export const THEME_CATEGORIES = [
   { slug: "books-journals-and-guides", name: "Journaling & Guides", sortOrder: 6 },
 ];
 
-const A = "Aadya Editorial Collective (Demo Sample)";
+const A = "Tushaqsa Editorial Collective (Demo Sample)";
 const M = "Meera Sample (Demo Sample)";
 const R = "Rohan Placeholder (Demo Sample)";
 const I = "Ila Example (Demo Sample)";
@@ -25,7 +25,7 @@ const P = { clay: ["#b8694a", "#f3e4d6", "#fff7ef"], sage: ["#7e8f7a", "#e8eee4"
 export const DEMO_BOOKS = [
   { n: 1, title: "Quiet Spaces", subtitle: "Rooms that breathe", theme: "books-home-and-interiors", author: A, price: 899, pages: 192, binding: "Hardcover", flags: { isFeatured: true, isNewArrival: true }, palette: P.clay, blurb: "A demo title showcasing a calm, photograph-led guide to unhurried rooms, natural light and room-by-room restraint." },
   { n: 2, title: "The Warm Home", subtitle: "Texture, light and comfort", theme: "books-home-and-interiors", author: M, price: 749, pages: 168, binding: "Paperback", flags: { isNewArrival: true }, palette: P.sand, blurb: "A demo title about layering warmth at home through fabric, finish and everyday objects." },
-  { n: 3, title: "Rooms with Soul", subtitle: "A design notebook", theme: "books-design-inspiration", author: R, price: 1099, pages: 224, binding: "Hardcover", flags: { isFeatured: true }, palette: P.char, blurb: "A demo title of room studies and styling ideas, written as a sample for the Aadya bookshelf." },
+  { n: 3, title: "Rooms with Soul", subtitle: "A design notebook", theme: "books-design-inspiration", author: R, price: 1099, pages: 224, binding: "Hardcover", flags: { isFeatured: true }, palette: P.char, blurb: "A demo title of room studies and styling ideas, written as a sample for the Tushaqsa bookshelf." },
   { n: 4, title: "The Thoughtful Interior", subtitle: "Design with intention", theme: "books-design-inspiration", author: A, price: 949, pages: 208, binding: "Paperback", flags: { isBestSeller: true }, palette: P.ivory, blurb: "A demo title on choosing fewer, better things and arranging them with care." },
   { n: 5, title: "Notes on Slow Living", subtitle: "Small rituals, big calm", theme: "books-slow-living", author: M, price: 599, pages: 144, binding: "Paperback", flags: { isFeatured: true, isBestSeller: true }, palette: P.sage, blurb: "A demo title of short essays on pace, craft and the pleasure of doing things slowly." },
   { n: 6, title: "Everyday Styling", subtitle: "Simple arrangements that last", theme: "books-journals-and-guides", author: A, price: 449, pages: 112, binding: "Paperback", flags: { isNewArrival: true }, palette: P.dusk, blurb: "A demo styling guide: shelves, tables and corners, arranged in minutes." },

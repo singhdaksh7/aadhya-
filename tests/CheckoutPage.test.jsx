@@ -60,8 +60,8 @@ vi.mock("../src/lib/api", () => ({
         razorpayOrderId: "order_rzp_1",
         amount: 108900,
         currency: "INR",
-        name: "Aadya Society",
-        description: "Aadya Society Order AAD-2026-000001",
+        name: "Tushaqsa",
+        description: "Tushaqsa Order AAD-2026-000001",
         prefill: {},
       },
     })

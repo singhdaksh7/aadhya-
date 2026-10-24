@@ -35,7 +35,7 @@ export default function SystemPage({ slug, eyebrow = "Customer Information", fal
   }, [slug]);
 
   const ctx = commercialContext(settings);
-  const storeName = settings.general?.storeName || "Aadya";
+  const storeName = settings.general?.storeName || "Tushaqsa";
 
   if (state === "loading") {
     return (

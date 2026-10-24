@@ -34,7 +34,7 @@ function sanitizeOrder(order) {
 
 function formatOrderNumber(orderSeq) {
   const year = new Date().getFullYear();
-  return `AAD-${year}-${String(orderSeq).padStart(6, "0")}`;
+  return `TUS-${year}-${String(orderSeq).padStart(6, "0")}`;
 }
 
 // Creates Order + OrderItems (price/name/sku/image snapshots) + OrderAddress

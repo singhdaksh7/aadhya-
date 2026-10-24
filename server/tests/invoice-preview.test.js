@@ -54,7 +54,7 @@ describe("manual invoice preview endpoint (task 3/4/5/7): informational, non-per
     await request(app)
       .put("/api/admin/invoices/settings")
       .set("Authorization", `Bearer ${token}`)
-      .send({ prefix: "AADYA", nextInvoiceNumber: 1, legalName: "Aadya Society", state: "Karnataka", stateCode: "29" });
+      .send({ prefix: "AADYA", nextInvoiceNumber: 1, legalName: "Tushaqsa", state: "Karnataka", stateCode: "29" });
 
     const res = await request(app)
       .post("/api/admin/invoices/manual/preview")
@@ -73,7 +73,7 @@ describe("manual invoice preview endpoint (task 3/4/5/7): informational, non-per
     await request(app)
       .put("/api/admin/invoices/settings")
       .set("Authorization", `Bearer ${token}`)
-      .send({ prefix: "AADYA", nextInvoiceNumber: 1, legalName: "Aadya Society", state: "Karnataka", stateCode: "29" });
+      .send({ prefix: "AADYA", nextInvoiceNumber: 1, legalName: "Tushaqsa", state: "Karnataka", stateCode: "29" });
 
     const res = await request(app)
       .post("/api/admin/invoices/manual/preview")
@@ -111,7 +111,7 @@ describe("manual invoice preview endpoint (task 3/4/5/7): informational, non-per
     await request(app)
       .put("/api/admin/invoices/settings")
       .set("Authorization", `Bearer ${token}`)
-      .send({ prefix: "AADYA", nextInvoiceNumber: 1, legalName: "Aadya Society", state: "Karnataka", stateCode: "29", gstEnabled: true, defaultTaxRate: 18 });
+      .send({ prefix: "AADYA", nextInvoiceNumber: 1, legalName: "Tushaqsa", state: "Karnataka", stateCode: "29", gstEnabled: true, defaultTaxRate: 18 });
 
     const payload = {
       customer: { name: "Parity Test", email: "parity@example.com", state: "Maharashtra" },

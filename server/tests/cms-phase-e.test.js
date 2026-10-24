@@ -48,11 +48,11 @@ describe("Phase E CMS, Blog, FAQ, Media & Sanitizer", () => {
         .post("/api/admin/pages")
         .set("Authorization", `Bearer ${token}`)
         .send({
-          name: "About Aadya",
+          name: "About Tushaqsa",
           slug: "about-us",
           pageType: "STANDARD",
           status: "DRAFT",
-          content: "<p>Welcome to <strong>Aadya</strong></p>"
+          content: "<p>Welcome to <strong>Tushaqsa</strong></p>"
         });
 
       expect(createRes.status).toBe(201);
@@ -75,8 +75,8 @@ describe("Phase E CMS, Blog, FAQ, Media & Sanitizer", () => {
       // Public storefront route now returns published page
       const publicPub = await request(app).get("/api/pages/about-us");
       expect(publicPub.status).toBe(200);
-      expect(publicPub.body.data.name).toBe("About Aadya");
-      expect(publicPub.body.data.content).toContain("Welcome to <strong>Aadya</strong>");
+      expect(publicPub.body.data.name).toBe("About Tushaqsa");
+      expect(publicPub.body.data.content).toContain("Welcome to <strong>Tushaqsa</strong>");
 
       // Delete page
       const delRes = await request(app)
@@ -191,7 +191,7 @@ describe("Phase E CMS, Blog, FAQ, Media & Sanitizer", () => {
         .post("/api/admin/media/upload")
         .set("Authorization", `Bearer ${token}`)
         .attach("file", fileBuffer, "test-banner.jpg")
-        .field("altText", "Aadya Banner");
+        .field("altText", "Tushaqsa Banner");
 
       expect(uploadRes.status).toBe(201);
       expect(uploadRes.body.data.url).toBeDefined();

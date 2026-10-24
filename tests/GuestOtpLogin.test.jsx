@@ -120,7 +120,7 @@ describe("guest account: one-time code login, then set a password", () => {
 });
 
 describe("Admin SMTP settings form", () => {
-  const settings = { saved: true, enabled: true, host: "smtp.mail.test", port: 587, encryption: "STARTTLS", user: "orders@shop.test", hasPassword: true, fromName: "Aadya", fromEmail: "orders@shop.test", replyTo: "", effectiveSource: "admin" };
+  const settings = { saved: true, enabled: true, host: "smtp.mail.test", port: 587, encryption: "STARTTLS", user: "orders@shop.test", hasPassword: true, fromName: "Tushaqsa", fromEmail: "orders@shop.test", replyTo: "", effectiveSource: "admin" };
 
   it("loads saved settings without ever showing the password, and keeps it when left blank", async () => {
     api.adminGetSmtpSettings.mockResolvedValue({ data: settings });

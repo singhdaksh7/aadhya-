@@ -8,7 +8,7 @@ const DEFAULT_BANNERS = [
     id: "hero-1",
     desktopImage: "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?q=80&w=1800&auto=format&fit=crop",
     mobileImage: "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?q=80&w=800&auto=format&fit=crop",
-    eyebrow: "Aadya Home & Lifestyle",
+    eyebrow: "Tushaqsa Home & Lifestyle",
     headline: "Decor that",
     highlightText: "Feels Like Home",
     description: "Discover handcrafted oil lamps, unglazed clay vessels, linen textiles, and slow design objects created for peaceful sanctuaries.",
@@ -117,7 +117,7 @@ export default function HeroBannerCarousel({ bannersOverride }) {
                 <source media="(max-width: 639px)" srcSet={banner.mobileImage || banner.desktopImage} />
                 <img
                   src={banner.desktopImage}
-                  alt={banner.headline || banner.title || "Aadya Storefront Banner"}
+                  alt={banner.headline || banner.title || "Tushaqsa Banner"}
                   className="h-full w-full object-cover object-center"
                 />
               </picture>

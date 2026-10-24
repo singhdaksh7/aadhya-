@@ -7,7 +7,7 @@ import MegaMenu from "../src/components/MegaMenu";
 import CircularCategoryNav from "../src/components/CircularCategoryNav";
 
 let mockSettings = {
-  general: { storeName: "Aadya" },
+  general: { storeName: "Tushaqsa" },
   branding: {},
   header: { showUtilityBar: true, showSearch: true },
   announcementBar: { active: true, text: "Special Offer" },
@@ -70,7 +70,7 @@ describe("Premium Storefront Header & Navigation", () => {
 
   it("renders centered logo and main header layout", async () => {
     renderHeader();
-    const logoText = screen.getAllByText("Aadya");
+    const logoText = screen.getAllByText("Tushaqsa");
     expect(logoText.length).toBeGreaterThan(0);
     expect(screen.getByText("Cart")).toBeInTheDocument();
     expect(screen.getAllByText("3").length).toBeGreaterThan(0);

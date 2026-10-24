@@ -33,7 +33,7 @@ test("E2E CMS Page Roundtrip: Create, Draft 404, Publish, Edit & Update", async 
   // 2. Fill form as DRAFT
   await page.locator('input[placeholder*="Shipping & Delivery Policy"]').fill(PAGE_TITLE);
   await page.locator('input[placeholder*="shipping-policy"]').fill(PAGE_SLUG);
-  await page.locator('div[contenteditable="true"]').fill("Welcome to Aadya CMS Page Content");
+  await page.locator('div[contenteditable="true"]').fill("Welcome to Tushaqsa CMS Page Content");
   await page.locator('button:has-text("Save Page")').click();
 
   // 3. Draft page should be hidden on public storefront (returns 404 / NotFound)
@@ -48,7 +48,7 @@ test("E2E CMS Page Roundtrip: Create, Draft 404, Publish, Edit & Update", async 
   // 5. Public page now displays published content
   await page.goto(`/pages/${PAGE_SLUG}`);
   await expect(page.locator("body")).toContainText(PAGE_TITLE);
-  await expect(page.locator("body")).toContainText("Welcome to Aadya CMS Page Content");
+  await expect(page.locator("body")).toContainText("Welcome to Tushaqsa CMS Page Content");
 });
 
 test("E2E Blog Roundtrip: Create Draft, Hide Publicly, Publish & Display Detail", async ({ page }) => {

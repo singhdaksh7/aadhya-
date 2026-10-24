@@ -62,13 +62,13 @@ export default function BlogDetail() {
     image: featuredImgUrl ? [featuredImgUrl] : undefined,
     datePublished: post.publishDate || post.createdAt,
     dateModified: post.updatedAt || post.publishDate || post.createdAt,
-    author: { "@type": "Person", name: post.author || "Aadya Editorial" },
+    author: { "@type": "Person", name: post.author || "Tushaqsa Editorial" },
     mainEntityOfPage: postUrl,
   };
 
   return (
     <div className="store-bg min-h-screen py-12 px-5 sm:px-8 animate-fade-in">
-      <title>{`${post.title} — Aadya Lifestyle Journal`}</title>
+      <title>{`${post.title} | Tushaqsa`}</title>
       <meta name="description" content={metaDescription} />
       <link rel="canonical" href={postUrl} />
       <script type="application/ld+json" {...jsonLdProps(articleJsonLd)} />
@@ -106,7 +106,7 @@ export default function BlogDetail() {
           )}
 
           <div className="pt-2 text-xs font-medium store-text">
-            Written by <span className="font-semibold store-primary">{post.author || "Aadya Editorial"}</span>
+            Written by <span className="font-semibold store-primary">{post.author || "Tushaqsa Editorial"}</span>
           </div>
         </header>
 

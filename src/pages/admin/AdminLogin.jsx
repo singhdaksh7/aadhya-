@@ -34,7 +34,7 @@ export default function AdminLogin() {
     <div className="flex min-h-[70vh] items-center justify-center px-5">
       <div className="w-full max-w-sm rounded-3xl border border-charcoal/10 bg-white/60 p-8">
         <h1 className="font-serif-display text-2xl text-charcoal">Admin Login</h1>
-        <p className="mt-1 text-sm text-charcoal-soft">Aadya commerce admin.</p>
+        <p className="mt-1 text-sm text-charcoal-soft">Tushaqsa commerce admin.</p>
 
         <form onSubmit={onSubmit} className="mt-6 space-y-4">
           <div>

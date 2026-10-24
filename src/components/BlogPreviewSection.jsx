@@ -18,7 +18,7 @@ export default function BlogPreviewSection({ section }) {
 
   return (
     <section data-testid="blog-section" className="mx-auto max-w-7xl px-4 sm:px-8">
-      <HomepageSectionTitle align={s.headingAlign || "CENTER"} eyebrow={s.eyebrow} title={s.title || "Stories from Aadya"} subtitle={s.subtitle} className="mb-10 sm:mb-12" />
+      <HomepageSectionTitle align={s.headingAlign || "CENTER"} eyebrow={s.eyebrow} title={s.title || "Stories from Tushaqsa"} subtitle={s.subtitle} className="mb-10 sm:mb-12" />
       {showEmpty ? (
         <div data-testid="blog-empty" className="mx-auto max-w-xl rounded-2xl border store-border store-surface px-6 py-12 text-center">
           <p className="font-serif-display text-lg store-text">{s.emptyStateMessage || "Stories coming soon."}</p>

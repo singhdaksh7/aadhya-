@@ -4,9 +4,9 @@ import { lighten, darken, mix } from "../lib/color";
 
 export const DEFAULT_SITE_SETTINGS = {
   general: {
-    storeName: "Aadya",
-    legalName: "Aadya Lifestyle Private Limited",
-    shortDescription: "Aadya is a premium Indian home decor and lifestyle brand celebrating slow craft and artisan traditions.",
+    storeName: "Tushaqsa",
+    legalName: "",
+    shortDescription: "Tushaqsa is a premium Indian home decor and lifestyle brand celebrating slow craft and artisan traditions.",
     supportEmail: "",
     supportPhone: "",
     businessEmail: "",
@@ -29,11 +29,12 @@ export const DEFAULT_SITE_SETTINGS = {
     mobileLogo: "",
     secondaryLogo: "",
     favicon: "",
-    logoAltText: "Aadya Logo",
+    logoAltText: "Tushaqsa - Home Decor and Lifestyle Products",
     logoWidthDesktop: 140,
     logoWidthMobile: 110,
-    logoMaxHeightDesktop: 60,
-    logoMaxHeightMobile: 44,
+    // 0 = auto (follow the artwork's aspect ratio from the width). Both set = both honored.
+    logoHeightDesktop: 0,
+    logoHeightMobile: 0,
   },
   header: {
     showUtilityBar: true,
@@ -62,10 +63,10 @@ export const DEFAULT_SITE_SETTINGS = {
     textStyle: "LIGHT",
   },
   footer: {
-    brandDescription: "Aadya is a premium Indian home decor and lifestyle brand. We create and curate objects for thoughtful living — celebrating slow craft, natural minerals, and artisan traditions.",
+    brandDescription: "Tushaqsa is a premium Indian home decor and lifestyle brand. We create and curate objects for thoughtful living — celebrating slow craft, natural minerals, and artisan traditions.",
     footerLogo: "",
     newsletterVisibility: true,
-    newsletterTitle: "Join the Aadya Inner Circle",
+    newsletterTitle: "Join the Tushaqsa Inner Circle",
     newsletterSubtitle: "Receive invitations to private seasonal edits, monograph previews, and artisan stories.",
     contactDetails: true,
     socialLinksVisibility: true,
@@ -106,7 +107,7 @@ export const DEFAULT_SITE_SETTINGS = {
         enabled: true,
         sortOrder: 3,
         links: [
-          { label: "About Aadya", type: "CUSTOM_URL", url: "/about" },
+          { label: "About Tushaqsa", type: "CUSTOM_URL", url: "/about" },
           { label: "Featured Collections", type: "CUSTOM_URL", url: "/collections" },
           { label: "Privacy Policy", type: "CUSTOM_URL", url: "/privacy" },
           { label: "Terms of Service", type: "CUSTOM_URL", url: "/terms" },
@@ -225,7 +226,7 @@ export const DEFAULT_SITE_SETTINGS = {
   ],
 };
 
-// Canonical default palette — must exactly match the current Aadya branding
+// Canonical default palette — must exactly match the current Tushaqsa branding
 // so nothing visually changes when no custom theme is set. This is the
 // single source of truth for both the DEFAULT_SITE_SETTINGS.appearance.colors
 // object above and the --theme-* CSS variable fallbacks applied below.
@@ -251,7 +252,7 @@ export function deriveThemeColors(colors = {}) {
   const background = colors.background || DEFAULT_THEME_COLORS.background;
   const text = colors.text || DEFAULT_THEME_COLORS.text;
 
-  // When primary/secondary/background/text are all still at their Aadya
+  // When primary/secondary/background/text are all still at their Tushaqsa
   // defaults (i.e. nothing custom set), fall back to the exact default
   // values for the derived fields too, so a fresh/empty settings object
   // renders pixel-identical to before this theming system existed. Only

@@ -46,7 +46,7 @@ export default function TrackOrder() {
 
   return (
     <div className="mx-auto max-w-2xl px-5 py-16 sm:px-8 space-y-10">
-      <title>Track Your Order — Aadya</title>
+      <title>Track Your Order | Tushaqsa</title>
 
       <div className="text-center max-w-lg mx-auto">
         <span className="text-xs font-semibold uppercase tracking-widest store-primary">Shipment Tracker</span>

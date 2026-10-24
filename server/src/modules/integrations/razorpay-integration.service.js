@@ -100,7 +100,7 @@ export async function testRazorpayConnection(environment, adminId) {
 }
 
 // Local verification only. Razorpay offers no API to fire a signed test event, so this
-// never pretends to: it confirms Aadya is ready, then reports whether a real signed
+// never pretends to: it confirms Tushaqsa is ready, then reports whether a real signed
 // event has ever arrived.
 export async function verifyWebhookSetup(req) {
   const summary = await razorpaySummary(req);

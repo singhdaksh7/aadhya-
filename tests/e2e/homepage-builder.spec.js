@@ -31,7 +31,7 @@ test("Admin -> Public Homepage Roundtrip (Edit, Draft, Publish, Enable/Disable)"
 
   // 5. Navigate to public storefront homepage
   await page.goto("/");
-  await expect(page.locator("body")).toContainText("Aadya");
+  await expect(page.locator("body")).toContainText("Tushaqsa");
 
   // 6. Return to Admin Homepage Builder and test toggle section
   await page.goto("/admin/homepage-builder");

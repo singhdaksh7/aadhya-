@@ -27,7 +27,7 @@ export default function AdminBlog() {
     excerpt: "",
     featuredImage: "",
     content: "",
-    author: "Aadya Editorial",
+    author: "Tushaqsa Editorial",
     category: "Decor & Living",
     tags: "",
     isFeatured: false,
@@ -63,7 +63,7 @@ export default function AdminBlog() {
       excerpt: "",
       featuredImage: "",
       content: "",
-      author: "Aadya Editorial",
+      author: "Tushaqsa Editorial",
       category: "Decor & Living",
       tags: "handcrafted, decor, lifestyle",
       isFeatured: false,
@@ -83,7 +83,7 @@ export default function AdminBlog() {
       excerpt: post.excerpt || "",
       featuredImage: post.featuredImage || "",
       content: post.content || "",
-      author: post.author || "Aadya Editorial",
+      author: post.author || "Tushaqsa Editorial",
       category: post.category || "Decor & Living",
       tags: Array.isArray(post.tags) ? post.tags.join(", ") : post.tags || "",
       isFeatured: post.isFeatured || false,
@@ -389,7 +389,7 @@ export default function AdminBlog() {
                     type="text"
                     value={formData.author}
                     onChange={(e) => setFormData({ ...formData, author: e.target.value })}
-                    placeholder="e.g. Aadya Editorial"
+                    placeholder="e.g. Tushaqsa Editorial"
                     className="w-full px-3 py-2 text-xs rounded-xl border border-charcoal/15 bg-white text-charcoal focus:outline-none"
                   />
                 </div>

@@ -16,10 +16,10 @@ export default function CollectionsHub() {
 
   return (
     <div className="space-y-12 pb-20">
-      <title>Curated Collections — Aadya</title>
+      <title>Curated Collections | Tushaqsa</title>
       <meta
         name="description"
-        content="Explore Aadya's editorial collections — handcrafted metalwork, home decor, and lifestyle objects grouped by materiality and mood."
+        content="Explore Tushaqsa's editorial collections — handcrafted metalwork, home decor, and lifestyle objects grouped by materiality and mood."
       />
       <link rel="canonical" href={canonicalUrl("/collections")} />
       {/* Header */}
@@ -29,7 +29,7 @@ export default function CollectionsHub() {
             Curated Series
           </span>
           <h1 className="font-serif-display text-3xl sm:text-5xl store-text">
-            Aadya Editorial Collections
+            Tushaqsa Editorial Collections
           </h1>
           <p className="max-w-xl mx-auto text-sm sm:text-base store-muted leading-relaxed">
             Thematically curated home decor, handcrafted metalwork, and serene lifestyle objects grouped by materiality, mood, and living space.

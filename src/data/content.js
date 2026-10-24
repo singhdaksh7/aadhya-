@@ -25,7 +25,7 @@ export const contentItems = [
     id: "c4",
     category: "Research",
     type: "Resource",
-    title: "How We Approach Research at Aadya Society",
+    title: "How We Approach Research at Tushaqsa",
     excerpt: "An overview resource on the research philosophy behind our programs and publications.",
   },
   {

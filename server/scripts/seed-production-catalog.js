@@ -66,21 +66,21 @@ const books = [
     slug: "the-art-of-slow-living",
     sku: "AADYA-BOOK-001",
     physical: { price: 599, stockQuantity: 30, weightGrams: 320 },
-    author: "Aadya Editorial Collective (Demo Sample)",
+    author: "Tushaqsa Editorial Collective (Demo Sample)",
     isbn: "AADYA-DEMO-ISBN-0001",
-    publisher: "Aadya Sample Press",
+    publisher: "Tushaqsa Sample Press",
     language: "English",
     pageCount: 184,
     color: "#3F506B",
   },
   {
-    name: "Aadya Home Styling Guide",
+    name: "Tushaqsa Home Styling Guide",
     slug: "aadya-home-styling-guide",
     sku: "AADYA-BOOK-002",
     pdf: { price: 349 },
-    author: "Aadya Editorial Collective (Demo Sample)",
+    author: "Tushaqsa Editorial Collective (Demo Sample)",
     isbn: "AADYA-DEMO-ISBN-0002",
-    publisher: "Aadya Sample Press",
+    publisher: "Tushaqsa Sample Press",
     language: "English",
     pageCount: 96,
     color: "#705485",
@@ -91,9 +91,9 @@ const books = [
     sku: "AADYA-BOOK-003",
     physical: { price: 699, stockQuantity: 30, weightGrams: 380 },
     pdf: { price: 419 },
-    author: "Aadya Editorial Collective (Demo Sample)",
+    author: "Tushaqsa Editorial Collective (Demo Sample)",
     isbn: "AADYA-DEMO-ISBN-0003",
-    publisher: "Aadya Sample Press",
+    publisher: "Tushaqsa Sample Press",
     language: "English",
     pageCount: 220,
     color: "#8B5C48",
@@ -113,7 +113,7 @@ function placeholderArtwork(label, color, isCover = false) {
       `<rect width="100%" height="100%" fill="${color}"/>` +
       `<circle cx="${width / 2}" cy="${height * 0.38}" r="150" fill="#ffffff" fill-opacity="0.12"/>` +
       `<text x="${width / 2}" y="${height * 0.62}" fill="#ffffff" font-family="serif" font-size="54" text-anchor="middle">${safeLabel}</text>` +
-      `<text x="${width / 2}" y="${height * 0.68}" fill="#ffffff" fill-opacity="0.82" font-family="sans-serif" font-size="24" text-anchor="middle">Original Aadya sample artwork</text>` +
+      `<text x="${width / 2}" y="${height * 0.68}" fill="#ffffff" fill-opacity="0.82" font-family="sans-serif" font-size="24" text-anchor="middle">Original Tushaqsa sample artwork</text>` +
       `</svg>`,
     "utf8"
   );
@@ -121,7 +121,7 @@ function placeholderArtwork(label, color, isCover = false) {
 
 // A small, valid PDF generated without external content or dependencies.
 function buildDemoPdf(title) {
-  const lines = ["Aadya Demo Digital Book", "Sample content for testing digital fulfilment.", title];
+  const lines = ["Tushaqsa Demo Digital Book", "Sample content for testing digital fulfilment.", title];
   const stream = `BT /F1 18 Tf 72 720 Td (${lines[0]}) Tj 0 -32 Td /F1 13 Tf (${lines[1]}) Tj 0 -44 Td /F1 16 Tf (${lines[2]}) Tj ET`;
   const objects = [
     "<< /Type /Catalog /Pages 2 0 R >>",
@@ -240,14 +240,14 @@ async function main() {
       trackInventory: Boolean(book.physical),
       isDigital: Boolean(book.pdf),
       isActive: true,
-      shortDescription: "Aadya demo/sample book for catalog and fulfilment testing.",
-      description: "Aadya demo/sample content only. This original placeholder title is for production catalog and fulfilment testing.",
+      shortDescription: "Tushaqsa demo/sample book for catalog and fulfilment testing.",
+      description: "Tushaqsa demo/sample content only. This original placeholder title is for production catalog and fulfilment testing.",
       tags: ["aadya-sample", "book"],
     });
     await prisma.productBookDetails.upsert({
       where: { productId: product.id },
       update: {},
-      create: { productId: product.id, author: book.author, isbn: book.isbn, publisher: book.publisher, language: book.language, pageCount: book.pageCount, edition: "Aadya demo/sample edition" },
+      create: { productId: product.id, author: book.author, isbn: book.isbn, publisher: book.publisher, language: book.language, pageCount: book.pageCount, edition: "Tushaqsa demo/sample edition" },
     });
     if (await createPrimaryImageIfMissing(product, book.name, book.color, true)) imagesCreated += 1;
     if (book.physical) await createFormatIfMissing(product.id, "PHYSICAL", { ...book.physical, trackInventory: true, lowStockThreshold: 5, isActive: true });

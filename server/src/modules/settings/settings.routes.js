@@ -9,11 +9,14 @@ import { decorationsSchema, DEFAULT_DECORATIONS } from "./decorations.js";
 // Hex color validator (#fff or #ffffff)
 const colorHexSchema = z.string().regex(/^#([A-Fa-f0-9]{3}){1,2}$/, "Must be a valid hex color code");
 
+// Safe numeric bounds only (positive, finite, sane upper limit against absurd/overflow input).
+const logoDimension = z.number().positive().finite().max(10000);
+
 export const DEFAULT_SETTINGS = {
   general: {
-    storeName: "Aadya",
-    legalName: "Aadya Lifestyle Private Limited",
-    shortDescription: "Aadya is a premium Indian home decor and lifestyle brand celebrating slow craft and artisan traditions.",
+    storeName: "Tushaqsa",
+    legalName: "",
+    shortDescription: "Tushaqsa is a premium Indian home decor and lifestyle brand celebrating slow craft and artisan traditions.",
     supportEmail: "",
     supportPhone: "",
     businessEmail: "",
@@ -36,11 +39,12 @@ export const DEFAULT_SETTINGS = {
     mobileLogo: "",
     secondaryLogo: "",
     favicon: "",
-    logoAltText: "Aadya Logo",
+    logoAltText: "Tushaqsa - Home Decor and Lifestyle Products",
     logoWidthDesktop: 140,
     logoWidthMobile: 110,
-    logoMaxHeightDesktop: 60,
-    logoMaxHeightMobile: 44,
+    // 0 = auto (follow the artwork's aspect ratio from the width). Both set = both honored.
+    logoHeightDesktop: 0,
+    logoHeightMobile: 0,
   },
   header: {
     showUtilityBar: true,
@@ -69,10 +73,10 @@ export const DEFAULT_SETTINGS = {
     textStyle: "LIGHT",
   },
   footer: {
-    brandDescription: "Aadya is a premium Indian home decor and lifestyle brand. We create and curate objects for thoughtful living — celebrating slow craft, natural minerals, and artisan traditions.",
+    brandDescription: "Tushaqsa is a premium Indian home decor and lifestyle brand. We create and curate objects for thoughtful living — celebrating slow craft, natural minerals, and artisan traditions.",
     footerLogo: "",
     newsletterVisibility: true,
-    newsletterTitle: "Join the Aadya Inner Circle",
+    newsletterTitle: "Join the Tushaqsa Inner Circle",
     newsletterSubtitle: "Receive invitations to private seasonal edits, monograph previews, and artisan stories.",
     contactDetails: true,
     socialLinksVisibility: true,
@@ -113,7 +117,7 @@ export const DEFAULT_SETTINGS = {
         enabled: true,
         sortOrder: 3,
         links: [
-          { label: "About Aadya", type: "CUSTOM_URL", url: "/about" },
+          { label: "About Tushaqsa", type: "CUSTOM_URL", url: "/about" },
           { label: "Featured Collections", type: "CUSTOM_URL", url: "/collections" },
           { label: "Privacy Policy", type: "CUSTOM_URL", url: "/privacy" },
           { label: "Terms of Service", type: "CUSTOM_URL", url: "/terms" },
@@ -608,10 +612,11 @@ export const settingsValidationSchema = z.object({
     secondaryLogo: z.string().max(500).optional(),
     favicon: z.string().max(500).optional(),
     logoAltText: z.string().max(100).optional(),
-    logoWidthDesktop: z.number().int().min(40).max(400).optional(),
-    logoWidthMobile: z.number().int().min(30).max(300).optional(),
-    logoMaxHeightDesktop: z.number().int().min(32).max(96).optional(),
-    logoMaxHeightMobile: z.number().int().min(24).max(72).optional(),
+    // No design-level caps: any positive finite number is valid. Height 0/null means "auto".
+    logoWidthDesktop: logoDimension.optional(),
+    logoWidthMobile: logoDimension.optional(),
+    logoHeightDesktop: logoDimension.or(z.literal(0)).nullable().optional(),
+    logoHeightMobile: logoDimension.or(z.literal(0)).nullable().optional(),
   }).optional(),
 
   header: headerSettingsSchema.optional(),

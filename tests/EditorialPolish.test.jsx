@@ -15,7 +15,7 @@ const wrap = (ui) => render(<BrowserRouter>{ui}</BrowserRouter>);
 const products = [{ id: "p1", name: "Vase" }];
 
 describe("hero banner redesign", () => {
-  const banner = { id: "h", desktopImage: "/d.jpg", mobileImage: "/m.jpg", eyebrow: "Aadya Home", headline: "Decor that", highlightText: "Feels Like Home", description: "Handcrafted.", primaryCtaLabel: "Shop", primaryCtaUrl: "/shop", secondaryCtaLabel: "Explore", secondaryCtaUrl: "/collections", textPosition: "LEFT", textTheme: "DARK" };
+  const banner = { id: "h", desktopImage: "/d.jpg", mobileImage: "/m.jpg", eyebrow: "Tushaqsa Home", headline: "Decor that", highlightText: "Feels Like Home", description: "Handcrafted.", primaryCtaLabel: "Shop", primaryCtaUrl: "/shop", secondaryCtaLabel: "Explore", secondaryCtaUrl: "/collections", textPosition: "LEFT", textTheme: "DARK" };
 
   it("renders the copy on the image in light type with a script eyebrow, serif heading and solid + outlined buttons", () => {
     wrap(<HeroBannerCarousel bannersOverride={[banner]} />);

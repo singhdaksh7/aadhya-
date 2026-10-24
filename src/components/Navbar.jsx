@@ -109,7 +109,7 @@ export default function Navbar() {
         className="relative store-bg store-border border-b"
       >
         {/* Desktop Header Layout */}
-        <div className="hidden lg:grid grid-cols-3 items-center justify-between px-8 py-3.5 max-w-7xl mx-auto gap-4">
+        <div className="hidden lg:grid grid-cols-[minmax(auto,1fr)_auto_minmax(auto,1fr)] items-center justify-between px-8 py-3.5 max-w-7xl mx-auto gap-4">
           {/* Left Column: Minimalist Search UI */}
           <div className="flex items-center justify-start">
             {mainHeaderConfig.showSearch !== false && (
@@ -129,15 +129,15 @@ export default function Navbar() {
           </div>
 
           {/* Center Column: Visually Centered BrandLogo */}
-          <div className={`flex items-center ${logoAlignmentClass}`}>
-            <Link to="/" className="inline-flex items-center justify-center shrink-0">
+          <div className={`flex min-w-0 items-center ${logoAlignmentClass}`}>
+            <Link to="/" className="inline-flex min-w-0 max-w-full items-center justify-center">
               <BrandLogo
                 src={branding?.desktopLogo}
-                alt={branding?.logoAltText || `${general?.storeName || "Aadya"} Logo`}
-                fallbackText={general?.storeName || "Aadya"}
+                alt={branding?.logoAltText || `${general?.storeName || "Tushaqsa"} Logo`}
+                fallbackText={general?.storeName || "Tushaqsa"}
                 widthPx={branding?.logoWidthDesktop || 140}
-                maxHeightPx={branding?.logoMaxHeightDesktop || 60}
-                className="w-auto"
+                heightPx={branding?.logoHeightDesktop}
+                className="block"
                 textClassName="font-serif-display text-4xl tracking-tight text-charcoal font-bold xl:text-5xl"
               />
             </Link>
@@ -214,11 +214,11 @@ export default function Navbar() {
           <Link to="/" className="mx-2 flex min-w-0 shrink items-center justify-center">
             <BrandLogo
               src={branding?.mobileLogo || branding?.desktopLogo}
-              alt={branding?.logoAltText || `${general?.storeName || "Aadya"} Logo`}
-              fallbackText={general?.storeName || "Aadya"}
+              alt={branding?.logoAltText || `${general?.storeName || "Tushaqsa"} Logo`}
+              fallbackText={general?.storeName || "Tushaqsa"}
               widthPx={branding?.logoWidthMobile || 110}
-              maxHeightPx={branding?.logoMaxHeightMobile || 44}
-              className="w-auto"
+              heightPx={branding?.logoHeightMobile}
+              className="block"
               textClassName="font-serif-display text-2xl tracking-tight store-text font-bold"
             />
           </Link>
@@ -278,7 +278,7 @@ export default function Navbar() {
             <div className="absolute left-0 top-0 h-full w-full max-w-xs overflow-y-auto store-bg p-6 shadow-2xl">
               <div className="flex items-center justify-between border-b store-border pb-4">
                 <Link to="/" className="font-serif-display text-2xl store-text font-bold">
-                  {mobileConfig.drawerTitle || general?.storeName || "Aadya"}
+                  {mobileConfig.drawerTitle || general?.storeName || "Tushaqsa"}
                 </Link>
                 <button
                   onClick={() => setMobileMenuOpen(false)}

@@ -34,11 +34,11 @@ const PAGES = [
   draftPage("events", "Events"),
   draftPage("thinkpod", "Thinkpod"),
   {
-    slug: "about", name: "About Aadya", excerpt: "Considered objects for everyday living.",
-    seoTitle: "About Aadya", seoDescription: "Aadya is a home and lifestyle store of handcrafted decor, textiles, lighting, fragrance and books.",
+    slug: "about", name: "About Tushaqsa", excerpt: "Considered objects for everyday living.",
+    seoTitle: "About Tushaqsa", seoDescription: "Tushaqsa is a home and lifestyle store of handcrafted decor, textiles, lighting, fragrance and books.",
     content: [
       "<h2>Our approach</h2>",
-      "<p>Aadya is a home and lifestyle store built around calm, considered objects: ceramics, linen and cotton textiles, woven pieces and warm lighting, alongside a small shelf of books on slow living and interiors.</p>",
+      "<p>Tushaqsa is a home and lifestyle store built around calm, considered objects: ceramics, linen and cotton textiles, woven pieces and warm lighting, alongside a small shelf of books on slow living and interiors.</p>",
       "<h2>What you'll find</h2>",
       "<ul><li>Home decor, textiles and lighting for living spaces</li><li>Table and dining pieces for slower meals</li><li>Candles, incense and diffusers</li><li>Books on slow living and interiors</li></ul>",
       "<h2>How we choose</h2>",

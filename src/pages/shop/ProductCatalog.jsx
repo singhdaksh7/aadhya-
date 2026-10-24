@@ -44,7 +44,7 @@ export default function ProductCatalog(props) {
 function CatalogView({
   categories,
   collections,
-  eyebrow = "Aadya Storefront",
+  eyebrow = "Tushaqsa",
   title = "Objects for Thoughtful Living",
   description = "Explore handcrafted oil lamps, unglazed ceramic vessels, linen runners, and slow living monographs.",
   lockedCategory = null,
