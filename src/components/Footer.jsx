@@ -1,10 +1,59 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useSiteSettings } from "../hooks/useSiteSettings";
 import BrandLogo from "./BrandLogo";
 import { SITE_CREDIT } from "../lib/siteCredit";
 import { isExternalUrl } from "../lib/footerUrls";
 import { CompanyBlock, ContactItems, SeoBand, PaymentBadges, FooterImage, hasPaymentBadgeImages } from "./FooterSections";
+
+// Footer logo: admin-controlled width/height (desktop + mobile, 0 = auto), with a style option so
+// dark artwork stays legible on the dark footer. Prefers the footer logo, then the light/secondary
+// logo meant for dark backgrounds, then the main logo.
+const FOOTER_LOGO_STYLES = {
+  ORIGINAL: { wrap: "", img: "" },
+  LIGHT_PLATE: { wrap: "rounded-lg bg-[#FAF6F0] p-3", img: "" },
+  WHITE_SILHOUETTE: { wrap: "", img: "brightness-0 invert" },
+};
+
+function FooterLogo({ footer, branding, storeName }) {
+  const src = footer?.footerLogo || branding?.secondaryLogo || branding?.desktopLogo;
+  const style = FOOTER_LOGO_STYLES[footer?.footerLogoStyle] || FOOTER_LOGO_STYLES.ORIGINAL;
+  const w = Number(footer?.footerLogoWidth) || 0;
+  const h = Number(footer?.footerLogoHeight) || 0;
+  const wm = Number(footer?.footerLogoWidthMobile) || 0;
+  const hm = Number(footer?.footerLogoHeightMobile) || 0;
+  // Sensible default when nothing is configured: 160px wide on desktop, 130px on mobile, height auto.
+  const desktop = { widthPx: w || (h ? undefined : 160), heightPx: h || undefined };
+  const mobile = { widthPx: wm || (hm ? undefined : (w ? Math.min(w, 130) : 130)), heightPx: hm || undefined };
+  const isDesktop = useIsDesktop();
+  const size = isDesktop ? desktop : mobile;
+  return (
+    <span className={`inline-flex max-w-full ${style.wrap}`}>
+      <BrandLogo
+        src={src}
+        alt={storeName}
+        fallbackText={storeName}
+        {...size}
+        className={`block ${style.img}`}
+        textClassName="font-serif-display text-3xl tracking-tight text-white font-bold"
+      />
+    </span>
+  );
+}
+
+function useIsDesktop() {
+  const query = "(min-width: 768px)";
+  const get = () => (typeof window !== "undefined" && window.matchMedia ? window.matchMedia(query).matches : true);
+  const [match, setMatch] = useState(get);
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return undefined;
+    const mq = window.matchMedia(query);
+    const onChange = () => setMatch(mq.matches);
+    mq.addEventListener?.("change", onChange);
+    return () => mq.removeEventListener?.("change", onChange);
+  }, []);
+  return match;
+}
 
 export default function Footer() {
   const { footer, general, social, branding, supportEmail, supportPhone } = useSiteSettings();
@@ -85,14 +134,8 @@ export default function Footer() {
         <div className={gridCls}>
           {/* Brand Intro Column */}
           <div className="col-span-2 min-w-0 space-y-4">
-            <Link to="/" className="inline-block">
-              <BrandLogo
-                src={footer?.footerLogo || branding?.desktopLogo}
-                alt={general?.storeName || "Tushaqsa"}
-                fallbackText={general?.storeName || "Tushaqsa"}
-                className="h-8 object-contain brightness-200"
-                textClassName="font-serif-display text-3xl tracking-tight text-white font-bold"
-              />
+            <Link to="/" className="inline-block max-w-full">
+              <FooterLogo footer={footer} branding={branding} storeName={general?.storeName || "Tushaqsa"} />
             </Link>
             <p className="max-w-sm text-xs sm:text-sm leading-relaxed text-[#FAF6F0]/80">
               {brandDesc}

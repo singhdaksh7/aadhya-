@@ -586,6 +586,96 @@ export default function AdminSettings() {
               enableCrop
               aspectOptions={["free", "wide", "square"]}
             />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Footer Logo Width Desktop (px)</label>
+                <input
+                  type="number"
+                  min={1}
+                  step="any"
+                  value={settings.footer?.footerLogoWidth || ""}
+                  placeholder="Auto"
+                  onChange={(e) => {
+                    const n = Number(e.target.value);
+                    setSettings((s) => ({ ...s, footer: { ...s.footer, footerLogoWidth: Number.isFinite(n) && n > 0 ? n : 0 } }));
+                  }}
+                  className={inputCls}
+                />
+                <p className="mt-1 text-[11px] text-charcoal-soft">Empty = auto (default 160). Set both width and height to fix both; never cropped.</p>
+              </div>
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Footer Logo Height Desktop (px)</label>
+                <input
+                  type="number"
+                  min={1}
+                  step="any"
+                  value={settings.footer?.footerLogoHeight || ""}
+                  placeholder="Auto"
+                  onChange={(e) => {
+                    const n = Number(e.target.value);
+                    setSettings((s) => ({ ...s, footer: { ...s.footer, footerLogoHeight: Number.isFinite(n) && n > 0 ? n : 0 } }));
+                  }}
+                  className={inputCls}
+                />
+                <p className="mt-1 text-[11px] text-charcoal-soft">Empty = auto from the width.</p>
+              </div>
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Footer Logo Width Mobile (px)</label>
+                <input
+                  type="number"
+                  min={1}
+                  step="any"
+                  value={settings.footer?.footerLogoWidthMobile || ""}
+                  placeholder="Auto"
+                  onChange={(e) => {
+                    const n = Number(e.target.value);
+                    setSettings((s) => ({ ...s, footer: { ...s.footer, footerLogoWidthMobile: Number.isFinite(n) && n > 0 ? n : 0 } }));
+                  }}
+                  className={inputCls}
+                />
+                <p className="mt-1 text-[11px] text-charcoal-soft">Empty = auto (default 130).</p>
+              </div>
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Footer Logo Height Mobile (px)</label>
+                <input
+                  type="number"
+                  min={1}
+                  step="any"
+                  value={settings.footer?.footerLogoHeightMobile || ""}
+                  placeholder="Auto"
+                  onChange={(e) => {
+                    const n = Number(e.target.value);
+                    setSettings((s) => ({ ...s, footer: { ...s.footer, footerLogoHeightMobile: Number.isFinite(n) && n > 0 ? n : 0 } }));
+                  }}
+                  className={inputCls}
+                />
+                <p className="mt-1 text-[11px] text-charcoal-soft">Empty = auto from the width.</p>
+              </div>
+              <div className="col-span-2">
+                <label className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Footer Logo Style (footer is dark)</label>
+                <select
+                  value={settings.footer?.footerLogoStyle || "ORIGINAL"}
+                  onChange={(e) => setSettings((s) => ({ ...s, footer: { ...s.footer, footerLogoStyle: e.target.value } }))}
+                  className={inputCls}
+                >
+                  <option value="ORIGINAL">Original colours (use a light logo)</option>
+                  <option value="LIGHT_PLATE">Dark logo on a light plate</option>
+                  <option value="WHITE_SILHOUETTE">White silhouette (single-colour logo)</option>
+                </select>
+              </div>
+              <div className="col-span-2 flex flex-wrap items-center gap-3 rounded-xl bg-charcoal px-4 py-4" data-testid="footer-logo-preview">
+                <span className="w-full text-[10px] font-semibold uppercase tracking-wider text-white/70">Footer preview (dark background)</span>
+                <span className={`inline-flex max-w-full ${settings.footer?.footerLogoStyle === "LIGHT_PLATE" ? "rounded-lg bg-[#FAF6F0] p-3" : ""}`}>
+                  {(settings.footer?.footerLogo || settings.branding?.secondaryLogo || settings.branding?.desktopLogo) ? <BrandLogo
+                    src={settings.footer?.footerLogo || settings.branding?.secondaryLogo || settings.branding?.desktopLogo}
+                    widthPx={Number(settings.footer?.footerLogoWidth) || (Number(settings.footer?.footerLogoHeight) ? undefined : 160)}
+                    heightPx={Number(settings.footer?.footerLogoHeight) || undefined}
+                    className={`block ${settings.footer?.footerLogoStyle === "WHITE_SILHOUETTE" ? "brightness-0 invert" : ""}`}
+                    textClassName="font-serif-display text-3xl font-bold text-white"
+                  /> : <span className="text-xs text-white/60">No logo selected</span>}
+                </span>
+              </div>
+            </div>
             <div>
               <label className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Brand Description in Footer</label>
               <textarea

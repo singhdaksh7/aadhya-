@@ -75,6 +75,12 @@ export const DEFAULT_SETTINGS = {
   footer: {
     brandDescription: "Tushaqsa is a premium Indian home decor and lifestyle brand. We create and curate objects for thoughtful living — celebrating slow craft, natural minerals, and artisan traditions.",
     footerLogo: "",
+    // Footer logo sizing (px, 0 = auto) and legibility on the dark footer.
+    footerLogoWidth: 0,
+    footerLogoHeight: 0,
+    footerLogoWidthMobile: 0,
+    footerLogoHeightMobile: 0,
+    footerLogoStyle: "ORIGINAL",
     newsletterVisibility: true,
     newsletterTitle: "Join the Tushaqsa Inner Circle",
     newsletterSubtitle: "Receive invitations to private seasonal edits, monograph previews, and artisan stories.",
@@ -635,6 +641,11 @@ export const settingsValidationSchema = z.object({
   footer: z.object({
     brandDescription: z.string().max(1000).optional(),
     footerLogo: z.string().max(500).optional(),
+    footerLogoWidth: logoDimension.or(z.literal(0)).nullable().optional(),
+    footerLogoHeight: logoDimension.or(z.literal(0)).nullable().optional(),
+    footerLogoWidthMobile: logoDimension.or(z.literal(0)).nullable().optional(),
+    footerLogoHeightMobile: logoDimension.or(z.literal(0)).nullable().optional(),
+    footerLogoStyle: z.enum(["ORIGINAL", "LIGHT_PLATE", "WHITE_SILHOUETTE"]).optional(),
     newsletterVisibility: z.boolean().optional(),
     newsletterTitle: z.string().max(150).optional(),
     newsletterSubtitle: z.string().max(300).optional(),
