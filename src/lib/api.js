@@ -356,7 +356,8 @@ export function createOrder(payload, authenticated = false) {
 }
 
 export async function createCashfreeSession(orderId) {
-  const res = await api.post(`/orders/${orderId}/payment`);
+  // Logged-in customers own their orders; without the Bearer token the server cannot match the owner and answers 404. Guests have no token and send nothing extra.
+  const res = await api.post(`/orders/${orderId}/payment`, undefined, { auth: "customer" });
   return res.data;
 }
 
