@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { useSiteSettings } from "../hooks/useSiteSettings";
 import { resolveMediaUrl } from "../lib/api";
@@ -8,10 +8,42 @@ import { LAYER_CLASSES, VISIBILITY_CLASSES, expandBothSides, frameStyle, imageSt
 // (not shown as a broken image) if its file cannot be loaded.
 function Art({ item, eager }) {
   const [broken, setBroken] = useState(false);
+  const ref = useRef(null);
+  const drifts = item.vertical === "CENTER" && !item.fixed;
+
+  // Vertical travel: as its layer (the page or the section) scrolls through the screen, centred artwork glides from the
+  // top of the screen to the bottom, so it visibly moves while you scroll instead of just riding along with the page.
+  // Written straight to the element (the CSS `translate` property, independent of rotate/flip) so scrolling never re-renders.
+  useEffect(() => {
+    const el = ref.current;
+    const layer = el?.parentElement;
+    if (!drifts || !el || !layer || typeof window === "undefined") return undefined;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) return undefined;
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const box = layer.getBoundingClientRect();
+      const h = el.offsetHeight;
+      const vh = window.innerHeight;
+      if (!box.height || !h || !vh) return;
+      const progress = Math.min(1, Math.max(0, (vh - box.top) / (vh + box.height))); // 0: layer just entering, 1: just left
+      const top = -h + progress * (vh + h) - box.top; // wanted top edge, in layer coordinates
+      el.style.translate = `0 ${Math.round(top - (box.height / 2 - h / 2))}px`; // relative to the CSS-centred position
+    };
+    const schedule = () => { if (!frame) frame = requestAnimationFrame(update); };
+    const img = el.querySelector("img");
+    update();
+    img?.addEventListener("load", schedule); // the art's height is only known once its image has loaded
+    window.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("resize", schedule);
+    return () => { img?.removeEventListener("load", schedule); window.removeEventListener("scroll", schedule); window.removeEventListener("resize", schedule); if (frame) cancelAnimationFrame(frame); };
+  }, [drifts]);
+
   if (broken) return null;
   const visibility = `${VISIBILITY_CLASSES.mobile[item.showMobile]} ${VISIBILITY_CLASSES.tablet[item.showTablet]} ${VISIBILITY_CLASSES.desktop[item.showDesktop]}`;
   return (
     <div
+      ref={ref}
       data-testid="decoration"
       data-decoration-id={item.id}
       data-side={item.side}

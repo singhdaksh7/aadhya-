@@ -352,3 +352,40 @@ describe("Section artwork framing (hero-clean, side-anchored, safe zone)", () =>
     expect(wrapperStyle(normalizeDecoration(sec({ maxWidth: 150 }))).maxWidth).toMatch(/^min\(150px, max\(0px/);
   });
 });
+
+describe("Artwork vertical travel while scrolling", () => {
+  const stub = (layerTop, layerHeight, artHeight) => {
+    vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function () {
+      return this.dataset?.testid === "decoration" ? { top: 0, height: artHeight } : { top: layerTop.v, height: layerHeight };
+    });
+    Object.defineProperty(HTMLElement.prototype, "offsetHeight", { configurable: true, get() { return this.dataset?.testid === "decoration" ? artHeight : 0; } });
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: 800 });
+  };
+
+  it("22. centred artwork moves down the screen as its layer scrolls up through it", () => {
+    const layerTop = { v: 800 }; // layer just entering at the bottom of the screen
+    stub(layerTop, 4000, 200);
+    set(deco({ scope: "SITE" }));
+    at("/");
+    const art = arts()[0];
+    const y = () => Number(art.style.translate.split(" ")[1].replace("px", "")) + (4000 / 2 - 100) + layerTop.v; // screen y of the art's top edge
+    const before = y();
+    layerTop.v = -1000; // user scrolled down 1800px
+    fireEvent.scroll(window);
+    return new Promise((resolve) => requestAnimationFrame(() => { expect(y()).toBeGreaterThan(before); resolve(); })); // later = lower on screen
+  });
+
+  it("23. fixed and top/bottom-anchored artwork do not drift", () => {
+    stub({ v: 0 }, 4000, 200);
+    set(deco({ id: "t", scope: "SITE", vertical: "TOP" }), deco({ id: "f", scope: "SITE", positionMode: "FIXED" }));
+    at("/");
+    arts().forEach((a) => expect(a.style.translate).toBe(""));
+  });
+});
+
+describe("Homepage-scoped artwork safe zone", () => {
+  it("24. homepage-only artwork is width-capped to the gutter like section artwork", () => {
+    const style = wrapperStyle(normalizeDecoration(deco({ scope: "HOME", offsetX: -40 })));
+    expect(style.maxWidth).toBe("max(0px, calc((100% - 76rem) / 2 - 12px + 40px))");
+  });
+});

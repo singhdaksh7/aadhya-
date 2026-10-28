@@ -68,13 +68,13 @@ const autoplayAllowed = () => {
   if (typeof window === "undefined") return false;
   return navigator.connection?.saveData !== true;
 };
-const prefersReducedMotion = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches === true;
 
-// Three reels fit across; any beyond that glide right to left.
+// Three reels fit across; any beyond that glide right to left, non-stop, like the reviews marquee (a CSS animation,
+// so it never hitches and nothing pauses it). Seconds of travel per reel: higher is slower.
 const VISIBLE_REELS = 3;
-const MARQUEE_PX_PER_SECOND = 36;
+const SECONDS_PER_REEL = 9;
 
-function ReelCard({ reel, soundOn, onSound, onShop, clone = false }) {
+function ReelCard({ reel, soundOn, onSound, onShop, clone = false, track = false }) {
   const cardRef = useRef(null);
   const videoRef = useRef(null);
   const [inView, setInView] = useState(false);
@@ -123,7 +123,9 @@ function ReelCard({ reel, soundOn, onSound, onShop, clone = false }) {
   const ctaCls = "pointer-events-auto mt-3 flex w-full items-center justify-center border border-white/80 bg-transparent px-4 py-3 text-[11px] font-medium uppercase tracking-[0.2em] text-white transition hover:bg-white hover:text-charcoal";
 
   return (
-    <article ref={cardRef} data-testid={clone ? "reel-card-clone" : "reel-card"} aria-hidden={clone ? "true" : undefined} inert={clone ? true : undefined} className="w-[64%] shrink-0 sm:w-[calc((100%-1.25rem)/2)] md:w-[calc((100%-3rem)/3)]">
+    <article ref={cardRef} data-testid={clone ? "reel-card-clone" : "reel-card"} aria-hidden={clone ? "true" : undefined} inert={clone ? true : undefined} className={track
+      ? "mr-4 w-[64cqw] shrink-0 sm:mr-5 sm:w-[calc((100cqw-1.25rem)/2)] md:mr-6 md:w-[calc((100cqw-3rem)/3)] motion-reduce:[&[aria-hidden=true]]:hidden"
+      : "w-[64%] shrink-0 sm:w-[calc((100%-1.25rem)/2)] md:w-[calc((100%-3rem)/3)]"}>
       <div className="relative aspect-[9/16] overflow-hidden rounded-2xl store-surface">
         {cover ? <img src={cover} alt={reel.title ? `${reel.title} cover` : ""} loading="lazy" className="absolute inset-0 h-full w-full object-cover" /> : <div data-testid="reel-fallback" aria-hidden="true" className="absolute inset-0 flex items-center justify-center store-muted"><svg viewBox="0 0 24 24" className="h-10 w-10 opacity-40" fill="currentColor"><path d="M8 5v14l11-7z" /></svg></div>}
         {playable && loaded && (
@@ -156,74 +158,37 @@ export default function ShoppableReels({ section }) {
   const [soundId, setSoundId] = useState(null); // only one reel is ever unmuted
   const [trayReel, setTrayReel] = useState(null);
   const closeTray = useCallback(() => setTrayReel(null), []);
-  const holdRef = useRef({ hover: false, focus: false, touch: false, nudge: false });
   const count = reels.length;
   const marquee = count > VISIBLE_REELS;
 
-  // Slow right-to-left glide. The list is rendered twice, so when the first copy has fully passed we jump back by exactly
-  // one copy's width and the loop is seamless. It holds still while the visitor hovers, focuses, touches or uses the arrows.
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!marquee || !el || prefersReducedMotion() || typeof requestAnimationFrame === "undefined") return undefined;
-    let raf = 0; let last = 0; let pos = el.scrollLeft;
-    const tick = (now) => {
-      const dt = last ? Math.min(now - last, 64) : 0;
-      last = now;
-      const hold = holdRef.current;
-      if (hold.hover || hold.focus || hold.touch || hold.nudge) {
-        pos = el.scrollLeft; // follow wherever the visitor moved it
-      } else {
-        const loop = (el.children[count]?.offsetLeft || 0) - (el.children[0]?.offsetLeft || 0); // width of one full copy incl. gap
-        if (loop > 0) {
-          pos += (MARQUEE_PX_PER_SECOND * dt) / 1000;
-          if (pos >= loop) pos -= loop;
-          el.scrollLeft = pos;
-        }
-      }
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [marquee, count]);
-
   if (count === 0) return null;
-  const hold = (key, value) => () => { holdRef.current[key] = value; };
-  const releaseTouch = () => { setTimeout(() => { holdRef.current.touch = false; }, 1500); };
-  const slide = (dir) => {
-    const el = scrollRef.current;
-    if (!el) return;
-    holdRef.current.nudge = true;
-    setTimeout(() => { holdRef.current.nudge = false; }, 1200);
-    el.scrollBy?.({ left: dir * el.clientWidth * 0.8, behavior: "smooth" });
-  };
+  const slide = (dir) => scrollRef.current?.scrollBy?.({ left: dir * scrollRef.current.clientWidth * 0.8, behavior: "smooth" });
   const arrow = "absolute top-[38%] z-10 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border store-border store-surface shadow-md md:flex";
   return (
     <section data-testid="shoppable-reels" aria-label={s.title || "Shoppable reels"} className="mx-auto max-w-7xl px-4 sm:px-8">
       <HomepageSectionTitle align="CENTER" eyebrow={s.eyebrow} title={s.title || "Shop Our Reels"} subtitle={s.subtitle} className="mb-8 sm:mb-10" />
-      <div className="relative">
-        {s.showArrows !== false && <button type="button" aria-label="Previous reels" onClick={() => slide(-1)} className={`${arrow} -left-3`}>&larr;</button>}
-        <div
-          ref={scrollRef}
-          data-testid="reel-track"
-          data-marquee={marquee ? "true" : undefined}
-          onPointerEnter={hold("hover", true)}
-          onPointerLeave={hold("hover", false)}
-          onFocus={hold("focus", true)}
-          onBlur={hold("focus", false)}
-          onTouchStart={hold("touch", true)}
-          onTouchEnd={releaseTouch}
-          className={`no-scrollbar flex gap-4 overflow-x-auto pb-1 sm:gap-5 md:gap-6 ${marquee ? "" : "md:justify-center"}`}
-        >
-          {reels.map((reel, index) => {
-            const id = reel.id || `reel-${index}`;
-            return <ReelCard key={id} reel={{ ...reel, products: reel.products || [], categories: reel.categories || [] }} soundOn={soundId === id} onSound={() => setSoundId((current) => (current === id ? null : id))} onShop={() => setTrayReel(reel)} />;
-          })}
-          {marquee && reels.map((reel, index) => (
-            <ReelCard key={`clone-${reel.id || index}`} clone reel={{ ...reel, products: reel.products || [], categories: reel.categories || [] }} soundOn={false} onSound={() => {}} onShop={() => {}} />
-          ))}
+      {marquee ? (
+        <div data-testid="reel-track" data-marquee="true" className="no-scrollbar overflow-hidden [container-type:inline-size] motion-reduce:overflow-x-auto">
+          <div className="reels-marquee-track flex w-max" style={{ "--reels-duration": `${count * SECONDS_PER_REEL}s` }}>
+            {[...reels, ...reels].map((reel, index) => {
+              const clone = index >= count;
+              const id = reel.id || `reel-${index % count}`;
+              return <ReelCard key={`${clone ? "clone-" : ""}${id}`} track clone={clone} reel={{ ...reel, products: reel.products || [], categories: reel.categories || [] }} soundOn={!clone && soundId === id} onSound={() => setSoundId((current) => (current === id ? null : id))} onShop={() => setTrayReel(reel)} />;
+            })}
+          </div>
         </div>
-        {s.showArrows !== false && <button type="button" aria-label="Next reels" onClick={() => slide(1)} className={`${arrow} -right-3`}>&rarr;</button>}
-      </div>
+      ) : (
+        <div className="relative">
+          {s.showArrows !== false && <button type="button" aria-label="Previous reels" onClick={() => slide(-1)} className={`${arrow} -left-3`}>&larr;</button>}
+          <div ref={scrollRef} data-testid="reel-track" className="no-scrollbar flex gap-4 overflow-x-auto pb-1 sm:gap-5 md:justify-center md:gap-6">
+            {reels.map((reel, index) => {
+              const id = reel.id || `reel-${index}`;
+              return <ReelCard key={id} reel={{ ...reel, products: reel.products || [], categories: reel.categories || [] }} soundOn={soundId === id} onSound={() => setSoundId((current) => (current === id ? null : id))} onShop={() => setTrayReel(reel)} />;
+            })}
+          </div>
+          {s.showArrows !== false && <button type="button" aria-label="Next reels" onClick={() => slide(1)} className={`${arrow} -right-3`}>&rarr;</button>}
+        </div>
+      )}
       {trayReel && <ShopTray reel={{ ...trayReel, products: trayReel.products || [], categories: trayReel.categories || [] }} onClose={closeTray} />}
     </section>
   );
