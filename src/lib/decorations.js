@@ -119,6 +119,16 @@ export const VISIBILITY_CLASSES = {
   desktop: { true: "lg:block", false: "lg:hidden" },
 };
 
+// Section artwork frames the content, it never covers it. The homepage content column is max-w-7xl (80rem) with 2rem
+// side padding, so its text edge sits at 76rem. Percentages resolve against the layer (the section's own width), so the
+// gutter on each side is (100% - 76rem) / 2. Artwork is anchored to its outer edge (left or right, never the centre),
+// the admin offset moves it from that anchor, and its width is capped so its inner edge stops one gap short of the
+// content. On narrow screens the gutter is zero, the cap collapses and the artwork tucks away instead of covering content.
+export const SAFE_CONTENT_WIDTH = "76rem";
+export const SAFE_GAP_PX = 12;
+export const safeZoneWidth = (item) =>
+  `max(0px, calc((100% - ${SAFE_CONTENT_WIDTH}) / 2 - ${SAFE_GAP_PX}px ${item.offsetX >= 0 ? "-" : "+"} ${Math.abs(item.offsetX)}px))`;
+
 /** Inline style for the positioned wrapper. Offsets may be negative so artwork can sit partly off the edge. */
 export function wrapperStyle(item) {
   const style = {
@@ -128,7 +138,9 @@ export function wrapperStyle(item) {
     "--deco-w-t": `${item.widthTablet}px`,
     "--deco-w-m": `${item.widthMobile}px`,
   };
-  if (item.maxWidth > 0) style.maxWidth = `${item.maxWidth}px`;
+  const cap = item.scope === "HOME_SECTION" ? safeZoneWidth(item) : null;
+  if (cap) style.maxWidth = item.maxWidth > 0 ? `min(${item.maxWidth}px, ${cap})` : cap;
+  else if (item.maxWidth > 0) style.maxWidth = `${item.maxWidth}px`;
   const transforms = [];
   if (item.vertical === "TOP") style.top = `${item.offsetY}px`;
   else if (item.vertical === "BOTTOM") style.bottom = `${item.offsetY}px`;
