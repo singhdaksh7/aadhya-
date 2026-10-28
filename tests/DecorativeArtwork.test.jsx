@@ -307,7 +307,8 @@ describe("Section artwork framing (hero-clean, side-anchored, safe zone)", () =>
     inSection(sec());
     const clip = screen.getByTestId("decoration-section-clip");
     expect(clip).toHaveClass("absolute", "inset-0", "[clip-path:inset(0)]");
-    expect(within(clip).getByTestId("decoration-layer-fixed")).toBeInTheDocument();
+    expect(within(clip).getByTestId("decoration-layer")).toBeInTheDocument();
+    expect(screen.queryByTestId("decoration-layer-fixed")).toBeNull(); // scrolls with its section, never pinned to the viewport
   });
 
   it("17. a left item anchors to the left edge, offset measured from that edge", () => {

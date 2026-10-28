@@ -106,14 +106,35 @@ describe("ShoppableReels storefront", () => {
     expect(vids.map((v) => v.muted)).toEqual([true, false]);
   });
 
-  it("waits for a tap when the visitor prefers reduced motion", () => {
+  it("still autoplays (muted) when the visitor prefers reduced motion; only the sliding is switched off", () => {
     window.matchMedia = vi.fn(() => ({ matches: true, addEventListener() {}, removeEventListener() {} }));
+    view([reel("a")]);
+    setVisible(screen.getByTestId("reel-card"), 1);
+    expect(playSpy).toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Pause Reel a" })).toBeInTheDocument();
+  });
+
+  it("waits for a tap on Save-Data connections", () => {
+    vi.stubGlobal("navigator", { ...navigator, connection: { saveData: true } });
     view([reel("a")]);
     setVisible(screen.getByTestId("reel-card"), 1);
     expect(playSpy).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Play Reel a" }));
     expect(playSpy).toHaveBeenCalled();
-    expect(screen.getByRole("button", { name: "Pause Reel a" })).toBeInTheDocument();
+  });
+
+  it("three or fewer reels sit still with three-up widths; more than three get a looping right-to-left copy", () => {
+    const three = view([reel("a"), reel("b"), reel("c")]);
+    expect(screen.getByTestId("reel-track")).not.toHaveAttribute("data-marquee");
+    expect(screen.queryAllByTestId("reel-card-clone")).toHaveLength(0);
+    expect(screen.getAllByTestId("reel-card")[0].className).toContain("md:w-[calc((100%-3rem)/3)]");
+    three.unmount();
+    view([reel("a"), reel("b"), reel("c"), reel("d")]);
+    expect(screen.getByTestId("reel-track")).toHaveAttribute("data-marquee", "true");
+    expect(screen.getAllByTestId("reel-card")).toHaveLength(4);
+    const clones = screen.getAllByTestId("reel-card-clone");
+    expect(clones).toHaveLength(4);
+    clones.forEach((c) => { expect(c).toHaveAttribute("aria-hidden", "true"); expect(c).toHaveAttribute("inert"); });
   });
 
   it("shows the play button when the browser refuses autoplay", async () => {
