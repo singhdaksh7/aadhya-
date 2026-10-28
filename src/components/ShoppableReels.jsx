@@ -75,7 +75,7 @@ const autoplayAllowed = () => {
 const MARQUEE_MIN_REELS = 4;
 const SECONDS_PER_REEL = 6;
 
-function ReelCard({ reel, soundOn, onSound, onShop, clone = false, track = false }) {
+function ReelCard({ reel, soundOn, onSound, onHover, onSoundDenied, onShop, clone = false, track = false }) {
   const cardRef = useRef(null);
   const videoRef = useRef(null);
   const [inView, setInView] = useState(false);
@@ -108,9 +108,16 @@ function ReelCard({ reel, soundOn, onSound, onShop, clone = false, track = false
     const video = videoRef.current;
     if (!video) return;
     video.muted = muted;
-    if (playing) video.play?.()?.catch?.(() => setPaused(true)); // browser refused autoplay: show the play button
-    else video.pause?.();
-  }, [playing, muted, loaded]);
+    if (playing) {
+      video.play?.()?.catch?.(() => { if (muted) setPaused(true); else onSoundDenied?.(); }); // refused: show the play button, or fall back to silent when sound was refused
+    } else video.pause?.();
+    if (playing && !muted) {
+      // Browsers may pause (without an error) a video they will not let make sound before the visitor has clicked the page.
+      const check = setTimeout(() => { if (video.paused) onSoundDenied?.(); }, 250);
+      return () => clearTimeout(check);
+    }
+    return undefined;
+  }, [playing, muted, loaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggle = () => {
     setLoaded(true);
@@ -124,7 +131,7 @@ function ReelCard({ reel, soundOn, onSound, onShop, clone = false, track = false
   const ctaCls = "pointer-events-auto mt-3 flex w-full items-center justify-center border border-white/80 bg-transparent px-4 py-3 text-[11px] font-medium uppercase tracking-[0.2em] text-white transition hover:bg-white hover:text-charcoal";
 
   return (
-    <article ref={cardRef} data-testid={clone ? "reel-card-clone" : "reel-card"} aria-hidden={clone ? "true" : undefined} inert={clone ? true : undefined} className={track
+    <article ref={cardRef} data-testid={clone ? "reel-card-clone" : "reel-card"} aria-hidden={clone ? "true" : undefined} onPointerEnter={(e) => { if (e.pointerType === "mouse") onHover?.(true); }} onPointerLeave={(e) => { if (e.pointerType === "mouse") onHover?.(false); }} className={track
       ? "mr-3 w-[calc((100cqw-0.75rem)/2.3)] shrink-0 sm:mr-5 sm:w-[calc((100cqw-2.5rem)/3)] md:w-[calc((100cqw-3.75rem)/4)] lg:mr-6 lg:w-[calc((100cqw-6rem)/5)] motion-reduce:[&[aria-hidden=true]]:hidden"
       : "w-[calc((100%-0.75rem)/2.3)] shrink-0 sm:w-[calc((100%-2.5rem)/3)] md:w-[calc((100%-3.75rem)/4)] lg:w-[calc((100%-6rem)/5)]"}>
       <div className="relative aspect-[9/16] overflow-hidden rounded-2xl store-surface">
@@ -133,18 +140,18 @@ function ReelCard({ reel, soundOn, onSound, onShop, clone = false, track = false
           <video ref={videoRef} data-testid="reel-video" src={resolveMediaUrl(reel.videoUrl)} poster={cover || undefined} muted loop playsInline autoPlay={started && playing} preload="metadata" aria-label={title} className="absolute inset-0 h-full w-full object-cover" />
         )}
         {playable && (
-          <button type="button" onClick={toggle} aria-label={playing ? `Pause ${title}` : `Play ${title}`} aria-pressed={playing} className="absolute inset-0 flex items-center justify-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-4px]">
+          <button type="button" tabIndex={clone ? -1 : undefined} onClick={toggle} aria-label={playing ? `Pause ${title}` : `Play ${title}`} aria-pressed={playing} className="absolute inset-0 flex items-center justify-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-4px]">
             {!playing && <span aria-hidden="true" className="flex h-12 w-12 items-center justify-center rounded-full bg-white/85 text-charcoal shadow-md"><svg viewBox="0 0 24 24" className="ml-0.5 h-5 w-5" fill="currentColor"><path d="M8 5v14l11-7z" /></svg></span>}
           </button>
         )}
         {playable && loaded && (
-          <button type="button" onClick={onSound} aria-label={muted ? "Turn sound on" : "Turn sound off"} className="absolute right-3 top-3 z-10 rounded-full bg-black/60 px-3 py-1 text-[11px] font-semibold text-white">{muted ? "Sound off" : "Sound on"}</button>
+          <button type="button" tabIndex={clone ? -1 : undefined} onClick={onSound} aria-label={muted ? "Turn sound on" : "Turn sound off"} className="absolute right-3 top-3 z-10 rounded-full bg-black/60 px-3 py-1 text-[11px] font-semibold text-white">{muted ? "Sound off" : "Sound on"}</button>
         )}
         {(reel.title || targetCount > 0) && (
           <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/75 via-black/35 to-transparent p-3 pt-14 text-white">
             {reel.title && <h3 className="line-clamp-2 text-sm font-medium leading-snug drop-shadow">{reel.title}</h3>}
-            {single && <Link to={singleHref} className={ctaCls}>{cta}</Link>}
-            {targetCount > 1 && <button type="button" onClick={onShop} aria-haspopup="dialog" className={ctaCls}>{cta}</button>}
+            {single && <Link to={singleHref} tabIndex={clone ? -1 : undefined} className={ctaCls}>{cta}</Link>}
+            {targetCount > 1 && <button type="button" tabIndex={clone ? -1 : undefined} onClick={onShop} aria-haspopup="dialog" className={ctaCls}>{cta}</button>}
           </div>
         )}
       </div>
@@ -174,7 +181,8 @@ export default function ShoppableReels({ section }) {
             {[...reels, ...reels].map((reel, index) => {
               const clone = index >= count;
               const id = reel.id || `reel-${index % count}`;
-              return <ReelCard key={`${clone ? "clone-" : ""}${id}`} track clone={clone} reel={{ ...reel, products: reel.products || [], categories: reel.categories || [] }} soundOn={!clone && soundId === id} onSound={() => setSoundId((current) => (current === id ? null : id))} onShop={() => setTrayReel(reel)} />;
+              const key = `${clone ? "clone-" : ""}${id}`; // each on-screen card is its own sound owner, copies included
+              return <ReelCard key={key} track clone={clone} reel={{ ...reel, products: reel.products || [], categories: reel.categories || [] }} soundOn={soundId === key} onSound={() => setSoundId((current) => (current === key ? null : key))} onHover={(on) => setSoundId((current) => (on ? key : current === key ? null : current))} onSoundDenied={() => setSoundId((current) => (current === key ? null : current))} onShop={() => setTrayReel(reel)} />;
             })}
           </div>
         </div>
@@ -184,7 +192,7 @@ export default function ShoppableReels({ section }) {
           <div ref={scrollRef} data-testid="reel-track" className="no-scrollbar flex gap-3 overflow-x-auto pb-1 sm:gap-5 md:justify-center lg:gap-6">
             {reels.map((reel, index) => {
               const id = reel.id || `reel-${index}`;
-              return <ReelCard key={id} reel={{ ...reel, products: reel.products || [], categories: reel.categories || [] }} soundOn={soundId === id} onSound={() => setSoundId((current) => (current === id ? null : id))} onShop={() => setTrayReel(reel)} />;
+              return <ReelCard key={id} reel={{ ...reel, products: reel.products || [], categories: reel.categories || [] }} soundOn={soundId === id} onSound={() => setSoundId((current) => (current === id ? null : id))} onHover={(on) => setSoundId((current) => (on ? id : current === id ? null : current))} onSoundDenied={() => setSoundId((current) => (current === id ? null : current))} onShop={() => setTrayReel(reel)} />;
             })}
           </div>
           {s.showArrows !== false && <button type="button" aria-label="Next reels" onClick={() => slide(1)} className={`${arrow} -right-3`}>&rarr;</button>}
