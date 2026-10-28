@@ -298,3 +298,56 @@ describe("Decorative artwork admin page", () => {
     expect(screen.getByText("Hidden on mobile")).toBeInTheDocument();
   });
 });
+
+describe("Section artwork framing (hero-clean, side-anchored, safe zone)", () => {
+  const sec = (over = {}) => deco({ id: "s1", scope: "HOME_SECTION", targetId: "sec-1", positionMode: "FIXED", ...over });
+  const inSection = (...items) => render(<DecorationLayer items={normalizeDecorations({ decorations: { items } })} />);
+
+  it("16. section artwork is clipped to its own section so it cannot paint over the hero", () => {
+    inSection(sec());
+    const clip = screen.getByTestId("decoration-section-clip");
+    expect(clip).toHaveClass("absolute", "inset-0", "[clip-path:inset(0)]");
+    expect(within(clip).getByTestId("decoration-layer-fixed")).toBeInTheDocument();
+  });
+
+  it("17. a left item anchors to the left edge, offset measured from that edge", () => {
+    inSection(sec({ side: "LEFT", offsetX: -40 }));
+    const { style } = arts()[0];
+    expect(style.left).toBe("-40px");
+    expect(style.right).toBe("");
+  });
+
+  it("18. a right item anchors to the right edge, mirroring the left", () => {
+    inSection(sec({ side: "RIGHT", offsetX: -40 }));
+    const { style } = arts()[0];
+    expect(style.right).toBe("-40px");
+    expect(style.left).toBe("");
+    inSection(sec({ id: "both", side: "BOTH", offsetX: 10 }));
+    const sides = arts().filter((a) => a.dataset.decorationId.startsWith("both"));
+    expect(sides.map((a) => a.dataset.side).sort()).toEqual(["LEFT", "RIGHT"]);
+  });
+
+  it("19. section artwork is rendered only inside the decorated section wrapper, not in sibling sections", async () => {
+    set(sec({ targetId: "sec-2" }));
+    mockSettings.homepage = undefined;
+    const { container } = inSection(sec({ targetId: "sec-2" }));
+    expect(container.querySelectorAll('[data-testid="decoration-section-clip"]')).toHaveLength(1);
+    expect(container.firstChild.className).toContain("absolute");
+  });
+
+  it("20. site-wide artwork keeps its old behaviour: no section clip, no safe-zone cap", () => {
+    set(deco({ positionMode: "FIXED", maxWidth: 0 }));
+    at("/");
+    expect(screen.queryByTestId("decoration-section-clip")).toBeNull();
+    expect(arts()[0].style.maxWidth).toBe("");
+    expect(screen.getByTestId("decoration-layer-fixed")).toHaveClass("fixed");
+  });
+
+  it("21. section artwork is width-capped to the gutter so it never enters the content column", () => {
+    const item = normalizeDecoration(sec({ offsetX: -40, width: 198 }));
+    const style = wrapperStyle(item);
+    expect(style.maxWidth).toBe("max(0px, calc((100% - 76rem) / 2 - 12px + 40px))");
+    expect(wrapperStyle(normalizeDecoration(sec({ offsetX: 20 }))).maxWidth).toContain("- 12px - 20px");
+    expect(wrapperStyle(normalizeDecoration(sec({ maxWidth: 150 }))).maxWidth).toMatch(/^min\(150px, max\(0px/);
+  });
+});

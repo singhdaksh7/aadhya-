@@ -44,23 +44,37 @@ function Art({ item, eager }) {
 export function DecorationLayer({ items }) {
   if (!items || items.length === 0) return null;
   const all = expandBothSides(items);
-  const flow = all.filter((item) => !item.fixed);
-  const fixed = all.filter((item) => item.fixed);
-  return (
-    <>
-      {flow.length > 0 && (
-        <div data-testid="decoration-layer" aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
-          {flow.map((item) => <Art key={item.id} item={item} eager={item.vertical === "TOP"} />)}
-        </div>
-      )}
-      {fixed.length > 0 && (
-        // Fixed mode is opt-in per item and sits below the sticky header.
-        <div data-testid="decoration-layer-fixed" aria-hidden="true" className="pointer-events-none fixed inset-0 z-[5] overflow-hidden">
-          {fixed.map((item) => <Art key={item.id} item={item} eager />)}
-        </div>
-      )}
-    </>
-  );
+  const render = (list) => {
+    const flow = list.filter((item) => !item.fixed);
+    const fixed = list.filter((item) => item.fixed);
+    return (
+      <>
+        {flow.length > 0 && (
+          <div data-testid="decoration-layer" aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+            {flow.map((item) => <Art key={item.id} item={item} eager={item.vertical === "TOP"} />)}
+          </div>
+        )}
+        {fixed.length > 0 && (
+          // Fixed mode is opt-in per item and sits below the sticky header.
+          <div data-testid="decoration-layer-fixed" aria-hidden="true" className="pointer-events-none fixed inset-0 z-[5] overflow-hidden">
+            {fixed.map((item) => <Art key={item.id} item={item} eager />)}
+          </div>
+        )}
+      </>
+    );
+  };
+  // Section-scoped artwork is clipped to its own section (clip-path also clips fixed descendants), so "stays fixed"
+  // only keeps it in place while that section is on screen: the hero and unrelated sections never see it.
+  // clip-path makes a stacking context, so each layer (behind / middle / above) gets its own clip box to keep its stacking.
+  if (all.every((item) => item.scope === "HOME_SECTION")) {
+    return Object.keys(LAYER_CLASSES).map((layer) => {
+      const list = all.filter((item) => item.layer === layer);
+      return list.length === 0 ? null : (
+        <div key={layer} data-testid="decoration-section-clip" aria-hidden="true" className={`pointer-events-none absolute inset-0 [clip-path:inset(0)] ${LAYER_CLASSES[layer]}`}>{render(list)}</div>
+      );
+    });
+  }
+  return render(all);
 }
 
 /** Site-wide layer: mount ONCE inside the storefront <main>. Shows entire-site and route-scoped artwork. */
