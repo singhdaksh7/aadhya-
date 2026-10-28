@@ -79,8 +79,9 @@ export default function HowWeWork({ config = {} }) {
           )}
         </div>
         {imageSrc && (
-          <div data-testid="how-we-work-image" className={`min-h-[240px] overflow-hidden sm:min-h-[320px] ${position === "LEFT" ? "lg:order-1" : "lg:order-2"}`}>
-            <img src={imageSrc} alt={config.imageAlt || ""} loading="lazy" decoding="async" onError={() => setImageBroken(true)} className="h-full w-full object-cover" />
+          <div data-testid="how-we-work-image" className={`relative min-h-[240px] overflow-hidden sm:min-h-[320px] lg:min-h-0 ${position === "LEFT" ? "lg:order-1" : "lg:order-2"}`}>
+            {/* Absolutely positioned so the picture never sets the row height: on desktop the card is exactly as tall as the text and the image fills that height. */}
+            <img src={imageSrc} alt={config.imageAlt || ""} loading="lazy" decoding="async" onError={() => setImageBroken(true)} className="absolute inset-0 h-full w-full object-cover" />
           </div>
         )}
       </div>

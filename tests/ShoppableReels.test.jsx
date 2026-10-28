@@ -123,11 +123,11 @@ describe("ShoppableReels storefront", () => {
     expect(playSpy).toHaveBeenCalled();
   });
 
-  it("three or fewer reels sit still with three-up widths; more than three get a looping right-to-left copy", () => {
+  it("three or fewer reels sit still at compact five-across widths; four or more get a looping right-to-left copy", () => {
     const three = view([reel("a"), reel("b"), reel("c")]);
     expect(screen.getByTestId("reel-track")).not.toHaveAttribute("data-marquee");
     expect(screen.queryAllByTestId("reel-card-clone")).toHaveLength(0);
-    expect(screen.getAllByTestId("reel-card")[0].className).toContain("md:w-[calc((100%-3rem)/3)]");
+    expect(screen.getAllByTestId("reel-card")[0].className).toContain("lg:w-[calc((100%-6rem)/5)]");
     three.unmount();
     view([reel("a"), reel("b"), reel("c"), reel("d")]);
     expect(screen.getByTestId("reel-track")).toHaveAttribute("data-marquee", "true");
