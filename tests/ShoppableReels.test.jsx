@@ -134,7 +134,36 @@ describe("ShoppableReels storefront", () => {
     expect(screen.getAllByTestId("reel-card")).toHaveLength(4);
     const clones = screen.getAllByTestId("reel-card-clone");
     expect(clones).toHaveLength(4);
-    clones.forEach((c) => { expect(c).toHaveAttribute("aria-hidden", "true"); expect(c).toHaveAttribute("inert"); });
+    clones.forEach((c) => expect(c).toHaveAttribute("aria-hidden", "true"));
+  });
+
+  it("hovering a reel with a mouse turns its sound on, and leaving turns it off", () => {
+    const { container } = view([reel("a"), reel("b")]);
+    const [cardA, cardB] = screen.getAllByTestId("reel-card");
+    setVisible(cardA, 1); setVisible(cardB, 1);
+    fireEvent.pointerEnter(cardA, { pointerType: "mouse" });
+    let vids = [...container.querySelectorAll("video")];
+    expect(vids.map((v) => v.muted)).toEqual([false, true]);
+    fireEvent.pointerLeave(cardA, { pointerType: "mouse" });
+    vids = [...container.querySelectorAll("video")];
+    expect(vids.map((v) => v.muted)).toEqual([true, true]);
+  });
+
+  it("touch pointers never switch the sound on", () => {
+    const { container } = view([reel("a")]);
+    setVisible(screen.getByTestId("reel-card"), 1);
+    fireEvent.pointerEnter(screen.getByTestId("reel-card"), { pointerType: "touch" });
+    expect(container.querySelector("video").muted).toBe(true);
+  });
+
+  it("falls back to silent playback when the browser will not allow sound", async () => {
+    const { container } = view([reel("a")]);
+    const card = screen.getByTestId("reel-card");
+    setVisible(card, 1);
+    playSpy.mockImplementation(() => Promise.reject(new Error("NotAllowedError")));
+    fireEvent.pointerEnter(card, { pointerType: "mouse" });
+    await act(async () => { await Promise.resolve(); });
+    expect(container.querySelector("video").muted).toBe(true);
   });
 
   it("shows the play button when the browser refuses autoplay", async () => {

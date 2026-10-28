@@ -140,6 +140,8 @@ body {
   animation: reels-marquee var(--reels-duration, 60s) linear infinite;
   will-change: transform;
 }
+/* Hovering the row holds it still, so the reel under the mouse can be watched (and heard). */
+.reels-marquee-track:hover { animation-play-state: paused; }
 @media (prefers-reduced-motion: reduce) {
   .reels-marquee-track { animation: none !important; }
 }
