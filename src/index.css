@@ -131,6 +131,19 @@ body {
   .reviews-marquee-track { animation: none !important; }
 }
 
+/* Non-stop right-to-left reel marquee (two copies of the list, so -50% loops seamlessly). Duration comes from --reels-duration. */
+@keyframes reels-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.reels-marquee-track {
+  animation: reels-marquee var(--reels-duration, 60s) linear infinite;
+  will-change: transform;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reels-marquee-track { animation: none !important; }
+}
+
 @keyframes fade-up {
   from {
     opacity: 0;
