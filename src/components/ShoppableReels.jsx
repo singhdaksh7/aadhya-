@@ -145,7 +145,12 @@ function ReelCard({ reel, soundOn, onSound, onHover, onSoundDenied, onShop, clon
           </button>
         )}
         {playable && loaded && (
-          <button type="button" tabIndex={clone ? -1 : undefined} onClick={onSound} aria-label={muted ? "Turn sound on" : "Turn sound off"} className="absolute right-3 top-3 z-10 rounded-full bg-black/60 px-3 py-1 text-[11px] font-semibold text-white">{muted ? "Sound off" : "Sound on"}</button>
+          <button type="button" tabIndex={clone ? -1 : undefined} onClick={onSound} aria-label={muted ? "Turn sound on" : "Turn sound off"} className="absolute right-2.5 top-2.5 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-sm transition hover:bg-black/75">
+            <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M11 5 6 9H3v6h3l5 4V5Z" fill="currentColor" />
+              {muted ? <path d="m16 9 5 6m0-6-5 6" /> : <><path d="M15.5 8.5a5 5 0 0 1 0 7" /><path d="M18.5 5.5a9 9 0 0 1 0 13" /></>}
+            </svg>
+          </button>
         )}
         {(reel.title || targetCount > 0) && (
           <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/75 via-black/35 to-transparent p-3 pt-14 text-white">
