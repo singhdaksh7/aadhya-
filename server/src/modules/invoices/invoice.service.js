@@ -353,11 +353,22 @@ export async function ensureInvoiceForOrder(orderId, { forceCod = false } = {}) 
   return prisma.invoice.findUnique({ where: { id: invoice.id } });
 }
 
+// Storefront brand logo (Store Settings -> branding), used on invoices whose own logo setting is blank.
+async function getBrandLogoUrl() {
+  try {
+    const row = await prisma.siteSetting.findUnique({ where: { key: "branding" } });
+    const v = row?.value && typeof row.value === "object" ? row.value : {};
+    return String(v.desktopLogo || v.secondaryLogo || "").trim() || null;
+  } catch {
+    return null;
+  }
+}
+
 export async function regenerateInvoicePdf(invoiceId) {
   const invoice = await prisma.invoice.findUnique({ where: { id: invoiceId }, include: { order: { select: { orderNumber: true, paymentMethod: true, paymentStatus: true, status: true } } } });
   if (!invoice) throw ApiError.notFound("Invoice not found");
   const key = `invoice-${invoice.id}.pdf`;
-  await writeInvoicePdf(key, await renderInvoicePdf(invoice, { brandName: await getStoreName(), website: publicWebsiteHost() }));
+  await writeInvoicePdf(key, await renderInvoicePdf(invoice, { brandName: await getStoreName(), website: publicWebsiteHost(), fallbackLogoUrl: await getBrandLogoUrl() }));
   return prisma.invoice.update({ where: { id: invoice.id }, data: { pdfStorageKey: key } });
 }
 export async function getInvoiceFile(invoiceId) {

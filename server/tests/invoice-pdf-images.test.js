@@ -308,3 +308,22 @@ describe("invoice PDF: historical immutability with images", () => {
     expect(reloaded.companySnapshot.legalName).toBe("Original Co");
   });
 });
+
+describe("invoice PDF: brand logo fallback", () => {
+  const base = (companySnapshot) => ({
+    invoiceNumber: "TEST/2025-26/000002", invoiceDate: new Date(), currency: "INR", subtotal: 100, discountAmount: 0, shippingAmount: 0, totalAmount: 100,
+    customerName: "Test Buyer", customerEmail: "buyer@test.local", billingAddress: {}, shippingAddress: {}, companySnapshot, taxSnapshot: {},
+    itemsSnapshot: [{ productName: "Item", quantity: 1, unitPrice: 100, taxableValue: 100, lineTotal: 100 }], order: {},
+  });
+
+  it("uses the storefront brand logo when the invoice has no logo of its own", async () => {
+    const url = await placeSavedLocalImage(PNG_1X1, `test-brand-${Date.now()}.png`);
+    const pdf = await renderInvoicePdf(base({ legalName: "Test Co", logoUrl: null }), { fallbackLogoUrl: url });
+    expect(pdf.toString("latin1")).toContain("/Subtype /Image");
+  });
+
+  it("still renders text only when neither logo is available", async () => {
+    const pdf = await renderInvoicePdf(base({ legalName: "Test Co" }), { fallbackLogoUrl: "/uploads/products/missing.png" });
+    expect(pdf.toString("latin1")).not.toContain("/Subtype /Image");
+  });
+});
