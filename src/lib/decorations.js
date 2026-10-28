@@ -138,7 +138,7 @@ export function wrapperStyle(item) {
     "--deco-w-t": `${item.widthTablet}px`,
     "--deco-w-m": `${item.widthMobile}px`,
   };
-  const cap = item.scope === "HOME_SECTION" ? safeZoneWidth(item) : null;
+  const cap = item.scope === "HOME_SECTION" || item.scope === "HOME" ? safeZoneWidth(item) : null; // homepage artwork shares the homepage content column
   if (cap) style.maxWidth = item.maxWidth > 0 ? `min(${item.maxWidth}px, ${cap})` : cap;
   else if (item.maxWidth > 0) style.maxWidth = `${item.maxWidth}px`;
   const transforms = [];
