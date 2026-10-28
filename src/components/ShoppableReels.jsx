@@ -69,10 +69,11 @@ const autoplayAllowed = () => {
   return navigator.connection?.saveData !== true;
 };
 
-// Three reels fit across; any beyond that glide right to left, non-stop, like the reviews marquee (a CSS animation,
-// so it never hitches and nothing pauses it). Seconds of travel per reel: higher is slower.
-const VISIBLE_REELS = 3;
-const SECONDS_PER_REEL = 9;
+// Compact cards: 5 across on desktop, 4 on tablet, 3 on large phones, about 2 on small phones. With four or more reels
+// the row glides right to left, non-stop, like the reviews marquee (a CSS animation, so it never hitches and nothing
+// pauses it). Seconds of travel per reel: higher is slower.
+const MARQUEE_MIN_REELS = 4;
+const SECONDS_PER_REEL = 6;
 
 function ReelCard({ reel, soundOn, onSound, onShop, clone = false, track = false }) {
   const cardRef = useRef(null);
@@ -124,8 +125,8 @@ function ReelCard({ reel, soundOn, onSound, onShop, clone = false, track = false
 
   return (
     <article ref={cardRef} data-testid={clone ? "reel-card-clone" : "reel-card"} aria-hidden={clone ? "true" : undefined} inert={clone ? true : undefined} className={track
-      ? "mr-4 w-[64cqw] shrink-0 sm:mr-5 sm:w-[calc((100cqw-1.25rem)/2)] md:mr-6 md:w-[calc((100cqw-3rem)/3)] motion-reduce:[&[aria-hidden=true]]:hidden"
-      : "w-[64%] shrink-0 sm:w-[calc((100%-1.25rem)/2)] md:w-[calc((100%-3rem)/3)]"}>
+      ? "mr-3 w-[calc((100cqw-0.75rem)/2.3)] shrink-0 sm:mr-5 sm:w-[calc((100cqw-2.5rem)/3)] md:w-[calc((100cqw-3.75rem)/4)] lg:mr-6 lg:w-[calc((100cqw-6rem)/5)] motion-reduce:[&[aria-hidden=true]]:hidden"
+      : "w-[calc((100%-0.75rem)/2.3)] shrink-0 sm:w-[calc((100%-2.5rem)/3)] md:w-[calc((100%-3.75rem)/4)] lg:w-[calc((100%-6rem)/5)]"}>
       <div className="relative aspect-[9/16] overflow-hidden rounded-2xl store-surface">
         {cover ? <img src={cover} alt={reel.title ? `${reel.title} cover` : ""} loading="lazy" className="absolute inset-0 h-full w-full object-cover" /> : <div data-testid="reel-fallback" aria-hidden="true" className="absolute inset-0 flex items-center justify-center store-muted"><svg viewBox="0 0 24 24" className="h-10 w-10 opacity-40" fill="currentColor"><path d="M8 5v14l11-7z" /></svg></div>}
         {playable && loaded && (
@@ -159,7 +160,7 @@ export default function ShoppableReels({ section }) {
   const [trayReel, setTrayReel] = useState(null);
   const closeTray = useCallback(() => setTrayReel(null), []);
   const count = reels.length;
-  const marquee = count > VISIBLE_REELS;
+  const marquee = count >= MARQUEE_MIN_REELS;
 
   if (count === 0) return null;
   const slide = (dir) => scrollRef.current?.scrollBy?.({ left: dir * scrollRef.current.clientWidth * 0.8, behavior: "smooth" });
@@ -180,7 +181,7 @@ export default function ShoppableReels({ section }) {
       ) : (
         <div className="relative">
           {s.showArrows !== false && <button type="button" aria-label="Previous reels" onClick={() => slide(-1)} className={`${arrow} -left-3`}>&larr;</button>}
-          <div ref={scrollRef} data-testid="reel-track" className="no-scrollbar flex gap-4 overflow-x-auto pb-1 sm:gap-5 md:justify-center md:gap-6">
+          <div ref={scrollRef} data-testid="reel-track" className="no-scrollbar flex gap-3 overflow-x-auto pb-1 sm:gap-5 md:justify-center lg:gap-6">
             {reels.map((reel, index) => {
               const id = reel.id || `reel-${index}`;
               return <ReelCard key={id} reel={{ ...reel, products: reel.products || [], categories: reel.categories || [] }} soundOn={soundId === id} onSound={() => setSoundId((current) => (current === id ? null : id))} onShop={() => setTrayReel(reel)} />;
