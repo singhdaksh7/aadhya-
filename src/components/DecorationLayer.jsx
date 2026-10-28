@@ -43,7 +43,9 @@ function Art({ item, eager }) {
  */
 export function DecorationLayer({ items }) {
   if (!items || items.length === 0) return null;
-  const all = expandBothSides(items);
+  // Artwork pinned to a homepage section always scrolls with that section: a viewport-fixed layer would sit still on
+  // screen while the page moves, which reads as a stuck overlay. (Site/route artwork keeps the admin's choice.)
+  const all = expandBothSides(items).map((item) => (item.scope === "HOME_SECTION" && item.fixed ? { ...item, fixed: false } : item));
   const render = (list) => {
     const flow = list.filter((item) => !item.fixed);
     const fixed = list.filter((item) => item.fixed);
