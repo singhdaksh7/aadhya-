@@ -103,7 +103,9 @@ export async function renderInvoicePdf(invoice, options = {}) {
     doc.on("error", reject);
   });
 
-  const [logo, signature] = await Promise.all([loadImage(doc, company.logoUrl), loadImage(doc, company.signatureUrl)]);
+  // The invoice-settings logo wins; when it is blank (or unusable) fall back to the storefront brand logo so every invoice carries one.
+  const [ownLogo, signature] = await Promise.all([loadImage(doc, company.logoUrl), loadImage(doc, company.signatureUrl)]);
+  const logo = ownLogo || (options.fallbackLogoUrl ? await loadImage(doc, options.fallbackLogoUrl) : null);
 
   // Tax columns/summary appear whenever the frozen snapshot carries GST (the flag, or any tax amount).
   const taxOn = Boolean(tax.enabled) || Number(tax.cgstAmount || 0) + Number(tax.sgstAmount || 0) + Number(tax.igstAmount || 0) > 0;
