@@ -3,6 +3,29 @@ import { ApiError } from "../../utils/ApiError.js";
 import { howWeWorkSchema, HOW_WE_WORK_DEFAULTS } from "./how-we-work-content.js";
 import { ourJourneySchema, OUR_JOURNEY_DEFAULTS } from "./our-journey.js";
 import { shoppableReelsSchema, DEFAULT_SHOPPABLE_REELS } from "./reels.js";
+import {
+  giftingHeroSchema,
+  giftsByOccasionSchema,
+  curatedStoriesSchema,
+  giftsByFestivalSchema,
+  giftingBenefitsSchema,
+  giftsByCraftSchema,
+  featuredGiftsSchema,
+  giftsByBudgetSchema,
+  giftingSeoSchema,
+  giftingFaqSchema,
+  GIFTING_HERO_DEFAULTS,
+  GIFTS_BY_OCCASION_DEFAULTS,
+  CURATED_STORIES_DEFAULTS,
+  GIFTS_BY_FESTIVAL_DEFAULTS,
+  GIFTING_BENEFITS_DEFAULTS,
+  GIFTS_BY_CRAFT_DEFAULTS,
+  FEATURED_GIFTS_DEFAULTS,
+  GIFTS_BY_BUDGET_DEFAULTS,
+  GIFTING_SEO_DEFAULTS,
+  GIFTING_FAQ_DEFAULTS,
+} from "./gifting-content.js";
+
 
 export const SAFE_ICONS = ["sparkles", "badge", "home", "shield", "leaf", "heart"];
 // The compact trust banner adds service icons (shipping, returns, ...) on top of the shared set.
@@ -66,6 +89,16 @@ const rawSchemas = {
   // `averageRating` / `reviewCount` are optional overrides; when omitted the storefront shows the real approved-review aggregate.
   TESTIMONIALS: z.object({ demoMode: z.boolean().optional(), demoReviews: z.array(z.object({ id: optionalText(60), customerName: text(60), rating: z.number().int().min(1).max(5), title: optionalText(100), comment: text(400) })).max(12).optional(), headingAlign, eyebrow: optionalText(120), title: optionalText(160), subtitle: optionalText(300), averageRating: z.number().min(0).max(5).nullable().optional(), reviewCount: z.number().int().min(0).max(10000000).nullable().optional(), motion: z.enum(["STATIC", "SLIDER", "MARQUEE"]).optional(), speed: z.number().int().min(10).max(300).optional(), pauseOnHover: z.boolean().optional(), showVerifiedBadge: z.boolean().optional(), limit: z.number().int().min(1).max(24).optional() }),
   SHOPPABLE_REELS: shoppableReelsSchema,
+  GIFTING_HERO: giftingHeroSchema,
+  GIFTS_BY_OCCASION: giftsByOccasionSchema,
+  CURATED_STORIES: curatedStoriesSchema,
+  GIFTS_BY_FESTIVAL: giftsByFestivalSchema,
+  GIFTING_BENEFITS: giftingBenefitsSchema,
+  GIFTS_BY_CRAFT: giftsByCraftSchema,
+  FEATURED_GIFTS: featuredGiftsSchema,
+  GIFTS_BY_BUDGET: giftsByBudgetSchema,
+  GIFTING_SEO: giftingSeoSchema,
+  GIFTING_FAQ: giftingFaqSchema,
   BLOG_PREVIEW: z.object({ headingAlign, eyebrow: optionalText(120), title: optionalText(160), subtitle: optionalText(300), limit: z.number().int().min(1).max(12).optional(), viewAllLabel: optionalText(60), showEmptyState: z.boolean().optional(), emptyStateMessage: optionalText(200), showExcerpt: z.boolean().optional(), showAuthor: z.boolean().optional(), showDate: z.boolean().optional(), showReadingTime: z.boolean().optional(), showViewAll: z.boolean().optional(), viewAllUrl: optionalUrl }),
 };
 
@@ -83,6 +116,16 @@ export const DEMO_REVIEWS = [
 ];
 
 export const DEFAULT_HOMEPAGE_CONTENT = {
+  GIFTING_HERO: GIFTING_HERO_DEFAULTS,
+  GIFTS_BY_OCCASION: GIFTS_BY_OCCASION_DEFAULTS,
+  CURATED_STORIES: CURATED_STORIES_DEFAULTS,
+  GIFTS_BY_FESTIVAL: GIFTS_BY_FESTIVAL_DEFAULTS,
+  GIFTING_BENEFITS: GIFTING_BENEFITS_DEFAULTS,
+  GIFTS_BY_CRAFT: GIFTS_BY_CRAFT_DEFAULTS,
+  FEATURED_GIFTS: FEATURED_GIFTS_DEFAULTS,
+  GIFTS_BY_BUDGET: GIFTS_BY_BUDGET_DEFAULTS,
+  GIFTING_SEO: GIFTING_SEO_DEFAULTS,
+  GIFTING_FAQ: GIFTING_FAQ_DEFAULTS,
   HOW_WE_WORK: HOW_WE_WORK_DEFAULTS,
   OUR_JOURNEY: OUR_JOURNEY_DEFAULTS,
   TRUST_STRIP: { background: "SURFACE", showDividers: true, desktopColumns: 4, mobileLayout: "STACKED", spacing: "NORMAL", items: [

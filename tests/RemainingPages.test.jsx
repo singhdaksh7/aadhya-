@@ -119,7 +119,7 @@ describe("routes and legacy content", () => {
   const src = (p) => fs.readFileSync(path.join(__dirname, "..", "src", p), "utf8");
 
   it("every system page has a fixed route and the lookup helpers agree", () => {
-    expect(Object.keys(SYSTEM_PAGES).sort()).toEqual(["about", "cancellation", "consultation", "contact", "events", "payments", "privacy", "research", "returns", "shipping", "terms", "thinkpod", "training"]);
+    expect(Object.keys(SYSTEM_PAGES).sort()).toEqual(["about", "cancellation", "consultation", "contact", "events", "gifting", "payments", "privacy", "research", "returns", "shipping", "terms", "thinkpod", "training"]);
     expect(isSystemPageSlug("contact")).toBe(true);
     expect(isSystemPageSlug("summer-lookbook")).toBe(false);
     expect(publicPagePath("thinkpod")).toBe("/thinkpod");

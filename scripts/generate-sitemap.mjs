@@ -24,6 +24,7 @@ const STATIC_ROUTES = [
   "/testimonials",
   "/faq",
   "/contact",
+  "/gifting",
 ];
 
 async function fetchAllProductSlugs() {

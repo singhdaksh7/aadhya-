@@ -15,6 +15,7 @@ export const SYSTEM_PAGES = {
   research: "/research",
   events: "/events",
   thinkpod: "/thinkpod",
+  gifting: "/gifting",
 };
 
 export const isSystemPageSlug = (slug) => Object.prototype.hasOwnProperty.call(SYSTEM_PAGES, String(slug || ""));
