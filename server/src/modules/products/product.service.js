@@ -2,6 +2,7 @@ import { prisma } from "../../lib/prisma.js";
 import { slugify } from "../../utils/slugify.js";
 import { ApiError } from "../../utils/ApiError.js";
 import { removeByUrl } from "../uploads/storage.js";
+import { normalizeSpecifications } from "../../utils/specifications.js";
 
 const PUBLIC_INCLUDE = {
   category: true,
@@ -38,6 +39,7 @@ export function serializePublicProduct(product) {
 
   return {
     ...safe,
+    specifications: normalizeSpecifications(product.specifications),
     averageRating,
     reviewCount,
     price: Number(product.price),
@@ -418,7 +420,7 @@ export async function updateProduct(id, input) {
         ...(input.careInstructions !== undefined ? { careInstructions: input.careInstructions } : {}),
         ...(input.whatsIncluded !== undefined ? { whatsIncluded: input.whatsIncluded } : {}),
         ...(input.shippingInformation !== undefined ? { shippingInformation: input.shippingInformation } : {}),
-        ...(input.specifications !== undefined ? { specifications: input.specifications } : {}),
+        ...(input.specifications !== undefined ? { specifications: input.specifications ?? [] } : {}),
         ...(input.seoTitle !== undefined ? { seoTitle: input.seoTitle } : {}),
         ...(input.seoDescription !== undefined ? { seoDescription: input.seoDescription } : {}),
         ...(input.ogImage !== undefined ? { ogImage: input.ogImage } : {}),
