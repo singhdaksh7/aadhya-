@@ -82,8 +82,8 @@ export default function CategoryBannersEditor({ banners, onChange, autoplay, onA
             </div>
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <ImagePickerInput label="Desktop image" value={b.desktopImage} onChange={(url) => update(i, { desktopImage: url })} pickerTitle="Select desktop banner" inputClassName={inputCls} enableCrop aspectOptions={["wide", "free"]} />
-            <ImagePickerInput label="Mobile image" value={b.mobileImage} onChange={(url) => update(i, { mobileImage: url })} pickerTitle="Select mobile banner" inputClassName={inputCls} enableCrop aspectOptions={["wide", "free"]} />
+            <ImagePickerInput label="Desktop image" sizeHint="1600 × 400 px (4:1 wide) — shown in a fixed wide frame" value={b.desktopImage} onChange={(url) => update(i, { desktopImage: url })} pickerTitle="Select desktop banner" inputClassName={inputCls} enableCrop aspectOptions={["wide", "free"]} />
+            <ImagePickerInput label="Mobile image" sizeHint="1200 × 600 px (2:1) — shown in a fixed frame" value={b.mobileImage} onChange={(url) => update(i, { mobileImage: url })} pickerTitle="Select mobile banner" inputClassName={inputCls} enableCrop aspectOptions={["wide", "free"]} />
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <input aria-label={`Banner ${i + 1} title`} placeholder="Title (optional)" maxLength={120} value={b.title} onChange={(e) => update(i, { title: e.target.value })} className={inputCls} />

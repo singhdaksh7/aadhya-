@@ -14,49 +14,20 @@ function Cta({ slide }) {
     : <Link to={slide.ctaUrl} className={cls}>{slide.ctaLabel}</Link>;
 }
 
-// The frame takes the banner's own proportions (clamped 1:1 to 4:1) at every screen size, so the
-// whole image is always visible, never cropped, at any viewport. Before the image has loaded the frame
-// uses a fixed placeholder ratio. A slide whose shape differs from the frame (only possible in a
-// carousel of mixed shapes) is shown whole with object-contain, centred over a blurred copy of itself.
-const MIN_FRAME_RATIO = 1;
-const MAX_FRAME_RATIO = 4;
-const ratioMismatch = (natural, frame) => Boolean(natural && frame) && Math.abs(natural / frame - 1) > 0.03;
-
-function SlideImage({ slide, alt, first, onBroken, onMeasure, frameRatio }) {
-  const [natural, setNatural] = useState(null);
-  const contain = ratioMismatch(natural, frameRatio);
-  const src = resolveMediaUrl(slide.desktop || slide.mobile);
+function SlideImage({ slide, alt, first }) {
   return (
     <picture>
       {slide.mobile && slide.desktop && slide.mobile !== slide.desktop && (
         <source media="(max-width: 767px)" srcSet={resolveMediaUrl(slide.mobile)} />
       )}
-      {contain && (
-        <img
-          src={src}
-          alt=""
-          aria-hidden="true"
-          data-testid="category-banner-backdrop"
-          draggable={false}
-          className="absolute inset-0 h-full w-full scale-110 object-cover opacity-40 blur-2xl"
-        />
-      )}
       <img
-        src={src}
+        src={resolveMediaUrl(slide.desktop || slide.mobile)}
         alt={alt}
         loading={first ? "eager" : "lazy"}
         fetchPriority={first ? "high" : "auto"}
         decoding={first ? "sync" : "async"}
         draggable={false}
-        onLoad={(e) => {
-          const { naturalWidth: w, naturalHeight: h } = e.currentTarget;
-          if (w > 0 && h > 0) {
-            setNatural(w / h);
-            onMeasure?.(w / h);
-          }
-        }}
-        onError={onBroken}
-        className={`absolute inset-0 h-full w-full object-center ${contain ? "object-contain" : "object-cover"}`}
+        className="absolute inset-0 h-full w-full object-cover"
       />
     </picture>
   );
@@ -65,8 +36,6 @@ function SlideImage({ slide, alt, first, onBroken, onMeasure, frameRatio }) {
 export default function CategoryBannerCarousel({ slides = [], autoplay = false, intervalMs = 5000, categoryName = "Category" }) {
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
-  const [broken, setBroken] = useState(() => new Set());
-  const [ratio, setRatio] = useState(null);
   const touchX = useRef(null);
   const count = slides.length;
   const safeIndex = count ? Math.min(index, count - 1) : 0;
@@ -80,14 +49,9 @@ export default function CategoryBannerCarousel({ slides = [], autoplay = false, 
     return () => clearInterval(t);
   }, [count, autoplay, intervalMs, paused]);
 
-  const markBroken = (id) => setBroken((prev) => (prev.has(id) ? prev : new Set(prev).add(id)));
-  // Every image failed to load: drop the banner instead of leaving an empty frame.
-  if (count === 0 || slides.every((x) => broken.has(x.id))) return null;
+  if (count === 0) return null;
 
-  const frameRatio = ratio ? Math.min(MAX_FRAME_RATIO, Math.max(MIN_FRAME_RATIO, ratio)) : null;
-  const frameBase = "relative w-full overflow-hidden rounded-2xl border border-[var(--theme-border)] store-surface";
-  const frame = frameRatio ? frameBase : `${frameBase} aspect-[2/1] md:aspect-[3/1] md:max-h-[300px]`;
-  const frameStyle = frameRatio ? { aspectRatio: frameRatio } : undefined;
+  const frame = "relative aspect-[2/1] w-full overflow-hidden rounded-2xl border border-[var(--theme-border)] store-surface md:aspect-[3/1] md:max-h-[300px]";
   const alt = (s) => s.title || `${categoryName} banner`;
 
   const overlay = (s) => (s.title || s.subtitle || s.ctaLabel) && (
@@ -101,8 +65,8 @@ export default function CategoryBannerCarousel({ slides = [], autoplay = false, 
   if (count === 1) {
     return (
       <section data-testid="category-banner" className="mx-auto w-full max-w-7xl px-4 sm:px-8">
-        <div className={frame} style={frameStyle}>
-          <SlideImage slide={slides[0]} alt={alt(slides[0])} first onBroken={() => markBroken(slides[0].id)} onMeasure={setRatio} frameRatio={frameRatio} />
+        <div className={frame}>
+          <SlideImage slide={slides[0]} alt={alt(slides[0])} first />
           {overlay(slides[0])}
         </div>
       </section>
@@ -128,7 +92,7 @@ export default function CategoryBannerCarousel({ slides = [], autoplay = false, 
       onFocus={() => setPaused(true)}
       onBlur={() => setPaused(false)}
     >
-      <div className={frame} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} style={{ ...frameStyle, touchAction: "pan-y" }}>
+      <div className={frame} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} style={{ touchAction: "pan-y" }}>
         {slides.map((s, i) => (
           <div
             key={s.id}
@@ -139,7 +103,7 @@ export default function CategoryBannerCarousel({ slides = [], autoplay = false, 
             aria-hidden={i !== safeIndex}
             className={`absolute inset-0 transition-opacity duration-500 motion-reduce:transition-none ${i === safeIndex ? "opacity-100" : "pointer-events-none opacity-0"}`}
           >
-            <SlideImage slide={s} alt={alt(s)} first={i === 0} onBroken={() => markBroken(s.id)} onMeasure={i === 0 ? setRatio : undefined} frameRatio={frameRatio} />
+            <SlideImage slide={s} alt={alt(s)} first={i === 0} />
             {i === safeIndex && overlay(s)}
           </div>
         ))}
