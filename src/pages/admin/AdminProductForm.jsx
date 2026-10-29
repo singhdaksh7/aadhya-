@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import SpecificationsEditor from "../../components/admin/SpecificationsEditor";
+import { normalizeSpecifications } from "../../lib/specifications";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   adminListCategories,
@@ -62,6 +64,7 @@ const emptyForm = {
   materials: "",
   dimensions: "",
   careInstructions: "",
+  specifications: [],
   whatsIncluded: "",
   shippingInformation: "",
   seoTitle: "",
@@ -132,6 +135,7 @@ export default function AdminProductForm() {
           materials: p.materials || "",
           dimensions: p.dimensions || "",
           careInstructions: p.careInstructions || "",
+          specifications: normalizeSpecifications(p.specifications),
           whatsIncluded: p.whatsIncluded || "",
           shippingInformation: p.shippingInformation || "",
           seoTitle: p.seoTitle || "",
@@ -187,6 +191,7 @@ export default function AdminProductForm() {
       materials: form.materials || null,
       dimensions: form.dimensions || null,
       careInstructions: form.careInstructions || null,
+      specifications: normalizeSpecifications(form.specifications),
       whatsIncluded: form.whatsIncluded || null,
       shippingInformation: form.shippingInformation || null,
       seoTitle: form.seoTitle || null,
@@ -435,6 +440,7 @@ export default function AdminProductForm() {
               <input value={form.whatsIncluded} onChange={(e) => set("whatsIncluded", e.target.value)} placeholder="1x Vase, 1x Care Guide" className={inputCls} />
             </Field>
           </div>
+          <SpecificationsEditor rows={form.specifications} onChange={(rows) => set("specifications", rows)} />
           <Field label="Shipping Information">
             <input value={form.shippingInformation} onChange={(e) => set("shippingInformation", e.target.value)} placeholder="Dispatched in 2-3 business days" className={inputCls} />
           </Field>

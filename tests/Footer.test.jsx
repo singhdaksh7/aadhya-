@@ -185,4 +185,17 @@ describe("Footer logo sizing", () => {
     window.matchMedia = orig;
     expect(container.querySelector("footer img").style.width).toBe("200px");
   });
+
+  it("renders a transparent logo directly on the footer: no plate/box, even for a saved LIGHT_PLATE style", () => {
+    const base = settingsWith();
+    mockSettings = { ...base, footer: { ...base.footer, footerLogoStyle: "LIGHT_PLATE" } };
+    const { container } = renderFooter();
+    const img = container.querySelector("footer img");
+    expect(img.className).toMatch(/object-contain/);
+    expect(img.className).not.toMatch(/invert/);
+    for (let el = img; el && el.tagName !== "FOOTER"; el = el.parentElement) {
+      expect(el.className).not.toMatch(/bg-|rounded|\bp-\d/);
+      expect(el.style.backgroundColor).toBe("");
+    }
+  });
 });

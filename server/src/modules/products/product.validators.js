@@ -1,4 +1,12 @@
 import { z } from "zod";
+import { MAX_SPEC_ROWS, normalizeSpecifications } from "../../utils/specifications.js";
+
+const specificationsSchema = z
+  .union([
+    z.array(z.object({ label: z.string().max(120), value: z.string().max(1000) })).max(MAX_SPEC_ROWS),
+    z.record(z.string().max(120), z.string().max(1000)),
+  ])
+  .transform(normalizeSpecifications);
 
 const bookDetailSchema = z
   .object({
@@ -41,7 +49,7 @@ export const createProductSchema = z.object({
   careInstructions: z.string().trim().max(1000).optional().nullable(),
   whatsIncluded: z.string().trim().max(1000).optional().nullable(),
   shippingInformation: z.string().trim().max(1000).optional().nullable(),
-  specifications: z.any().optional().nullable(),
+  specifications: specificationsSchema.optional().nullable(),
   seoTitle: z.string().trim().max(200).optional().nullable(),
   seoDescription: z.string().trim().max(500).optional().nullable(),
   ogImage: z.string().trim().max(500).optional().nullable(),

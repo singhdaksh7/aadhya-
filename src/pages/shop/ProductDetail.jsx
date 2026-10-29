@@ -11,6 +11,7 @@ import { commercialContext, shippingInfoText, returnWindowLabel } from "../../li
 import { getProductBySlug, getProducts } from "../../services/api";
 import { IconCheck, IconCart } from "../../components/icons";
 import { trackProductView, recordRecentlyViewed } from "../../lib/analytics";
+import ProductSpecifications from "../../components/shop/ProductSpecifications";
 import RecentlyViewed from "../../components/shop/RecentlyViewed";
 import { canonicalUrl, jsonLdProps } from "../../lib/seo";
 
@@ -513,8 +514,7 @@ export default function ProductDetail() {
           <div role="tablist" aria-label="Product details" className="flex border-b border-[var(--theme-border)] gap-8 overflow-x-auto text-sm font-medium">
             {[
               { id: "story", label: "Description & Craft" },
-              { id: "specs", label: "Specifications & Material" },
-              { id: "care", label: "Dimensions & Care" },
+              { id: "care", label: "Care" },
               { id: "shipping", label: "Shipping & Returns" }
             ].map((tab) => (
               <button
@@ -545,18 +545,6 @@ export default function ProductDetail() {
             {activeTab === "story" && (
               <p className="whitespace-pre-line">{product.story || product.shortDescription}</p>
             )}
-            {activeTab === "specs" && (
-              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div><dt className="font-semibold store-text">Materials:</dt><dd>{product.materials || "Natural Raw Materials"}</dd></div>
-                <div><dt className="font-semibold store-text">Dimensions:</dt><dd>{product.dimensions || "Standard Size"}</dd></div>
-                <div><dt className="font-semibold store-text">Weight:</dt><dd>{product.weight || "N/A"}</dd></div>
-                {Object.entries(product.specifications && typeof product.specifications === "object" ? product.specifications : {})
-                  .filter(([, value]) => typeof value === "string" && value.trim())
-                  .map(([label, value]) => (
-                    <div key={label}><dt className="font-semibold store-text">{label}:</dt><dd>{value}</dd></div>
-                  ))}
-              </dl>
-            )}
             {activeTab === "care" && (
               <p>{product.careInstructions || "Wipe gently with a soft dry cloth. Avoid harsh chemicals."}</p>
             )}
@@ -565,6 +553,8 @@ export default function ProductDetail() {
             )}
           </div>
         </section>
+
+        <ProductSpecifications product={product} />
 
         {/* Product Reviews Section */}
         <section className="border-t border-[var(--theme-border)] pt-12">

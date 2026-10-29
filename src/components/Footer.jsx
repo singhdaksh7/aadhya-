@@ -8,10 +8,12 @@ import { CompanyBlock, ContactItems, SeoBand, PaymentBadges, FooterImage, hasPay
 
 // Footer logo: admin-controlled width/height (desktop + mobile, 0 = auto), with a style option so
 // dark artwork stays legible on the dark footer. Prefers the footer logo, then the light/secondary
-// logo meant for dark backgrounds, then the main logo.
+// logo meant for dark backgrounds, then the main logo. The logo always sits directly on the footer
+// background: the retired LIGHT_PLATE style (a cream rounded box) is still accepted from saved
+// settings but renders like ORIGINAL, so a transparent logo never shows a rectangle behind it.
 const FOOTER_LOGO_STYLES = {
   ORIGINAL: { wrap: "", img: "" },
-  LIGHT_PLATE: { wrap: "rounded-lg bg-[#FAF6F0] p-3", img: "" },
+  LIGHT_PLATE: { wrap: "", img: "" },
   WHITE_SILHOUETTE: { wrap: "", img: "brightness-0 invert" },
 };
 

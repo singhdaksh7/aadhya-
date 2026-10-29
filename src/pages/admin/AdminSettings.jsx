@@ -654,18 +654,17 @@ export default function AdminSettings() {
               <div className="col-span-2">
                 <label className="text-xs font-semibold uppercase tracking-wider text-charcoal-soft">Footer Logo Style (footer is dark)</label>
                 <select
-                  value={settings.footer?.footerLogoStyle || "ORIGINAL"}
+                  value={settings.footer?.footerLogoStyle === "WHITE_SILHOUETTE" ? "WHITE_SILHOUETTE" : "ORIGINAL"}
                   onChange={(e) => setSettings((s) => ({ ...s, footer: { ...s.footer, footerLogoStyle: e.target.value } }))}
                   className={inputCls}
                 >
-                  <option value="ORIGINAL">Original colours (use a light logo)</option>
-                  <option value="LIGHT_PLATE">Dark logo on a light plate</option>
+                  <option value="ORIGINAL">Original colours (transparent logo, no background box)</option>
                   <option value="WHITE_SILHOUETTE">White silhouette (single-colour logo)</option>
                 </select>
               </div>
               <div className="col-span-2 flex flex-wrap items-center gap-3 rounded-xl bg-charcoal px-4 py-4" data-testid="footer-logo-preview">
                 <span className="w-full text-[10px] font-semibold uppercase tracking-wider text-white/70">Footer preview (dark background)</span>
-                <span className={`inline-flex max-w-full ${settings.footer?.footerLogoStyle === "LIGHT_PLATE" ? "rounded-lg bg-[#FAF6F0] p-3" : ""}`}>
+                <span className="inline-flex max-w-full">
                   {(settings.footer?.footerLogo || settings.branding?.secondaryLogo || settings.branding?.desktopLogo) ? <BrandLogo
                     src={settings.footer?.footerLogo || settings.branding?.secondaryLogo || settings.branding?.desktopLogo}
                     widthPx={Number(settings.footer?.footerLogoWidth) || (Number(settings.footer?.footerLogoHeight) ? undefined : 160)}
