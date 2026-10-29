@@ -13,7 +13,7 @@ import { buildCategoryIndex, resolveCategoryThumb } from "./categoryInheritance"
  * NavLink   = { id, label, to, external, openInNewTab }
  */
 
-export const DESTINATION_TYPES = ["CATEGORY", "COLLECTION", "PAGE", "BOOKS", "NEW_ARRIVALS", "CUSTOM_URL"];
+export const DESTINATION_TYPES = ["CATEGORY", "COLLECTION", "PAGE", "GIFTING", "BOOKS", "NEW_ARRIVALS", "CUSTOM_URL"];
 export const MEGA_MODES = ["DISABLED", "AUTO_FROM_CATEGORY", "ALL_CATEGORIES", "MANUAL"];
 export const CATEGORY_SCOPES = ["ROOT", "ALL", "PARENTS"];
 
@@ -53,6 +53,8 @@ export function resolveDestination({ type, destination, category }) {
       return prefixed("/collections/", "/collections");
     case "PAGE":
       return prefixed("/pages/", "/");
+    case "GIFTING":
+      return safe(dest, "/gifting");
     case "BOOKS":
       return safe(dest, "/books");
     case "NEW_ARRIVALS":

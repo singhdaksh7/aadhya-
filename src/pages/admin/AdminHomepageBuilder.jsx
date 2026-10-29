@@ -38,6 +38,17 @@ const SECTION_TYPE_LABELS = {
   TESTIMONIALS: "Reviews / Testimonials",
   HOW_WE_WORK: "How We Work",
   SHOPPABLE_REELS: "Shoppable Reels",
+  GIFTING_HERO: "Gifting Hero",
+  GIFTS_BY_OCCASION: "Gifts by Occasion",
+  CURATED_STORIES: "Curated Gifting Stories",
+  GIFTS_BY_FESTIVAL: "Gifts by Festival",
+  GIFTING_BENEFITS: "Gifting Service Strip",
+  GIFTS_BY_CRAFT: "Gifts by Craft",
+  FEATURED_GIFTS: "Featured Handpicked Gifts",
+  GIFTS_BY_BUDGET: "Gifts by Budget",
+  GIFTING_SEO: "Gifting SEO Story",
+  GIFTING_FAQ: "Gifting FAQ Accordion",
+
 };
 
 export default function AdminHomepageBuilder() {

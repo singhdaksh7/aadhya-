@@ -23,6 +23,7 @@ import FAQ from "./pages/FAQ";
 import Contact from "./pages/Contact";
 import PaymentInfo from "./pages/PaymentInfo";
 import SystemPage from "./pages/SystemPage";
+import GiftingPage from "./pages/GiftingPage";
 import NotFound from "./pages/NotFound";
 import BooksStorefront from "./pages/shop/BooksStorefront";
 import ProductCatalog from "./pages/shop/ProductCatalog";
@@ -141,6 +142,7 @@ function SiteLayout() {
                 <Route path="/account/notifications" element={<RequireCustomer><AccountNotifications /></RequireCustomer>} />
 
                 {/* Informational & Policy Routes */}
+                <Route path="/gifting" element={<GiftingPage />} />
                 <Route path="/about" element={<SystemPage slug="about" eyebrow="About" fallbackTitle="About" />} />
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/faq" element={<FAQ />} />

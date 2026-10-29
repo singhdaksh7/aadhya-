@@ -1,3 +1,15 @@
+import {
+  GiftingHeroSection,
+  GiftsByOccasionSection,
+  CuratedStoriesSection,
+  GiftsByFestivalSection,
+  GiftingBenefitsSection,
+  GiftsByCraftSection,
+  FeaturedGiftsSection,
+  GiftsByBudgetSection,
+  GiftingSeoSection,
+  GiftingFaqSection,
+} from "../gifting/GiftingSections";
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { fetchBlogPosts, fetchFaqs, resolveProductImageUrl } from "../../lib/api";
@@ -87,6 +99,26 @@ function SectionItem({ section }) {
         </div>
       );
 
+    case "GIFTING_HERO":
+      return <GiftingHeroSection section={section} />;
+    case "GIFTS_BY_OCCASION":
+      return <GiftsByOccasionSection section={section} />;
+    case "CURATED_STORIES":
+      return <CuratedStoriesSection section={section} />;
+    case "GIFTS_BY_FESTIVAL":
+      return <GiftsByFestivalSection section={section} />;
+    case "GIFTING_BENEFITS":
+      return <GiftingBenefitsSection section={section} />;
+    case "GIFTS_BY_CRAFT":
+      return <GiftsByCraftSection section={section} />;
+    case "FEATURED_GIFTS":
+      return <FeaturedGiftsSection section={section} />;
+    case "GIFTS_BY_BUDGET":
+      return <GiftsByBudgetSection section={section} />;
+    case "GIFTING_SEO":
+      return <GiftingSeoSection section={section} />;
+    case "GIFTING_FAQ":
+      return <GiftingFaqSection section={section} />;
     case "BLOG_PREVIEW":
       return <BlogPreviewSection settings={settings} content={content} />;
 

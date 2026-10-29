@@ -1,9 +1,10 @@
+import { DEFAULT_GIFTING_PAGE_SECTIONS } from "./gifting-content.js";
 import { prisma } from "../../lib/prisma.js";
 import { sanitizeRichText } from "../../utils/sanitizer.js";
 
 // Pages the storefront routes depend on (/about, /shipping, ...). They can be edited and
 // unpublished, but never moved to a different slug or deleted, so a route cannot break.
-export const SYSTEM_PAGE_SLUGS = ["about", "shipping", "returns", "privacy", "terms", "cancellation", "payments", "contact", "training", "consultation", "research", "events", "thinkpod"];
+export const SYSTEM_PAGE_SLUGS = ["about", "shipping", "returns", "privacy", "terms", "cancellation", "payments", "contact", "training", "consultation", "research", "events", "thinkpod", "gifting"];
 const isSystemSlug = (slug) => SYSTEM_PAGE_SLUGS.includes(String(slug || "").toLowerCase().trim());
 function protectedError(message) { const e = new Error(message); e.statusCode = 400; return e; }
 
@@ -50,12 +51,48 @@ export async function getPageById(id) {
   return page;
 }
 
+export async function ensureDefaultGiftingPage() {
+  let page = await prisma.page.findUnique({
+    where: { slug: "gifting" },
+    include: { sections: { orderBy: { sortOrder: "asc" } } },
+  });
+  if (!page) {
+    page = await prisma.page.create({
+      data: {
+        name: "Artisan Gifting",
+        slug: "gifting",
+        pageType: "LANDING",
+        status: "PUBLISHED",
+        publishedAt: new Date(),
+        seoTitle: "Thoughtful Gifting | Handcrafted Decor & Curated Keepsakes | Tushaqsa",
+        seoDescription: "Discover handcrafted gifts for housewarming, weddings, anniversaries and festivals. Heirloom brass, raw ceramics, and mindful objects made in India.",
+        sections: {
+          create: DEFAULT_GIFTING_PAGE_SECTIONS.map((sec) => ({
+            type: sec.type,
+            name: sec.name,
+            sortOrder: sec.sortOrder,
+            settings: sec.settings,
+            isEnabled: true,
+            isActive: true,
+          })),
+        },
+      },
+      include: { sections: { orderBy: { sortOrder: "asc" } } },
+    });
+  }
+  return page;
+}
+
 export async function getPageBySlug(slug, { allowDraft = false } = {}) {
   const normalizedSlug = slug.toLowerCase().trim();
-  const page = await prisma.page.findUnique({
+  let page = await prisma.page.findUnique({
     where: { slug: normalizedSlug },
     include: { sections: { orderBy: { sortOrder: "asc" }, where: { isActive: true } } }
   });
+
+  if (!page && normalizedSlug === "gifting") {
+    page = await ensureDefaultGiftingPage();
+  }
 
   if (!page) {
     const error = new Error("CMS Page not found");

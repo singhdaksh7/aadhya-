@@ -116,6 +116,7 @@ export default function Footer() {
       title: "Company & Policies",
       links: [
         { label: "About Tushaqsa", url: "/about" },
+        { label: "Artisan Gifting", url: "/gifting" },
         { label: "Featured Collections", url: "/collections" },
         { label: "Privacy Policy", url: "/privacy" },
         { label: "Terms & Conditions", url: "/terms" },
