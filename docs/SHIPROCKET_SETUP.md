@@ -2,7 +2,7 @@
 
 For the store owner. Follow in order. Nothing here creates a real shipment until you press the final button on a real order.
 
-> Status: the package, serviceability and shipment-creation code is merged to `main` (PR #75) but is **not deployed to production yet**. Steps 1 to 3 can be done in Shiprocket right now. Steps 4 onward need the deploy.
+> Status: package preparation and gated shipment creation are live. This revision also covers the operational fulfilment flow, cancellation, Integrations diagnostics, Admin alerts and the customer tracking timeline.
 
 ## What you need before you start
 
@@ -98,11 +98,45 @@ Weight is always item weights plus your packaging weight. Volumetric weight is s
 - A second "create" on the same order is refused, so a double-click or retry cannot duplicate the Shiprocket order.
 - Provider errors are shown in a safe, short form. Secrets are never displayed.
 
+## First live shipment: step-by-step (controlled mode)
+
+Keep **auto-create, auto-AWB and auto-pickup OFF**. Do one real order by hand, one explicit click at a time:
+
+1. **Admin → Integrations → Shiprocket → Overview.** Credentials show as configured. Press **Test connection** (read-only login). Open **Pickup** and press **Load pickup locations**: your nickname must appear and match.
+2. **Open a real, paid order** you will actually ship. The Fulfilment card shows the current step and any blockers (incomplete address, missing credentials, missing pickup pincode).
+3. **Confirm Package & Check Couriers.** Check weight and size against the real box.
+4. **Choose a courier**, then **Create Shiprocket shipment.** This creates a real Shiprocket order and, if a courier is chosen, assigns the AWB.
+5. If no AWB was assigned, use **Assign AWB** (pick a courier first).
+6. **Schedule pickup.** Download the label from the card and attach it to the parcel.
+7. Watch **Last webhook** on the Webhook tab. Tracking events appear on the order and on the customer's order page.
+
+Each button appears only when that step is valid, and the server re-checks the same rules.
+
+## Cancelling
+
+**Cancel shipment** is offered only before the courier has collected the parcel (shipment created or pickup scheduled). The app asks Shiprocket to cancel and changes its own state **only after Shiprocket confirms**. If Shiprocket refuses, nothing changes locally, an Admin alert is raised and you can retry. After a confirmed cancellation you can create a new shipment for the order.
+
+## Admin alerts
+
+You are alerted (Admin notifications) only for: shipment creation failed, AWB failed, pickup failed or reported a problem, cancellation failed, delivery attempt failed, return to origin started. Normal tracking scans never alert.
+
+## Customer tracking
+
+Customers see courier, AWB, tracking link, a friendly status and a milestone timeline on their order page and on Track Order. They never see Shiprocket ids, raw statuses, errors or internal actors. Customer emails go out only for meaningful milestones (shipped, out for delivery, delivered, delivery failed), once each.
+
+## Rolling back
+
+1. Admin → Shipping: set provider to MANUAL. New orders then use the manual tracking form; nothing is sent to Shiprocket.
+2. Turn off any auto-create / auto-AWB / auto-pickup switch.
+3. A wrongly created Shiprocket order can be cancelled from the order (before pickup) or in the Shiprocket dashboard.
+4. Credentials can be replaced or removed in Admin → Integrations at any time.
+
 ## Known limits (read before going live)
 
 1. The Shiprocket endpoints and response fields were implemented from the documented external API but have **not** been checked against a live or sandbox account yet. The first real call is the verification.
 2. The status-ID table that maps Shiprocket tracking statuses to order states predates this work and must be checked against the first real webhook payloads. Unknown statuses change nothing and email nobody.
-3. Not yet built: customer-facing tracking timeline redesign, admin alerts for failed shipments, Shiprocket-side cancellation, return (reverse) shipments, label/manifest polish, and a fuller Integrations diagnostics page.
+3. **Return (reverse) shipments are not implemented.** Customer return pickups must be arranged in the Shiprocket dashboard. The app ignores webhook events for return shipments so they cannot disturb the original order. Manifest generation is also not built (Shiprocket generates it with pickup in most flows).
+3a. The cancel endpoints (`/orders/cancel/shipment/awbs` and `/orders/cancel`) and the pickup-locations endpoint follow the documented external API but are unverified against a live account.
 4. Variants have no admin screen in this codebase; variant shipping values can only be set through the API. Variants inherit the product's values.
 
 ## First-order checklist
