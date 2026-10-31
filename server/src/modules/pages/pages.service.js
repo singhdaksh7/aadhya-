@@ -1,5 +1,6 @@
 import { prisma } from "../../lib/prisma.js";
 import { ApiError } from "../../utils/ApiError.js";
+import { ensureDefaultGiftingPage } from "./page.service.js";
 import { DEFAULT_HOMEPAGE_CONTENT, DEMO_REVIEWS, mergeMissingSettings, settingsEqual, validateHomepageSettings } from "./homepage-content.js";
 import { serializePublicProduct } from "../products/product.service.js";
 import { listCategories } from "../categories/category.service.js";
@@ -291,9 +292,12 @@ export async function getAdminHomepage() {
 }
 
 export async function createPageSection(pageIdOrSlug, input) {
-  let page = await prisma.page.findFirst({
+  let page = pageIdOrSlug ? await prisma.page.findFirst({
     where: { OR: [{ id: pageIdOrSlug }, { slug: pageIdOrSlug }] },
-  });
+  }) : null;
+  if (!page && pageIdOrSlug === "gifting") {
+    page = await ensureDefaultGiftingPage();
+  }
   if (!page) {
     page = await ensureDefaultHomepage();
   }
@@ -342,17 +346,27 @@ export async function duplicatePageSection(sectionId) {
   const section = await prisma.pageSection.findUnique({ where: { id: sectionId } });
   if (!section) throw ApiError.notFound("Page section not found");
 
-  return prisma.pageSection.create({
-    data: {
-      pageId: section.pageId,
-      type: section.type,
-      name: `${section.name} (Copy)`,
-      settings: section.settings ?? {},
-      content: section.content ?? {},
-      isEnabled: section.isEnabled,
-      sortOrder: section.sortOrder + 1,
-    },
+  // Slot the copy directly after the original: later siblings shift down one so the order is unambiguous.
+  const later = await prisma.pageSection.findMany({
+    where: { pageId: section.pageId, sortOrder: { gt: section.sortOrder } },
+    select: { id: true, sortOrder: true },
   });
+  const ops = [
+    ...later.map((sibling) => prisma.pageSection.update({ where: { id: sibling.id }, data: { sortOrder: sibling.sortOrder + 1 } })),
+    prisma.pageSection.create({
+      data: {
+        pageId: section.pageId,
+        type: section.type,
+        name: `${section.name} (Copy)`,
+        settings: section.settings ?? {},
+        content: section.content ?? {},
+        isEnabled: section.isEnabled,
+        sortOrder: section.sortOrder + 1,
+      },
+    }),
+  ];
+  const results = await prisma.$transaction(ops);
+  return results[results.length - 1];
 }
 
 export async function reorderPageSections(pageIdOrSlug, sectionIds) {
@@ -366,9 +380,10 @@ export async function reorderPageSections(pageIdOrSlug, sectionIds) {
     throw ApiError.badRequest("sectionIds must not contain duplicates");
   }
 
-  let page = await prisma.page.findFirst({
+  // No page given (PUT /sections/reorder) means the homepage; other pages use PUT /:pageId/sections/reorder.
+  let page = pageIdOrSlug ? await prisma.page.findFirst({
     where: { OR: [{ id: pageIdOrSlug }, { slug: pageIdOrSlug }] },
-  });
+  }) : null;
   if (!page) {
     page = await ensureDefaultHomepage();
   }

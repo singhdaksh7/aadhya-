@@ -49,6 +49,7 @@ export const adminNavGroups = [
       { to: "/admin/coupons", label: "Coupons" },
       { to: "/admin/whats-new", label: "What's New" },
       { to: "/admin/popup", label: "Popup / Promotions" },
+      { to: "/admin/gifting", label: "Gifting" },
     ],
   },
   {
@@ -106,6 +107,7 @@ export function pageTitleFromPath(pathname) {
     "/admin/customers": "Customers",
     "/admin/reviews": "Reviews",
     "/admin/homepage-builder": "Homepage Builder",
+    "/admin/gifting": "Gifting",
     "/admin/email-templates": "Email Templates",
     "/admin/email-notifications": "Admin Email Alerts",
     "/admin/header-settings": "Header & Navigation",

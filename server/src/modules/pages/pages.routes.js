@@ -3,6 +3,8 @@ import { requireAdmin } from "../../middleware/adminAuth.js";
 import {
   handleGetPublicHomepage,
   handleGetAdminHomepage,
+  handleGetAdminGifting,
+  handleRestoreGiftingDefaults,
   handleCreateSection,
   handleUpdateSection,
   handleDeleteSection,
@@ -16,12 +18,16 @@ publicPagesRouter.get("/home", handleGetPublicHomepage);
 
 export const adminPagesRouter = Router();
 adminPagesRouter.get("/home", requireAdmin, handleGetAdminHomepage);
+adminPagesRouter.get("/gifting", requireAdmin, handleGetAdminGifting);
+adminPagesRouter.post("/gifting/restore-defaults", requireAdmin, handleRestoreGiftingDefaults);
 adminPagesRouter.post("/home/sections", requireAdmin, handleCreateSection);
 adminPagesRouter.post("/:pageId/sections", requireAdmin, handleCreateSection);
 
 // Static paths must precede :sectionId so "reorder" is not treated as an ID.
 adminPagesRouter.put("/sections/reorder", requireAdmin, handleReorderSections);
 adminPagesRouter.put("/home/sections/reorder", requireAdmin, handleReorderSections);
+// Page-scoped reorder (e.g. /admin/pages/gifting/sections/reorder); sections must belong to that page.
+adminPagesRouter.put("/:pageId/sections/reorder", requireAdmin, handleReorderSections);
 
 adminPagesRouter.post("/publish", requireAdmin, handlePublishHomepage);
 adminPagesRouter.post("/home/publish", requireAdmin, handlePublishHomepage);

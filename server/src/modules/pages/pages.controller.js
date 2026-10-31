@@ -1,4 +1,23 @@
 import * as pagesService from "./pages.service.js";
+import * as pageService from "./page.service.js";
+
+export async function handleGetAdminGifting(req, res, next) {
+  try {
+    const data = await pageService.getAdminGiftingPage();
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function handleRestoreGiftingDefaults(req, res, next) {
+  try {
+    const data = await pageService.restoreDefaultGiftingSections();
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+}
 
 export async function handleGetPublicHomepage(req, res, next) {
   try {

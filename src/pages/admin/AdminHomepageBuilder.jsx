@@ -52,7 +52,34 @@ const SECTION_TYPE_LABELS = {
 
 };
 
-export default function AdminHomepageBuilder() {
+/** Section type -> label map restricted to the given type keys. */
+export const sectionTypeLabels = (types) => Object.fromEntries(types.map((t) => [t, SECTION_TYPE_LABELS[t] || t]));
+
+/** The default configuration: the storefront homepage. Other pages (e.g. Gifting) pass their own. */
+const HOMEPAGE_CONFIG = {
+  title: "Homepage Builder",
+  eyebrow: "Content",
+  description: "Reorder, enable/disable, and configure sections for the public storefront homepage.",
+  noun: "homepage",
+  layoutTitle: "Homepage Layout",
+  previewHref: "/",
+  previewLabel: "Preview",
+  publishLabel: "Publish Homepage",
+  typeLabels: SECTION_TYPE_LABELS,
+  defaultNewType: "NEW_ARRIVALS",
+  load: () => adminFetchHomepage(),
+  create: (data) => adminCreatePageSection(data),
+  reorder: (ids) => adminReorderPageSections(ids),
+  publish: () => adminPublishHomepage(),
+  Fields: HomepageSectionFields,
+  renderHeaderActions: null,
+  renderAfterHeader: null,
+};
+
+export default function AdminHomepageBuilder({ config: configOverride } = {}) {
+  const config = configOverride ? { ...HOMEPAGE_CONFIG, ...configOverride } : HOMEPAGE_CONFIG;
+  const Fields = config.Fields;
+  const SECTION_TYPE_LABELS_IN_USE = config.typeLabels;
   const [page, setPage] = useState(null);
   const [sections, setSections] = useState([]);
   const [status, setStatus] = useState("loading");
@@ -61,7 +88,7 @@ export default function AdminHomepageBuilder() {
   // Modals state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingSection, setEditingSection] = useState(null);
-  const [newSectionType, setNewSectionType] = useState("NEW_ARRIVALS");
+  const [newSectionType, setNewSectionType] = useState(config.defaultNewType);
   const [newSectionName, setNewSectionName] = useState("");
 
   // Edit settings form state
@@ -74,7 +101,7 @@ export default function AdminHomepageBuilder() {
   const loadHomepage = async () => {
     setStatus("loading");
     try {
-      const res = await adminFetchHomepage();
+      const res = await config.load();
       const pageData = res.page || res.data?.page || res;
       const sectionData = res.sections || res.data?.sections || pageData.sections || [];
       setPage(pageData);
@@ -96,8 +123,8 @@ export default function AdminHomepageBuilder() {
 
   const handlePublish = async () => {
     try {
-      await adminPublishHomepage();
-      alert("Homepage published successfully!");
+      await config.publish(page);
+      alert(`${config.title} published successfully!`);
       loadHomepage();
     } catch (err) {
       alert("Publish failed: " + err.message);
@@ -107,8 +134,8 @@ export default function AdminHomepageBuilder() {
   const handleAddSection = async (e) => {
     e.preventDefault();
     try {
-      const name = newSectionName.trim() || SECTION_TYPE_LABELS[newSectionType] || newSectionType;
-      await adminCreatePageSection({
+      const name = newSectionName.trim() || SECTION_TYPE_LABELS_IN_USE[newSectionType] || newSectionType;
+      await config.create({
         type: newSectionType,
         name,
         settings: {},
@@ -146,7 +173,7 @@ export default function AdminHomepageBuilder() {
     setSections(updated);
 
     try {
-      await adminReorderPageSections(sectionIds);
+      await config.reorder(sectionIds);
     } catch (err) {
       alert("Failed to save section order: " + err.message);
       loadHomepage();
@@ -163,7 +190,7 @@ export default function AdminHomepageBuilder() {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm("Are you sure you want to remove this section from the homepage?")) return;
+    if (!confirm(`Are you sure you want to remove this section from the ${config.noun}?`)) return;
     try {
       await adminDeletePageSection(id);
       loadHomepage();
@@ -201,25 +228,28 @@ export default function AdminHomepageBuilder() {
     <div className="space-y-5">
       <div className="admin-page-header">
         <div>
-          <p className="admin-page-header__eyebrow">Content</p>
+          <p className="admin-page-header__eyebrow">{config.eyebrow}</p>
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="admin-page-header__title">Homepage Builder</h1>
+            <h1 className="admin-page-header__title">{config.title}</h1>
             <span className="admin-badge admin-badge--neutral">{page?.status || "DRAFT"}</span>
           </div>
           <p className="admin-page-header__desc">
-            Reorder, enable/disable, and configure sections for the public storefront homepage.
+            {config.description}
           </p>
         </div>
         <div className="admin-page-header__actions">
-          <a href="/" target="_blank" rel="noopener noreferrer" className="admin-btn admin-btn--ghost">
-            Preview
+          <a href={config.previewHref} target="_blank" rel="noopener noreferrer" className="admin-btn admin-btn--ghost">
+            {config.previewLabel}
           </a>
+          {config.renderHeaderActions && config.renderHeaderActions({ page, sections, reload: loadHomepage })}
           <button type="button" onClick={() => setIsAddModalOpen(true)} className="admin-btn admin-btn--ghost">
             + Add Section
           </button>
-          <Button onClick={handlePublish}>Publish Homepage</Button>
+          <Button onClick={handlePublish}>{config.publishLabel}</Button>
         </div>
       </div>
+
+      {status === "ready" && config.renderAfterHeader && config.renderAfterHeader({ page, sections, reload: loadHomepage, setPage })}
 
       {status === "loading" && <LoadingNotice />}
       {status === "error" && <ErrorNotice message={error || "Could not load homepage sections."} />}
@@ -228,19 +258,20 @@ export default function AdminHomepageBuilder() {
         <div className="space-y-4">
           <div className="admin-card p-5">
             <div className="mb-4 flex items-center justify-between gap-3">
-              <h2 className="admin-card__title">Homepage Layout ({sections.length} sections)</h2>
+              <h2 className="admin-card__title">{config.layoutTitle} ({sections.length} sections)</h2>
               <span className="text-xs text-charcoal-soft">Draft until published</span>
             </div>
 
             {sections.length === 0 ? (
               <p className="text-sm text-charcoal-soft italic py-8 text-center">
-                No sections defined for homepage. Click "+ Add Section" to build layout.
+                No sections defined for the {config.noun}. Click "+ Add Section" to build layout.
               </p>
             ) : (
               <div className="space-y-3">
                 {sections.map((sec, index) => (
                   <div
                     key={sec.id}
+                    data-testid={`section-row-${index}`}
                     className={`flex flex-wrap items-center justify-between gap-4 rounded-xl border p-4 transition ${
                       sec.isEnabled
                         ? "border-charcoal/15 bg-white"
@@ -287,7 +318,7 @@ export default function AdminHomepageBuilder() {
                           )}
                         </div>
                         <p className="text-xs text-charcoal-soft mt-0.5">
-                          {SECTION_TYPE_LABELS[sec.type] || sec.type}
+                          {SECTION_TYPE_LABELS_IN_USE[sec.type] || SECTION_TYPE_LABELS[sec.type] || sec.type}
                         </p>
                       </div>
                     </div>
@@ -341,7 +372,7 @@ export default function AdminHomepageBuilder() {
             onSubmit={handleAddSection}
             className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl space-y-4 border border-charcoal/10"
           >
-            <h3 className="font-serif-display text-xl font-bold text-charcoal">Add Homepage Section</h3>
+            <h3 className="font-serif-display text-xl font-bold text-charcoal">Add {config.noun === "homepage" ? "Homepage" : config.title} Section</h3>
 
             <div>
               <label className="text-xs font-semibold text-charcoal-soft">Section Type *</label>
@@ -350,7 +381,7 @@ export default function AdminHomepageBuilder() {
                 onChange={(e) => setNewSectionType(e.target.value)}
                 className="w-full rounded-xl border border-charcoal/20 px-4 py-2.5 text-sm focus:border-terracotta focus:outline-none mt-1"
               >
-                {Object.entries(SECTION_TYPE_LABELS).map(([type, label]) => (
+                {Object.entries(SECTION_TYPE_LABELS_IN_USE).map(([type, label]) => (
                   <option key={type} value={type}>
                     {label} ({type})
                   </option>
@@ -428,7 +459,7 @@ export default function AdminHomepageBuilder() {
               </div>
             </div>
 
-            <HomepageSectionFields
+            <Fields
               type={editingSection.type}
               value={editSettings}
               onChange={setEditSettings}
