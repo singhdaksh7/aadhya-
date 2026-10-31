@@ -16,7 +16,7 @@ import {
 import { PageHeader, AdminCard, StatusBadge } from "../../components/admin/ui";
 import CashfreePanel from "../../components/admin/integrations/CashfreePanel";
 import SmtpSettingsForm from "../../components/admin/integrations/SmtpSettingsForm";
-import ShiprocketWebhookPanel from "../../components/admin/integrations/ShiprocketWebhookPanel";
+import ShiprocketTabs from "../../components/admin/integrations/ShiprocketTabs";
 
 const initialBusiness = {
   provider: "MANUAL",
@@ -309,7 +309,7 @@ export default function AdminIntegrations() {
         </form>
       </AdminCard>
 
-      <ShiprocketWebhookPanel />
+      <ShiprocketTabs />
 
       <AdminCard
         title="Email"

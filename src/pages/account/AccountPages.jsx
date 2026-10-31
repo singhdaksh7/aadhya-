@@ -36,6 +36,7 @@ import {
   accountReturn,
 } from "../../lib/api";
 import { formatInr } from "../../lib/format";
+import TrackingBlock from "../../components/TrackingBlock";
 import { ORDER_STATUS_LABELS, StatusPill, SectionCard, EmptyPanel, SkeletonRows, OrderProgress, ItemThumb, formatDate } from "../../components/account/AccountUI";
 
 const blank = {
@@ -870,7 +871,7 @@ export function OrderDetail() {
 
   const num = (v) => Number(v || 0);
   const addr = o?.address;
-  const shipment = o?.shipment;
+  const tracking = o?.tracking;
   const timeline = (o?.timeline || []).filter((t) => TIMELINE_LABELS[t.status]);
 
   return (
@@ -934,15 +935,9 @@ export function OrderDetail() {
             </div>
 
             <div className="space-y-6">
-              {shipment && (
+              {tracking && (
                 <SectionCard eyebrow="Delivery" title="Shipment" labelledBy="order-shipment-heading">
-                  <dl className="space-y-3 text-sm">
-                    <div><dt className="text-xs font-semibold uppercase tracking-wider store-muted">Status</dt><dd className="mt-1 store-text">{String(shipment.status || "").replaceAll("_", " ") || "Preparing"}</dd></div>
-                    {shipment.carrier && <div><dt className="text-xs font-semibold uppercase tracking-wider store-muted">Courier</dt><dd className="mt-1 store-text">{shipment.carrier}</dd></div>}
-                    {shipment.trackingNumber && <div><dt className="text-xs font-semibold uppercase tracking-wider store-muted">Tracking number</dt><dd className="mt-1 break-all store-text">{shipment.trackingNumber}</dd></div>}
-                    {shipment.estimatedDelivery && <div><dt className="text-xs font-semibold uppercase tracking-wider store-muted">Estimated delivery</dt><dd className="mt-1 store-text">{formatDate(shipment.estimatedDelivery)}</dd></div>}
-                  </dl>
-                  {shipment.trackingUrl && /^https?:\/\//i.test(shipment.trackingUrl) && <a className="mt-4 inline-block rounded-full store-bg-primary px-5 py-2 text-xs font-semibold uppercase tracking-wider text-ivory" href={shipment.trackingUrl} target="_blank" rel="noreferrer">Track shipment</a>}
+                  <TrackingBlock tracking={tracking} />
                 </SectionCard>
               )}
 
