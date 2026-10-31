@@ -24,6 +24,23 @@ function SafeLink({ to, children, ...props }) {
   );
 }
 
+/**
+ * Admin-editable label with a safe fallback. A missing/undefined/null value (content saved before the
+ * field existed) falls back to the original text so the live page is unchanged; an explicitly empty
+ * string is a deliberate "hide it".
+ */
+export const labelOrDefault = (value, fallback = "") => (typeof value === "string" ? value.trim() : fallback);
+
+function Eyebrow({ value, fallback, className = "" }) {
+  const text = labelOrDefault(value, fallback);
+  if (!text) return null;
+  return (
+    <span data-testid="section-eyebrow" className={`text-xs font-semibold uppercase tracking-widest store-primary ${className}`.trim()}>
+      {text}
+    </span>
+  );
+}
+
 /** Resolves where a story's image sits: AUTO alternates by position, otherwise the CMS layout wins. */
 export function storyImageSide(layout, index) {
   if (layout === "IMAGE_LEFT") return "left";
@@ -118,11 +135,12 @@ export function GiftsByOccasionSection({ section }) {
     .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
 
   if (!items.length) return null;
+  const cardCta = labelOrDefault(content.cardCtaLabel, "Explore");
 
   return (
     <section data-testid="gifts-by-occasion" className="mx-auto max-w-7xl px-4 sm:px-8 py-10 sm:py-16">
       <div className="mb-8 sm:mb-12 text-center max-w-2xl mx-auto">
-        <span className="text-xs font-semibold uppercase tracking-widest store-primary">Celebrate Milestones</span>
+        <Eyebrow value={content.eyebrow} fallback="Celebrate Milestones" />
         <h2 className="mt-1 font-serif-display text-2xl sm:text-4xl font-bold store-text">
           {content.heading || "Gifts by Occasion"}
         </h2>
@@ -155,9 +173,11 @@ export function GiftsByOccasionSection({ section }) {
                 <div className="absolute inset-0 bg-gradient-to-t from-charcoal/80 via-transparent to-transparent opacity-80 group-hover:opacity-90 transition" />
                 <div className="absolute inset-x-0 bottom-0 p-3 sm:p-5 text-white">
                   <h3 className="font-serif-display text-sm sm:text-lg font-medium leading-snug">{item.title}</h3>
-                  <span className="mt-1 inline-flex items-center gap-1 text-[10px] sm:text-xs uppercase tracking-wider text-white/80 group-hover:text-white">
-                    Explore <IconArrowRight className="h-3 w-3" />
-                  </span>
+                  {cardCta && (
+                    <span className="mt-1 inline-flex items-center gap-1 text-[10px] sm:text-xs uppercase tracking-wider text-white/80 group-hover:text-white">
+                      {cardCta} <IconArrowRight className="h-3 w-3" />
+                    </span>
+                  )}
                 </div>
               </div>
             </SafeLink>
@@ -176,12 +196,13 @@ export function CuratedStoriesSection({ section }) {
     .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
 
   if (!stories.length) return null;
+  const storyLabel = labelOrDefault(content.storyLabel, "Story");
 
   return (
     <section data-testid="curated-stories" className="border-t store-border bg-[var(--theme-surface,#faf7f2)]/40 py-12 sm:py-20">
       <div className="mx-auto max-w-7xl px-4 sm:px-8">
         <div className="mb-10 sm:mb-14 text-center max-w-2xl mx-auto">
-          <span className="text-xs font-semibold uppercase tracking-widest store-primary">Artisan Narratives</span>
+          <Eyebrow value={content.eyebrow} fallback="Artisan Narratives" />
           <h2 className="mt-1 font-serif-display text-2xl sm:text-4xl font-bold store-text">
             {content.heading || "Curated Gifting Stories"}
           </h2>
@@ -206,9 +227,11 @@ export function CuratedStoriesSection({ section }) {
                     stacked ? "" : isEven ? "md:order-1" : "md:order-2"
                   }`}
                 >
-                  <span className="text-[11px] font-bold uppercase tracking-widest store-secondary">
-                    Story 0{idx + 1}
-                  </span>
+                  {storyLabel && (
+                    <span className="text-[11px] font-bold uppercase tracking-widest store-secondary">
+                      {storyLabel} 0{idx + 1}
+                    </span>
+                  )}
                   <h3 className="font-serif-display text-2xl sm:text-3xl lg:text-4xl font-normal store-text leading-snug">
                     {story.heading}
                   </h3>
@@ -258,12 +281,13 @@ export function GiftsByFestivalSection({ section }) {
     .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
 
   if (!items.length) return null;
+  const cardCta = labelOrDefault(content.cardCtaLabel, "View Festive Edit");
 
   return (
     <section data-testid="gifts-by-festival" className="mx-auto max-w-7xl px-4 sm:px-8 py-10 sm:py-16">
       <div className="mb-8 sm:mb-12 flex flex-wrap items-end justify-between gap-4 border-b store-border pb-4">
         <div>
-          <span className="text-xs font-semibold uppercase tracking-widest store-primary">Festive Celebrations</span>
+          <Eyebrow value={content.eyebrow} fallback="Festive Celebrations" />
           <h2 className="mt-1 font-serif-display text-2xl sm:text-4xl font-bold store-text">
             {content.heading || "Gifts by Festival"}
           </h2>
@@ -297,9 +321,11 @@ export function GiftsByFestivalSection({ section }) {
                 <div className="absolute inset-0 bg-gradient-to-t from-charcoal/85 via-charcoal/20 to-transparent" />
                 <div className="absolute inset-x-0 bottom-0 p-4 text-white">
                   <h3 className="font-serif-display text-base sm:text-xl font-normal leading-snug">{item.label}</h3>
-                  <span className="mt-1 inline-flex items-center gap-1 text-[10px] uppercase tracking-wider store-accent">
-                    View Festive Edit <IconArrowRight className="h-3 w-3" />
-                  </span>
+                  {cardCta && (
+                    <span className="mt-1 inline-flex items-center gap-1 text-[10px] uppercase tracking-wider store-accent">
+                      {cardCta} <IconArrowRight className="h-3 w-3" />
+                    </span>
+                  )}
                 </div>
               </div>
             </SafeLink>
@@ -338,7 +364,7 @@ export function GiftingBenefitsSection({ section }) {
     <section data-testid="gifting-benefits" className="border-y store-border store-surface py-12 sm:py-16">
       <div className="mx-auto max-w-7xl px-4 sm:px-8">
         <div className="mb-10 text-center max-w-xl mx-auto">
-          <span className="text-xs font-semibold uppercase tracking-widest store-primary">Care in Every Box</span>
+          <Eyebrow value={content.eyebrow} fallback="Care in Every Box" />
           <h2 className="mt-1 font-serif-display text-2xl sm:text-3xl font-bold store-text">
             {content.heading || "The Tushaqsa Gifting Promise"}
           </h2>
@@ -380,11 +406,12 @@ export function GiftsByCraftSection({ section }) {
     .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
 
   if (!crafts.length) return null;
+  const cardCta = labelOrDefault(content.cardCtaLabel, "Explore Craft");
 
   return (
     <section data-testid="gifts-by-craft" className="mx-auto max-w-7xl px-4 sm:px-8 py-10 sm:py-16">
       <div className="mb-8 sm:mb-12 text-center max-w-2xl mx-auto">
-        <span className="text-xs font-semibold uppercase tracking-widest store-primary">Artisanal Materials</span>
+        <Eyebrow value={content.eyebrow} fallback="Artisanal Materials" />
         <h2 className="mt-1 font-serif-display text-2xl sm:text-4xl font-bold store-text">
           {content.heading || "Shop Gifts by Craft"}
         </h2>
@@ -417,9 +444,11 @@ export function GiftsByCraftSection({ section }) {
                 <div className="absolute inset-0 bg-gradient-to-t from-charcoal/80 via-transparent to-transparent" />
                 <div className="absolute inset-x-0 bottom-0 p-4 text-white">
                   <h3 className="font-serif-display text-sm sm:text-base font-normal leading-snug">{craft.title}</h3>
-                  <span className="mt-1 inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-white/80 group-hover:text-white">
-                    Explore Craft <IconArrowRight className="h-3 w-3" />
-                  </span>
+                  {cardCta && (
+                    <span className="mt-1 inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-white/80 group-hover:text-white">
+                      {cardCta} <IconArrowRight className="h-3 w-3" />
+                    </span>
+                  )}
                 </div>
               </div>
             </SafeLink>
@@ -447,9 +476,7 @@ export function FeaturedGiftsSection({ section, products = [] }) {
     <section data-testid="featured-gifts" className="mx-auto max-w-7xl px-4 sm:px-8 py-10 sm:py-16">
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4 border-b store-border pb-4">
         <div>
-          <span className="text-xs font-semibold uppercase tracking-widest store-primary">
-            {content.eyebrow || "Artisan Selection"}
-          </span>
+          <Eyebrow value={content.eyebrow} fallback="Artisan Selection" />
           <h2 className="mt-1 font-serif-display text-3xl font-bold store-text sm:text-4xl">
             {content.heading || "Handpicked Gifts"}
           </h2>
@@ -482,11 +509,13 @@ export function GiftsByBudgetSection({ section }) {
     .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
 
   if (!tiers.length) return null;
+  const cardCta = labelOrDefault(content.cardCtaLabel, "Explore Collection");
+  const tierLabel = labelOrDefault(content.tierLabel, "Tier");
 
   return (
     <section data-testid="gifts-by-budget" className="mx-auto max-w-7xl px-4 sm:px-8 py-10 sm:py-16">
       <div className="mb-8 sm:mb-12 text-center max-w-2xl mx-auto">
-        <span className="text-xs font-semibold uppercase tracking-widest store-primary">Considered Values</span>
+        <Eyebrow value={content.eyebrow} fallback="Considered Values" />
         <h2 className="mt-1 font-serif-display text-2xl sm:text-4xl font-bold store-text">
           {content.heading || "Gifts by Budget"}
         </h2>
@@ -502,14 +531,14 @@ export function GiftsByBudgetSection({ section }) {
             className="group flex flex-col justify-between p-6 sm:p-8 rounded-2xl border store-border store-surface shadow-xs transition hover:shadow-lg hover:border-[var(--theme-primary)]"
           >
             <div>
-              <span className="text-[10px] font-bold uppercase tracking-widest store-secondary">Tier 0{idx + 1}</span>
+              {tierLabel && <span className="text-[10px] font-bold uppercase tracking-widest store-secondary">{tierLabel} 0{idx + 1}</span>}
               <h3 className="mt-2 font-serif-display text-xl sm:text-2xl font-semibold store-text group-hover:store-primary transition">
                 {tier.label}
               </h3>
               {tier.description && <p className="mt-2 text-xs store-muted leading-relaxed">{tier.description}</p>}
             </div>
             <div className="mt-6 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider store-primary">
-              <span>Explore Collection</span> <IconArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-1" />
+              {cardCta && <span>{cardCta}</span>} <IconArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-1" />
             </div>
           </SafeLink>
         ))}
@@ -527,6 +556,7 @@ export function GiftingSeoSection({ section }) {
     <section data-testid="gifting-seo" className="border-t store-border bg-[var(--theme-surface,#faf7f2)]/25 py-12 sm:py-16">
       <div className="mx-auto max-w-4xl px-4 sm:px-8">
         <div className="store-surface p-8 sm:p-12 rounded-3xl border store-border shadow-xs space-y-4">
+          <Eyebrow value={content.eyebrow} fallback="" className="block" />
           {content.heading && (
             <h2 className="font-serif-display text-2xl sm:text-3xl font-bold store-text leading-snug">
               {content.heading}
@@ -559,7 +589,7 @@ export function GiftingFaqSection({ section }) {
   return (
     <section data-testid="gifting-faq" className="mx-auto max-w-4xl px-4 sm:px-8 py-12 sm:py-20">
       <div className="mb-10 text-center max-w-xl mx-auto">
-        <span className="text-xs font-semibold uppercase tracking-widest store-primary">Help & Assurance</span>
+        <Eyebrow value={content.eyebrow} fallback="Help & Assurance" />
         <h2 className="mt-1 font-serif-display text-2xl sm:text-4xl font-bold store-text">
           {content.heading || "Frequently Asked Questions About Gifting"}
         </h2>

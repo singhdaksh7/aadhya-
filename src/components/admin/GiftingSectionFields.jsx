@@ -1,5 +1,6 @@
 import React from "react";
 import ImagePickerInput from "./ImagePickerInput";
+import { DEFAULT_GIFTING_CONTENT } from "../../lib/defaultGiftingContent";
 
 const SELECT_CLS = "mt-1 w-full rounded-xl border border-charcoal/20 px-3 py-2 text-sm";
 const INPUT_CLS = "mt-1 w-full rounded-xl border border-charcoal/20 px-3 py-2 text-sm";
@@ -79,8 +80,14 @@ function ListEditor({ title, addLabel, itemLabel, items, onChange, makeItem, ren
   );
 }
 
-const SectionHeading = ({ value, set, subtitle = true, headingLabel = "Section Heading" }) => (
+/** Shows the live default (what the storefront renders today) until an admin overrides it. */
+const labelValue = (value, type, key) => (typeof value[key] === "string" ? value[key] : DEFAULT_GIFTING_CONTENT[type]?.[key] ?? "");
+
+const SectionHeading = ({ value, set, type, subtitle = true, headingLabel = "Section Heading", eyebrow = true }) => (
   <>
+    {eyebrow && (
+      <TextField label="Eyebrow (small label above the heading, leave blank to hide)" value={labelValue(value, type, "eyebrow")} onChange={(v) => set("eyebrow", v)} />
+    )}
     <TextField label={headingLabel} value={value.heading} onChange={(v) => set("heading", v)} />
     {subtitle && <TextField label="Subtitle" value={value.subtitle} onChange={(v) => set("subtitle", v)} />}
   </>
@@ -135,7 +142,8 @@ export default function GiftingSectionFields({ type, value = {}, onChange, produ
     case "GIFTS_BY_OCCASION":
       return (
         <div className="space-y-4">
-          <SectionHeading value={value} set={set} />
+          <SectionHeading value={value} set={set} type={type} />
+          <TextField label="Card link label (blank to hide)" value={labelValue(value, type, "cardCtaLabel")} onChange={(v) => set("cardCtaLabel", v)} />
           <ListEditor
             title="Occasion Items" addLabel="Add Occasion" itemLabel="Occasion"
             items={value.items || []} onChange={(v) => set("items", v)}
@@ -156,7 +164,8 @@ export default function GiftingSectionFields({ type, value = {}, onChange, produ
     case "CURATED_STORIES":
       return (
         <div className="space-y-4">
-          <SectionHeading value={value} set={set} />
+          <SectionHeading value={value} set={set} type={type} />
+          <TextField label="Story number prefix, e.g. Story 01 (blank to hide)" value={labelValue(value, type, "storyLabel")} onChange={(v) => set("storyLabel", v)} />
           <ListEditor
             title="Editorial Stories" addLabel="Add Story" itemLabel="Story"
             items={value.stories || []} onChange={(v) => set("stories", v)}
@@ -188,7 +197,8 @@ export default function GiftingSectionFields({ type, value = {}, onChange, produ
     case "GIFTS_BY_FESTIVAL":
       return (
         <div className="space-y-4">
-          <SectionHeading value={value} set={set} />
+          <SectionHeading value={value} set={set} type={type} />
+          <TextField label="Card link label (blank to hide)" value={labelValue(value, type, "cardCtaLabel")} onChange={(v) => set("cardCtaLabel", v)} />
           <ListEditor
             title="Festivals" addLabel="Add Festival" itemLabel="Festival"
             items={value.items || []} onChange={(v) => set("items", v)}
@@ -209,7 +219,7 @@ export default function GiftingSectionFields({ type, value = {}, onChange, produ
     case "GIFTING_BENEFITS":
       return (
         <div className="space-y-4">
-          <SectionHeading value={value} set={set} />
+          <SectionHeading value={value} set={set} type={type} />
           <ListEditor
             title="Benefit Cards" addLabel="Add Benefit" itemLabel="Benefit"
             items={value.cards || []} onChange={(v) => set("cards", v)}
@@ -239,7 +249,8 @@ export default function GiftingSectionFields({ type, value = {}, onChange, produ
     case "GIFTS_BY_CRAFT":
       return (
         <div className="space-y-4">
-          <SectionHeading value={value} set={set} />
+          <SectionHeading value={value} set={set} type={type} />
+          <TextField label="Card link label (blank to hide)" value={labelValue(value, type, "cardCtaLabel")} onChange={(v) => set("cardCtaLabel", v)} />
           <ListEditor
             title="Crafts" addLabel="Add Craft" itemLabel="Craft"
             items={value.crafts || []} onChange={(v) => set("crafts", v)}
@@ -262,8 +273,7 @@ export default function GiftingSectionFields({ type, value = {}, onChange, produ
       const productIds = (value.productIds || []).filter(Boolean);
       return (
         <div className="space-y-4">
-          <TextField label="Eyebrow" value={value.eyebrow} onChange={(v) => set("eyebrow", v)} />
-          <SectionHeading value={value} set={set} />
+          <SectionHeading value={value} set={set} type={type} />
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <TextField label="CTA Label" value={value.ctaLabel} onChange={(v) => set("ctaLabel", v)} />
             <TextField label="CTA URL" value={value.ctaUrl} onChange={(v) => set("ctaUrl", v)} />
@@ -355,7 +365,11 @@ export default function GiftingSectionFields({ type, value = {}, onChange, produ
     case "GIFTS_BY_BUDGET":
       return (
         <div className="space-y-4">
-          <SectionHeading value={value} set={set} />
+          <SectionHeading value={value} set={set} type={type} />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <TextField label="Card link label (blank to hide)" value={labelValue(value, type, "cardCtaLabel")} onChange={(v) => set("cardCtaLabel", v)} />
+            <TextField label="Tier number prefix (blank to hide)" value={labelValue(value, type, "tierLabel")} onChange={(v) => set("tierLabel", v)} />
+          </div>
           <ListEditor
             title="Budget Tiers" addLabel="Add Tier" itemLabel="Tier"
             items={value.tiers || []} onChange={(v) => set("tiers", v)}
@@ -378,6 +392,7 @@ export default function GiftingSectionFields({ type, value = {}, onChange, produ
     case "GIFTING_SEO":
       return (
         <div className="space-y-4">
+          <TextField label="Eyebrow (optional small label above the heading)" value={value.eyebrow ?? ""} onChange={(v) => set("eyebrow", v)} />
           <TextField label="SEO Section Heading" value={value.heading} onChange={(v) => set("heading", v)} />
           <label className="block text-xs font-semibold text-charcoal-soft">
             Editorial content (HTML: &lt;p&gt;, &lt;h3&gt;, &lt;ul&gt;, &lt;a&gt;, &lt;strong&gt;, &lt;em&gt;)
@@ -389,7 +404,7 @@ export default function GiftingSectionFields({ type, value = {}, onChange, produ
     case "GIFTING_FAQ":
       return (
         <div className="space-y-4">
-          <SectionHeading value={value} set={set} headingLabel="FAQ Heading" />
+          <SectionHeading value={value} set={set} type={type} headingLabel="FAQ Heading" />
           <ListEditor
             title="Questions & Answers" addLabel="Add Question" itemLabel="Q"
             items={value.items || []} onChange={(v) => set("items", v)}

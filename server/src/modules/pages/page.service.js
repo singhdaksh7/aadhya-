@@ -120,6 +120,42 @@ export async function ensureDefaultGiftingPage() {
   return page;
 }
 
+const GIFTING_PAGE_INCLUDE = { sections: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] } };
+
+// Admin view of the /gifting page: the page row (created with the default layout if it does not
+// exist yet) with EVERY section, including disabled / inactive ones, in storefront order.
+export async function getAdminGiftingPage() {
+  await ensureDefaultGiftingPage();
+  return prisma.page.findUnique({ where: { slug: "gifting" }, include: GIFTING_PAGE_INCLUDE });
+}
+
+// "Restore default gifting layout": re-creates the default sections of any default type that is
+// currently missing from the page. Existing sections (and every edit made to them) are never
+// modified, replaced or deleted. Restored sections are appended after the existing ones, except on
+// an empty page where the full default order is used. Returns the refreshed page plus what was added.
+export async function restoreDefaultGiftingSections() {
+  await ensureDefaultGiftingPage();
+  const page = await prisma.page.findUnique({ where: { slug: "gifting" }, include: GIFTING_PAGE_INCLUDE });
+  const present = new Set(page.sections.map((section) => section.type));
+  const missing = DEFAULT_GIFTING_PAGE_SECTIONS.filter((def) => !present.has(def.type));
+  const base = page.sections.length ? Math.max(...page.sections.map((section) => section.sortOrder)) : 0;
+  if (missing.length) {
+    await prisma.$transaction(missing.map((def, index) => prisma.pageSection.create({
+      data: {
+        pageId: page.id,
+        type: def.type,
+        name: def.name,
+        sortOrder: base + index + 1,
+        settings: def.settings,
+        isEnabled: true,
+        isActive: true,
+      },
+    })));
+  }
+  const refreshed = await prisma.page.findUnique({ where: { slug: "gifting" }, include: GIFTING_PAGE_INCLUDE });
+  return { page: refreshed, restoredTypes: missing.map((def) => def.type) };
+}
+
 export async function getPageBySlug(slug, { allowDraft = false } = {}) {
   const normalizedSlug = slug.toLowerCase().trim();
   let page = await prisma.page.findUnique({

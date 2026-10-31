@@ -11,6 +11,8 @@ export const GIFTING_HERO_DEFAULTS = {
 };
 
 export const GIFTS_BY_OCCASION_DEFAULTS = {
+  eyebrow: "Celebrate Milestones",
+  cardCtaLabel: "Explore",
   heading: "Gifts by Occasion",
   subtitle: "Find the perfect handcrafted piece to celebrate every milestone.",
   items: [
@@ -82,6 +84,8 @@ export const GIFTS_BY_OCCASION_DEFAULTS = {
 };
 
 export const CURATED_STORIES_DEFAULTS = {
+  eyebrow: "Artisan Narratives",
+  storyLabel: "Story",
   heading: "Curated Gifting Stories",
   subtitle: "Thoughtfully themed edits designed to inspire heartfelt connections.",
   stories: [
@@ -129,6 +133,8 @@ export const CURATED_STORIES_DEFAULTS = {
 };
 
 export const GIFTS_BY_FESTIVAL_DEFAULTS = {
+  eyebrow: "Festive Celebrations",
+  cardCtaLabel: "View Festive Edit",
   heading: "Gifts by Festival",
   subtitle: "Honoring India's celebrations with mindful craft and luminous light.",
   items: [
@@ -168,6 +174,7 @@ export const GIFTS_BY_FESTIVAL_DEFAULTS = {
 };
 
 export const GIFTING_BENEFITS_DEFAULTS = {
+  eyebrow: "Care in Every Box",
   heading: "The Tushaqsa Gifting Promise",
   subtitle: "Every gift is treated with reverence, care, and attention to detail.",
   cards: [
@@ -199,6 +206,8 @@ export const GIFTING_BENEFITS_DEFAULTS = {
 };
 
 export const GIFTS_BY_CRAFT_DEFAULTS = {
+  eyebrow: "Artisanal Materials",
+  cardCtaLabel: "Explore Craft",
   heading: "Shop Gifts by Craft",
   subtitle: "Explore timeless creations categorized by human skill and material purity.",
   crafts: [
@@ -250,6 +259,9 @@ export const FEATURED_GIFTS_DEFAULTS = {
 };
 
 export const GIFTS_BY_BUDGET_DEFAULTS = {
+  eyebrow: "Considered Values",
+  cardCtaLabel: "Explore Collection",
+  tierLabel: "Tier",
   heading: "Gifts by Budget",
   subtitle: "Quiet luxury curated for every gifting plan.",
   tiers: [
@@ -294,6 +306,7 @@ export const GIFTING_SEO_DEFAULTS = {
 };
 
 export const GIFTING_FAQ_DEFAULTS = {
+  eyebrow: "Help & Assurance",
   heading: "Frequently Asked Questions About Gifting",
   subtitle: "Clear answers to help you send thoughtful presents seamlessly.",
   items: [
@@ -351,6 +364,8 @@ export const giftingHeroSchema = z.object({
 });
 
 export const giftsByOccasionSchema = z.object({
+  eyebrow: optionalText(120),
+  cardCtaLabel: optionalText(60),
   heading: text(160),
   subtitle: optionalText(400),
   items: z.array(z.object({
@@ -364,6 +379,8 @@ export const giftsByOccasionSchema = z.object({
 });
 
 export const curatedStoriesSchema = z.object({
+  eyebrow: optionalText(120),
+  storyLabel: optionalText(40),
   heading: text(160),
   subtitle: optionalText(400),
   stories: z.array(z.object({
@@ -381,6 +398,8 @@ export const curatedStoriesSchema = z.object({
 });
 
 export const giftsByFestivalSchema = z.object({
+  eyebrow: optionalText(120),
+  cardCtaLabel: optionalText(60),
   heading: text(160),
   subtitle: optionalText(400),
   items: z.array(z.object({
@@ -394,6 +413,7 @@ export const giftsByFestivalSchema = z.object({
 });
 
 export const giftingBenefitsSchema = z.object({
+  eyebrow: optionalText(120),
   heading: text(160),
   subtitle: optionalText(400),
   cards: z.array(z.object({
@@ -408,6 +428,8 @@ export const giftingBenefitsSchema = z.object({
 });
 
 export const giftsByCraftSchema = z.object({
+  eyebrow: optionalText(120),
+  cardCtaLabel: optionalText(60),
   heading: text(160),
   subtitle: optionalText(400),
   crafts: z.array(z.object({
@@ -440,6 +462,9 @@ export const featuredGiftsSchema = z.object({
 });
 
 export const giftsByBudgetSchema = z.object({
+  eyebrow: optionalText(120),
+  cardCtaLabel: optionalText(60),
+  tierLabel: optionalText(40),
   heading: text(160),
   subtitle: optionalText(400),
   tiers: z.array(z.object({
@@ -456,11 +481,13 @@ export const giftsByBudgetSchema = z.object({
 });
 
 export const giftingSeoSchema = z.object({
+  eyebrow: optionalText(120),
   heading: text(200),
   content: optionalText(5000),
 });
 
 export const giftingFaqSchema = z.object({
+  eyebrow: optionalText(120),
   heading: text(160),
   subtitle: optionalText(400),
   items: z.array(z.object({

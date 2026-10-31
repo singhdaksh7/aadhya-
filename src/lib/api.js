@@ -577,6 +577,10 @@ export function adminDeletePageSection(sectionId) { return api.delete(`/admin/pa
 export function adminDuplicatePageSection(sectionId) { return api.post(`/admin/pages/sections/${sectionId}/duplicate`, undefined, { auth: "admin" }); }
 export function adminReorderPageSections(sectionIds) { return api.put("/admin/pages/sections/reorder", { sectionIds }, { auth: "admin" }); }
 export function adminPublishHomepage() { return api.post("/admin/pages/publish", undefined, { auth: "admin" }); }
+export function adminFetchGiftingPage() { return api.get("/admin/pages/gifting", { auth: "admin" }); }
+export function adminCreateGiftingSection(data) { return api.post("/admin/pages/gifting/sections", data, { auth: "admin" }); }
+export function adminReorderGiftingSections(sectionIds) { return api.put("/admin/pages/gifting/sections/reorder", { sectionIds }, { auth: "admin" }); }
+export function adminRestoreGiftingDefaults() { return api.post("/admin/pages/gifting/restore-defaults", undefined, { auth: "admin" }); }
 
 export function fetchBanners(params = {}) {
   const query = typeof params === "string" ? `placement=${params}` : new URLSearchParams(params).toString();
