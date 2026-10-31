@@ -15,6 +15,8 @@ describe("category banner frame sizes itself to the uploaded image", () => {
     const img = frame.querySelector("img");
     expect(img.className).toContain("h-auto");
     expect(img.className).toContain("w-full");
+    expect(img.className).toContain("object-contain");
+    expect(img.className).toMatch(/max-h-\[\d+px\]/); // responsive cap, never cropping
     expect(img.className).not.toContain("object-cover");
   });
 
@@ -26,6 +28,8 @@ describe("category banner frame sizes itself to the uploaded image", () => {
     const slides = screen.getAllByTestId("category-banner-slide");
     slides.forEach((s) => expect(s.className).toContain("col-start-1"));
     expect(slides[0].querySelector("img").className).toContain("object-contain");
+    expect(slides[0].className).toContain("items-center");
+    expect(slides[0].className).toContain("justify-center");
   });
 
   it("renders nothing without slides", () => {
