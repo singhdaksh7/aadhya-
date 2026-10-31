@@ -8,6 +8,25 @@ function required(name, fallback) {
   return value;
 }
 
+export function corsOriginsFrom(value) {
+  const out = new Set();
+  for (const raw of String(value).split(",")) {
+    const v = raw.trim().replace(/\/+$/, "");
+    if (!v) continue;
+    out.add(v);
+    try {
+      const u = new URL(v);
+      if (u.hostname !== "localhost" && !/^[\d.]+$/.test(u.hostname) && !u.hostname.startsWith("api.")) {
+        u.hostname = u.hostname.startsWith("www.") ? u.hostname.slice(4) : `www.${u.hostname}`;
+        out.add(u.origin);
+      }
+    } catch {
+      /* not a URL: keep as typed */
+    }
+  }
+  return [...out];
+}
+
 export const env = {
   nodeEnv: process.env.NODE_ENV || "development",
   isProduction: process.env.NODE_ENV === "production",
@@ -18,6 +37,9 @@ export const env = {
   trustProxy: Number.isInteger(Number(process.env.TRUST_PROXY)) && process.env.TRUST_PROXY !== "" ? Number(process.env.TRUST_PROXY) : process.env.NODE_ENV === "production" ? 1 : 0,
   port: Number(process.env.PORT || 4000),
   frontendUrl: process.env.FRONTEND_URL || "http://localhost:5173",
+  // Origins allowed by CORS: FRONTEND_URL (may be a comma-separated list) plus its www/apex twin, so a
+  // visitor on https://www.example.com is not blocked when FRONTEND_URL is the apex origin.
+  corsOrigins: corsOriginsFrom(process.env.FRONTEND_URL || "http://localhost:5173"),
   // Optional explicit public API origin (e.g. https://api.example.com). When unset the
   // Admin webhook URL is derived from the incoming request's host instead.
   apiPublicUrl: (process.env.API_PUBLIC_URL || "").replace(/\/+$/, ""),

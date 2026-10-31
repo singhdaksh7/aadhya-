@@ -50,6 +50,7 @@ export const adminNavGroups = [
       { to: "/admin/whats-new", label: "What's New" },
       { to: "/admin/popup", label: "Popup / Promotions" },
       { to: "/admin/gifting", label: "Gifting" },
+      { to: "/admin/newsletter", label: "Newsletter" },
     ],
   },
   {

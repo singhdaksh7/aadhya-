@@ -543,6 +543,21 @@ export function adminFetchSiteSettings() { return api.get("/admin/settings", { a
 export function adminUpdateSiteSettings(data) { return api.put("/admin/settings", data, { auth: "admin" }); }
 export function adminResetAppearanceSettings() { return api.post("/admin/settings/reset-appearance", undefined, { auth: "admin" }); }
 export function subscribeNewsletter(email) { return api.post("/newsletter/subscribe", { email }); }
+export function adminListNewsletter({ q = "", page = 1, pageSize = 50 } = {}) {
+  const qs = new URLSearchParams({ page: String(page), pageSize: String(pageSize), ...(q ? { q } : {}) });
+  return api.get(`/admin/newsletter?${qs}`, { auth: "admin" });
+}
+export function adminDeleteNewsletterSubscriber(id) { return api.delete(`/admin/newsletter/${id}`, { auth: "admin" }); }
+// CSV is not JSON, so it bypasses the JSON request helper; resolves to a Blob.
+export async function adminExportNewsletterCsv(q = "") {
+  const token = getAccessToken("admin");
+  const res = await fetch(`${API_URL}/admin/newsletter/export${q ? `?q=${encodeURIComponent(q)}` : ""}`, {
+    credentials: "include",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new ApiRequestError(`Export failed (status ${res.status})`, res.status);
+  return res.blob();
+}
 
 // --- Phase A-C Navigation, Banners, Promos, Homepage Builder ---
 export function fetchNavigation(code = "HEADER_MAIN") { return api.get(`/navigation/${code}`); }
