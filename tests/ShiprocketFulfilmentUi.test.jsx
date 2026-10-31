@@ -103,6 +103,34 @@ describe("Fulfilment card", () => {
     await waitFor(() => expect(api.adminCreateShipment).toHaveBeenCalledWith("o1", { courierCompanyId: 9 }));
   });
 
+  it("preselects the cheapest courier, badges it Lowest cost and labels a different recommendation Shiprocket pick", async () => {
+    const user = userEvent.setup();
+    api.adminConfirmOrderPackage.mockResolvedValue({ data: pkgCtx });
+    api.adminCheckServiceability.mockResolvedValue({ data: { cod: false, pickupPostcode: "110001", deliveryPostcode: "560038", recommendedCourierCompanyId: 7, cheapestCourierCompanyId: 9, couriers: [{ courierCompanyId: 9, name: "Xpressbees", rate: 70, cod: true }, { courierCompanyId: 7, name: "Delhivery", rate: 80, cod: true }] } });
+    api.adminCreateShipment.mockResolvedValue({ data: {} });
+    renderPanel(order({ actions: { confirmPackage: true, checkServiceability: true, createShipment: true } }));
+    await user.click(await screen.findByRole("button", { name: /Confirm Package & Check Couriers/ }));
+    expect(await screen.findByLabelText("Choose Xpressbees")).toBeChecked();
+    expect(screen.getByLabelText("Choose Delhivery")).not.toBeChecked();
+    expect(screen.getAllByText("Lowest cost")).toHaveLength(1);
+    expect(screen.getByText("Lowest cost").closest("tr")).toHaveTextContent("Xpressbees");
+    expect(screen.getByText("Shiprocket pick").closest("tr")).toHaveTextContent("Delhivery");
+    expect(screen.queryByText("Recommended")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Create Shiprocket shipment" }));
+    await waitFor(() => expect(api.adminCreateShipment).toHaveBeenCalledWith("o1", { courierCompanyId: 9 }));
+  });
+
+  it("falls back to the first row as cheapest and shows no second badge when the pick is the same courier", async () => {
+    const user = userEvent.setup();
+    api.adminConfirmOrderPackage.mockResolvedValue({ data: pkgCtx });
+    api.adminCheckServiceability.mockResolvedValue({ data: { cod: false, pickupPostcode: "110001", deliveryPostcode: "560038", recommendedCourierCompanyId: 9, couriers: [{ courierCompanyId: 9, name: "Xpressbees", rate: 70 }, { courierCompanyId: 7, name: "Delhivery", rate: 80 }] } });
+    renderPanel(order({ actions: { confirmPackage: true, checkServiceability: true, createShipment: true } }));
+    await user.click(await screen.findByRole("button", { name: /Confirm Package & Check Couriers/ }));
+    expect(await screen.findByLabelText("Choose Xpressbees")).toBeChecked();
+    expect(screen.getAllByText("Lowest cost")).toHaveLength(1);
+    expect(screen.queryByText("Shiprocket pick")).not.toBeInTheDocument();
+  });
+
   it("assigns an AWB without a courier when none was chosen, and with it when picked", async () => {
     const user = userEvent.setup();
     api.adminGenerateShipmentAwb.mockResolvedValue({ data: {} });
@@ -196,22 +224,23 @@ const TRACKING = {
 };
 
 describe("Customer tracking block", () => {
-  it("renders courier, AWB, status, ETA, link and a newest-first timeline", () => {
+  it("renders courier, AWB, status, ETA and a newest-first timeline, with no off-site link", () => {
     render(<TrackingBlock tracking={TRACKING} />);
     expect(screen.getByText("Delhivery")).toBeInTheDocument();
     expect(screen.getByText("AWB555")).toBeInTheDocument();
     expect(screen.getByText("Estimated delivery")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Track shipment" })).toHaveAttribute("href", "https://track.example/AWB555");
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Track shipment/i)).not.toBeInTheDocument();
     const items = within(screen.getByTestId("tracking-timeline")).getAllByRole("listitem");
     expect(items[0]).toHaveTextContent("Shipped");
     expect(items[1]).toHaveTextContent("Order placed");
   });
 
-  it("hides the block when tracking is null and drops non-http links", () => {
+  it("hides the block when tracking is null", () => {
     const { container, rerender } = render(<TrackingBlock tracking={null} />);
     expect(container).toBeEmptyDOMElement();
     rerender(<TrackingBlock tracking={{ ...TRACKING, trackingUrl: "javascript:alert(1)" }} />);
-    expect(screen.queryByRole("link", { name: "Track shipment" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
 
   it("never renders internal fields even if the payload carries them", () => {

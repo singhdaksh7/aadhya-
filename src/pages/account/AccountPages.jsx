@@ -551,6 +551,13 @@ export function Addresses() {
   );
 }
 
+// "Delhivery · In transit · arriving 4 Nov" - courier, friendly status and ETA only; never an off-site link.
+const trackingSummary = (t) => {
+  if (!t) return "";
+  const eta = t.deliveredAt ? `delivered ${formatDate(t.deliveredAt)}` : t.estimatedDelivery ? `arriving ${formatDate(t.estimatedDelivery)}` : "";
+  return [t.courier, t.statusLabel, eta].filter(Boolean).join(" · ");
+};
+
 const ORDER_FILTERS = [
   ["all", "All orders", () => true],
   ["active", "In progress", (o) => !["DELIVERED", "CANCELLED"].includes(o.status)],
@@ -598,25 +605,35 @@ export function Orders() {
       {state === "ready" && (
         <div className="space-y-4">
           {visible.map((o) => (
-            <Link key={o.id} to={`/account/orders/${o.orderNumber}`} className="group block rounded-3xl border border-[var(--theme-border)]/10 store-bg p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-[var(--theme-primary)]/35 hover:shadow-md sm:p-6">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="font-serif-display text-lg store-text">{o.orderNumber}</p>
-                  {o.createdAt && <p className="mt-1 text-xs store-muted">Placed on {formatDate(o.createdAt)}</p>}
+            <article key={o.id} data-testid="order-card" className="group rounded-3xl border border-[var(--theme-border)]/10 store-bg p-5 shadow-sm transition hover:border-[var(--theme-primary)]/35 hover:shadow-md sm:p-6">
+              <Link to={`/account/orders/${o.orderNumber}`} className="block">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-serif-display text-lg store-text">{o.orderNumber}</p>
+                    {o.createdAt && <p className="mt-1 text-xs store-muted">Placed on {formatDate(o.createdAt)}</p>}
+                  </div>
+                  <div className="flex flex-wrap gap-2"><StatusPill value={o.status} /><StatusPill kind="payment" value={o.paymentStatus} /></div>
                 </div>
-                <div className="flex flex-wrap gap-2"><StatusPill value={o.status} /><StatusPill kind="payment" value={o.paymentStatus} /></div>
-              </div>
-              {o.items?.length > 0 && (
-                <div className="mt-4 flex items-center gap-3">
-                  <div className="flex -space-x-2">{o.items.slice(0, 4).map((it) => <span key={it.id} className="rounded-xl ring-2 ring-[var(--theme-background)]"><ItemThumb src={it.imageSnapshot} name={it.productNameSnapshot} size="h-12 w-12" /></span>)}</div>
-                  <p className="min-w-0 truncate text-sm store-muted">{itemsLine(o.items)}</p>
-                </div>
+                {o.items?.length > 0 && (
+                  <div className="mt-4 flex items-center gap-3">
+                    <div className="flex -space-x-2">{o.items.slice(0, 4).map((it) => <span key={it.id} className="rounded-xl ring-2 ring-[var(--theme-background)]"><ItemThumb src={it.imageSnapshot} name={it.productNameSnapshot} size="h-12 w-12" /></span>)}</div>
+                    <p className="min-w-0 truncate text-sm store-muted">{itemsLine(o.items)}</p>
+                  </div>
+                )}
+              </Link>
+              {trackingSummary(o.tracking) && (
+                <p data-testid="order-tracking-line" className="mt-4 break-words rounded-xl store-surface px-3 py-2 text-xs store-text">{trackingSummary(o.tracking)}</p>
               )}
-              <div className="mt-5 flex items-center justify-between gap-4 border-t border-[var(--theme-border)]/10 pt-4">
+              <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--theme-border)]/10 pt-4">
                 <span className="text-base font-bold store-primary">{formatInr(Number(o.totalAmount))}</span>
-                <span className="text-xs font-semibold uppercase tracking-wider store-text group-hover:text-[var(--theme-primary-hover)]">View details <span aria-hidden="true">→</span></span>
+                <div className="flex flex-wrap items-center gap-4">
+                  {o.tracking && (
+                    <Link to={`/account/orders/${o.orderNumber}`} aria-label={`Track order ${o.orderNumber}`} className="rounded-full store-bg-primary px-5 py-2 text-xs font-semibold uppercase tracking-wider text-ivory">Track order</Link>
+                  )}
+                  <Link to={`/account/orders/${o.orderNumber}`} className="text-xs font-semibold uppercase tracking-wider store-text hover:text-[var(--theme-primary-hover)]">View details <span aria-hidden="true">→</span></Link>
+                </div>
               </div>
-            </Link>
+            </article>
           ))}
           {items.length > 0 && visible.length === 0 && <EmptyPanel title="No orders in this view" description="Try another filter to see your other orders." />}
           {!items.length && <EmptyPanel title="No account orders yet." description="When you place an order it will appear here with live delivery progress." actionLabel="Browse the store" to="/shop" />}
@@ -893,6 +910,12 @@ export function OrderDetail() {
             <div className="mt-7"><OrderProgress status={o.status} /></div>
           </section>
 
+          {tracking && (
+            <SectionCard eyebrow="Delivery" title="Shipment" labelledBy="order-shipment-heading">
+              <TrackingBlock tracking={tracking} />
+            </SectionCard>
+          )}
+
           <div className="grid gap-6 lg:grid-cols-3">
             <div className="space-y-6 lg:col-span-2">
               <SectionCard eyebrow="Your order" title="Purchased Items" labelledBy="order-items-heading">
@@ -935,12 +958,6 @@ export function OrderDetail() {
             </div>
 
             <div className="space-y-6">
-              {tracking && (
-                <SectionCard eyebrow="Delivery" title="Shipment" labelledBy="order-shipment-heading">
-                  <TrackingBlock tracking={tracking} />
-                </SectionCard>
-              )}
-
               {addr && (
                 <SectionCard eyebrow="Delivery" title="Shipping Address" labelledBy="order-address-heading">
                   <address className="text-sm not-italic leading-relaxed store-muted">

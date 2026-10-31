@@ -11,6 +11,7 @@ const initialBusiness = {
   autoGenerateAwb: false,
   autoSchedulePickup: false,
   codAllowed: true,
+  autoFulfilSingleItem: false,
   packagingTareGrams: 0,
   volumetricDivisor: 5000,
   packageDefaults: { length: 20, width: 15, height: 10, weight: 0.5 },
@@ -171,6 +172,21 @@ export default function AdminShipping() {
               {l}
             </label>
           ))}
+          <div className="sm:col-span-2 rounded-xl border border-black/10 p-4" data-testid="auto-fulfil-setting">
+            <label className="flex items-start gap-3 text-sm font-semibold text-charcoal">
+              <input
+                type="checkbox"
+                role="switch"
+                className="mt-1"
+                aria-describedby="auto-fulfil-help auto-fulfil-warning"
+                checked={Boolean(business.autoFulfilSingleItem)}
+                onChange={(e) => setBusiness({ ...business, autoFulfilSingleItem: e.target.checked })}
+              />
+              Automatically ship single-item orders
+            </label>
+            <p id="auto-fulfil-help" className="mt-2 text-xs text-charcoal-soft">When an order contains exactly one product (quantity 1) with complete package data, the system picks the lowest-cost courier, creates the Shiprocket shipment, assigns the AWB and schedules pickup automatically. Orders with several products or quantities always wait for you to confirm the package size.</p>
+            <p id="auto-fulfil-warning" className="mt-2 text-xs font-semibold text-terracotta">This uses your Shiprocket wallet for every qualifying order.</p>
+          </div>
           <div className="sm:col-span-2">
             <h3 className="mb-1 mt-2 text-sm font-semibold text-charcoal">Package preparation</h3>
             <p className="text-xs text-charcoal-soft">Each order&apos;s package is calculated from product shipping data, then confirmed by an Admin before Shiprocket is used.</p>

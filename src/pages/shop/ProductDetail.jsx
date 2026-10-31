@@ -4,6 +4,7 @@ import ProductCard from "../../components/ProductCard";
 import ProductReviews from "../../components/ProductReviews";
 import { PDPSkeleton } from "../../components/ui/Skeleton";
 import { formatInr } from "../../lib/format";
+import { PincodeCheck } from "../../components/DeliveryEstimate";
 import { useCart } from "../../context/CartContext";
 import { useWishlist } from "../../context/WishlistContext";
 import { useSiteSettings } from "../../hooks/useSiteSettings";
@@ -498,6 +499,12 @@ export default function ProductDetail() {
                     Buy Now
                   </button>
                 </div>
+              </div>
+            )}
+
+            {selectedFormat !== "PDF" && (
+              <div className="border-t border-[var(--theme-border)] pt-4">
+                <PincodeCheck items={[{ slug: product.slug, quantity: 1, ...(selectedVariant?.id ? { variantId: selectedVariant.id } : {}) }]} />
               </div>
             )}
 

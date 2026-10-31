@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { SectionHeading, Button, Tag } from "../components/ui";
 import { trackOrder, ApiRequestError } from "../lib/api";
 import { formatInr } from "../lib/format";
@@ -14,21 +15,25 @@ const STATUS_TIMELINE = [
 ];
 
 export default function TrackOrder() {
-  const [orderNumber, setOrderNumber] = useState("");
+  const [params] = useSearchParams();
+  const qOrder = (params.get("order") || "").trim();
+  const qToken = (params.get("t") || "").trim();
+  const [orderNumber, setOrderNumber] = useState(qOrder);
   const [email, setEmail] = useState("");
   const [order, setOrder] = useState(null);
-  const [status, setStatus] = useState("idle"); // idle | loading | ready | error
+  const [status, setStatus] = useState(qOrder && qToken ? "loading" : "idle"); // idle | loading | ready | error
   const [error, setError] = useState(null);
+  const lastAuto = useRef("");
 
-  const onSubmit = async (e) => {
-    e.preventDefault();
+  const lookup = async (payload) => {
     setStatus("loading");
     setError(null);
     try {
-      const res = await trackOrder({ orderNumber: orderNumber.trim(), email: email.trim() });
+      const res = await trackOrder(payload);
       setOrder(res.data);
       setStatus("ready");
     } catch (err) {
+      setOrder(null);
       setError(
         err instanceof ApiRequestError && err.status === 404
           ? "No matching order was found. Please check your order number and email address."
@@ -36,6 +41,23 @@ export default function TrackOrder() {
       );
       setStatus("error");
     }
+  };
+
+  // Email links open /track-order?order=<number>&t=<token>: look the order up straight away.
+  useEffect(() => {
+    if (!qOrder) return;
+    setOrderNumber(qOrder);
+    if (!qToken) return;
+    const key = `${qOrder}|${qToken}`;
+    if (lastAuto.current === key) return;
+    lastAuto.current = key;
+    lookup({ orderNumber: qOrder, token: qToken });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [qOrder, qToken]);
+
+  const onSubmit = (e) => {
+    e.preventDefault();
+    lookup({ orderNumber: orderNumber.trim(), email: email.trim() });
   };
 
   const getStepIndex = (currentStatus) => {
@@ -61,8 +83,9 @@ export default function TrackOrder() {
 
       <form onSubmit={onSubmit} className="rounded-3xl border store-border store-surface p-6 sm:p-8 space-y-4 shadow-sm">
         <div>
-          <label className="block text-xs font-semibold uppercase tracking-wider store-muted mb-1">Order Number</label>
+          <label htmlFor="track-order-number" className="block text-xs font-semibold uppercase tracking-wider store-muted mb-1">Order Number</label>
           <input
+            id="track-order-number"
             required
             placeholder="AAD-2026-008921"
             value={orderNumber}
@@ -72,8 +95,9 @@ export default function TrackOrder() {
         </div>
 
         <div>
-          <label className="block text-xs font-semibold uppercase tracking-wider store-muted mb-1">Checkout Email</label>
+          <label htmlFor="track-order-email" className="block text-xs font-semibold uppercase tracking-wider store-muted mb-1">Checkout Email</label>
           <input
+            id="track-order-email"
             required
             type="email"
             placeholder="you@example.com"
@@ -91,7 +115,8 @@ export default function TrackOrder() {
         </button>
       </form>
 
-      {error && <p className="text-center text-sm font-medium text-terracotta bg-terracotta/10 p-4 rounded-xl">{error}</p>}
+      {status === "loading" && <p role="status" className="text-center text-sm store-muted">Looking up your order…</p>}
+      {error && <p role="alert" className="text-center text-sm font-medium text-terracotta bg-terracotta/10 p-4 rounded-xl">{error}</p>}
 
       {status === "ready" && order && (
         <div className="rounded-3xl border store-border store-bg p-6 sm:p-8 space-y-8 shadow-md animate-fade-up">

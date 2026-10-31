@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { formatInr } from "../lib/format";
+import { PincodeCheck } from "../components/DeliveryEstimate";
 import { EmptyCartState } from "../components/ui/EmptyState";
 import { useSiteSettings } from "../hooks/useSiteSettings";
 import { commercialContext, shippingInfoText } from "../lib/commercialText";
@@ -214,6 +215,10 @@ export default function CartPage() {
                   <span className="store-primary text-xl">{formatInr(finalTotal)}</span>
                 </div>
               </div>
+
+              {!isDigitalOnly && (
+                <PincodeCheck items={items.map((i) => ({ slug: i.product.slug, quantity: i.quantity, ...(i.variant?.id ? { variantId: i.variant.id } : {}) }))} />
+              )}
 
               {/* Dispatch Note */}
               {dispatchNote && (

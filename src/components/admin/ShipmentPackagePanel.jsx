@@ -112,7 +112,7 @@ export default function ShipmentPackagePanel({ orderId, order, onChanged }) {
 
   const applyCouriers = (data) => {
     setCouriers(data);
-    setCourierId((cur) => cur ?? data.recommendedCourierCompanyId ?? data.couriers?.[0]?.courierCompanyId ?? null);
+    setCourierId((cur) => cur ?? data.cheapestCourierCompanyId ?? data.couriers?.[0]?.courierCompanyId ?? null);
   };
 
   const confirmAndCheck = () => run("check", async () => {
@@ -238,7 +238,7 @@ export default function ShipmentPackagePanel({ orderId, order, onChanged }) {
                     {couriers.couriers.map((c) => (
                       <tr key={c.courierCompanyId} className="border-t border-black/10">
                         <td className="py-1"><input type="radio" name="courier" checked={courierId === c.courierCompanyId} onChange={() => setCourierId(c.courierCompanyId)} aria-label={`Choose ${c.name}`} /></td>
-                        <td>{c.name}{c.courierCompanyId === couriers.recommendedCourierCompanyId && <span className="ml-1 rounded bg-black/5 px-1">Recommended</span>}</td>
+                        <td>{c.name}{c.courierCompanyId === (couriers.cheapestCourierCompanyId ?? couriers.couriers[0]?.courierCompanyId) && <span className="ml-1 rounded bg-black/5 px-1">Lowest cost</span>}{couriers.recommendedCourierCompanyId != null && c.courierCompanyId === couriers.recommendedCourierCompanyId && c.courierCompanyId !== (couriers.cheapestCourierCompanyId ?? couriers.couriers[0]?.courierCompanyId) && <span className="ml-1 rounded bg-black/5 px-1">Shiprocket pick</span>}</td>
                         <td>{formatInr(c.rate)}</td>
                         <td>{c.etd || (c.estimatedDeliveryDays ? `${c.estimatedDeliveryDays} days` : "—")}</td>
                         <td>{c.cod ? "Yes" : "No"}</td>

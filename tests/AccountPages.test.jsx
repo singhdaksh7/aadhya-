@@ -455,6 +455,24 @@ describe("orders redesign", () => {
     expect(await screen.findByText(/couldn’t load your orders/i)).toBeInTheDocument();
   });
 
+  it("orders list shows a tracking line and a Track order button only for orders with tracking", async () => {
+    api.customerRefresh.mockResolvedValue({ data: { accessToken: "tok", customer: CUSTOMER } });
+    api.accountOrders.mockResolvedValue({ data: [
+      { id: "o1", orderNumber: "AAD-2026-000001", totalAmount: 500, status: "SHIPPED", paymentStatus: "PAID", tracking: { courier: "Delhivery", statusLabel: "In transit", estimatedDelivery: "2026-11-04T00:00:00Z", deliveredAt: null, events: [] } },
+      { id: "o2", orderNumber: "AAD-2026-000002", totalAmount: 300, status: "CONFIRMED", paymentStatus: "PAID", tracking: null },
+    ] });
+    render(<AuthedRoutes initialEntries={["/account/orders"]} />);
+    const line = await screen.findByTestId("order-tracking-line");
+    expect(line).toHaveTextContent("Delhivery");
+    expect(line).toHaveTextContent("In transit");
+    expect(line).toHaveTextContent("4 Nov");
+    expect(screen.getAllByTestId("order-tracking-line")).toHaveLength(1);
+    const btn = screen.getByRole("link", { name: "Track order AAD-2026-000001" });
+    expect(btn).toHaveAttribute("href", "/account/orders/AAD-2026-000001");
+    expect(screen.getAllByRole("link", { name: /Track order/ })).toHaveLength(1);
+    expect(screen.getAllByText("Shipped").length).toBeGreaterThan(0);
+  });
+
   it("order detail shows progress, address, payment, shipment, totals and a customer-safe timeline", async () => {
     api.customerRefresh.mockResolvedValue({ data: { accessToken: "tok", customer: CUSTOMER } });
     api.accountOrder.mockResolvedValue({
@@ -472,7 +490,9 @@ describe("orders redesign", () => {
     expect(screen.getByText("Cash on Delivery")).toBeInTheDocument();
     expect(screen.getByText("12 MG Road")).toBeInTheDocument();
     expect(screen.getByText("Delhivery")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Track shipment" })).toHaveAttribute("href", "https://track.example/AWB123");
+    expect(screen.queryByText(/Track shipment/i)).not.toBeInTheDocument();
+    expect(document.querySelector("a[href^='http']")).toBeNull();
+    expect(screen.getByRole("region", { name: /Shipment tracking/i })).toBeInTheDocument();
     expect(screen.getByText("Order timeline", { exact: false })).toBeInTheDocument();
     expect(screen.getByText("₹99")).toBeInTheDocument(); // shipping line
     expect(screen.queryByText(/ADMIN|SHIPROCKET/)).not.toBeInTheDocument();
