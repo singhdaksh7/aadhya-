@@ -48,6 +48,7 @@ export const adminNavGroups = [
     items: [
       { to: "/admin/coupons", label: "Coupons" },
       { to: "/admin/whats-new", label: "What's New" },
+      { to: "/admin/popup", label: "Popup / Promotions" },
     ],
   },
   {
@@ -64,10 +65,6 @@ export const adminNavGroups = [
       { to: "/admin/media", label: "Media Library" },
       { to: "/admin/navigation", label: "Navigation" },
     ],
-  },
-  {
-    title: "Marketing",
-    items: [{ to: "/admin/popup", label: "Popup / Promotions" }],
   },
   {
     title: "Operations",

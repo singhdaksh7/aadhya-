@@ -195,7 +195,8 @@ describe("Gifting navigation and footer CMS", () => {
   });
 
   it("admin sidebar has a Marketing group with Popup / Promotions", () => {
-    const marketing = adminNavGroups.find((g) => g.title === "Marketing");
-    expect(marketing.items).toEqual([{ to: "/admin/popup", label: "Popup / Promotions" }]);
+    const groups = adminNavGroups.filter((g) => g.title === "Marketing");
+    expect(groups).toHaveLength(1);
+    expect(groups[0].items.map((i) => i.to)).toEqual(expect.arrayContaining(["/admin/coupons", "/admin/whats-new", "/admin/popup"]));
   });
 });
