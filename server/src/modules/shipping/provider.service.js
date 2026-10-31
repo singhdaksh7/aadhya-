@@ -10,6 +10,13 @@ const manual = {
 
 function providerError(response) { const message = response?.message || response?.error || response?.errors?.[0]?.message; return new Error(message ? `Carrier request failed: ${message}` : "Carrier request failed."); }
 async function shiprocketCredentials(environment = "LIVE") { const credential = await getCredential("SHIPROCKET", environment).catch(() => null) || await getCredential("SHIPROCKET", environment === "LIVE" ? "TEST" : "LIVE").catch(() => null); if (!credential?.data?.apiEmail || !credential.data.apiPassword) throw ApiError.badRequest("SHIPROCKET is not configured."); return credential.data; }
+// Shiprocket bearer tokens are long-lived; reusing one avoids a login per request (customer delivery estimates are
+// public). Disabled under tests so mocked fetch sequences stay deterministic (set SHIPROCKET_TOKEN_CACHE=1 to force).
+const TOKEN_CACHE_ON = process.env.SHIPROCKET_TOKEN_CACHE === "1" || process.env.NODE_ENV !== "test";
+const TOKEN_TTL_MS = 6 * 60 * 60 * 1000;
+const tokenCache = new Map();
+export const clearShiprocketTokenCache = () => tokenCache.clear();
+
 // Operational diagnostics (never credentials): last successful auth, last provider error, last serviceability
 // check. Stored in SiteSetting so the Admin Integrations page can show them. Best effort; never blocks a call.
 export async function recordShiprocketDiagnostic(patch) {
@@ -25,9 +32,26 @@ async function shiprocketRequest(path, { method = "GET", body, environment, time
   const credentials = await shiprocketCredentials(environment); const base = (credentials.apiBaseUrl || "https://apiv2.shiprocket.in/v1/external").replace(/\/$/, "");
   const op = `${method} ${String(path).split("?")[0]}`;
   try {
-    const login = await fetch(`${base}/auth/login`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: credentials.apiEmail, password: credentials.apiPassword }), signal: AbortSignal.timeout(timeoutMs) }); const auth = await login.json().catch(() => null); if (!login.ok || !auth?.token) throw providerError(auth);
-    await recordShiprocketDiagnostic({ lastAuthAt: new Date().toISOString(), lastAuthOk: true });
-    const response = await fetch(`${base}${path}`, { method, headers: { authorization: `Bearer ${auth.token}`, ...(body ? { "content-type": "application/json" } : {}) }, body: body ? JSON.stringify(body) : undefined, signal: AbortSignal.timeout(timeoutMs) }); const json = await response.json().catch(() => null); if (!response.ok || json?.status_code >= 400) throw providerError(json); return json;
+    const cacheKey = `${base}|${credentials.apiEmail}`;
+    const login = async () => {
+      const res = await fetch(`${base}/auth/login`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: credentials.apiEmail, password: credentials.apiPassword }), signal: AbortSignal.timeout(timeoutMs) });
+      const auth = await res.json().catch(() => null);
+      if (!res.ok || !auth?.token) throw providerError(auth);
+      await recordShiprocketDiagnostic({ lastAuthAt: new Date().toISOString(), lastAuthOk: true });
+      if (TOKEN_CACHE_ON) tokenCache.set(cacheKey, { token: auth.token, exp: Date.now() + TOKEN_TTL_MS });
+      return auth.token;
+    };
+    const call = async (token) => {
+      const response = await fetch(`${base}${path}`, { method, headers: { authorization: `Bearer ${token}`, ...(body ? { "content-type": "application/json" } : {}) }, body: body ? JSON.stringify(body) : undefined, signal: AbortSignal.timeout(timeoutMs) });
+      const json = await response.json().catch(() => null);
+      return { response, json };
+    };
+    const cached = TOKEN_CACHE_ON ? tokenCache.get(cacheKey) : null;
+    let token = cached && cached.exp > Date.now() ? cached.token : await login();
+    let { response, json } = await call(token);
+    if (response.status === 401 && cached) { tokenCache.delete(cacheKey); token = await login(); ({ response, json } = await call(token)); } // stale cached token: log in once more
+    if (!response.ok || json?.status_code >= 400) throw providerError(json);
+    return json;
   } catch (error) {
     const timedOut = error?.name === "TimeoutError" || error?.name === "AbortError";
     const wrapped = timedOut ? new Error("Carrier request timed out. Try again in a moment.") : error;

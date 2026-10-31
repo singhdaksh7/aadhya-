@@ -21,6 +21,7 @@ const STALE_PENDING_MIN = 10;
 const base = () => env.frontendUrl.replace(/\/$/, "");
 const firstName = (name) => String(name || "").trim().split(/\s+/)[0] || "there";
 const inr = (n) => `₹${Number(n || 0).toLocaleString("en-IN")}`;
+import { trackingToken } from "../../utils/trackingToken.js";
 const httpsUrl = (u) => (typeof u === "string" && /^https:\/\//i.test(u) ? u : "");
 
 async function loadSettings() {
@@ -68,6 +69,8 @@ export async function loadTemplate(key) {
   };
 }
 
+const siteTrackingUrl = (orderNumber) => `${base()}/track-order?order=${encodeURIComponent(orderNumber)}&t=${trackingToken(orderNumber)}`;
+
 function paymentLabel(order) {
   if (order.paymentMethod === "cod") return "Cash on Delivery";
   return order.paymentStatus === "PAID" ? "Paid online" : "Online payment";
@@ -85,9 +88,12 @@ function orderVariables(order, brand, extra = {}) {
     paymentMethod: paymentLabel(order),
     trackingNumber: shipment?.awb || shipment?.trackingNumber || "",
     courierName: shipment?.carrier || "",
-    trackingUrl: httpsUrl(shipment?.trackingUrl),
+    // Customers follow their shipment on THIS website (never the courier/Shiprocket site). The signed token lets the
+    // link open the tracking page without asking for the email again.
+    trackingUrl: siteTrackingUrl(order.orderNumber),
+    estimatedDelivery: shipment?.estimatedDelivery ? new Date(shipment.estimatedDelivery).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "",
     accountUrl: `${base()}/account`,
-    orderUrl: order.customerId ? `${base()}/account/orders/${encodeURIComponent(order.orderNumber)}` : `${base()}/track-order`,
+    orderUrl: order.customerId ? `${base()}/account/orders/${encodeURIComponent(order.orderNumber)}` : siteTrackingUrl(order.orderNumber),
     supportEmail: brand.supportEmail,
     brandName: brand.name,
     cancellationReason: extra.reason || "",

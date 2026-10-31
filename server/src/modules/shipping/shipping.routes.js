@@ -15,7 +15,7 @@ adminShippingRouter.use(requireAdmin);
 
 const businessSettings = z.object({
   provider: z.enum(["MANUAL", "SHIPROCKET", "DELHIVERY"]).default("MANUAL"), environment: z.enum(["TEST", "LIVE"]).default("TEST"),
-  autoCreateShipment: z.boolean().default(false), autoGenerateAwb: z.boolean().default(false), autoSchedulePickup: z.boolean().default(false), codAllowed: z.boolean().default(true),
+  autoCreateShipment: z.boolean().default(false), autoFulfilSingleItem: z.boolean().default(false), autoGenerateAwb: z.boolean().default(false), autoSchedulePickup: z.boolean().default(false), codAllowed: z.boolean().default(true),
   pickup: z.object({ location: z.string().max(120).optional(), name: z.string().max(120).optional(), contact: z.string().max(120).optional(), email: z.string().email().optional().or(z.literal("")), phone: z.string().max(30).optional(), address: z.string().max(300).optional(), city: z.string().max(100).optional(), state: z.string().max(100).optional(), postalCode: z.string().max(20).optional(), country: z.string().max(100).optional() }).default({}),
   packagingTareGrams: z.coerce.number().int().min(0).max(5000).default(0), volumetricDivisor: z.coerce.number().int().min(1000).max(10000).default(5000),
   packageDefaults: z.object({ length: z.coerce.number().positive().default(20), width: z.coerce.number().positive().default(15), height: z.coerce.number().positive().default(10), weight: z.coerce.number().positive().default(.5) }).default({}),

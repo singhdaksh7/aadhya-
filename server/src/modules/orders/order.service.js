@@ -12,11 +12,12 @@ import { sendInvoiceEmail } from "../email/email.service.js";
 import { notifyOrderEvent, notifyOrderStatus } from "../mailer/mailer.service.js";
 import { ensureAccountForOrder } from "../customer-auth/guest-account.service.js";
 import { getShippingProvider } from "../shipping/provider.service.js";
-import { requireConfirmedPackage, lockOrderPackage } from "../shipping/package.service.js";
+import { requireConfirmedPackage, lockOrderPackage, etaForCourier } from "../shipping/package.service.js";
 import { getFulfilmentState, validateShippingAddress, isShiprocketConfigured } from "../shipping/fulfilment-state.js";
+import { verifyTrackingToken } from "../../utils/trackingToken.js";
 import { toCustomerOrder } from "../shipping/customer-tracking.js";
 import { recordMilestone, raiseShipmentAlert } from "../shipping/shipment-milestones.js";
-import { cancelShipmentForOrder, attemptAutomaticShipment, buildShipmentPayload, assertPickupConfigured, generateAwbForShipment, schedulePickupForShipment, getLabelForShipment, refreshTrackingForShipment, sanitizeProviderError } from "../shipping/fulfilment.service.js";
+import { cancelShipmentForOrder, notifyShipmentBooked, attemptAutomaticShipment, buildShipmentPayload, assertPickupConfigured, generateAwbForShipment, schedulePickupForShipment, getLabelForShipment, refreshTrackingForShipment, sanitizeProviderError } from "../shipping/fulfilment.service.js";
 
 const ADMIN_INCLUDE = {
   items: true,
@@ -330,7 +331,7 @@ export async function getOrderForConfirmation(orderNumber, token) {
   return toCustomerOrder(order);
 }
 
-export async function trackOrder({ orderNumber, email }) {
+export async function trackOrder({ orderNumber, email, token }) {
   const order = await prisma.order.findUnique({
     where: { orderNumber },
     include: ADMIN_INCLUDE,
@@ -338,7 +339,8 @@ export async function trackOrder({ orderNumber, email }) {
 
   // Deliberately generic: whether the order number doesn't exist or the
   // email doesn't match it, the caller gets the same message either way.
-  if (!order || order.customerEmail.toLowerCase() !== email.toLowerCase()) {
+  const proven = order && (token ? verifyTrackingToken(order.orderNumber, token) : email && order.customerEmail.toLowerCase() === email.toLowerCase());
+  if (!proven) {
     throw ApiError.notFound("No matching order was found. Check your order number and email and try again.");
   }
 
@@ -544,6 +546,11 @@ export async function createOrderShipment(orderId, data) {
     let shipment = await prisma.shipment.upsert({ where: { orderId }, create: { orderId, ...result, shippedDate: data.shippedDate || null }, update: { ...result, shippedDate: data.shippedDate || undefined, lastError: null } });
     await recordMilestone(shipment, "CREATED");
     if (shipment.awb) await recordMilestone(shipment, "AWB_ASSIGNED");
+    if (providerName === "SHIPROCKET" && data.courierCompanyId) {
+      const eta = data.estimatedDelivery || (await etaForCourier(orderId, data.courierCompanyId).catch(() => null));
+      if (eta) shipment = await prisma.shipment.update({ where: { id: shipment.id }, data: { estimatedDelivery: eta } });
+    }
+    if (shipment.awb) await notifyShipmentBooked(orderId);
     if (settings.autoGenerateAwb && shipment.providerShipmentId && !shipment.awb) shipment = await generateAwbForShipment(shipment.id, settings).catch(() => shipment);
     if (settings.autoSchedulePickup && shipment.awb) shipment = await schedulePickupForShipment(shipment.id, settings).catch(() => shipment);
     return shipment;

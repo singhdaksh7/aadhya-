@@ -83,6 +83,7 @@ function trackingBlock(vars) {
   const rows = [
     vars.courierName ? ["Courier", vars.courierName] : null,
     vars.trackingNumber ? ["Tracking number (AWB)", vars.trackingNumber] : null,
+    vars.estimatedDelivery ? ["Expected delivery", vars.estimatedDelivery] : null,
   ].filter(Boolean);
   if (!rows.length) return "";
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:6px 0 14px;border:1px solid ${COLORS.line};border-radius:8px;border-collapse:separate;">
