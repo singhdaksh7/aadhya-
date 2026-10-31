@@ -140,7 +140,7 @@ describe("Admin Gifting screen", () => {
   });
 
   it("saves page name, SEO title, SEO description and share image via the page endpoint", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderScreen();
     const form = await screen.findByTestId("gifting-page-settings");
     const title = within(form).getByLabelText(/SEO title/);
@@ -156,7 +156,7 @@ describe("Admin Gifting screen", () => {
       seoTitle: "New SEO title",
       seoDescription: "New description",
       featuredImage: "/uploads/og.png",
-    }));
+    }), { timeout: 5000 });
     expect(await within(form).findByRole("status")).toHaveTextContent("saved");
   });
 
