@@ -6,7 +6,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-const SITE_URL = (process.env.SITE_URL || "https://www.aadyasociety.example").replace(/\/$/, "");
+const SITE_URL = (process.env.SITE_URL || "https://tushaqsa.aadyavocational.com").replace(/\/$/, "");
 const API_URL = process.env.VITE_API_URL || "http://localhost:4100/api";
 
 const STATIC_ROUTES = [
@@ -25,6 +25,17 @@ const STATIC_ROUTES = [
   "/faq",
   "/contact",
   "/gifting",
+  "/offers",
+  "/best-sellers",
+  "/new-arrivals",
+  "/collections",
+  "/blog",
+  "/shipping",
+  "/returns",
+  "/cancellation",
+  "/privacy",
+  "/terms",
+  "/track-order",
 ];
 
 async function fetchAllProductSlugs() {
