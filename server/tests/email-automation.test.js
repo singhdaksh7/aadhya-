@@ -132,7 +132,8 @@ describe("status emails: manual Admin changes", () => {
     expect(shipped.html).toContain(order.number);
     expect(shipped.html).toContain("Delhivery");
     expect(shipped.html).toContain("AWB123456");
-    expect(shipped.html).toContain("https://track.example/AWB123456");
+    expect(shipped.html).toContain("/track-order?order="); // customers are sent to our own tracking page, never the courier link
+    expect(shipped.html).not.toContain("https://track.example/AWB123456");
 
     expect((await adminSet(order.id, "OUT_FOR_DELIVERY")).status).toBe(200);
     expect((await adminSet(order.id, "DELIVERED")).status).toBe(200);

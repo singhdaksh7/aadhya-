@@ -182,10 +182,11 @@ describe("customer tracking privacy", () => {
     const confirmation = await request(app).get(`/api/orders/${order.orderNumber}/confirmation`).query({ token: accessToken });
     for (const res of [track, confirmation]) {
       expect(res.status).toBe(200);
-      expect(res.body.data.tracking).toMatchObject({ courier: "Alpha", awb: "AWB999", trackingUrl: "https://track.example/AWB999", status: "IN_TRANSIT", statusLabel: "In transit" });
+      expect(res.body.data.tracking).toMatchObject({ courier: "Alpha", awb: "AWB999", status: "IN_TRANSIT", statusLabel: "In transit" });
+      expect(res.body.data.tracking.trackingUrl).toBeUndefined(); // customers follow the order on our site, never the courier link
       expect(res.body.data.tracking.events.map((e) => e.label)).toEqual(["Shipment created", "In transit"]);
       const raw = JSON.stringify(res.body);
-      for (const secret of ["SECRET-SR-ORDER", "SECRET-SR-SHIP", "RAW-PROVIDER-TEXT", "INTERNAL-ERROR-TEXT", "ADMIN-ACTOR-ID", "WEBHOOK-EVENT-ID", "accessTokenHash"]) expect(raw).not.toContain(secret);
+      for (const secret of ["https://track.example/AWB999", "SECRET-SR-ORDER", "SECRET-SR-SHIP", "RAW-PROVIDER-TEXT", "INTERNAL-ERROR-TEXT", "ADMIN-ACTOR-ID", "WEBHOOK-EVENT-ID", "accessTokenHash"]) expect(raw).not.toContain(secret);
       expect(res.body.data.shipment).toBeUndefined();
       expect(res.body.data.statusHistory).toBeUndefined();
     }
