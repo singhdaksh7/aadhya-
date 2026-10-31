@@ -1,3 +1,4 @@
+import { shippingInputSchema } from "../shipping/shipping-fields.js";
 import { z } from "zod";
 import { MAX_SPEC_ROWS, normalizeSpecifications } from "../../utils/specifications.js";
 
@@ -60,6 +61,7 @@ export const createProductSchema = z.object({
   unit: z.string().trim().min(1).max(20).optional(),
   taxPricingMode: z.enum(["TAX_INCLUSIVE", "TAX_EXCLUSIVE"]).optional(),
   invoiceName: z.string().trim().max(200).optional().nullable(),
+  shipping: shippingInputSchema,
 });
 
 export const updateProductSchema = createProductSchema.partial();

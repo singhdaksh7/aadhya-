@@ -41,33 +41,33 @@ enum PaymentStatus {
 }
 
 model AdminUser {
-  id           String    @id @default(uuid())
-  name         String
-  email        String    @unique
-  passwordHash String
-  role         AdminRole @default(ADMIN)
-  isActive     Boolean   @default(true)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id             String    @id @default(uuid())
+  name           String
+  email          String    @unique
+  passwordHash   String
+  role           AdminRole @default(ADMIN)
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
   manualInvoices Invoice[]
 
   @@index([email])
 }
 
 model Customer {
-  id                String                 @id @default(uuid())
+  id                String                   @id @default(uuid())
   name              String
-  email             String                 @unique
+  email             String                   @unique
   phone             String?
   passwordHash      String
-  isActive          Boolean                @default(true)
+  isActive          Boolean                  @default(true)
   emailVerifiedAt   DateTime?
   // null = the customer has never chosen a password (account auto-created from a guest order and
   // reached only through one-time email codes). Set the first time they set or reset a password.
   passwordSetAt     DateTime?
-  autoCreated       Boolean                @default(false)
-  createdAt         DateTime               @default(now())
-  updatedAt         DateTime               @updatedAt
+  autoCreated       Boolean                  @default(false)
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
   addresses         Address[]
   loginOtps         CustomerLoginOtp[]
   orders            Order[]
@@ -84,49 +84,49 @@ model Customer {
 }
 
 model Address {
-  id           String   @id @default(uuid())
-  customerId   String
-  label        String
-  fullName     String
-  phone        String
-  addressLine1 String
-  addressLine2 String?
-  city         String
-  state        String
-  postalCode   String
-  country      String   @default("India")
-  isDefault    Boolean  @default(false)
-  isDefaultBilling Boolean @default(false)
-  isDefaultShipping Boolean @default(false)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  customer     Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  id                String   @id @default(uuid())
+  customerId        String
+  label             String
+  fullName          String
+  phone             String
+  addressLine1      String
+  addressLine2      String?
+  city              String
+  state             String
+  postalCode        String
+  country           String   @default("India")
+  isDefault         Boolean  @default(false)
+  isDefaultBilling  Boolean  @default(false)
+  isDefaultShipping Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  customer          Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   @@index([customerId])
 }
 
 model CustomerRefreshSession {
-  id         String   @id @default(uuid())
+  id         String    @id @default(uuid())
   customerId String
-  tokenHash  String   @unique
+  tokenHash  String    @unique
   expiresAt  DateTime
   revokedAt  DateTime?
-  createdAt  DateTime @default(now())
+  createdAt  DateTime  @default(now())
   userAgent  String?
-  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customer   Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   @@index([customerId])
   @@index([expiresAt])
 }
 
 model PasswordResetToken {
-  id         String   @id @default(uuid())
+  id         String    @id @default(uuid())
   customerId String
-  tokenHash  String   @unique
+  tokenHash  String    @unique
   expiresAt  DateTime
   usedAt     DateTime?
-  createdAt  DateTime @default(now())
-  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  createdAt  DateTime  @default(now())
+  customer   Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   @@index([customerId])
   @@index([expiresAt])
@@ -161,27 +161,27 @@ model CartItem {
 }
 
 model Category {
-  id             String   @id @default(uuid())
-  name           String
-  slug           String   @unique
-  description    String?
-  parentId       String?
-  image          String?
-  icon           String?
-  logo           String?
-  desktopBanner  String?
-  mobileBanner   String?
+  id               String   @id @default(uuid())
+  name             String
+  slug             String   @unique
+  description      String?
+  parentId         String?
+  image            String?
+  icon             String?
+  logo             String?
+  desktopBanner    String?
+  mobileBanner     String?
   // Multi-banner carousel (additive). Legacy desktopBanner/mobileBanner act as banner #1 when `banners` is null/empty.
   banners          Json?
   bannerAutoplay   Boolean  @default(true)
   bannerIntervalMs Int      @default(5000)
-  isFeatured     Boolean  @default(false)
-  isActive       Boolean  @default(true)
-  sortOrder      Int      @default(0)
-  seoTitle       String?
-  seoDescription String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  isFeatured       Boolean  @default(false)
+  isActive         Boolean  @default(true)
+  sortOrder        Int      @default(0)
+  seoTitle         String?
+  seoDescription   String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   parent   Category?  @relation("CategoryToSubcategory", fields: [parentId], references: [id], onDelete: SetNull)
   children Category[] @relation("CategoryToSubcategory")
@@ -264,32 +264,38 @@ enum TaxPricingMode {
 }
 
 model Product {
-  id                  String              @id @default(uuid())
+  id                  String         @id @default(uuid())
   name                String
-  slug                String              @unique
+  slug                String         @unique
   brand               String?
   shortDescription    String?
   description         String?
   productType         ProductType
   categoryId          String
-  sku                 String?             @unique
-  price               Decimal             @db.Decimal(10, 2)
-  salePrice           Decimal?            @db.Decimal(10, 2)
-  mrp                 Decimal?            @db.Decimal(10, 2)
-  costPrice           Decimal?            @db.Decimal(10, 2)
-  stockQuantity       Int                 @default(0)
-  lowStockThreshold   Int                 @default(5)
+  sku                 String?        @unique
+  price               Decimal        @db.Decimal(10, 2)
+  salePrice           Decimal?       @db.Decimal(10, 2)
+  mrp                 Decimal?       @db.Decimal(10, 2)
+  costPrice           Decimal?       @db.Decimal(10, 2)
+  stockQuantity       Int            @default(0)
+  lowStockThreshold   Int            @default(5)
   lowStockNotifiedAt  DateTime? // dedupe: set when a LOW_STOCK/OUT_OF_STOCK notification fires, cleared once stock recovers above threshold
-  trackInventory      Boolean             @default(true)
-  isFeatured          Boolean             @default(false)
-  isBestSeller        Boolean             @default(false)
-  isNewArrival        Boolean             @default(false)
-  isTrending          Boolean             @default(false)
-  isActive            Boolean             @default(true)
-  sortOrder           Int                 @default(0)
-  tags                String[]            @default([])
+  trackInventory      Boolean        @default(true)
+  isFeatured          Boolean        @default(false)
+  isBestSeller        Boolean        @default(false)
+  isNewArrival        Boolean        @default(false)
+  isTrending          Boolean        @default(false)
+  isActive            Boolean        @default(true)
+  sortOrder           Int            @default(0)
+  tags                String[]       @default([])
   materials           String?
   dimensions          String?
+  // Operational package data for couriers (NOT the customer-facing `dimensions` text).
+  // Canonical units: grams and millimetres. Null = not set (variant inherits from product).
+  shipWeightGrams     Int?
+  shipLengthMm        Int?
+  shipWidthMm         Int?
+  shipHeightMm        Int?
   careInstructions    String?
   whatsIncluded       String?
   shippingInformation String?
@@ -298,27 +304,27 @@ model Product {
   seoDescription      String?
   ogImage             String?
   attributes          Json?
-  isDigital           Boolean             @default(false)
+  isDigital           Boolean        @default(false)
   // GST / invoicing fields (Phase 1 foundation). Nullable where existing
   // products have no data yet — never backfilled with a guessed value.
   hsnCode             String?
-  gstRate             Decimal?            @db.Decimal(4, 2)
-  unit                String              @default("PCS")
-  taxPricingMode      TaxPricingMode      @default(TAX_EXCLUSIVE)
+  gstRate             Decimal?       @db.Decimal(4, 2)
+  unit                String         @default("PCS")
+  taxPricingMode      TaxPricingMode @default(TAX_EXCLUSIVE)
   invoiceName         String?
-  createdAt           DateTime            @default(now())
-  updatedAt           DateTime            @updatedAt
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
 
-  category   Category            @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  images     ProductImage[]
-  bookDetail ProductBookDetails?
-  orderItems OrderItem[]
-  cartItems  CartItem[]
-  collections CollectionProduct[]
-  variants   ProductVariant[]
-  reviews    ProductReview[]
+  category      Category            @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  images        ProductImage[]
+  bookDetail    ProductBookDetails?
+  orderItems    OrderItem[]
+  cartItems     CartItem[]
+  collections   CollectionProduct[]
+  variants      ProductVariant[]
+  reviews       ProductReview[]
   wishlistItems WishlistItem[]
-  bookFormats BookFormatOption[]
+  bookFormats   BookFormatOption[]
 
   @@index([categoryId])
   @@index([productType])
@@ -331,28 +337,34 @@ model Product {
 }
 
 model ProductVariant {
-  id            String   @id @default(uuid())
-  productId     String
-  name          String
-  sku           String   @unique
-  priceOverride Decimal? @db.Decimal(10, 2)
-  stockQuantity Int      @default(0)
-  lowStockThreshold Int? // nullable per-variant override; falls back to product/global threshold
+  id                 String    @id @default(uuid())
+  productId          String
+  name               String
+  sku                String    @unique
+  priceOverride      Decimal?  @db.Decimal(10, 2)
+  stockQuantity      Int       @default(0)
+  lowStockThreshold  Int? // nullable per-variant override; falls back to product/global threshold
   lowStockNotifiedAt DateTime? // dedupe: set when a LOW_STOCK/OUT_OF_STOCK notification fires, cleared once stock recovers above threshold
-  isActive      Boolean  @default(true)
-  attributes    Json?
+  isActive           Boolean   @default(true)
+  attributes         Json?
   // Optional overrides — null means inherit from the parent Product.
   // taxPricingMode is intentionally NOT overridden here; it always follows
   // the parent Product.
-  hsnCode       String?
-  gstRate       Decimal? @db.Decimal(4, 2)
-  unit          String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  hsnCode            String?
+  gstRate            Decimal?  @db.Decimal(4, 2)
+  unit               String?
+  // Operational package data for couriers (NOT the customer-facing `dimensions` text).
+  // Canonical units: grams and millimetres. Null = not set (variant inherits from product).
+  shipWeightGrams    Int?
+  shipLengthMm       Int?
+  shipWidthMm        Int?
+  shipHeightMm       Int?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
-  product   Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
-  cartItems CartItem[]
-  orderItems OrderItem[]
+  product       Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  cartItems     CartItem[]
+  orderItems    OrderItem[]
   wishlistItems WishlistItem[]
 
   @@index([productId])
@@ -466,52 +478,53 @@ model ProductImage {
 }
 
 model Order {
-  id              String        @id @default(uuid())
-  orderSeq        Int           @default(autoincrement())
-  orderNumber     String        @unique
-  customerName    String
-  customerEmail   String
-  customerPhone   String
+  id                     String        @id @default(uuid())
+  orderSeq               Int           @default(autoincrement())
+  orderNumber            String        @unique
+  customerName           String
+  customerEmail          String
+  customerPhone          String
   customerAlternatePhone String?
-  customerId      String?
-  status          OrderStatus   @default(PENDING)
-  paymentStatus   PaymentStatus @default(PENDING)
-  subtotal        Decimal       @db.Decimal(10, 2)
-  shippingAmount  Decimal       @db.Decimal(10, 2) @default(0)
-  discountAmount  Decimal       @db.Decimal(10, 2) @default(0)
-  taxAmount       Decimal       @db.Decimal(10, 2) @default(0)
-  totalAmount     Decimal       @db.Decimal(10, 2)
-  currency        String        @default("INR")
-  couponCode      String?
-  couponId        String?
-  notes           String?
-  accessTokenHash String
-  utmSource       String?
-  utmMedium       String?
-  utmCampaign     String?
-  utmContent      String?
-  utmTerm         String?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  paidAt          DateTime?
-  cancelledAt     DateTime?
+  customerId             String?
+  status                 OrderStatus   @default(PENDING)
+  paymentStatus          PaymentStatus @default(PENDING)
+  subtotal               Decimal       @db.Decimal(10, 2)
+  shippingAmount         Decimal       @default(0) @db.Decimal(10, 2)
+  discountAmount         Decimal       @default(0) @db.Decimal(10, 2)
+  taxAmount              Decimal       @default(0) @db.Decimal(10, 2)
+  totalAmount            Decimal       @db.Decimal(10, 2)
+  currency               String        @default("INR")
+  couponCode             String?
+  couponId               String?
+  notes                  String?
+  accessTokenHash        String
+  utmSource              String?
+  utmMedium              String?
+  utmCampaign            String?
+  utmContent             String?
+  utmTerm                String?
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
+  paidAt                 DateTime?
+  cancelledAt            DateTime?
 
-  paymentMethod   String        @default("cashfree")
-  codFeeAmount    Decimal       @db.Decimal(10, 2) @default(0)
-  shippingZoneId  String?
-  billingSameAsShipping Boolean @default(true)
-  stockDecrementedAt DateTime?
-  stockRestoredAt    DateTime?
+  paymentMethod         String    @default("cashfree")
+  codFeeAmount          Decimal   @default(0) @db.Decimal(10, 2)
+  shippingZoneId        String?
+  billingSameAsShipping Boolean   @default(true)
+  stockDecrementedAt    DateTime?
+  stockRestoredAt       DateTime?
 
   items            OrderItem[]
   address          OrderAddress?
   billingAddress   OrderBillingAddress?
   payments         Payment[]
-  customer         Customer?         @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  customer         Customer?             @relation(fields: [customerId], references: [id], onDelete: SetNull)
   couponRedemption CouponRedemption?
-  shippingZone     ShippingZone?     @relation(fields: [shippingZoneId], references: [id], onDelete: SetNull)
+  shippingZone     ShippingZone?         @relation(fields: [shippingZoneId], references: [id], onDelete: SetNull)
   statusHistory    OrderStatusHistory[]
   shipment         Shipment?
+  shipmentPackage  OrderShipmentPackage?
   invoice          Invoice?
   returnRequests   ReturnRequest[]
 
@@ -526,32 +539,32 @@ model Order {
 }
 
 model OrderBillingAddress {
-  id           String  @id @default(uuid())
-  orderId      String  @unique
-  fullName     String
-  phone        String
+  id             String  @id @default(uuid())
+  orderId        String  @unique
+  fullName       String
+  phone          String
   alternatePhone String?
-  email        String?
-  landmark     String?
-  addressLine1 String
-  addressLine2 String?
-  city         String
-  state        String
-  postalCode   String
-  country      String  @default("India")
+  email          String?
+  landmark       String?
+  addressLine1   String
+  addressLine2   String?
+  city           String
+  state          String
+  postalCode     String
+  country        String  @default("India")
 
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 }
 
 model OrderStatusHistory {
-  id         String      @id @default(uuid())
-  orderId    String
-  fromStatus OrderStatus?
-  toStatus   OrderStatus
-  changedAt  DateTime    @default(now())
-  note       String?
+  id              String       @id @default(uuid())
+  orderId         String
+  fromStatus      OrderStatus?
+  toStatus        OrderStatus
+  changedAt       DateTime     @default(now())
+  note            String?
   // Who/what caused the change: ADMIN | SHIPROCKET | PAYMENT | SYSTEM (internal; never shown to customers).
-  source          String  @default("SYSTEM")
+  source          String       @default("SYSTEM")
   adminId         String?
   shipmentId      String?
   providerEventId String?
@@ -563,24 +576,24 @@ model OrderStatusHistory {
 }
 
 model Shipment {
-  id                String    @id @default(uuid())
-  orderId           String    @unique
-  carrier           String?
-  trackingNumber    String?
-  trackingUrl       String?
-  shippedDate       DateTime?
-  estimatedDelivery DateTime?
-  deliveredDate     DateTime?
-  provider          String    @default("MANUAL")
-  providerOrderId   String?
+  id                 String    @id @default(uuid())
+  orderId            String    @unique
+  carrier            String?
+  trackingNumber     String?
+  trackingUrl        String?
+  shippedDate        DateTime?
+  estimatedDelivery  DateTime?
+  deliveredDate      DateTime?
+  provider           String    @default("MANUAL")
+  providerOrderId    String?
   providerShipmentId String?
-  awb               String?
-  labelStorageKey   String?
-  status            String    @default("PENDING")
-  rawProviderStatus String?
-  lastError         String?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  awb                String?
+  labelStorageKey    String?
+  status             String    @default("PENDING")
+  rawProviderStatus  String?
+  lastError          String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
@@ -590,29 +603,29 @@ model Shipment {
 // A complete fiscal/legal snapshot. Nothing on an Invoice is derived from a
 // live product or settings row after it has been created.
 model Invoice {
-  id              String   @id @default(uuid())
-  orderId         String   @unique
-  invoiceNumber   String?  @unique
-  invoiceDate     DateTime @default(now())
+  id              String     @id @default(uuid())
+  orderId         String     @unique
+  invoiceNumber   String?    @unique
+  invoiceDate     DateTime   @default(now())
   customerName    String
   customerEmail   String
   customerPhone   String?
   billingAddress  Json
   shippingAddress Json?
-  subtotal        Decimal  @db.Decimal(10, 2)
-  discountAmount  Decimal  @db.Decimal(10, 2) @default(0)
-  shippingAmount  Decimal  @db.Decimal(10, 2) @default(0)
-  taxAmount       Decimal  @db.Decimal(10, 2) @default(0)
-  totalAmount     Decimal  @db.Decimal(10, 2)
-  currency        String   @default("INR")
+  subtotal        Decimal    @db.Decimal(10, 2)
+  discountAmount  Decimal    @default(0) @db.Decimal(10, 2)
+  shippingAmount  Decimal    @default(0) @db.Decimal(10, 2)
+  taxAmount       Decimal    @default(0) @db.Decimal(10, 2)
+  totalAmount     Decimal    @db.Decimal(10, 2)
+  currency        String     @default("INR")
   companySnapshot Json
   taxSnapshot     Json?
   itemsSnapshot   Json
   pdfStorageKey   String?
   emailedAt       DateTime?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  order           Order    @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  order           Order      @relation(fields: [orderId], references: [id], onDelete: Restrict)
   emailLogs       EmailLog[]
 
   // --- Manual/offline invoice support (Phase 2) ---
@@ -620,23 +633,23 @@ model Invoice {
   // existing auto-generated flow. Every pre-existing row (and every row
   // created by ensureInvoiceForOrder) defaults to ONLINE/ISSUED so nothing
   // about the automatic flow changes behavior.
-  source            String    @default("ONLINE") // "ONLINE" | "MANUAL"
-  status            String    @default("ISSUED") // "DRAFT" | "ISSUED"
-  createdByAdminId  String?
-  notes             String?
-  paymentMethod     String?
-  paymentReference  String?
+  source           String  @default("ONLINE") // "ONLINE" | "MANUAL"
+  status           String  @default("ISSUED") // "DRAFT" | "ISSUED"
+  createdByAdminId String?
+  notes            String?
+  paymentMethod    String?
+  paymentReference String?
 
   // --- Optional externally-prepared PDF attachment ---
   // Deliberately separate from pdfStorageKey (the canonical generated PDF)
   // unless an admin explicitly designates it as canonical.
-  externalPdfStorageKey   String?
-  externalInvoiceNumber   String?
-  externalInvoiceDate     DateTime?
-  externalPdfUploadedAt   DateTime?
-  externalPdfIsCanonical  Boolean   @default(false)
+  externalPdfStorageKey  String?
+  externalInvoiceNumber  String?
+  externalInvoiceDate    DateTime?
+  externalPdfUploadedAt  DateTime?
+  externalPdfIsCanonical Boolean   @default(false)
 
-  createdByAdmin  AdminUser? @relation(fields: [createdByAdminId], references: [id], onDelete: SetNull)
+  createdByAdmin AdminUser? @relation(fields: [createdByAdminId], references: [id], onDelete: SetNull)
 
   @@index([customerEmail])
   @@index([createdAt])
@@ -651,21 +664,21 @@ model InvoiceSequence {
 }
 
 model IntegrationCredential {
-  id            String   @id @default(uuid())
+  id            String    @id @default(uuid())
   provider      String
   environment   String
   encryptedData String
-  isActive      Boolean  @default(true)
+  isActive      Boolean   @default(true)
   lastTestedAt  DateTime?
   testStatus    String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   @@unique([provider, environment])
 }
 
 model EmailLog {
-  id                String   @id @default(uuid())
+  id                String    @id @default(uuid())
   type              String
   recipient         String
   orderId           String?
@@ -674,14 +687,14 @@ model EmailLog {
   providerMessageId String?
   sentAt            DateTime?
   failureMessage    String?
-  createdAt         DateTime @default(now())
+  createdAt         DateTime  @default(now())
   // Transactional notification metadata (never the body or any code/secret).
   event             String?
   subject           String?
   source            String?
   notificationId    String?
-  audience          String   @default("CUSTOMER") // CUSTOMER | ADMIN
-  invoice           Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  audience          String    @default("CUSTOMER") // CUSTOMER | ADMIN
+  invoice           Invoice?  @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
 
   @@index([orderId])
   @@index([invoiceId])
@@ -716,14 +729,14 @@ model ShippingZone {
 }
 
 model ShippingRate {
-  id               String   @id @default(cuid())
+  id               String       @id @default(cuid())
   zoneId           String
-  rate             Decimal  @db.Decimal(10, 2)
-  freeAbove        Decimal? @db.Decimal(10, 2)
+  rate             Decimal      @db.Decimal(10, 2)
+  freeAbove        Decimal?     @db.Decimal(10, 2)
   deliveryEstimate String?
-  active           Boolean  @default(true)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  active           Boolean      @default(true)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
   zone             ShippingZone @relation(fields: [zoneId], references: [id], onDelete: Cascade)
 
   @@index([zoneId])
@@ -731,36 +744,36 @@ model ShippingRate {
 }
 
 model OrderItem {
-  id                         String          @id @default(uuid())
-  orderId                    String
-  productId                  String?
-  variantId                  String?
-  productNameSnapshot        String
-  productSlugSnapshot        String
-  skuSnapshot                String?
-  unitPrice                  Decimal         @db.Decimal(10, 2)
-  quantity                   Int
-  lineTotal                  Decimal         @db.Decimal(10, 2)
-  productTypeSnapshot        ProductType
-  imageSnapshot              String?
-  variantNameSnapshot        String?
-  variantSkuSnapshot         String?
+  id                        String      @id @default(uuid())
+  orderId                   String
+  productId                 String?
+  variantId                 String?
+  productNameSnapshot       String
+  productSlugSnapshot       String
+  skuSnapshot               String?
+  unitPrice                 Decimal     @db.Decimal(10, 2)
+  quantity                  Int
+  lineTotal                 Decimal     @db.Decimal(10, 2)
+  productTypeSnapshot       ProductType
+  imageSnapshot             String?
+  variantNameSnapshot       String?
+  variantSkuSnapshot        String?
   variantAttributesSnapshot Json?
-  variantPriceSnapshot       Decimal?        @db.Decimal(10, 2)
-  bookFormatSnapshot          BookFormat?
-  bookFormatSkuSnapshot        String?
-  bookFormatPriceSnapshot      Decimal?        @db.Decimal(10, 2)
-  bookFormatPdfNameSnapshot    String?
+  variantPriceSnapshot      Decimal?    @db.Decimal(10, 2)
+  bookFormatSnapshot        BookFormat?
+  bookFormatSkuSnapshot     String?
+  bookFormatPriceSnapshot   Decimal?    @db.Decimal(10, 2)
+  bookFormatPdfNameSnapshot String?
   // GST snapshot fields captured at invoice-creation time (Phase 1 foundation).
   // Nullable: historical OrderItems predate this feature and never get one
   // backfilled.
-  hsnCodeSnapshot             String?
-  gstRateSnapshot             Decimal?        @db.Decimal(4, 2)
-  unitSnapshot                String?
-  cgstAmount                  Decimal?        @db.Decimal(10, 2)
-  sgstAmount                  Decimal?        @db.Decimal(10, 2)
-  igstAmount                  Decimal?        @db.Decimal(10, 2)
-  taxableValueSnapshot        Decimal?        @db.Decimal(10, 2)
+  hsnCodeSnapshot           String?
+  gstRateSnapshot           Decimal?    @db.Decimal(4, 2)
+  unitSnapshot              String?
+  cgstAmount                Decimal?    @db.Decimal(10, 2)
+  sgstAmount                Decimal?    @db.Decimal(10, 2)
+  igstAmount                Decimal?    @db.Decimal(10, 2)
+  taxableValueSnapshot      Decimal?    @db.Decimal(10, 2)
 
   order           Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product         Product?         @relation(fields: [productId], references: [id], onDelete: SetNull)
@@ -774,19 +787,19 @@ model OrderItem {
 }
 
 model OrderAddress {
-  id           String  @id @default(uuid())
-  orderId      String  @unique
-  fullName     String
-  phone        String
+  id             String  @id @default(uuid())
+  orderId        String  @unique
+  fullName       String
+  phone          String
   alternatePhone String?
-  email        String?
-  landmark     String?
-  addressLine1 String
-  addressLine2 String?
-  city         String
-  state        String
-  postalCode   String
-  country      String  @default("India")
+  email          String?
+  landmark       String?
+  addressLine1   String
+  addressLine2   String?
+  city           String
+  state          String
+  postalCode     String
+  country        String  @default("India")
 
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 }
@@ -802,11 +815,11 @@ model Payment {
   currency          String        @default("INR")
   method            String?
   rawReference      String?
-  refundedAmount    Decimal       @db.Decimal(10, 2) @default(0)
+  refundedAmount    Decimal       @default(0) @db.Decimal(10, 2)
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
 
-  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   refunds Refund[]
 
   @@index([orderId])
@@ -868,8 +881,8 @@ model ReturnRequest {
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
 
-  order    Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  customer Customer?  @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  order    Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  customer Customer?    @relation(fields: [customerId], references: [id], onDelete: SetNull)
   items    ReturnItem[]
   refunds  Refund[]
 
@@ -910,19 +923,19 @@ model InventoryMovement {
 }
 
 model Refund {
-  id                  String       @id @default(cuid())
-  returnRequestId     String?
-  paymentId           String
-  orderId             String
-  amount              Decimal      @db.Decimal(10, 2)
-  method              String
-  status              RefundStatus @default(PENDING)
-  providerRefundId    String?
-  reference           String?
-  note                String?
-  processedByAdminId  String?
-  createdAt           DateTime     @default(now())
-  updatedAt           DateTime     @updatedAt
+  id                 String       @id @default(cuid())
+  returnRequestId    String?
+  paymentId          String
+  orderId            String
+  amount             Decimal      @db.Decimal(10, 2)
+  method             String
+  status             RefundStatus @default(PENDING)
+  providerRefundId   String?
+  reference          String?
+  note               String?
+  processedByAdminId String?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
 
   payment       Payment        @relation(fields: [paymentId], references: [id], onDelete: Cascade)
   returnRequest ReturnRequest? @relation(fields: [returnRequestId], references: [id], onDelete: SetNull)
@@ -992,19 +1005,19 @@ enum BannerPlacement {
 }
 
 model Page {
-  id             String        @id @default(uuid())
+  id             String     @id @default(uuid())
   name           String
-  slug           String        @unique
-  pageType       PageType      @default(STANDARD)
-  status         PageStatus    @default(DRAFT)
-  content        String?       @db.Text
+  slug           String     @unique
+  pageType       PageType   @default(STANDARD)
+  status         PageStatus @default(DRAFT)
+  content        String?    @db.Text
   featuredImage  String?
-  excerpt        String?       @db.Text
+  excerpt        String?    @db.Text
   seoTitle       String?
-  seoDescription String?       @db.Text
+  seoDescription String?    @db.Text
   publishedAt    DateTime?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
 
   sections PageSection[]
 
@@ -1061,20 +1074,20 @@ model Banner {
 }
 
 model PromoMessage {
-  id              String    @id @default(uuid())
-  title           String
-  message         String
-  couponCode      String?
-  couponId        String?
-  ctaLabel        String?
-  ctaUrl          String?
-  icon            String?
-  startDate       DateTime?
-  endDate         DateTime?
-  isActive        Boolean   @default(true)
-  sortOrder       Int       @default(0)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id         String    @id @default(uuid())
+  title      String
+  message    String
+  couponCode String?
+  couponId   String?
+  ctaLabel   String?
+  ctaUrl     String?
+  icon       String?
+  startDate  DateTime?
+  endDate    DateTime?
+  isActive   Boolean   @default(true)
+  sortOrder  Int       @default(0)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   coupon Coupon? @relation(fields: [couponId], references: [id], onDelete: SetNull)
 
@@ -1168,13 +1181,13 @@ model BlogPost {
 }
 
 model FAQCategory {
-  id        String    @id @default(uuid())
+  id        String   @id @default(uuid())
   name      String
-  slug      String    @unique
-  sortOrder Int       @default(0)
-  isActive  Boolean   @default(true)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  slug      String   @unique
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   items FAQItem[]
 
@@ -1183,14 +1196,14 @@ model FAQCategory {
 }
 
 model FAQItem {
-  id         String      @id @default(uuid())
+  id         String   @id @default(uuid())
   categoryId String
   question   String
-  answer     String      @db.Text
-  sortOrder  Int         @default(0)
-  isActive   Boolean     @default(true)
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
+  answer     String   @db.Text
+  sortOrder  Int      @default(0)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   category FAQCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
@@ -1342,23 +1355,22 @@ enum AdminNotificationSeverity {
 }
 
 model AdminNotification {
-  id         String                     @id @default(uuid())
+  id         String                    @id @default(uuid())
   type       AdminNotificationType
   title      String
   message    String
-  severity   AdminNotificationSeverity  @default(INFO)
+  severity   AdminNotificationSeverity @default(INFO)
   entityType String?
   entityId   String?
-  isRead     Boolean                    @default(false)
-  createdAt  DateTime                   @default(now())
-  updatedAt  DateTime                   @updatedAt
+  isRead     Boolean                   @default(false)
+  createdAt  DateTime                  @default(now())
+  updatedAt  DateTime                  @updatedAt
 
   @@index([isRead])
   @@index([type])
   @@index([createdAt])
   @@index([entityType, entityId])
 }
-
 
 // One-time email login codes. Only an HMAC of the 6-digit code is stored; codes expire after 10 minutes,
 // are single-use and are invalidated after 5 wrong attempts.
@@ -1421,6 +1433,39 @@ model AdminNotificationRecipient {
   id        String   @id @default(uuid())
   email     String   @unique
   enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// The package an Admin confirmed for an order. A snapshot: later product edits never change it.
+model OrderShipmentPackage {
+  id            String    @id @default(uuid())
+  orderId       String    @unique
+  weightGrams   Int
+  lengthMm      Int
+  widthMm       Int
+  heightMm      Int
+  // AUTO_SINGLE | AUTO_ESTIMATE | MANUAL_OVERRIDE
+  source        String
+  presetName    String?
+  itemsSnapshot Json?
+  confirmedAt   DateTime  @default(now())
+  confirmedBy   String?
+  // Set once a provider shipment has been created from this package; the snapshot is then frozen.
+  lockedAt      DateTime?
+  order         Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+// Optional reusable box sizes for multi-product orders.
+model PackagePreset {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  lengthMm  Int
+  widthMm   Int
+  heightMm  Int
+  tareGrams Int      @default(0)
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

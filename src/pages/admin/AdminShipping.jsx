@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAdminAuth } from "../../context/AdminAuthContext";
-import { adminGetShippingBusiness, adminSaveShippingBusiness, adminGetIntegrationStatus, adminTestIntegration } from "../../lib/api";
+import { adminGetShippingBusiness, adminSaveShippingBusiness, adminGetIntegrationStatus, adminTestIntegration, adminListPackagePresets, adminSavePackagePreset, adminDeletePackagePreset } from "../../lib/api";
 import { PageHeader, AdminCard, StatusBadge } from "../../components/admin/ui";
 
 const initialBusiness = {
@@ -11,6 +11,8 @@ const initialBusiness = {
   autoGenerateAwb: false,
   autoSchedulePickup: false,
   codAllowed: true,
+  packagingTareGrams: 0,
+  volumetricDivisor: 5000,
   packageDefaults: { length: 20, width: 15, height: 10, weight: 0.5 },
   pickup: { location: "", name: "", contact: "", phone: "", email: "", address: "", city: "", state: "", postalCode: "", country: "India" },
 };
@@ -117,6 +119,8 @@ export default function AdminShipping() {
             try {
               await adminSaveShippingBusiness({
                 ...business,
+                packagingTareGrams: Number(business.packagingTareGrams) || 0,
+                volumetricDivisor: Number(business.volumetricDivisor) || 5000,
                 packageDefaults: Object.fromEntries(
                   Object.entries(business.packageDefaults).map(([k, v]) => [k, Number(v)])
                 ),
@@ -167,6 +171,19 @@ export default function AdminShipping() {
               {l}
             </label>
           ))}
+          <div className="sm:col-span-2">
+            <h3 className="mb-1 mt-2 text-sm font-semibold text-charcoal">Package preparation</h3>
+            <p className="text-xs text-charcoal-soft">Each order&apos;s package is calculated from product shipping data, then confirmed by an Admin before Shiprocket is used.</p>
+          </div>
+          <label className="admin-label">
+            Packaging weight added to every package (grams)
+            <input type="number" min="0" max="5000" className="admin-input" value={business.packagingTareGrams ?? 0} onChange={(e) => setBusiness({ ...business, packagingTareGrams: e.target.value })} />
+          </label>
+          <label className="admin-label">
+            Volumetric divisor (cm³ per kg, estimate only)
+            <input type="number" min="1000" max="10000" className="admin-input" value={business.volumetricDivisor ?? 5000} onChange={(e) => setBusiness({ ...business, volumetricDivisor: e.target.value })} />
+          </label>
+          <p className="text-xs text-charcoal-soft sm:col-span-2">Legacy fallback package (used only by non-Shiprocket providers):</p>
           <div className="grid grid-cols-2 gap-3 sm:col-span-2 sm:grid-cols-4">
             {Object.entries(business.packageDefaults).map(([k, v]) => (
               <label key={k} className="admin-label">
@@ -219,6 +236,54 @@ export default function AdminShipping() {
           </div>
         </form>
       </AdminCard>
+      <PackagePresets />
     </div>
+  );
+}
+
+const blankPreset = { name: "", lengthCm: "", widthCm: "", heightCm: "", tareKg: "0" };
+function PackagePresets() {
+  const [presets, setPresets] = useState([]);
+  const [draft, setDraft] = useState(blankPreset);
+  const [editingId, setEditingId] = useState(null);
+  const [error, setError] = useState("");
+  const load = () => adminListPackagePresets().then((r) => setPresets(r.data)).catch(() => {});
+  useEffect(() => { load(); }, []);
+  const save = async (e) => {
+    e.preventDefault();
+    setError("");
+    try {
+      await adminSavePackagePreset({ name: draft.name, lengthCm: Number(draft.lengthCm), widthCm: Number(draft.widthCm), heightCm: Number(draft.heightCm), tareKg: Number(draft.tareKg || 0) }, editingId);
+      setDraft(blankPreset); setEditingId(null); load();
+    } catch (err) { setError(err.message); }
+  };
+  return (
+    <AdminCard title="Package presets" subtitle="Optional reusable boxes for multi-product orders">
+      {presets.length === 0 && <p className="text-sm text-charcoal-soft">No presets yet (for example Small Box, Medium Box, Mailer).</p>}
+      <ul className="divide-y divide-black/10 text-sm">
+        {presets.map((p) => (
+          <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+            <span>{p.name} · {p.lengthCm}×{p.widthCm}×{p.heightCm} cm · box {p.tareKg} kg</span>
+            <span className="flex gap-2">
+              <button type="button" className="admin-btn admin-btn--ghost" onClick={() => { setEditingId(p.id); setDraft({ name: p.name, lengthCm: String(p.lengthCm), widthCm: String(p.widthCm), heightCm: String(p.heightCm), tareKg: String(p.tareKg) }); }}>Edit</button>
+              <button type="button" className="admin-btn admin-btn--danger" onClick={async () => { await adminDeletePackagePreset(p.id); load(); }}>Delete</button>
+            </span>
+          </li>
+        ))}
+      </ul>
+      <form onSubmit={save} className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-5">
+        {[["name", "Name", "text"], ["lengthCm", "Length (cm)", "number"], ["widthCm", "Width (cm)", "number"], ["heightCm", "Height (cm)", "number"], ["tareKg", "Box weight (kg)", "number"]].map(([k, l, t]) => (
+          <label key={k} className="admin-label">
+            {l}
+            <input type={t} step="any" required={k !== "tareKg"} className="admin-input" value={draft[k]} onChange={(e) => setDraft({ ...draft, [k]: e.target.value })} />
+          </label>
+        ))}
+        <div className="col-span-2 flex gap-2 sm:col-span-5">
+          <button type="submit" className="admin-btn admin-btn--primary">{editingId ? "Update preset" : "Add preset"}</button>
+          {editingId && <button type="button" className="admin-btn admin-btn--ghost" onClick={() => { setEditingId(null); setDraft(blankPreset); }}>Cancel</button>}
+        </div>
+      </form>
+      {error && <p role="alert" className="mt-2 text-sm text-terracotta">{error}</p>}
+    </AdminCard>
   );
 }

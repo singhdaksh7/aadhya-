@@ -6,6 +6,7 @@ import { asyncHandler } from "../../utils/asyncHandler.js";
 import { ok, created } from "../../utils/apiResponse.js";
 import { zoneSchema, zoneUpdateSchema, rateSchema, rateUpdateSchema } from "./shipping.validators.js";
 import * as shippingService from "./shipping.service.js";
+import { presetSchema, listPresets, createPreset, updatePreset, deletePreset } from "./package.service.js";
 
 export const adminShippingRouter = Router();
 adminShippingRouter.use(requireAdmin);
@@ -14,6 +15,7 @@ const businessSettings = z.object({
   provider: z.enum(["MANUAL", "SHIPROCKET", "DELHIVERY"]).default("MANUAL"), environment: z.enum(["TEST", "LIVE"]).default("TEST"),
   autoCreateShipment: z.boolean().default(false), autoGenerateAwb: z.boolean().default(false), autoSchedulePickup: z.boolean().default(false), codAllowed: z.boolean().default(true),
   pickup: z.object({ location: z.string().max(120).optional(), name: z.string().max(120).optional(), contact: z.string().max(120).optional(), email: z.string().email().optional().or(z.literal("")), phone: z.string().max(30).optional(), address: z.string().max(300).optional(), city: z.string().max(100).optional(), state: z.string().max(100).optional(), postalCode: z.string().max(20).optional(), country: z.string().max(100).optional() }).default({}),
+  packagingTareGrams: z.coerce.number().int().min(0).max(5000).default(0), volumetricDivisor: z.coerce.number().int().min(1000).max(10000).default(5000),
   packageDefaults: z.object({ length: z.coerce.number().positive().default(20), width: z.coerce.number().positive().default(15), height: z.coerce.number().positive().default(10), weight: z.coerce.number().positive().default(.5) }).default({}),
 }).superRefine((value, ctx) => { if (value.provider === "DELHIVERY") ctx.addIssue({ code: z.ZodIssueCode.custom, message: "DELHIVERY is not available yet." }); });
 
@@ -83,3 +85,8 @@ adminShippingRouter.delete(
     ok(res, result);
   })
 );
+
+adminShippingRouter.get("/package-presets", asyncHandler(async (_req, res) => ok(res, await listPresets())));
+adminShippingRouter.post("/package-presets", asyncHandler(async (req, res) => created(res, await createPreset(presetSchema.parse(req.body)))));
+adminShippingRouter.patch("/package-presets/:id", asyncHandler(async (req, res) => ok(res, await updatePreset(req.params.id, presetSchema.parse(req.body)))));
+adminShippingRouter.delete("/package-presets/:id", asyncHandler(async (req, res) => { await deletePreset(req.params.id); ok(res, { deleted: true }); }));

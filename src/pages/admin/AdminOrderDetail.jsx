@@ -16,6 +16,7 @@ import {
 import { LoadingNotice, ErrorNotice } from "../../components/StateNotice";
 import { formatInr } from "../../lib/format";
 import { StatusBadge, AdminCard, PageHeader } from "../../components/admin/ui";
+import ShipmentPackagePanel from "../../components/admin/ShipmentPackagePanel";
 
 const ALLOWED_TRANSITIONS = {
   PENDING: ["CONFIRMED", "CANCELLED"],
@@ -306,6 +307,8 @@ export default function AdminOrderDetail() {
             </form>
             {shipmentError && <p className="mt-3 text-sm text-terracotta">{shipmentError}</p>}
           </AdminCard>
+
+          <ShipmentPackagePanel orderId={id} shipment={providerShipment} onShipment={(next) => setOrder((prev) => ({ ...prev, shipment: next }))} />
 
           <AdminCard title="Provider Shipment">
             {providerShipment ? (

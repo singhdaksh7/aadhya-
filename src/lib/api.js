@@ -397,6 +397,12 @@ export function adminCreateShipment(id, payload) { return api.post(`/admin/order
 export function adminGenerateShipmentAwb(id) { return api.post(`/admin/orders/${id}/shipment/awb`, {}, { auth: "admin" }); }
 export function adminScheduleShipmentPickup(id) { return api.post(`/admin/orders/${id}/shipment/pickup`, {}, { auth: "admin" }); }
 export function adminGetShipmentLabel(id) { return api.get(`/admin/orders/${id}/shipment/label`, { auth: "admin" }); }
+export function adminGetOrderPackage(id) { return api.get(`/admin/orders/${id}/package`, { auth: "admin" }); }
+export function adminConfirmOrderPackage(id, payload) { return api.put(`/admin/orders/${id}/package`, payload, { auth: "admin" }); }
+export function adminCheckServiceability(id) { return api.post(`/admin/orders/${id}/shipment/serviceability`, {}, { auth: "admin" }); }
+export function adminListPackagePresets() { return api.get("/admin/shipping/package-presets", { auth: "admin" }); }
+export function adminSavePackagePreset(payload, id = null) { return id ? api.patch(`/admin/shipping/package-presets/${id}`, payload, { auth: "admin" }) : api.post("/admin/shipping/package-presets", payload, { auth: "admin" }); }
+export function adminDeletePackagePreset(id) { return api.delete(`/admin/shipping/package-presets/${id}`, { auth: "admin" }); }
 export function adminRefreshTracking(id) { return api.post(`/admin/orders/${id}/shipment/refresh-tracking`, {}, { auth: "admin" }); }
 export function accountInvoices() { return api.get("/account/invoices", { auth: true }); }
 export async function downloadAccountInvoice(id) { const res = await fetch(`${API_URL}/account/invoices/${id}/download`, { headers: { Authorization: `Bearer ${tokens.customer}` }, credentials: "include" }); if (!res.ok) throw new ApiRequestError("Could not download invoice", res.status); return res.blob(); }
