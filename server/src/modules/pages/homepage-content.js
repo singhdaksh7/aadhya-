@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { ApiError } from "../../utils/ApiError.js";
 import { howWeWorkSchema, HOW_WE_WORK_DEFAULTS } from "./how-we-work-content.js";
+import { exploreMoreSchema, EXPLORE_MORE_DEFAULTS } from "./explore-more-content.js";
 import { ourJourneySchema, OUR_JOURNEY_DEFAULTS } from "./our-journey.js";
 import { shoppableReelsSchema, DEFAULT_SHOPPABLE_REELS } from "./reels.js";
 import {
@@ -45,6 +46,7 @@ const item = z.object({ id: optionalText(100), enabled: z.boolean().optional(), 
 const rawSchemas = {
   HOW_WE_WORK: howWeWorkSchema,
   OUR_JOURNEY: ourJourneySchema,
+  EXPLORE_MORE: exploreMoreSchema,
   TRUST_STRIP: z.object({
     background: z.enum(["SURFACE", "PLAIN"]).optional(),
     showDividers: z.boolean().optional(),
@@ -128,6 +130,7 @@ export const DEFAULT_HOMEPAGE_CONTENT = {
   GIFTING_FAQ: GIFTING_FAQ_DEFAULTS,
   HOW_WE_WORK: HOW_WE_WORK_DEFAULTS,
   OUR_JOURNEY: OUR_JOURNEY_DEFAULTS,
+  EXPLORE_MORE: EXPLORE_MORE_DEFAULTS,
   TRUST_STRIP: { background: "SURFACE", showDividers: true, desktopColumns: 4, mobileLayout: "STACKED", spacing: "NORMAL", items: [
     { id: "trust-1", title: "Thoughtfully Curated", description: "Hand-selected slow design objects for mindful living", icon: "sparkles", enabled: true, sortOrder: 1 },
     { id: "trust-2", title: "Premium Quality", description: "Authentic materials from Indian craft clusters", icon: "badge", enabled: true, sortOrder: 2 },

@@ -15,6 +15,7 @@ import {
   adminGetInvoiceSettings,
 } from "../../lib/api";
 import BookFormatsTab from "./BookFormatsTab";
+import ProductVariantsSection from "./ProductVariantsSection";
 import { Button } from "../../components/ui";
 import { LoadingNotice } from "../../components/StateNotice";
 import ImagePickerInput from "../../components/admin/ImagePickerInput";
@@ -449,6 +450,13 @@ export default function AdminProductForm() {
           </div>
           <p className="text-xs text-charcoal-soft">Variants inherit these values unless a variant sets its own (variant, then product, then missing).</p>
         </section>
+
+        {isEdit && (
+          <ProductVariantsSection
+            productId={id}
+            productShipping={{ weightKg: form.shipWeightKg, lengthCm: form.shipLengthCm, widthCm: form.shipWidthCm, heightCm: form.shipHeightCm }}
+          />
+        )}
 
         <section id="sec-content" className="admin-card space-y-4 p-5">
           <h2 className="admin-card__title border-b border-charcoal/10 pb-2">Product Content & Specs</h2>

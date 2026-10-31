@@ -7,6 +7,7 @@ import TrustServiceStrip from "./TrustServiceStrip";
 import TrustBanner from "./TrustBanner";
 import PromoBanners2Up from "./PromoBanners2Up";
 import OurJourney from "./OurJourney";
+import ExploreMore from "./ExploreMore";
 import ProductCard from "./ProductCard";
 import { ProductGridSkeleton } from "./ui/Skeleton";
 import { formatInr } from "../lib/format";
@@ -48,6 +49,7 @@ export default function HomepageRenderer({ sections = [], newArrivals = [], best
       case "HERO_CAROUSEL": case "HERO": return <HeroBannerCarousel key={section.id} />;
       case "TRUST_STRIP": case "TRUST_BADGES": return <TrustServiceStrip key={section.id} items={s.items} config={s} />;
       case "TRUST_BANNER": return <TrustBanner key={section.id} config={s} />;
+      case "EXPLORE_MORE": return <ExploreMore key={section.id} config={s} />;
       case "OUR_JOURNEY": return <OurJourney key={section.id} config={s} />;
       case "PROMO_BANNERS_2UP": case "MULTI_BANNER": return <PromoBanners2Up key={section.id} promoCards={s.items} layout={s.layout} showSubtitle={s.showSubtitle === true} />;
       case "NEW_ARRIVALS": case "BEST_SELLERS": {

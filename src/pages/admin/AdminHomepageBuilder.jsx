@@ -37,6 +37,7 @@ const SECTION_TYPE_LABELS = {
   BLOG_PREVIEW: "Blog / Stories",
   TESTIMONIALS: "Reviews / Testimonials",
   HOW_WE_WORK: "How We Work",
+  EXPLORE_MORE: "Explore More",
   SHOPPABLE_REELS: "Shoppable Reels",
   GIFTING_HERO: "Gifting Hero",
   GIFTS_BY_OCCASION: "Gifts by Occasion",
