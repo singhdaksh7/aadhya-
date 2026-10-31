@@ -158,7 +158,7 @@ export async function renderInvoicePdf(invoice, options = {}) {
     ["Invoice no.", invoice.invoiceNumber],
     ["Invoice date", formatDate(invoice.invoiceDate)],
     invoice.order?.orderNumber ? ["Order no.", invoice.order.orderNumber] : null,
-    taxOn ? ["Supply", interState ? "Inter-state supply" : "Intra-state supply"] : null,
+    taxOn ? ["Supply", tax.placeOfSupplyKnown === false ? "Not determined" : interState ? "Inter-state supply" : "Intra-state supply"] : null,
   ].filter((r) => r && clean(r[1]));
   for (const [k, v] of meta) {
     put(k, RIGHT_X, my, { width: 80, size: 8, color: C.muted });
@@ -266,7 +266,7 @@ export async function renderInvoicePdf(invoice, options = {}) {
     cell("unit", money(item.unitPrice));
     cell("disc", Number(item.discountAmount || 0) > 0 ? `-${money(item.discountAmount)}` : "-");
     cell("taxable", money(item.taxableValue ?? item.lineTotal ?? 0));
-    cell("gst", item.gstRate != null ? `${item.gstRate}%` : "-");
+    cell("gst", item.gstRate != null ? `${item.gstRate}%` : "N/A");
     cell("amount", money(item.lineTotal), "S");
     y += rowH;
     hr(y, M, PAGE_W - M);
@@ -284,6 +284,7 @@ export async function renderInvoicePdf(invoice, options = {}) {
   if (Number(tax.cgstAmount || 0) > 0) totalRows.push(["CGST", money(tax.cgstAmount)]);
   if (Number(tax.sgstAmount || 0) > 0) totalRows.push(["SGST", money(tax.sgstAmount)]);
   if (Number(tax.igstAmount || 0) > 0) totalRows.push(["IGST", money(tax.igstAmount)]);
+  if (Number(tax.codFeeAmount || 0) > 0) totalRows.push(["COD fee", money(tax.codFeeAmount)]);
   if (Number(tax.rounding || 0) !== 0) totalRows.push(["Rounding", money(tax.rounding)]);
   const totalsH = totalRows.length * 17 + 8 + 34;
 
@@ -304,7 +305,7 @@ export async function renderInvoicePdf(invoice, options = {}) {
     if (rates.length) {
       taxSummary = rates.map((k) => {
         const g = rateGroups.get(k);
-        return { rate: k === "unrated" ? "-" : `${k}%`, taxable: round2sum([g.taxable]), a: interState ? g.igst : g.cgst, b: interState ? null : g.sgst };
+        return { rate: k === "unrated" ? "N/A" : `${k}%`, taxable: round2sum([g.taxable]), a: interState ? g.igst : g.cgst, b: interState ? null : g.sgst };
       });
     } else if (interState || Number(tax.cgstAmount || 0) > 0 || Number(tax.sgstAmount || 0) > 0) {
       const taxable = round2sum(items.map((i) => Number(i.taxableValue ?? 0)));
@@ -329,9 +330,19 @@ export async function renderInvoicePdf(invoice, options = {}) {
   ].filter((r) => r[1]);
   const wordsText = `Amount in words: ${amountInWords(invoice.totalAmount)}`;
 
+  // Explicit tax caveats: never leave the reader guessing why tax is missing or how the supply type was chosen.
+  const taxNotes = [];
+  if (taxOn && tax.hasIncompleteTaxData) taxNotes.push(`GST not configured for ${tax.unratedItemCount ? `${tax.unratedItemCount} item(s)` : "this invoice"}: no tax rate is set, so tax is not calculated for them.`);
+  if (taxOn && !taxNotes.length && !Number(tax.cgstAmount || 0) && !Number(tax.sgstAmount || 0) && !Number(tax.igstAmount || 0) && tax.enabled) taxNotes.push("GST not configured: no tax amount was calculated.");
+  if (taxOn && tax.placeOfSupplyKnown === false) taxNotes.push("Place of supply could not be determined (company or delivery state missing); intra-state split shown.");
+  if (taxOn && tax.pricingNote) taxNotes.push(tax.pricingNote);
+  const notesText = taxNotes.join(" ");
+  const notesH = notesText ? 16 + heightOf(notesText, LEFT_W, "R", 7.6) + 8 : 0;
+
   const leftH =
     (payRows.length ? 16 + payRows.length * 14 + 8 : 0) +
     (taxSummary.length ? 16 + 14 + taxSummary.length * 13 + 8 : 0) +
+    notesH +
     (bankLines.length ? 16 + bankLines.reduce((h, l) => h + heightOf(l, LEFT_W, "R", 8) + 2, 0) + 8 : 0);
   const wordsH = heightOf(wordsText, CONTENT_W, "R", 8) + 10;
   if (y + Math.max(leftH, totalsH) + wordsH > CONTENT_BOTTOM) {
@@ -379,6 +390,12 @@ export async function renderInvoicePdf(invoice, options = {}) {
       ly += 13;
     }
     ly += 8;
+  }
+  if (notesText) {
+    label("Tax notes", M, ly, LEFT_W);
+    ly += 14;
+    put(notesText, M, ly, { width: LEFT_W, size: 7.6, color: "#44403c" });
+    ly += heightOf(notesText, LEFT_W, "R", 7.6) + 8;
   }
   if (bankLines.length) {
     label("Bank details", M, ly, LEFT_W);

@@ -132,7 +132,9 @@ function calculateFlat(order, settings, { hasIncompleteTaxData = false } = {}) {
   // Existing order totals are authoritative and normally already include tax.
   // Tax is separately shown only when a configured rate is used for a new invoice.
   const taxAmount = enabled ? itemTax : num(order.taxAmount);
-  const totalAmount = round2(num(order.subtotal) - num(order.discountAmount) + num(order.shippingAmount) + taxAmount);
+  // Flat path is only reached with GST off, so the order's own total (which
+  // includes any COD fee) is the invoice total.
+  const totalAmount = enabled ? round2(num(order.subtotal) - num(order.discountAmount) + num(order.shippingAmount) + taxAmount) : round2(num(order.totalAmount));
   return {
     items,
     tax: {
@@ -153,17 +155,28 @@ function calculateFlat(order, settings, { hasIncompleteTaxData = false } = {}) {
 }
 
 // Resolves the effective HSN/GST-rate/unit/pricing-mode for an order item:
-// variant override wins, else the parent product's value, else null (no
-// guessing). `complete` is false when the rate cannot be resolved at all.
+// variant override wins, then the parent product, then the admin-configured
+// store default rate (only when it is > 0; a 0 default means "not
+// configured", never a rate). If none applies the rate stays null: a rate is
+// never invented. `rateSource` records where the rate came from.
 function resolveItemTax(item, settings) {
   const product = item.product || null;
   const variant = item.variant || null;
   const hsnCode = (variant?.hsnCode ?? product?.hsnCode) || null;
-  const gstRateRaw = variant?.gstRate ?? product?.gstRate ?? null;
-  const gstRate = gstRateRaw != null ? Number(gstRateRaw) : null;
+  const ownRate = variant?.gstRate ?? product?.gstRate ?? null;
+  const defaultRate = num(settings.defaultTaxRate);
+  let gstRate = null;
+  let rateSource = "none";
+  if (ownRate != null) {
+    gstRate = Number(ownRate);
+    rateSource = "product";
+  } else if (defaultRate > 0) {
+    gstRate = defaultRate;
+    rateSource = "default";
+  }
   const unit = (variant?.unit ?? product?.unit) || null;
   const taxPricingMode = product?.taxPricingMode || settings.defaultTaxPricingMode || "TAX_EXCLUSIVE";
-  return { hsnCode, gstRate, unit, taxPricingMode, complete: gstRate != null };
+  return { hsnCode, gstRate, unit, taxPricingMode, rateSource, complete: gstRate != null };
 }
 
 // Single source of truth for per-line GST math (TAX_INCLUSIVE/EXCLUSIVE,
@@ -180,13 +193,21 @@ export function computeItemTaxLine({ priceAfterDiscount, gstRate, taxPricingMode
   return { taxableValue, taxAmount: taxOnItem, cgstAmount, sgstAmount, igstAmount, lineTotal: round2(taxableValue + taxOnItem) };
 }
 
-// Full per-item GST calculation. Only used once every order item resolves a
-// concrete gstRate (via resolveItemTax) — otherwise calculateFlat is used so
-// behavior stays identical to the pre-existing simplified flow.
-function calculatePerItem(order, settings, resolved) {
+// Full per-item GST calculation. Items without a resolvable rate are NOT
+// taxed and are flagged (gstRate null, hasIncompleteTaxData) so the PDF can
+// say "GST not configured" explicitly instead of silently omitting tax.
+//
+// Storefront checkout never adds tax on top of the price (order.taxAmount is
+// 0), so what the customer paid is authoritative and the price is treated as
+// tax-INCLUSIVE: tax is extracted from the paid price and the invoice total
+// always equals the amount actually charged. A tax-exclusive mode is only
+// honoured if the order itself carries a tax amount on top.
+function calculatePerItem(order, settings, resolved, { autoEnabled = false } = {}) {
+  const placeKnown = Boolean(order.address?.state && settings.state);
   const interState = isInterState(order, settings);
   const subtotal = num(order.subtotal);
   const discountTotal = num(order.discountAmount);
+  const taxChargedOnTop = num(order.taxAmount) > 0;
 
   let allocatedDiscount = 0;
   const items = resolved.map((r, idx) => {
@@ -197,11 +218,9 @@ function calculatePerItem(order, settings, resolved) {
     const discountForItem = isLast ? round2(discountTotal - allocatedDiscount) : round2(discountTotal * share);
     allocatedDiscount = round2(allocatedDiscount + discountForItem);
     const priceAfterDiscount = round2(lineTotal - discountForItem);
+    const mode = taxChargedOnTop ? r.taxPricingMode : "TAX_INCLUSIVE";
 
-    const rate = r.gstRate;
-    const { taxableValue, taxAmount: taxOnItem, cgstAmount, sgstAmount, igstAmount, lineTotal: itemLineTotal } = computeItemTaxLine({ priceAfterDiscount, gstRate: rate, taxPricingMode: r.taxPricingMode, interState });
-
-    return {
+    const base = {
       productName: item.productNameSnapshot,
       sku: item.variantSkuSnapshot || item.bookFormatSkuSnapshot || item.skuSnapshot || null,
       format: item.bookFormatSnapshot || null,
@@ -209,17 +228,14 @@ function calculatePerItem(order, settings, resolved) {
       unitPrice: num(item.unitPrice),
       discountAmount: discountForItem,
       hsnCode: r.hsnCode,
-      gstRate: rate,
       unit: r.unit,
-      taxPricingMode: r.taxPricingMode,
-      taxableValue,
-      taxAmount: taxOnItem,
-      cgstAmount,
-      sgstAmount,
-      igstAmount,
-      lineTotal: round2(taxableValue + taxOnItem),
       orderItemId: item.id,
     };
+    if (!r.complete) {
+      return { ...base, gstRate: null, rateSource: "none", taxPricingMode: mode, taxableValue: priceAfterDiscount, taxAmount: 0, cgstAmount: 0, sgstAmount: 0, igstAmount: 0, lineTotal: priceAfterDiscount, gstNotConfigured: true };
+    }
+    const t = computeItemTaxLine({ priceAfterDiscount, gstRate: r.gstRate, taxPricingMode: mode, interState });
+    return { ...base, gstRate: r.gstRate, rateSource: r.rateSource, taxPricingMode: mode, taxableValue: t.taxableValue, taxAmount: t.taxAmount, cgstAmount: t.cgstAmount, sgstAmount: t.sgstAmount, igstAmount: t.igstAmount, lineTotal: t.lineTotal };
   });
 
   const cgstItemsTotal = round2(items.reduce((sum, i) => sum + i.cgstAmount, 0));
@@ -227,13 +243,13 @@ function calculatePerItem(order, settings, resolved) {
   const igstItemsTotal = round2(items.reduce((sum, i) => sum + i.igstAmount, 0));
 
   const shippingAmount = num(order.shippingAmount);
-  const shippingTaxRate = Boolean(settings.gstEnabled) ? num(settings.shippingTaxRate) : 0;
+  const shippingTaxRate = num(settings.shippingTaxRate);
   let shippingTaxAmount = 0;
   let shippingCgst = 0;
   let shippingSgst = 0;
   let shippingIgst = 0;
   if (shippingTaxRate > 0 && shippingAmount > 0) {
-    shippingTaxAmount = round2((shippingAmount * shippingTaxRate) / 100);
+    shippingTaxAmount = taxChargedOnTop ? round2((shippingAmount * shippingTaxRate) / 100) : round2(shippingAmount - shippingAmount / (1 + shippingTaxRate / 100));
     if (interState) {
       shippingIgst = shippingTaxAmount;
     } else {
@@ -247,16 +263,20 @@ function calculatePerItem(order, settings, resolved) {
   const igstAmount = round2(igstItemsTotal + shippingIgst);
   const taxAmount = round2(cgstAmount + sgstAmount + igstAmount);
 
-  const computedTotal = round2(subtotal - discountTotal + taxAmount + shippingAmount);
+  const codFee = num(order.codFeeAmount);
+  const computedTotal = round2(subtotal - discountTotal + shippingAmount + codFee + (taxChargedOnTop ? taxAmount : 0));
   // Reconcile exactly against the order's authoritative total (rounding is
   // typically 0 or +/-0.01 from per-item round2 accumulation).
   const rounding = round2(num(order.totalAmount) - computedTotal);
   const totalAmount = round2(computedTotal + rounding);
 
+  const unrated = items.filter((i) => i.gstNotConfigured).length;
+  const hasIncompleteTaxData = unrated > 0;
   return {
     items,
     tax: {
       enabled: true,
+      autoEnabledFromProductRates: autoEnabled,
       rate: null, // per-item rates vary; no single flat rate applies
       gstin: settings.gstin || "",
       pan: settings.pan || "",
@@ -268,23 +288,32 @@ function calculatePerItem(order, settings, resolved) {
       shippingTaxRate,
       shippingHsnCode: settings.shippingHsnCode || null,
       shippingTaxAmount,
+      codFeeAmount: codFee,
       rounding,
-      hasIncompleteTaxData: false,
+      pricingNote: taxChargedOnTop ? null : "Prices are tax-inclusive; GST is included in the amount paid.",
+      placeOfSupplyKnown: placeKnown,
+      unratedItemCount: unrated,
+      gstNotConfigured: unrated === items.length,
+      hasIncompleteTaxData,
     },
     totalAmount,
-    hasIncompleteTaxData: false,
+    hasIncompleteTaxData,
   };
 }
 
+// GST applies when the admin switched it on, OR when any line carries a rate
+// configured on its product/variant (a configured rate must never be
+// silently dropped just because the master toggle was left off).
 function calculate(order, settings) {
-  const enabled = Boolean(settings.gstEnabled);
-  if (!enabled) return calculateFlat(order, settings, { hasIncompleteTaxData: false });
-
   const resolved = order.items.map((item) => ({ item, ...resolveItemTax(item, settings) }));
-  const anyIncomplete = resolved.some((r) => !r.complete);
-  if (anyIncomplete) return calculateFlat(order, settings, { hasIncompleteTaxData: true });
+  const hasConfiguredRate = resolved.some((r) => r.rateSource === "product");
+  const enabled = Boolean(settings.gstEnabled) || hasConfiguredRate;
+  if (!enabled) return calculateFlat(order, settings, { hasIncompleteTaxData: false });
+  return calculatePerItem(order, settings, resolved, { autoEnabled: !settings.gstEnabled });
+}
 
-  return calculatePerItem(order, settings, resolved);
+export function calculateInvoiceTax(order, settings) {
+  return calculate(order, settings);
 }
 
 export async function ensureInvoiceForOrder(orderId, { forceCod = false } = {}) {

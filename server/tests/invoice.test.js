@@ -493,9 +493,10 @@ describe("totals/tax calculation correctness", () => {
 
     expect(invoice.taxSnapshot.enabled).toBe(true);
     expect(Number(invoice.taxSnapshot.igstAmount)).toBe(0);
-    expect(Number(invoice.taxSnapshot.cgstAmount)).toBeCloseTo(90, 2);
-    expect(Number(invoice.taxSnapshot.sgstAmount)).toBeCloseTo(90, 2);
-    expect(Number(invoice.taxAmount)).toBeCloseTo(180, 2);
+    // Checkout charges no tax on top, so the 1000 paid is tax-inclusive: 18% GST = 152.54 (76.27 each).
+    expect(Number(invoice.taxSnapshot.cgstAmount)).toBeCloseTo(76.27, 2);
+    expect(Number(invoice.taxSnapshot.sgstAmount)).toBeCloseTo(76.27, 2);
+    expect(Number(invoice.taxAmount)).toBeCloseTo(152.54, 2);
   });
 
   it("applies IGST (no CGST/SGST split) for an inter-state order when GST is enabled", async () => {
@@ -507,8 +508,8 @@ describe("totals/tax calculation correctness", () => {
     expect(invoice.taxSnapshot.enabled).toBe(true);
     expect(Number(invoice.taxSnapshot.cgstAmount)).toBe(0);
     expect(Number(invoice.taxSnapshot.sgstAmount)).toBe(0);
-    expect(Number(invoice.taxSnapshot.igstAmount)).toBeCloseTo(180, 2);
-    expect(Number(invoice.taxAmount)).toBeCloseTo(180, 2);
+    expect(Number(invoice.taxSnapshot.igstAmount)).toBeCloseTo(152.54, 2);
+    expect(Number(invoice.taxAmount)).toBeCloseTo(152.54, 2);
   });
 });
 
