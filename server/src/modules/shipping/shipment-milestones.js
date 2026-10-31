@@ -66,6 +66,8 @@ const ALERTS = {
   DELIVERY_FAILED: { title: "Delivery attempt failed", severity: "WARNING" },
   RTO_INITIATED: { title: "Return to origin started", severity: "WARNING" },
   CANCELLATION_FAILED: { title: "Shipment cancellation failed", severity: "WARNING" },
+  NEEDS_PACKAGE_DETAILS: { title: "Order needs package details", severity: "WARNING" },
+  NO_COURIER_AVAILABLE: { title: "No courier available", severity: "WARNING" },
 };
 
 export async function raiseShipmentAlert(kind, { orderId, orderNumber = null, detail = "" }) {

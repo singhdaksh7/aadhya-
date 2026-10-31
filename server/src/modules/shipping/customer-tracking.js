@@ -1,17 +1,15 @@
 import { customerStatusLabel, milestoneForStatus } from "./shipment-milestones.js";
 
 const HIDDEN = new Set(["PENDING", "CREATING", "FAILED", "CREATION_FAILED"]);
-const safeUrl = (u) => (typeof u === "string" && /^https?:\/\//i.test(u) ? u : null);
 
-// What a customer may know about a shipment: courier, AWB, tracking link, a friendly status and the milestone
-// timeline. Never the provider ids, raw provider status, error text, actor, source or webhook ids.
+// What a customer may know about a shipment: courier, AWB, a friendly status and the milestone timeline. There is
+// deliberately no courier/Shiprocket link: customers follow their order on this website. Never the provider ids, raw provider status, error text, actor, source or webhook ids.
 export function customerTrackingView(shipment) {
   if (!shipment || HIDDEN.has(shipment.status)) return null;
   const events = (shipment.events || []).slice().sort((a, b) => new Date(a.occurredAt) - new Date(b.occurredAt));
   return {
     courier: shipment.carrier || null,
     awb: shipment.awb || shipment.trackingNumber || null,
-    trackingUrl: safeUrl(shipment.trackingUrl),
     status: milestoneForStatus(shipment.status),
     statusLabel: customerStatusLabel(shipment.status),
     estimatedDelivery: shipment.estimatedDelivery || null,

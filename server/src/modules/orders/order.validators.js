@@ -77,10 +77,14 @@ export const createOrderSchema = checkoutItemsSchema.extend({
   ...utmSchema,
 });
 
-export const trackOrderSchema = z.object({
-  orderNumber: z.string().trim().min(1).max(40),
-  email: z.string().trim().toLowerCase().email(),
-});
+// Either the email used at checkout, or the signed token carried by the link in the customer's emails.
+export const trackOrderSchema = z
+  .object({
+    orderNumber: z.string().trim().min(1).max(40),
+    email: z.string().trim().toLowerCase().email().optional(),
+    token: z.string().trim().length(40).optional(),
+  })
+  .refine((v) => v.email || v.token, { message: "Enter the email address used for the order." });
 
 export const confirmationQuerySchema = z.object({
   token: z.string().trim().length(48, "Invalid confirmation token"),

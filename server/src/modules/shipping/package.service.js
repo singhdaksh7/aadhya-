@@ -3,12 +3,20 @@ import { prisma } from "../../lib/prisma.js";
 import { ApiError } from "../../utils/ApiError.js";
 import { validateShippingAddress, isShiprocketConfigured } from "./fulfilment-state.js";
 import { getShippingProvider } from "./provider.service.js";
+import { parseEtd } from "./eta.js";
 import { resolveItemShipping, suggestPackage, validatePackage, classifyConfirmation, volumetricWeightGrams, toShiprocketPackage, DEFAULT_VOLUMETRIC_DIVISOR } from "./package-calc.js";
 
 const mmToCm = (mm) => (mm == null ? null : Number((mm / 10).toFixed(1)));
 const cmToMm = (cm) => Math.round(Number(cm) * 10);
 const gToKg = (g) => (g == null ? null : Number((g / 1000).toFixed(3)));
 const kgToG = (kg) => Math.round(Number(kg) * 1000);
+
+// Lowest freight first; ties go to the earlier estimated delivery. Couriers without a usable rate sort last.
+export function sortByCost(couriers = []) {
+  const rate = (c) => (Number.isFinite(Number(c.rate)) && Number(c.rate) > 0 ? Number(c.rate) : Number.POSITIVE_INFINITY);
+  const days = (c) => (Number.isFinite(Number(c.estimatedDeliveryDays)) ? Number(c.estimatedDeliveryDays) : 99);
+  return [...couriers].sort((a, b) => rate(a) - rate(b) || days(a) - days(b));
+}
 
 export async function getShippingSettings() {
   const row = await prisma.siteSetting.findUnique({ where: { key: "shippingBusiness" } });
@@ -118,7 +126,15 @@ export async function checkOrderServiceability(orderId) {
   if (!/^\d{6}$/.test(deliveryPostcode)) throw ApiError.badRequest("The order's delivery postal code is not a valid 6-digit pincode.");
   const cod = order.paymentMethod === "cod";
   const result = await getShippingProvider("SHIPROCKET").getServiceability({ pickupPostcode, deliveryPostcode, package: toShiprocketPackage(pkg), cod, declaredValue: Number(order.totalAmount), settings });
-  return { cod, pickupPostcode, deliveryPostcode, package: packageView(pkg), ...result, couriers: cod ? result.couriers.filter((c) => c.cod) : result.couriers };
+  const couriers = sortByCost(cod ? result.couriers.filter((c) => c.cod) : result.couriers);
+  return { cod, pickupPostcode, deliveryPostcode, package: packageView(pkg), ...result, couriers, cheapestCourierCompanyId: couriers[0]?.courierCompanyId ?? null };
+}
+
+// Expected delivery date of one courier option for this order's confirmed package (null when unknown).
+export async function etaForCourier(orderId, courierCompanyId) {
+  const r = await checkOrderServiceability(orderId);
+  const c = r.couriers.find((x) => Number(x.courierCompanyId) === Number(courierCompanyId));
+  return parseEtd(c?.etd);
 }
 
 export const presetSchema = z.object({

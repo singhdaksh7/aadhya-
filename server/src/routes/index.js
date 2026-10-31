@@ -36,6 +36,7 @@ import wishlistRouter from "../modules/wishlist/wishlist.routes.js";
 import notificationRouter from "../modules/notifications/notification.routes.js";
 import { publicAnalyticsRouter, adminAnalyticsRouter } from "../modules/analytics/analytics.routes.js";
 import { publicSearchRouter } from "../modules/search/search.routes.js";
+import { publicShippingEstimateRouter } from "../modules/shipping/estimate.routes.js";
 import { adminShippingRouter } from "../modules/shipping/shipping.routes.js";
 import { publicDownloadRouter, customerDownloadRouter, guestDownloadRouter } from "../modules/downloads/download.routes.js";
 import { customerInvoiceRouter, guestInvoiceRouter, adminInvoiceRouter } from "../modules/invoices/invoice.routes.js";
@@ -66,6 +67,7 @@ router.use("/banners", publicBannersRouter);
 router.use("/promos", publicPromosRouter);
 router.use("/search", publicSearchRouter);
 router.use("/analytics", publicAnalyticsRouter);
+router.use("/shipping", publicShippingEstimateRouter);
 
 // Pages APIs: Specific /home route BEFORE parameterized /:slug route!
 router.use("/pages", publicPagesRouter);

@@ -32,7 +32,16 @@ export function buildShipmentPayload(order, settings = {}, confirmedPackage = nu
   const physicalItems = order.items.filter((item) => item.bookFormatSnapshot !== "PDF").map((item) => ({ name: item.productNameSnapshot, sku: item.variantSkuSnapshot || item.bookFormatSkuSnapshot || item.skuSnapshot || null, quantity: item.quantity, sellingPrice: Number(item.unitPrice), discount: 0, tax: 0 }));
   return { idempotencyKey: `${order.id}:standard`, order: { id: order.id, number: order.orderNumber, date: order.createdAt, paymentMethod: order.paymentMethod, codAmount: order.paymentMethod === "cod" ? Number(order.totalAmount) : 0 }, customer: { name: order.customerName, email: order.customerEmail, phone: order.customerPhone, alternatePhone: order.customerAlternatePhone || null }, shippingAddress: order.address, billingAddress: order.billingAddress || order.address, items: physicalItems, package: confirmedPackage ? toShiprocketPackage(confirmedPackage) : (settings.packageDefaults || { weight: 0.5, length: 20, width: 15, height: 10 }), pickup: settings.pickup || null, courierCompanyId: extra.courierCompanyId || null };
 }
+// Customer email once the shipment is booked (AWB known). The notification ledger de-duplicates by order + event,
+// so calling this from several code paths can never send two.
+export async function notifyShipmentBooked(orderId) {
+  try { await notifyOrderEvent(orderId, "ORDER_SHIPMENT_CREATED", { source: "SYSTEM" }); } catch (err) { console.error("Shipment booked email failed:", err.message); }
+}
+
 export async function attemptAutomaticShipment(orderId) {
+  // Single-item orders can be fulfilled end to end (cheapest courier, AWB, pickup) when the owner enables it.
+  const auto = await (await import("./auto-fulfilment.js")).autoFulfilOrder(orderId);
+  if (auto.handled) return prisma.shipment.findUnique({ where: { orderId } });
   const settingsRow = await prisma.siteSetting.findUnique({ where: { key: "shippingBusiness" } }); const settings = settingsRow?.value || {};
   if (!settings.autoCreateShipment) return null;
   const order = await prisma.order.findUnique({ where: { id: orderId }, include: { items: true, address: true, billingAddress: true, shipment: true } });
@@ -99,6 +108,7 @@ export async function generateAwbForShipment(shipmentId, settingsOverride = null
     if (!result.awb) throw new Error("Shiprocket did not return an AWB. Check the courier selection and wallet balance, then retry.");
     const updated = await prisma.shipment.update({ where: { id: shipmentId }, data: { awb: result.awb, carrier: result.carrier || shipment.carrier, trackingNumber: result.awb || shipment.trackingNumber, lastError: null } });
     await recordMilestone(updated, "AWB_ASSIGNED");
+    await notifyShipmentBooked(shipment.orderId);
     return updated;
   } catch (error) {
     const lastError = sanitizeProviderError(error);
