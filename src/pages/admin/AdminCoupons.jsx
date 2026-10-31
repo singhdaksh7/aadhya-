@@ -25,6 +25,9 @@ const emptyForm = {
   usageLimit: "",
   perCustomerLimit: "",
   isActive: true,
+  isPublic: false,
+  displayTitle: "",
+  terms: "",
   targetType: "ALL",
   targetId: "",
 };
@@ -74,6 +77,9 @@ export default function AdminCoupons() {
       usageLimit: c.usageLimit != null ? String(c.usageLimit) : "",
       perCustomerLimit: c.perCustomerLimit != null ? String(c.perCustomerLimit) : "",
       isActive: c.isActive,
+      isPublic: !!c.isPublic,
+      displayTitle: c.displayTitle || "",
+      terms: c.terms || "",
       targetType: firstTarget.targetType || "ALL",
       targetId: firstTarget.targetId || "",
     });
@@ -99,6 +105,9 @@ export default function AdminCoupons() {
       usageLimit: form.usageLimit !== "" ? Number(form.usageLimit) : null,
       perCustomerLimit: form.perCustomerLimit !== "" ? Number(form.perCustomerLimit) : null,
       isActive: form.isActive,
+      isPublic: form.isPublic,
+      displayTitle: form.displayTitle || null,
+      terms: form.terms || null,
       targetType: form.targetType,
       targets,
     };
@@ -342,7 +351,38 @@ export default function AdminCoupons() {
             />
             Active
           </label>
+          <label className="flex items-center gap-2 text-sm text-charcoal">
+            <input
+              type="checkbox"
+              checked={form.isPublic}
+              onChange={(e) => setForm((f) => ({ ...f, isPublic: e.target.checked }))}
+            />
+            Show on public Offers page
+          </label>
         </div>
+
+        {form.isPublic && (
+          <div className="space-y-4 rounded-xl border border-charcoal/10 bg-ivory-dark/40 p-4">
+            <div>
+              <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-charcoal-soft">Display Title (customer-facing)</label>
+              <input
+                placeholder="e.g. Festive 10% off"
+                value={form.displayTitle}
+                onChange={(e) => setForm((f) => ({ ...f, displayTitle: e.target.value }))}
+                className={inputCls}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-charcoal-soft">Terms &amp; Conditions (customer-facing)</label>
+              <textarea
+                placeholder="e.g. Valid on prepaid orders only. Cannot be combined with other offers."
+                value={form.terms}
+                onChange={(e) => setForm((f) => ({ ...f, terms: e.target.value }))}
+                className={inputCls}
+              />
+            </div>
+          </div>
+        )}
 
         {error && <p className="text-sm text-terracotta">{error}</p>}
 
@@ -374,7 +414,10 @@ export default function AdminCoupons() {
             <tbody className="divide-y divide-charcoal/10">
               {coupons.map((c) => (
                 <tr key={c.id}>
-                  <td className="px-4 py-3 font-mono font-bold text-charcoal">{c.code}</td>
+                  <td className="px-4 py-3 font-mono font-bold text-charcoal">
+                    {c.code}
+                    {c.isPublic && <span className="ml-2 rounded-full bg-sage-light px-2 py-0.5 font-sans text-[10px] font-semibold uppercase text-green">Public</span>}
+                  </td>
                   <td className="px-4 py-3 text-charcoal">
                     {c.discountType === "PERCENTAGE" ? `${c.value}%` : `₹${c.value}`}
                     {c.maximumDiscountAmount ? ` (Max ₹${c.maximumDiscountAmount})` : ""}

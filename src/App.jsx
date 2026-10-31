@@ -43,6 +43,8 @@ import AdminProductForm from "./pages/admin/AdminProductForm";
 import AdminCategories from "./pages/admin/AdminCategories";
 import AdminCollections from "./pages/admin/AdminCollections";
 import AdminCoupons from "./pages/admin/AdminCoupons";
+import AdminWhatsNew from "./pages/admin/AdminWhatsNew";
+import OffersPage from "./pages/OffersPage";
 import AdminNavigation from "./pages/admin/AdminNavigation";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminOrderList from "./pages/admin/AdminOrderList";
@@ -143,6 +145,7 @@ function SiteLayout() {
 
                 {/* Informational & Policy Routes */}
                 <Route path="/gifting" element={<GiftingPage />} />
+                <Route path="/offers" element={<OffersPage />} />
                 <Route path="/about" element={<SystemPage slug="about" eyebrow="About" fallbackTitle="About" />} />
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/faq" element={<FAQ />} />
@@ -203,6 +206,7 @@ function AdminRoutes() {
           <Route path="collections" element={<AdminCollections />} />
           <Route path="filters" element={<AdminFilters />} />
           <Route path="coupons" element={<AdminCoupons />} />
+          <Route path="whats-new" element={<AdminWhatsNew />} />
           <Route path="customers" element={<AdminCustomers />} />
           <Route path="customers/:id" element={<AdminCustomers />} />
           <Route path="invoices" element={<AdminInvoices />} />

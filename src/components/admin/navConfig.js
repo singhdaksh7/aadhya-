@@ -39,9 +39,15 @@ export const adminNavGroups = [
           { to: "/admin/invoices/settings", label: "Invoice Settings" },
         ],
       },
-      { to: "/admin/coupons", label: "Coupons" },
       { to: "/admin/customers", label: "Customers" },
       { to: "/admin/reviews", label: "Reviews" },
+    ],
+  },
+  {
+    title: "Marketing",
+    items: [
+      { to: "/admin/coupons", label: "Coupons" },
+      { to: "/admin/whats-new", label: "What's New" },
     ],
   },
   {
@@ -95,6 +101,7 @@ export function pageTitleFromPath(pathname) {
     "/admin/invoices": "Invoices",
     "/admin/invoices/settings": "Invoice Settings",
     "/admin/coupons": "Coupons",
+    "/admin/whats-new": "What's New",
     "/admin/customers": "Customers",
     "/admin/reviews": "Reviews",
     "/admin/homepage-builder": "Homepage Builder",

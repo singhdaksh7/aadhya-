@@ -18,6 +18,9 @@ export const createCouponSchema = z.object({
   usageLimit: z.number().int().min(1).optional().nullable(),
   perCustomerLimit: z.number().int().min(1).optional().nullable(),
   isActive: z.boolean().optional().default(true),
+  isPublic: z.boolean().optional().default(false),
+  displayTitle: z.string().trim().max(150).optional().nullable(),
+  terms: z.string().trim().max(2000).optional().nullable(),
   targets: z.array(couponTargetSchema).optional().default([{ targetType: "ALL" }]),
 });
 

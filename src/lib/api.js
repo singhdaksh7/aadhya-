@@ -341,6 +341,14 @@ export function listPublicActiveCoupons() {
   return api.get("/coupons/active");
 }
 
+// --- Offers & What's New ---
+export function fetchOffers() { return api.get("/offers"); }
+export function fetchWhatsNew() { return api.get("/whats-new"); }
+export function adminListWhatsNew() { return api.get("/admin/whats-new", { auth: "admin" }); }
+export function adminCreateWhatsNew(data) { return api.post("/admin/whats-new", data, { auth: "admin" }); }
+export function adminUpdateWhatsNew(id, data) { return api.patch(`/admin/whats-new/${id}`, data, { auth: "admin" }); }
+export function adminDeleteWhatsNew(id) { return api.delete(`/admin/whats-new/${id}`, { auth: "admin" }); }
+
 // --- Checkout / orders / payments ---
 export function checkoutPreview(payload) {
   const data = Array.isArray(payload) ? { items: payload } : payload;
