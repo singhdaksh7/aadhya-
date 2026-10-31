@@ -190,7 +190,7 @@ export default function Footer() {
               </h4>
               <ul className="space-y-2.5 text-xs text-[#FAF6F0]/80">
                 {col.links?.map((link, idx) => {
-                  const to = link.url || (link.type === "CMS_PAGE" ? `/pages/${link.targetId}` : link.type === "CATEGORY" ? `/shop/category/${link.targetId}` : link.type === "COLLECTION" ? `/collections/${link.targetId}` : "#");
+                  const to = link.url || (link.type === "GIFTING" ? "/gifting" : link.type === "CMS_PAGE" ? `/pages/${link.targetId}` : link.type === "CATEGORY" ? `/shop/category/${link.targetId}` : link.type === "COLLECTION" ? `/collections/${link.targetId}` : "#");
                   return (
                     <li key={idx}>
                       {isExternalUrl(to) ? (

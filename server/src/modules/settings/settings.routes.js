@@ -125,6 +125,7 @@ export const DEFAULT_SETTINGS = {
         sortOrder: 3,
         links: [
           { label: "About Tushaqsa", type: "CUSTOM_URL", url: "/about" },
+          { label: "Artisan Gifting", type: "GIFTING", url: "/gifting" },
           { label: "Featured Collections", type: "CUSTOM_URL", url: "/collections" },
           { label: "Privacy Policy", type: "CUSTOM_URL", url: "/privacy" },
           { label: "Terms of Service", type: "CUSTOM_URL", url: "/terms" },
@@ -281,7 +282,7 @@ const secondaryRowSchema = z.object({
   })).max(12).optional(),
 }).optional();
 
-const NAV_DESTINATION_TYPES = ["CATEGORY", "COLLECTION", "PAGE", "BOOKS", "NEW_ARRIVALS", "CUSTOM_URL"];
+const NAV_DESTINATION_TYPES = ["CATEGORY", "COLLECTION", "PAGE", "GIFTING", "BOOKS", "NEW_ARRIVALS", "CUSTOM_URL"];
 
 // The Header CMS owns the whole `header` key. `.passthrough()` is kept only for the
 // legacy flat keys written by older admin builds; every key the current admin UI saves
@@ -413,7 +414,7 @@ export const headerSettingsSchema = z.object({
       // Upper-case values are canonical; lower-case/legacy values are still accepted.
       destinationType: z.enum([
         ...NAV_DESTINATION_TYPES,
-        "category", "collection", "page", "custom", "external", "new", "books", "search",
+        "category", "collection", "page", "gifting", "custom", "external", "new", "books", "search",
       ]).optional(),
       destination: safeUrl().optional(),
       categoryId: z.string().max(100).nullable().optional(),
@@ -662,7 +663,7 @@ export const settingsValidationSchema = z.object({
       sortOrder: z.number().optional(),
       links: z.array(z.object({
         label: z.string().max(100),
-        type: z.enum(["CMS_PAGE", "CATEGORY", "COLLECTION", "CUSTOM_URL"]),
+        type: z.enum(["CMS_PAGE", "CATEGORY", "COLLECTION", "GIFTING", "CUSTOM_URL"]),
         url: z.string().max(500).optional(),
         targetId: z.string().optional(),
       })).max(30),
@@ -840,7 +841,7 @@ async function getMergedSettings() {
 export const publicSettingsRouter = Router();
 // Keys stored in SiteSetting that must never be served to anonymous visitors (invoice settings
 // hold the seller GSTIN/PAN, address and bank details).
-export const PRIVATE_SETTING_KEYS = ["invoice", "adminNotifications"];
+export const PRIVATE_SETTING_KEYS = ["invoice", "adminNotifications", "promoPopup"];
 export function toPublicSettings(settings) {
   const pub = { ...settings };
   for (const key of PRIVATE_SETTING_KEYS) delete pub[key];
@@ -867,7 +868,11 @@ adminSettingsRouter.put("/", asyncHandler(async (req, res) => {
     return res.status(400).json({ error: "Cannot modify system environment secrets via API." });
   }
 
-  const parseResult = settingsValidationSchema.safeParse(req.body);
+  // The promo popup has its own validated endpoint (/api/admin/popup). Admin clients may echo the
+  // whole settings object back, so ignore (never persist) a promoPopup key rather than failing the save.
+  const { promoPopup: _ignoredPromoPopup, ...settingsBody } = req.body || {};
+
+  const parseResult = settingsValidationSchema.safeParse(settingsBody);
   if (!parseResult.success) {
     console.error("Settings validation error:", JSON.stringify(parseResult.error.format(), null, 2));
     const firstErr = parseResult.error.errors[0];

@@ -585,6 +585,10 @@ export function adminUpdateBanner(id, data) { return api.put(`/admin/banners/${i
 export function adminDeleteBanner(id) { return api.delete(`/admin/banners/${id}`, { auth: "admin" }); }
 
 export function fetchPromos() { return api.get("/promos"); }
+// Promotional popup (SiteSetting "promoPopup"): public read is null unless enabled and inside its date window.
+export function fetchPromoPopup() { return api.get("/popup"); }
+export function adminGetPromoPopup() { return api.get("/admin/popup", { auth: "admin" }); }
+export function adminUpdatePromoPopup(data) { return api.put("/admin/popup", data, { auth: "admin" }); }
 export function adminListPromos() { return api.get("/admin/promos", { auth: "admin" }); }
 export function adminFetchPromos() { return adminListPromos(); }
 export function adminCreatePromo(data) { return api.post("/admin/promos", data, { auth: "admin" }); }

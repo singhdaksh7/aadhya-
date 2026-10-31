@@ -54,6 +54,8 @@ import AdminReturnDetail from "./pages/admin/AdminReturnDetail";
 import AdminHomepageBuilder from "./pages/admin/AdminHomepageBuilder";
 import AdminBanners from "./pages/admin/AdminBanners";
 import AdminPromos from "./pages/admin/AdminPromos";
+import AdminPopup from "./pages/admin/AdminPopup";
+import PromoPopup from "./components/PromoPopup";
 import AdminReviews from "./pages/admin/AdminReviews";
 import AdminFilters from "./pages/admin/AdminFilters";
 
@@ -172,6 +174,7 @@ function SiteLayout() {
           </div>
           <CartDrawer />
           <BrochureModal />
+          <PromoPopup />
         </BrochureProvider>
       </WishlistProvider>
     </CartProvider>
@@ -197,6 +200,7 @@ function AdminRoutes() {
           <Route path="storefront/header" element={<AdminHeaderSettings />} />
           <Route path="banners" element={<AdminBanners />} />
           <Route path="promos" element={<AdminPromos />} />
+          <Route path="popup" element={<AdminPopup />} />
           <Route path="products" element={<AdminProductList />} />
           <Route path="products/new" element={<AdminProductForm />} />
           <Route path="products/:id" element={<AdminProductForm />} />
