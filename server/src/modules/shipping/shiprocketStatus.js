@@ -10,14 +10,17 @@
 //   event           an extra customer email that is not an order-status change, or null
 //   label           human label for logs/Admin
 //
-// Status ids below are the commonly documented Shiprocket shipment status ids. They could not be
-// re-verified against Shiprocket's own (browser-rendered) docs from this environment, which is exactly why
-// unknown ids are harmless and why the first real webhook should be checked against this table.
+// VERIFICATION STATUS: Shiprocket's official API docs are browser-rendered and could not be read by tooling, so
+// these ids are NOT confirmed against the current docs. Treat the table as provisional until the first real
+// webhooks are compared with it (Admin -> Integrations shows the last event). Unknown ids/texts are recorded
+// and change nothing; no email or alert is triggered by an unmapped status.
+//
+// Extra fields: milestone (overrides the milestone derived from shipmentStatus), alert (Admin alert kind).
 
-const S = (label, shipmentStatus, orderStatus = null, event = null) => ({ known: true, label, shipmentStatus, orderStatus, event });
+const S = (label, shipmentStatus, orderStatus = null, event = null, extra = {}) => ({ known: true, label, shipmentStatus, orderStatus, event, ...extra });
 
 export const SHIPROCKET_BY_ID = {
-  1: S("AWB assigned", "CREATED"),
+  1: S("AWB assigned", "CREATED", null, null, { milestone: "AWB_ASSIGNED" }),
   2: S("Label generated", "CREATED"),
   3: S("Pickup scheduled", "PICKUP_SCHEDULED"),
   4: S("Pickup queued", "PICKUP_SCHEDULED"),
@@ -29,14 +32,14 @@ export const SHIPROCKET_BY_ID = {
   10: S("RTO delivered", "RTO_DELIVERED"),
   11: S("Pending", null),
   12: S("Lost", null),
-  13: S("Pickup error", null),
+  13: S("Pickup error", null, null, null, { alert: "PICKUP_FAILED" }),
   14: S("RTO acknowledged", "RTO"),
   15: S("Pickup rescheduled", "PICKUP_SCHEDULED"),
   16: S("Cancellation requested", null),
   17: S("Out for delivery", "OUT_FOR_DELIVERY", "OUT_FOR_DELIVERY"),
   18: S("In transit", "IN_TRANSIT", "SHIPPED", "ORDER_IN_TRANSIT"),
   19: S("Out for pickup", "PICKUP_SCHEDULED"),
-  20: S("Pickup exception", null),
+  20: S("Pickup exception", null, null, null, { alert: "PICKUP_FAILED" }),
   21: S("Undelivered", "FAILED_ATTEMPT", null, "ORDER_UNDELIVERED"),
   22: S("Delayed", null),
   23: S("Partial delivered", null),

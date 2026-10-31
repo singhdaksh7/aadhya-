@@ -13,7 +13,10 @@ import { notifyOrderEvent, notifyOrderStatus } from "../mailer/mailer.service.js
 import { ensureAccountForOrder } from "../customer-auth/guest-account.service.js";
 import { getShippingProvider } from "../shipping/provider.service.js";
 import { requireConfirmedPackage, lockOrderPackage } from "../shipping/package.service.js";
-import { attemptAutomaticShipment, buildShipmentPayload, assertPickupConfigured, generateAwbForShipment, schedulePickupForShipment, getLabelForShipment, refreshTrackingForShipment, sanitizeProviderError } from "../shipping/fulfilment.service.js";
+import { getFulfilmentState, validateShippingAddress, isShiprocketConfigured } from "../shipping/fulfilment-state.js";
+import { toCustomerOrder } from "../shipping/customer-tracking.js";
+import { recordMilestone, raiseShipmentAlert } from "../shipping/shipment-milestones.js";
+import { cancelShipmentForOrder, attemptAutomaticShipment, buildShipmentPayload, assertPickupConfigured, generateAwbForShipment, schedulePickupForShipment, getLabelForShipment, refreshTrackingForShipment, sanitizeProviderError } from "../shipping/fulfilment.service.js";
 
 const ADMIN_INCLUDE = {
   items: true,
@@ -21,7 +24,7 @@ const ADMIN_INCLUDE = {
   billingAddress: true,
   payments: { orderBy: { createdAt: "desc" } },
   statusHistory: { orderBy: { changedAt: "asc" } },
-  shipment: true,
+  shipment: { include: { events: { orderBy: { occurredAt: "asc" } } } },
   invoice: true,
 };
 
@@ -324,7 +327,7 @@ export async function getOrderForConfirmation(orderNumber, token) {
     throw ApiError.notFound("Order not found");
   }
 
-  return sanitizeOrder(order);
+  return toCustomerOrder(order);
 }
 
 export async function trackOrder({ orderNumber, email }) {
@@ -339,7 +342,7 @@ export async function trackOrder({ orderNumber, email }) {
     throw ApiError.notFound("No matching order was found. Check your order number and email and try again.");
   }
 
-  return sanitizeOrder(order);
+  return toCustomerOrder(order);
 }
 
 export async function listAdminOrders({ page, limit, status, paymentStatus, search }) {
@@ -384,7 +387,7 @@ export async function listAdminOrders({ page, limit, status, paymentStatus, sear
 export async function getAdminOrderById(id) {
   const order = await prisma.order.findUnique({ where: { id }, include: ADMIN_INCLUDE });
   if (!order) throw ApiError.notFound("Order not found");
-  return sanitizeOrder(order);
+  return { ...sanitizeOrder(order), fulfilment: await getFulfilmentState(id) };
 }
 
 // THE single place an order's status changes, whoever asks: Admin clicking a status, the courier
@@ -523,19 +526,30 @@ export async function createOrderShipment(orderId, data) {
   // Validation happens before the try block so a refusal never marks an existing shipment FAILED.
   let input = data;
   if (providerName === "SHIPROCKET") {
-    if (order.shipment?.providerShipmentId) throw ApiError.badRequest("A provider shipment already exists for this order.");
+    if (order.shipment?.providerShipmentId && order.shipment.status !== "CANCELLED") throw ApiError.badRequest("A provider shipment already exists for this order.");
+    const addressProblems = validateShippingAddress(order.address);
+    if (addressProblems.length) throw ApiError.badRequest(addressProblems[0]);
+    if (!(await isShiprocketConfigured())) throw ApiError.badRequest("Shiprocket API credentials are not configured (Admin → Integrations).");
     const confirmed = await requireConfirmedPackage(orderId);
+    if (order.shipment?.status === "CANCELLED") {
+      // Re-shipping after a confirmed cancellation: start a clean timeline for the new shipment.
+      await prisma.shipmentEvent.deleteMany({ where: { shipmentId: order.shipment.id } });
+      await prisma.orderShipmentPackage.updateMany({ where: { orderId }, data: { lockedAt: null } });
+    }
     input = buildShipmentPayload(order, settings, confirmed, { courierCompanyId: data.courierCompanyId });
   }
   try {
     const result = await getShippingProvider(providerName).createShipment({ order, input, settings });
     if (providerName === "SHIPROCKET") await lockOrderPackage(orderId);
     let shipment = await prisma.shipment.upsert({ where: { orderId }, create: { orderId, ...result, shippedDate: data.shippedDate || null }, update: { ...result, shippedDate: data.shippedDate || undefined, lastError: null } });
+    await recordMilestone(shipment, "CREATED");
+    if (shipment.awb) await recordMilestone(shipment, "AWB_ASSIGNED");
     if (settings.autoGenerateAwb && shipment.providerShipmentId && !shipment.awb) shipment = await generateAwbForShipment(shipment.id, settings).catch(() => shipment);
     if (settings.autoSchedulePickup && shipment.awb) shipment = await schedulePickupForShipment(shipment.id, settings).catch(() => shipment);
     return shipment;
   } catch (error) {
     await prisma.shipment.upsert({ where: { orderId }, create: { orderId, provider: providerName, status: "FAILED", lastError: sanitizeProviderError(error) }, update: { status: "FAILED", lastError: sanitizeProviderError(error) } });
+    if (providerName === "SHIPROCKET") await raiseShipmentAlert("SHIPMENT_CREATION_FAILED", { orderId, orderNumber: order.orderNumber, detail: sanitizeProviderError(error) });
     throw error;
   }
 }
@@ -546,8 +560,8 @@ async function shipmentIdForOrder(orderId) {
   return shipment.id;
 }
 
-export async function generateOrderShipmentAwb(orderId) {
-  return generateAwbForShipment(await shipmentIdForOrder(orderId));
+export async function generateOrderShipmentAwb(orderId, courierCompanyId = null) {
+  return generateAwbForShipment(await shipmentIdForOrder(orderId), null, { courierCompanyId });
 }
 
 export async function scheduleOrderShipmentPickup(orderId) {
@@ -561,3 +575,5 @@ export async function getOrderShipmentLabel(orderId) {
 export async function refreshOrderShipmentTracking(orderId) {
   return refreshTrackingForShipment(await shipmentIdForOrder(orderId));
 }
+
+export const cancelOrderShipment = (orderId) => cancelShipmentForOrder(orderId);

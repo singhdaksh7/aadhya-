@@ -120,6 +120,8 @@ export async function handleShipmentStatusWebhook(req, res) {
       shipmentStatus: status.shipmentStatus,
       orderStatus: status.orderStatus,
       event: status.event,
+      milestone: status.milestone || null,
+      alert: status.alert || null,
       rawStatus: payload.current_status || payload.shipment_status || status.label,
       trackingNumber: payload.awb ? String(payload.awb) : undefined,
       estimatedDelivery: payload.etd && !Number.isNaN(Date.parse(payload.etd)) ? new Date(payload.etd) : undefined,

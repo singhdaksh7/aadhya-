@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { prisma } from "../../lib/prisma.js";
 import { ApiError } from "../../utils/ApiError.js";
+import { validateShippingAddress, isShiprocketConfigured } from "./fulfilment-state.js";
 import { getShippingProvider } from "./provider.service.js";
 import { resolveItemShipping, suggestPackage, validatePackage, classifyConfirmation, volumetricWeightGrams, toShiprocketPackage, DEFAULT_VOLUMETRIC_DIVISOR } from "./package-calc.js";
 
@@ -107,6 +108,9 @@ export async function checkOrderServiceability(orderId) {
   const settings = await getShippingSettings();
   const providerName = settings.provider || "MANUAL";
   if (providerName !== "SHIPROCKET") throw ApiError.badRequest("Courier serviceability requires the Shiprocket provider to be enabled in Shipping Settings.");
+  const addressProblems = validateShippingAddress(order.address);
+  if (addressProblems.length) throw ApiError.badRequest(addressProblems[0]);
+  if (!(await isShiprocketConfigured())) throw ApiError.badRequest("Shiprocket API credentials are not configured (Admin → Integrations).");
   const pkg = await requireConfirmedPackage(orderId);
   const pickupPostcode = String(settings.pickup?.postalCode || "").trim();
   const deliveryPostcode = String(order.address?.postalCode || "").trim();

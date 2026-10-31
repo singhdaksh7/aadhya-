@@ -6,6 +6,8 @@ import { asyncHandler } from "../../utils/asyncHandler.js";
 import { ok, created } from "../../utils/apiResponse.js";
 import { zoneSchema, zoneUpdateSchema, rateSchema, rateUpdateSchema } from "./shipping.validators.js";
 import * as shippingService from "./shipping.service.js";
+import { getShippingProvider } from "./provider.service.js";
+import { isShiprocketConfigured } from "./fulfilment-state.js";
 import { presetSchema, listPresets, createPreset, updatePreset, deletePreset } from "./package.service.js";
 
 export const adminShippingRouter = Router();
@@ -90,3 +92,33 @@ adminShippingRouter.get("/package-presets", asyncHandler(async (_req, res) => ok
 adminShippingRouter.post("/package-presets", asyncHandler(async (req, res) => created(res, await createPreset(presetSchema.parse(req.body)))));
 adminShippingRouter.patch("/package-presets/:id", asyncHandler(async (req, res) => ok(res, await updatePreset(req.params.id, presetSchema.parse(req.body)))));
 adminShippingRouter.delete("/package-presets/:id", asyncHandler(async (req, res) => { await deletePreset(req.params.id); ok(res, { deleted: true }); }));
+
+// --- Shiprocket operational visibility (read-only; never returns credentials) ---
+adminShippingRouter.get("/shiprocket/overview", requireRole("SUPER_ADMIN"), asyncHandler(async (_req, res) => {
+  const [business, diag, configured] = await Promise.all([
+    prisma.siteSetting.findUnique({ where: { key: "shippingBusiness" } }),
+    prisma.siteSetting.findUnique({ where: { key: "shiprocketDiagnostics" } }),
+    isShiprocketConfigured(),
+  ]);
+  const settings = business?.value || {};
+  const d = diag?.value || {};
+  const pickup = settings.pickup || {};
+  ok(res, {
+    enabled: (settings.provider || "MANUAL") === "SHIPROCKET",
+    provider: settings.provider || "MANUAL",
+    environment: settings.environment || "TEST",
+    credentialsConfigured: configured,
+    connection: { lastSuccessfulAuthAt: d.lastAuthAt || null, status: !configured ? "NOT_CONFIGURED" : d.lastAuthOk ? "OK" : "UNKNOWN" },
+    pickup: { nickname: pickup.location || null, city: pickup.city || null, pincode: pickup.postalCode || null, complete: ["location", "name", "phone", "address", "city", "state", "postalCode"].every((k) => String(pickup[k] || "").trim()) },
+    automation: { autoCreateShipment: !!settings.autoCreateShipment, autoGenerateAwb: !!settings.autoGenerateAwb, autoSchedulePickup: !!settings.autoSchedulePickup },
+    diagnostics: { lastError: d.lastError || null, lastServiceability: d.lastServiceability || null },
+  });
+}));
+
+adminShippingRouter.get("/shiprocket/pickup-locations", requireRole("SUPER_ADMIN"), asyncHandler(async (_req, res) => {
+  const row = await prisma.siteSetting.findUnique({ where: { key: "shippingBusiness" } });
+  const settings = row?.value || {};
+  const locations = await getShippingProvider("SHIPROCKET").getPickupLocations({ settings });
+  const configured = String(settings.pickup?.location || "").trim();
+  ok(res, { locations, configuredNickname: configured || null, configuredFound: !!configured && locations.some((l) => l.nickname === configured) });
+}));
