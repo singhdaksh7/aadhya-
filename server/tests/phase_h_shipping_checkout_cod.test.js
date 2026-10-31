@@ -80,23 +80,26 @@ describe("shipping zone/rate calculation", () => {
     void stateZone;
   });
 
-  it("applies a zone's flat rate when subtotal is below its freeAbove threshold", async () => {
+  it("the store-wide shipping settings are final: a zone's own rate/threshold never overrides them", async () => {
     const zone = await prisma.shippingZone.create({
       data: { name: "North Zone", states: ["Delhi"], postalCodes: [] },
     });
+    // Same shape as the live store: a zone rate of 150 that is free only above 2499.
     await prisma.shippingRate.create({
-      data: { zoneId: zone.id, rate: 120, freeAbove: 3000, deliveryEstimate: "4-6 days" },
+      data: { zoneId: zone.id, rate: 150, freeAbove: 2499, deliveryEstimate: "4-6 days" },
     });
-
-    const settings = { shippingEnabled: true, freeShippingThreshold: 2000, standardShippingAmount: 99, deliveryEstimate: "default" };
+    const settings = { shippingEnabled: true, freeShippingThreshold: 1099, standardShippingAmount: 150, deliveryEstimate: "default" };
     const fullZone = await prisma.shippingZone.findUnique({ where: { id: zone.id }, include: { rates: true } });
 
-    const below = computeShippingAmount(1000, settings, fullZone);
-    expect(below.amount).toBe(120);
-    expect(below.deliveryEstimate).toBe("4-6 days");
-
-    const above = computeShippingAmount(3500, settings, fullZone);
-    expect(above.amount).toBe(0);
+    expect(computeShippingAmount(1499, settings, fullZone).amount).toBe(0); // the reported case: 1499 >= 1099 -> free
+    expect(computeShippingAmount(1099, settings, fullZone).amount).toBe(0); // exactly at the minimum -> free
+    expect(computeShippingAmount(1098.99, settings, fullZone).amount).toBe(150); // just below -> standard fee from settings
+    expect(computeShippingAmount(249, settings, fullZone).amount).toBe(150);
+    expect(computeShippingAmount(1000, { ...settings, standardShippingAmount: 90 }, fullZone).amount).toBe(90); // fee comes from settings
+    expect(computeShippingAmount(1000, settings, fullZone).deliveryEstimate).toBe("4-6 days"); // zone still supplies the delivery estimate
+    expect(computeShippingAmount(1000, settings, null).deliveryEstimate).toBe("default");
+    expect(computeShippingAmount(5000, { ...settings, shippingEnabled: false }, fullZone).amount).toBe(0);
+    expect(computeShippingAmount(0, settings, fullZone).amount).toBe(0);
   });
 
   it("falls back to the flat settings-driven fee when no zone matches", () => {

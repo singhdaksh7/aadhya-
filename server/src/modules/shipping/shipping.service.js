@@ -70,21 +70,19 @@ function pickRate(zone, subtotal) {
   return applicable || zone.rates[0];
 }
 
-// Server-authoritative shipping computation. `zone` may be null (no zone
-// configured/matched) in which case the flat settings-driven fee applies.
+// Server-authoritative shipping computation. The store-wide Shipping settings (Admin -> Settings: free shipping
+// minimum + standard shipping fee) are FINAL: at or above the minimum shipping is free, below it the standard fee
+// applies. Zone rates no longer change the price (a stale zone threshold used to silently override the setting,
+// charging shipping on orders the storefront had promised free delivery for); a matching zone still supplies its
+// own delivery-time estimate.
 export function computeShippingAmount(subtotal, settings, zone) {
   if (!settings.shippingEnabled) return { amount: 0, deliveryEstimate: settings.deliveryEstimate };
-  if (subtotal <= 0) return { amount: 0, deliveryEstimate: settings.deliveryEstimate };
-
   const rate = pickRate(zone, subtotal);
-  if (rate) {
-    const freeAbove = rate.freeAbove != null ? Number(rate.freeAbove) : null;
-    const amount = freeAbove != null && subtotal >= freeAbove ? 0 : round2(Number(rate.rate));
-    return { amount, deliveryEstimate: rate.deliveryEstimate || settings.deliveryEstimate };
-  }
-
-  const amount = subtotal >= settings.freeShippingThreshold ? 0 : round2(settings.standardShippingAmount);
-  return { amount, deliveryEstimate: settings.deliveryEstimate };
+  const deliveryEstimate = rate?.deliveryEstimate || settings.deliveryEstimate;
+  if (subtotal <= 0) return { amount: 0, deliveryEstimate };
+  const threshold = Number(settings.freeShippingThreshold);
+  const free = Number.isFinite(threshold) && subtotal >= threshold;
+  return { amount: free ? 0 : round2(settings.standardShippingAmount), deliveryEstimate };
 }
 
 // Server-authoritative COD eligibility. Every reason for rejection is
