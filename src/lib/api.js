@@ -251,6 +251,10 @@ export function adminReorderImages(productId, order) {
 export function fetchBookFormats(productId) {
   return api.get(`/products/${productId}/book-formats`);
 }
+export function adminListVariants(productId) { return api.get(`/admin/products/${productId}/variants`, { auth: "admin" }); }
+export function adminCreateVariant(productId, data) { return api.post(`/admin/products/${productId}/variants`, data, { auth: "admin" }); }
+export function adminUpdateVariant(productId, variantId, data) { return api.patch(`/admin/products/${productId}/variants/${variantId}`, data, { auth: "admin" }); }
+export function adminDeleteVariant(productId, variantId) { return api.delete(`/admin/products/${productId}/variants/${variantId}`, { auth: "admin" }); }
 export function adminListBookFormats(productId) {
   return api.get(`/admin/products/${productId}/book-formats`, { auth: "admin" });
 }

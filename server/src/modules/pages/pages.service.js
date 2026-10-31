@@ -152,15 +152,17 @@ const DEFAULT_HOMEPAGE_SECTIONS = [
   { type: "BEST_SELLERS", name: "Best Sellers Grid", sortOrder: 7, settings: DEFAULT_HOMEPAGE_CONTENT.BEST_SELLERS },
   { type: "FEATURED_COLLECTION", name: "Featured Editorial Collection", sortOrder: 8, settings: DEFAULT_HOMEPAGE_CONTENT.FEATURED_COLLECTION },
   { type: "SHOP_THE_LOOK", name: "Shop the Look / Lifestyle Edit", sortOrder: 9, settings: DEFAULT_HOMEPAGE_CONTENT.SHOP_THE_LOOK },
-  { type: "BOOKS_SHELF", name: "From Our Bookshelf", sortOrder: 10, settings: DEFAULT_HOMEPAGE_CONTENT.BOOKS_SHELF },
-  { type: "EDITORIAL_BRAND", name: "Artisan Craftsmanship Brand Section", sortOrder: 11, settings: DEFAULT_HOMEPAGE_CONTENT.EDITORIAL_BRAND },
-  { type: "NEWSLETTER", name: "Newsletter Subscription Section", sortOrder: 12, settings: DEFAULT_HOMEPAGE_CONTENT.NEWSLETTER },
+  { type: "EXPLORE_MORE", name: "Explore More", sortOrder: 10, settings: DEFAULT_HOMEPAGE_CONTENT.EXPLORE_MORE },
+  { type: "BOOKS_SHELF", name: "From Our Bookshelf", sortOrder: 11, settings: DEFAULT_HOMEPAGE_CONTENT.BOOKS_SHELF },
+  { type: "EDITORIAL_BRAND", name: "Artisan Craftsmanship Brand Section", sortOrder: 12, settings: DEFAULT_HOMEPAGE_CONTENT.EDITORIAL_BRAND },
+  { type: "NEWSLETTER", name: "Newsletter Subscription Section", sortOrder: 13, settings: DEFAULT_HOMEPAGE_CONTENT.NEWSLETTER },
 ];
 
 // Data-driven sections older homepages were created without. They render nothing until real
 // approved reviews / published posts exist, so adding them is safe. Added at most once per type
 // (an admin who dislikes one should disable it rather than delete it).
 const SUPPLEMENTAL_SECTIONS = [
+  { type: "EXPLORE_MORE", name: "Explore More", before: ["BOOKS_SHELF", "EDITORIAL_BRAND", "NEWSLETTER"] },
   { type: "TESTIMONIALS", name: "Customer Reviews", before: ["NEWSLETTER"] },
   { type: "BLOG_PREVIEW", name: "Stories from Tushaqsa", before: ["NEWSLETTER"] },
 ];

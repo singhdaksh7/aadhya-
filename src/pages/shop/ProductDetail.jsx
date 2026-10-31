@@ -59,7 +59,6 @@ export default function ProductDetail() {
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [quantity, setQuantity] = useState(1);
-  const [activeTab, setActiveTab] = useState("story");
   const [isLoading, setIsLoading] = useState(true);
   const [addedNotice, setAddedNotice] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
@@ -83,7 +82,6 @@ export default function ProductDetail() {
       setIsLoading(true);
       setActiveImageIdx(0);
       setQuantity(1);
-      setActiveTab("story");
 
       const res = await getProductBySlug(slug);
       if (!active) return;
@@ -138,7 +136,7 @@ export default function ProductDetail() {
   if (isLoading) {
     return (
       <div className="store-bg min-h-screen py-16">
-        <div className="mx-auto max-w-6xl px-5 sm:px-8">
+        <div className="mx-auto w-full max-w-7xl px-4 sm:px-8">
           <PDPSkeleton />
         </div>
       </div>
@@ -261,9 +259,9 @@ export default function ProductDetail() {
       <link rel="canonical" href={pdpUrl} />
       <script type="application/ld+json" {...jsonLdProps(productJsonLd)} />
       <script type="application/ld+json" {...jsonLdProps(breadcrumbJsonLd)} />
-      <div className="mx-auto max-w-6xl px-4 sm:px-8 space-y-12">
+      <div className="mx-auto w-full max-w-7xl px-4 sm:px-8 space-y-10 lg:space-y-14" data-testid="pdp-container">
         {/* Breadcrumb Header */}
-        <nav className="flex items-center gap-2 text-xs store-muted">
+        <nav aria-label="Breadcrumb" className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs store-muted">
           <Link to="/" className="hover:text-[var(--theme-primary)]">Home</Link>
           <span>/</span>
           <Link to="/shop" className="hover:text-[var(--theme-primary)]">Shop</Link>
@@ -272,18 +270,18 @@ export default function ProductDetail() {
             {product.category}
           </Link>
           <span>/</span>
-          <span className="store-text font-medium truncate">{product.name}</span>
+          <span className="store-text font-medium truncate max-w-full" aria-current="page">{product.name}</span>
         </nav>
 
         {/* Main PDP Grid */}
-        <div className="grid gap-12 lg:grid-cols-12 items-start">
+        <div className="grid gap-8 lg:grid-cols-2 lg:gap-14 items-start" data-testid="pdp-hero">
           {/* Gallery Column (7 cols) */}
-          <div className="min-w-0 lg:col-span-7 space-y-4">
-            <div className="relative aspect-square w-full overflow-hidden rounded-2xl border border-[var(--theme-border)] store-surface shadow-xs">
+          <div className="mx-auto w-full min-w-0 max-w-xl space-y-4 lg:sticky lg:top-24 lg:max-w-none">
+            <div data-testid="pdp-gallery-main" className="relative aspect-square w-full overflow-hidden rounded-xl store-surface">
               <img
                 src={images[activeImageIdx]}
                 alt={product.name}
-                className="h-full w-full object-cover transition-all duration-500"
+                className="h-full w-full object-contain transition-opacity duration-300"
               />
               {onSale && (
                 <span className="absolute top-4 left-4 rounded-full store-bg-primary px-3 py-1 text-xs font-bold uppercase tracking-wider text-white shadow-xs">
@@ -304,11 +302,13 @@ export default function ProductDetail() {
                   <button
                     key={idx}
                     onClick={() => setActiveImageIdx(idx)}
-                    className={`h-20 w-20 shrink-0 overflow-hidden rounded-xl border-2 transition ${
-                      idx === activeImageIdx ? "border-[var(--theme-primary)] scale-95" : "border-transparent opacity-70 hover:opacity-100"
+                    aria-label={`View image ${idx + 1}`}
+                    aria-current={idx === activeImageIdx}
+                    className={`h-16 w-16 sm:h-20 sm:w-20 shrink-0 overflow-hidden rounded-lg border-2 store-surface transition ${
+                      idx === activeImageIdx ? "border-[var(--theme-primary)]" : "border-transparent opacity-70 hover:opacity-100"
                     }`}
                   >
-                    <img src={img} alt="" className="h-full w-full object-cover" />
+                    <img src={img} alt="" className="h-full w-full object-contain" />
                   </button>
                 ))}
               </div>
@@ -316,7 +316,7 @@ export default function ProductDetail() {
           </div>
 
           {/* Product Purchase Column (5 cols) */}
-          <div className="lg:col-span-5 space-y-6">
+          <div className="min-w-0 space-y-6" data-testid="pdp-info">
             <div className="space-y-2 border-b border-[var(--theme-border)] pb-6">
               <div className="flex items-center justify-between gap-4">
                 <span className="text-xs font-semibold uppercase tracking-widest store-primary">
@@ -335,16 +335,22 @@ export default function ProductDetail() {
                   </svg>
                 </button>
               </div>
-              <h1 className="font-serif-display text-3xl sm:text-4xl store-text font-bold leading-tight">
+              <h1 className="font-serif-display text-3xl sm:text-4xl store-text font-bold leading-tight break-words">
                 {product.name}
               </h1>
+              {product.reviewCount > 0 && (
+                <a href="#pdp-reviews" data-testid="pdp-rating" className="inline-flex items-center gap-2 text-xs store-muted hover:text-[var(--theme-primary)]">
+                  <span className="store-primary font-semibold">{Number(product.averageRating).toFixed(1)} ★</span>
+                  <span>{product.reviewCount} {product.reviewCount === 1 ? "review" : "reviews"}</span>
+                </a>
+              )}
               {isBook && product.author && (
                 <p className="text-sm store-muted italic">By {product.author}</p>
               )}
 
               {/* Price & MRP / Sale */}
               <div className="pt-2 flex items-baseline gap-3">
-                <span className="text-3xl font-bold store-primary">
+                <span data-testid="pdp-price" className="text-3xl sm:text-4xl font-bold store-primary">
                   {formatInr(salePrice ?? price)}
                 </span>
                 {onSale && (
@@ -367,9 +373,9 @@ export default function ProductDetail() {
             </div>
 
             {/* Short Description */}
-            <p className="text-xs sm:text-sm leading-relaxed store-muted">
-              {product.shortDescription || product.story}
-            </p>
+            {product.shortDescription && (
+              <p className="text-sm leading-relaxed store-muted">{product.shortDescription}</p>
+            )}
 
             {/* PDP Promo / Coupon Box */}
             {activeCoupon && (
@@ -449,6 +455,8 @@ export default function ProductDetail() {
                     <span className="text-xs font-semibold uppercase tracking-wider store-muted">Quantity</span>
                     <div className="flex items-center rounded-full border border-[var(--theme-border)] store-surface px-3 py-1">
                       <button
+                        type="button"
+                        aria-label="Decrease quantity"
                         onClick={() => setQuantity((q) => Math.max(1, q - 1))}
                         className="px-2 text-base font-bold store-text hover:text-[var(--theme-primary)]"
                       >
@@ -456,6 +464,8 @@ export default function ProductDetail() {
                       </button>
                       <span className="w-8 text-center text-sm font-semibold store-text">{quantity}</span>
                       <button
+                        type="button"
+                        aria-label="Increase quantity"
                         onClick={() => setQuantity((q) => Math.min(stockQty, q + 1))}
                         className="px-2 text-base font-bold store-text hover:text-[var(--theme-primary)]"
                       >
@@ -468,7 +478,7 @@ export default function ProductDetail() {
                   <p className="text-xs store-muted">Digital books are limited to one copy per order.</p>
                 )}
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <button
                     onClick={handleAddToCart}
                     disabled={maxQty <= 0 || formatSelectionMissing}
@@ -509,55 +519,34 @@ export default function ProductDetail() {
           </div>
         </div>
 
-        {/* Description & Specifications Tabs */}
-        <section className="border-t border-[var(--theme-border)] pt-10">
-          <div role="tablist" aria-label="Product details" className="flex border-b border-[var(--theme-border)] gap-8 overflow-x-auto text-sm font-medium">
-            {[
-              { id: "story", label: "Description & Craft" },
-              { id: "care", label: "Care" },
-              { id: "shipping", label: "Shipping & Returns" }
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                role="tab"
-                id={`pdp-tab-${tab.id}`}
-                aria-selected={activeTab === tab.id}
-                aria-controls={`pdp-tabpanel-${tab.id}`}
-                onClick={() => setActiveTab(tab.id)}
-                className={`pb-3 text-xs font-semibold uppercase tracking-wider transition border-b-2 whitespace-nowrap ${
-                  activeTab === tab.id
-                    ? "border-[var(--theme-primary)] store-primary"
-                    : "border-transparent store-muted hover:text-[var(--theme-text)]"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
+        {/* Detail sections: only those with content render. */}
+        <div className="space-y-10 max-w-4xl" data-testid="pdp-details">
+          {product.story && (
+            <section data-testid="pdp-description" aria-labelledby="pdp-desc-heading" className="border-t border-[var(--theme-border)] pt-10">
+              <h2 id="pdp-desc-heading" className="font-serif-display text-xl sm:text-2xl store-text font-bold">Description</h2>
+              <p className="mt-4 whitespace-pre-line break-words text-sm leading-relaxed store-muted">{product.story}</p>
+            </section>
+          )}
 
-          <div
-            role="tabpanel"
-            id={`pdp-tabpanel-${activeTab}`}
-            aria-labelledby={`pdp-tab-${activeTab}`}
-            className="py-6 text-xs sm:text-sm leading-relaxed store-muted max-w-3xl"
-          >
-            {activeTab === "story" && (
-              <p className="whitespace-pre-line">{product.story || product.shortDescription}</p>
-            )}
-            {activeTab === "care" && (
-              <p>{product.careInstructions || "Wipe gently with a soft dry cloth. Avoid harsh chemicals."}</p>
-            )}
-            {activeTab === "shipping" && (
+          <ProductSpecifications product={product} />
+
+          {product.careInstructions && (
+            <section data-testid="pdp-care" aria-labelledby="pdp-care-heading" className="border-t border-[var(--theme-border)] pt-10">
+              <h2 id="pdp-care-heading" className="font-serif-display text-xl sm:text-2xl store-text font-bold">Care</h2>
+              <p className="mt-4 whitespace-pre-line break-words text-sm leading-relaxed store-muted">{product.careInstructions}</p>
+            </section>
+          )}
+
+          <section data-testid="pdp-shipping-returns" aria-labelledby="pdp-ship-heading" className="border-t border-[var(--theme-border)] pt-10">
+            <h2 id="pdp-ship-heading" className="font-serif-display text-xl sm:text-2xl store-text font-bold">Shipping &amp; Returns</h2>
+            <div className="mt-4 text-sm leading-relaxed store-muted">
               <ProductPolicyInfo product={product} settings={siteSettings} />
-            )}
-          </div>
-        </section>
-
-        <ProductSpecifications product={product} />
+            </div>
+          </section>
+        </div>
 
         {/* Product Reviews Section */}
-        <section className="border-t border-[var(--theme-border)] pt-12">
+        <section id="pdp-reviews" className="border-t border-[var(--theme-border)] pt-12 scroll-mt-24">
           <ProductReviews productId={product.id} />
         </section>
 

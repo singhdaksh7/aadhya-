@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { fetchOffers, fetchWhatsNew } from "../lib/api";
 import { useSiteSettings } from "../hooks/useSiteSettings";
 import { canonicalUrl } from "../lib/seo";
@@ -14,7 +15,8 @@ const TABS = [
 export default function OffersPage() {
   const settings = useSiteSettings();
   const storeName = settings.general?.storeName || "Tushaqsa";
-  const [tab, setTab] = useState("offers");
+  const [searchParams] = useSearchParams();
+  const [tab, setTab] = useState(() => (TABS.some((t) => t.id === searchParams.get("tab")) ? searchParams.get("tab") : "offers"));
   const [offers, setOffers] = useState({ status: "loading", items: [] });
   const [news, setNews] = useState({ status: "loading", items: [] });
 

@@ -71,6 +71,15 @@ describe("OffersPage", () => {
     expect(screen.getByRole("link", { name: "Explore" })).toHaveAttribute("href", "/collections");
   });
 
+  it("opens the What's New tab from ?tab=whats-new and ignores unknown values", async () => {
+    const { unmount } = render(<MemoryRouter initialEntries={["/offers?tab=whats-new"]}><OffersPage /></MemoryRouter>);
+    expect(screen.getByRole("tab", { name: "What's New" })).toHaveAttribute("aria-selected", "true");
+    expect(await screen.findByText("Diwali drop")).toBeInTheDocument();
+    unmount();
+    render(<MemoryRouter initialEntries={["/offers?tab=bogus"]}><OffersPage /></MemoryRouter>);
+    expect(screen.getByRole("tab", { name: "Offers" })).toHaveAttribute("aria-selected", "true");
+  });
+
   it("shows empty states for both tabs", async () => {
     offersMock.mockResolvedValue({ data: [] });
     newsMock.mockResolvedValue({ data: [] });
