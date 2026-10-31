@@ -59,6 +59,7 @@ export async function resetDb() {
   await prisma.pageSection.deleteMany();
   await prisma.page.deleteMany();
   await prisma.banner.deleteMany();
+  await prisma.whatsNewItem.deleteMany();
   await prisma.mediaAsset.deleteMany();
   await prisma.fAQItem.deleteMany();
   await prisma.fAQCategory.deleteMany();

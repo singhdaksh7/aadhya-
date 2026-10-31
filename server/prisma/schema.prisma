@@ -1099,6 +1099,9 @@ model Coupon {
   perCustomerLimit      Int?
   isActive              Boolean            @default(true)
   targetType            CouponTargetType   @default(ALL)
+  isPublic              Boolean            @default(false)
+  displayTitle          String?
+  terms                 String?
   createdAt             DateTime           @default(now())
   updatedAt             DateTime           @updatedAt
 
@@ -1108,7 +1111,27 @@ model Coupon {
 
   @@index([code])
   @@index([isActive])
+  @@index([isPublic, isActive])
   @@index([validFrom, validUntil])
+}
+
+model WhatsNewItem {
+  id        String    @id @default(uuid())
+  title     String
+  subtitle  String?
+  imageUrl  String?
+  badge     String?
+  ctaLabel  String?
+  ctaUrl    String?
+  startDate DateTime?
+  endDate   DateTime?
+  isActive  Boolean   @default(true)
+  sortOrder Int       @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([isActive, sortOrder])
+  @@index([startDate, endDate])
 }
 
 model CouponTarget {
