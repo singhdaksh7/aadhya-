@@ -462,7 +462,7 @@ describe("orders redesign", () => {
         subtotal: 918, shippingAmount: 99, discountAmount: 0, paymentMethod: "cod",
         items: [{ id: "i1", productNameSnapshot: "Brass Lamp", quantity: 1, unitPrice: 918, lineTotal: 918 }],
         address: { fullName: "Asha Verma", addressLine1: "12 MG Road", city: "Bengaluru", state: "Karnataka", postalCode: "560038", phone: "9876543210" },
-        shipment: { status: "IN_TRANSIT", carrier: "Delhivery", trackingNumber: "AWB123", trackingUrl: "https://track.example/AWB123" },
+        tracking: { courier: "Delhivery", awb: "AWB123", trackingUrl: "https://track.example/AWB123", status: "IN_TRANSIT", statusLabel: "In transit", estimatedDelivery: null, deliveredAt: null, events: [] },
         timeline: [{ status: "CONFIRMED", at: "2026-10-24T08:00:00Z" }, { status: "SHIPPED", at: "2026-10-25T08:00:00Z" }],
       }),
     });

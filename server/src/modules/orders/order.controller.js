@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { asyncHandler } from "../../utils/asyncHandler.js";
 import { ok, created } from "../../utils/apiResponse.js";
 import {
@@ -73,7 +74,8 @@ export const createOrderShipment = asyncHandler(async (req, res) => {
 });
 
 export const generateOrderShipmentAwb = asyncHandler(async (req, res) => {
-  ok(res, await orderService.generateOrderShipmentAwb(req.params.id));
+  const courierCompanyId = z.object({ courierCompanyId: z.coerce.number().int().positive().optional() }).parse(req.body || {}).courierCompanyId;
+  ok(res, await orderService.generateOrderShipmentAwb(req.params.id, courierCompanyId));
 });
 
 export const scheduleOrderShipmentPickup = asyncHandler(async (req, res) => {
@@ -87,3 +89,5 @@ export const getOrderShipmentLabel = asyncHandler(async (req, res) => {
 export const refreshOrderShipmentTracking = asyncHandler(async (req, res) => {
   ok(res, await orderService.refreshOrderShipmentTracking(req.params.id));
 });
+
+export const cancelOrderShipmentHandler = asyncHandler(async (req, res) => ok(res, await orderService.cancelOrderShipment(req.params.id)));

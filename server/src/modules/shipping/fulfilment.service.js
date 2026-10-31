@@ -2,6 +2,7 @@ import { prisma } from "../../lib/prisma.js";
 import { getShippingProvider } from "./provider.service.js";
 import { notifyOrderEvent } from "../mailer/mailer.service.js";
 import { ApiError } from "../../utils/ApiError.js";
+import { recordMilestone, milestoneForStatus, raiseShipmentAlert } from "./shipment-milestones.js";
 import { requireConfirmedPackage, lockOrderPackage, unlockOrderPackage, toShiprocketPackage } from "./package.service.js";
 
 // Required before any provider (non-MANUAL) shipment-create call is allowed
@@ -19,6 +20,8 @@ export function assertPickupConfigured(settings) {
     throw ApiError.badRequest(`Pickup location is incomplete. Missing: ${missing.join(", ")}. Configure it under Shipping Settings before creating a shipment.`);
   }
 }
+
+const orderNumberOf = (orderId) => prisma.order.findUnique({ where: { id: orderId }, select: { orderNumber: true } }).then((o) => o?.orderNumber || null).catch(() => null);
 
 // RTO is an in-flight return state (the package is on its way back), not a
 // dead end — it must still be able to advance to RTO_DELIVERED. Only these
@@ -49,6 +52,8 @@ export async function attemptAutomaticShipment(orderId) {
     const result = await getShippingProvider(settings.provider || "MANUAL").createShipment({ order, input: buildShipmentPayload(order, settings, confirmedPackage), settings });
     if (confirmedPackage) await lockOrderPackage(orderId);
     let shipment = await prisma.shipment.update({ where: { orderId }, data: { ...result, status: result.status || "CREATED", lastError: null } });
+    await recordMilestone(shipment, "CREATED");
+    if (shipment.awb) await recordMilestone(shipment, "AWB_ASSIGNED");
     // Chain AWB generation / pickup scheduling only when explicitly enabled
     // and fully awaited — no detached promises past the end of this call.
     if (settings.autoGenerateAwb && shipment.providerShipmentId && !shipment.awb) {
@@ -58,7 +63,11 @@ export async function attemptAutomaticShipment(orderId) {
       shipment = await schedulePickupForShipment(shipment.id, settings).catch(() => shipment);
     }
     return shipment;
-  } catch (error) { return prisma.shipment.update({ where: { orderId }, data: { status: "CREATION_FAILED", lastError: sanitizeProviderError(error) } }); }
+  } catch (error) {
+    const failed = await prisma.shipment.update({ where: { orderId }, data: { status: "CREATION_FAILED", lastError: sanitizeProviderError(error) } });
+    await raiseShipmentAlert("SHIPMENT_CREATION_FAILED", { orderId, orderNumber: order.orderNumber, detail: failed.lastError });
+    return failed;
+  }
 }
 
 // Never leaks raw provider stack traces, request bodies, or credentials into
@@ -79,17 +88,22 @@ async function loadShipmentAndSettings(shipmentId) {
 
 // Idempotent: re-clicking "Generate AWB" on an already-AWB'd shipment does
 // not call the provider again.
-export async function generateAwbForShipment(shipmentId, settingsOverride = null) {
+export async function generateAwbForShipment(shipmentId, settingsOverride = null, { courierCompanyId = null } = {}) {
   const { shipment, settings } = await loadShipmentAndSettings(shipmentId);
-  const effectiveSettings = settingsOverride || settings;
+  const effectiveSettings = { ...(settingsOverride || settings), ...(courierCompanyId ? { courierCompanyId } : {}) };
   if (shipment.awb) return shipment;
   if (!shipment.providerShipmentId) throw ApiError.badRequest("Create the shipment before generating an AWB.");
   try {
     const provider = getShippingProvider(shipment.provider || "MANUAL");
     const result = await provider.generateAwb(shipment, effectiveSettings);
-    return await prisma.shipment.update({ where: { id: shipmentId }, data: { awb: result.awb, carrier: result.carrier || shipment.carrier, trackingNumber: result.awb || shipment.trackingNumber, status: "PICKUP_SCHEDULED" === shipment.status ? shipment.status : shipment.status, lastError: null } });
+    if (!result.awb) throw new Error("Shiprocket did not return an AWB. Check the courier selection and wallet balance, then retry.");
+    const updated = await prisma.shipment.update({ where: { id: shipmentId }, data: { awb: result.awb, carrier: result.carrier || shipment.carrier, trackingNumber: result.awb || shipment.trackingNumber, lastError: null } });
+    await recordMilestone(updated, "AWB_ASSIGNED");
+    return updated;
   } catch (error) {
-    await prisma.shipment.update({ where: { id: shipmentId }, data: { lastError: sanitizeProviderError(error) } });
+    const lastError = sanitizeProviderError(error);
+    await prisma.shipment.update({ where: { id: shipmentId }, data: { lastError } });
+    await raiseShipmentAlert("AWB_FAILED", { orderId: shipment.orderId, orderNumber: await orderNumberOf(shipment.orderId), detail: lastError });
     throw error;
   }
 }
@@ -104,10 +118,14 @@ export async function schedulePickupForShipment(shipmentId, settingsOverride = n
   if (!shipment.awb) throw ApiError.badRequest("Generate an AWB before scheduling pickup.");
   try {
     const provider = getShippingProvider(shipment.provider || "MANUAL");
-    await provider.schedulePickup(shipment, effectiveSettings);
-    return await prisma.shipment.update({ where: { id: shipmentId }, data: { status: "PICKUP_SCHEDULED", lastError: null } });
+    const pickup = await provider.schedulePickup(shipment, effectiveSettings);
+    const updated = await prisma.shipment.update({ where: { id: shipmentId }, data: { status: "PICKUP_SCHEDULED", pickupStatus: pickup?.pickupStatus || "PICKUP_SCHEDULED", lastError: null } });
+    await recordMilestone(updated, "PICKUP_SCHEDULED");
+    return updated;
   } catch (error) {
-    await prisma.shipment.update({ where: { id: shipmentId }, data: { lastError: sanitizeProviderError(error) } });
+    const lastError = sanitizeProviderError(error);
+    await prisma.shipment.update({ where: { id: shipmentId }, data: { lastError, pickupStatus: "FAILED" } });
+    await raiseShipmentAlert("PICKUP_FAILED", { orderId: shipment.orderId, orderNumber: await orderNumberOf(shipment.orderId), detail: lastError });
     throw error;
   }
 }
@@ -168,9 +186,9 @@ export async function applyTrackingUpdate({ provider, providerShipmentId, rawSta
 //   3. let that function send the (deduplicated) customer email   4. handle return-to-origin restocking.
 // Terminal shipments are left alone, and the order status is forward-only, so out-of-order or repeated
 // courier events can never move an order backwards or email twice.
-export async function applyResolvedShipmentUpdate(shipment, { shipmentStatus, orderStatus, event, rawStatus, trackingNumber, trackingUrl, estimatedDelivery, source = "SYSTEM", providerEventId = null }) {
+export async function applyResolvedShipmentUpdate(shipment, { shipmentStatus, orderStatus, event, milestone: milestoneOverride = null, alert = null, rawStatus, trackingNumber, trackingUrl, estimatedDelivery, source = "SYSTEM", providerEventId = null }) {
   if (!shipment || terminal.has(shipment.status)) return shipment;
-  const data = { rawProviderStatus: rawStatus != null ? String(rawStatus).slice(0, 120) : shipment.rawProviderStatus };
+  const data = { rawProviderStatus: rawStatus != null ? String(rawStatus).slice(0, 120) : shipment.rawProviderStatus, lastSyncedAt: new Date() };
   if (shipmentStatus) data.status = shipmentStatus;
   if (trackingNumber) {
     data.trackingNumber = trackingNumber;
@@ -181,6 +199,16 @@ export async function applyResolvedShipmentUpdate(shipment, { shipmentStatus, or
   if (shipmentStatus === "DELIVERED") data.deliveredDate = new Date();
   if (["PICKED_UP", "IN_TRANSIT"].includes(shipmentStatus) && !shipment.shippedDate) data.shippedDate = new Date();
   const updated = await prisma.shipment.update({ where: { id: shipment.id }, data });
+
+  // Customer timeline + Admin exceptions. A milestone is recorded once, so replays cannot re-alert.
+  const milestone = milestoneOverride || milestoneForStatus(shipmentStatus);
+  if (alert) await raiseShipmentAlert(alert, { orderId: shipment.orderId, orderNumber: await orderNumberOf(shipment.orderId), detail: String(rawStatus || "Courier reported a problem") });
+  if (milestone) {
+    const recorded = await recordMilestone(updated, milestone);
+    if (recorded && (milestone === "DELIVERY_FAILED" || milestone === "RTO_INITIATED")) {
+      await raiseShipmentAlert(milestone, { orderId: shipment.orderId, orderNumber: await orderNumberOf(shipment.orderId), detail: milestone === "RTO_INITIATED" ? "The courier is returning the package to the pickup address." : "The courier could not deliver the package." });
+    }
+  }
 
   const { changeOrderStatus } = await import("../orders/order.service.js");
   if (orderStatus) {
@@ -195,5 +223,28 @@ export async function applyResolvedShipmentUpdate(shipment, { shipmentStatus, or
     const { handleRtoDelivered } = await import("../returns/returns.service.js");
     await handleRtoDelivered(shipment.orderId).catch((err) => console.error("RTO restock failed:", err.message));
   }
+  return updated;
+}
+
+// Cancels the provider shipment. Internal state changes ONLY after the provider confirms; a failure is stored,
+// alerted and leaves the shipment exactly as it was so the Admin can retry.
+export async function cancelShipmentForOrder(orderId) {
+  const shipment = await prisma.shipment.findUnique({ where: { orderId } });
+  if (!shipment?.providerShipmentId) throw ApiError.badRequest("There is no provider shipment to cancel for this order.");
+  if (shipment.status === "CANCELLED") return shipment;
+  if (!["CREATED", "PICKUP_SCHEDULED"].includes(shipment.status)) throw ApiError.badRequest("This shipment can no longer be cancelled here because the courier has already collected it or it is closed. Contact Shiprocket support.");
+  const settingsRow = await prisma.siteSetting.findUnique({ where: { key: "shippingBusiness" } });
+  const settings = settingsRow?.value || {};
+  try {
+    await getShippingProvider(shipment.provider || "MANUAL").cancelShipment(shipment, settings);
+  } catch (error) {
+    const lastError = sanitizeProviderError(error);
+    await prisma.shipment.update({ where: { id: shipment.id }, data: { lastError } });
+    await raiseShipmentAlert("CANCELLATION_FAILED", { orderId, orderNumber: await orderNumberOf(orderId), detail: lastError });
+    throw error;
+  }
+  const updated = await prisma.shipment.update({ where: { id: shipment.id }, data: { status: "CANCELLED", cancelledAt: new Date(), lastError: null } });
+  await recordMilestone(updated, "CANCELLED");
+  await unlockOrderPackage(orderId);
   return updated;
 }

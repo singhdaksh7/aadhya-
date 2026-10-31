@@ -9,6 +9,9 @@ const { createApp } = await import("../src/app.js");
 const { env } = await import("../src/config/env.js");
 const { prisma } = await import("../src/lib/prisma.js");
 const { attemptAutomaticShipment } = await import("../src/modules/shipping/fulfilment.service.js");
+const { saveCredential } = await import("../src/modules/integrations/credential.service.js");
+const crypto = await import("node:crypto");
+env.integrationEncryptionKey = env.integrationEncryptionKey || crypto.randomBytes(32).toString("hex");
 const { resetDb, seedTestAdmin, seedTestProduct, VALID_CUSTOMER, VALID_ADDRESS } = await import("./helpers.js");
 const app = createApp();
 
@@ -35,7 +38,10 @@ beforeEach(async () => {
   await resetDb();
   providerMock.getServiceability.mockReset();
   providerMock.createShipment.mockReset();
+  await prisma.integrationCredential.deleteMany();
   token = await adminToken();
+  const admin = await prisma.adminUser.findFirst();
+  await saveCredential("SHIPROCKET", "LIVE", { apiEmail: "api@example.com", apiPassword: "pw" }, admin.id);
   await settings();
 });
 afterAll(async () => { await resetDb(); await prisma.$disconnect(); });

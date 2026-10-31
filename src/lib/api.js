@@ -406,7 +406,10 @@ export function adminUpsertShipment(id, payload) {
   return api.put(`/admin/orders/${id}/shipment`, payload, { auth: "admin" });
 }
 export function adminCreateShipment(id, payload) { return api.post(`/admin/orders/${id}/shipment/create`, payload, { auth: "admin" }); }
-export function adminGenerateShipmentAwb(id) { return api.post(`/admin/orders/${id}/shipment/awb`, {}, { auth: "admin" }); }
+export function adminGenerateShipmentAwb(id, body = {}) { return api.post(`/admin/orders/${id}/shipment/awb`, body || {}, { auth: "admin" }); }
+export function adminCancelShipment(id) { return api.post(`/admin/orders/${id}/shipment/cancel`, {}, { auth: "admin" }); }
+export function adminShiprocketOverview() { return api.get("/admin/shipping/shiprocket/overview", { auth: "admin" }); }
+export function adminShiprocketPickupLocations() { return api.get("/admin/shipping/shiprocket/pickup-locations", { auth: "admin" }); }
 export function adminScheduleShipmentPickup(id) { return api.post(`/admin/orders/${id}/shipment/pickup`, {}, { auth: "admin" }); }
 export function adminGetShipmentLabel(id) { return api.get(`/admin/orders/${id}/shipment/label`, { auth: "admin" }); }
 export function adminGetOrderPackage(id) { return api.get(`/admin/orders/${id}/package`, { auth: "admin" }); }

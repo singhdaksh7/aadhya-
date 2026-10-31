@@ -3,11 +3,15 @@ import { adminShiprocketSummary, adminShiprocketGenerateToken, adminShiprocketRe
 import { AdminCard, StatusBadge } from "../ui";
 
 const RESULT_TONE = { PROCESSED: "success", IGNORED: "neutral", DUPLICATE: "neutral", FAILED: "danger", REJECTED: "danger" };
+function BareWrap({ children, actions }) {
+  return <div>{actions && <div className="mb-3 flex gap-2">{actions}</div>}{children}</div>;
+}
 const fmt = (v) => (v ? new Date(v).toLocaleString("en-IN") : "—");
 
 // Admin → Integrations → Shiprocket: tracking webhook. The token is generated here, shown ONCE, and stored
 // encrypted; it goes into Shiprocket's webhook "Security Token" field and arrives in the x-api-key header.
-export default function ShiprocketWebhookPanel() {
+export default function ShiprocketWebhookPanel({ bare = false }) {
+  const Wrap = bare ? BareWrap : AdminCard;
   const [summary, setSummary] = useState(null);
   const [events, setEvents] = useState([]);
   const [token, setToken] = useState(null);
@@ -52,15 +56,15 @@ export default function ShiprocketWebhookPanel() {
 
   if (!summary) {
     return (
-      <AdminCard title="Shiprocket tracking webhook">
+      <Wrap title="Shiprocket tracking webhook">
         <p className="text-sm text-charcoal-soft">{message || "Loading…"}</p>
-      </AdminCard>
+      </Wrap>
     );
   }
   const hook = summary.webhook;
 
   return (
-    <AdminCard
+    <Wrap
       title="Shiprocket tracking webhook"
       subtitle="Lets Shiprocket update orders and email customers when a parcel ships, goes out for delivery or is delivered."
       actions={<StatusBadge value={hook.tokenConfigured ? "Token set" : "Token missing"} tone={hook.tokenConfigured ? "success" : "neutral"} />}
@@ -175,6 +179,6 @@ export default function ShiprocketWebhookPanel() {
           </ul>
         )}
       </div>
-    </AdminCard>
+    </Wrap>
   );
 }

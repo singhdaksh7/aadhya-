@@ -730,3 +730,58 @@ describe("Shiprocket adapter: serviceability with the confirmed package", () => 
     expect(JSON.parse(fetchMock.mock.calls[3][1].body)).toMatchObject({ shipment_id: 6, courier_company_id: 10 });
   });
 });
+
+describe("Shiprocket adapter: pickup locations, cancellation, timeouts, diagnostics", () => {
+  const diag = async () => (await prisma.siteSetting.findUnique({ where: { key: "shiprocketDiagnostics" } }))?.value || {};
+  it("reads pickup locations (read-only GET) and records the last successful auth", async () => {
+    await saveShiprocketCreds();
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse({ token: "t" }))
+      .mockResolvedValueOnce(jsonResponse({ data: { shipping_address: [{ pickup_location: "Primary", name: "Aadya", phone: "9999999999", address: "1 Rd", address_2: "Unit 2", city: "Jaipur", state: "Rajasthan", pin_code: "302001", phone_verified: 1 }] } }));
+    global.fetch = fetchMock;
+    const out = await getShippingProvider("SHIPROCKET").getPickupLocations({ settings: { environment: "LIVE" } });
+    expect(fetchMock.mock.calls[1][0]).toMatch(/settings\/company\/pickup$/);
+    expect(fetchMock.mock.calls[1][1].method).toBe("GET");
+    expect(out).toEqual([{ nickname: "Primary", name: "Aadya", phone: "9999999999", address: "1 Rd, Unit 2", city: "Jaipur", state: "Rajasthan", pincode: "302001", verified: true }]);
+    expect((await diag()).lastAuthOk).toBe(true);
+    expect((await diag()).lastAuthAt).toBeTruthy();
+  });
+  it("cancels by AWB when one exists, otherwise by Shiprocket order id", async () => {
+    await saveShiprocketCreds();
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse({ token: "t" })).mockResolvedValueOnce(jsonResponse({ message: "ok" }))
+      .mockResolvedValueOnce(jsonResponse({ token: "t" })).mockResolvedValueOnce(jsonResponse({ message: "ok" }));
+    global.fetch = fetchMock;
+    const p = getShippingProvider("SHIPROCKET");
+    await p.cancelShipment({ awb: "AWB1", providerOrderId: "55" }, { environment: "LIVE" });
+    expect(fetchMock.mock.calls[1][0]).toMatch(/orders\/cancel\/shipment\/awbs$/);
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({ awbs: ["AWB1"] });
+    await p.cancelShipment({ awb: null, providerOrderId: "55" }, { environment: "LIVE" });
+    expect(fetchMock.mock.calls[3][0]).toMatch(/orders\/cancel$/);
+    expect(JSON.parse(fetchMock.mock.calls[3][1].body)).toEqual({ ids: [55] });
+  });
+  it("never reports cancellation success when the provider rejects it", async () => {
+    await saveShiprocketCreds();
+    global.fetch = vi.fn().mockResolvedValueOnce(jsonResponse({ token: "t" })).mockResolvedValueOnce(jsonResponse({ message: "Cannot cancel: already picked up", status_code: 400 }, { ok: false, status: 400 }));
+    await expect(getShippingProvider("SHIPROCKET").cancelShipment({ awb: "AWB1" }, { environment: "LIVE" })).rejects.toThrow(/Cannot cancel/);
+  });
+  it("turns a provider timeout into a clear retryable error and stores a redacted diagnostic", async () => {
+    await saveShiprocketCreds();
+    const timeout = Object.assign(new Error("The operation was aborted due to timeout"), { name: "TimeoutError" });
+    global.fetch = vi.fn().mockRejectedValue(timeout);
+    await expect(getShippingProvider("SHIPROCKET").getPickupLocations({ settings: { environment: "LIVE" } })).rejects.toThrow(/timed out/);
+    const d = await diag();
+    expect(d.lastError.message).toMatch(/timed out/);
+    expect(JSON.stringify(d)).not.toMatch(/super-secret|password/i);
+  });
+  it("records the last serviceability check, success and failure", async () => {
+    await saveShiprocketCreds();
+    const pkg = { weight: 1, length: 10, breadth: 10, height: 10 };
+    global.fetch = vi.fn().mockResolvedValueOnce(jsonResponse({ token: "t" })).mockResolvedValueOnce(jsonResponse({ data: { available_courier_companies: [{ courier_company_id: 1, courier_name: "A", rate: 50, cod: 1 }] } }));
+    await getShippingProvider("SHIPROCKET").getServiceability({ pickupPostcode: "302001", deliveryPostcode: "560001", package: pkg, cod: false, settings: { environment: "LIVE" } });
+    expect((await diag()).lastServiceability).toMatchObject({ ok: true, couriers: 1, pickupPostcode: "302001", deliveryPostcode: "560001" });
+    global.fetch = vi.fn().mockResolvedValueOnce(jsonResponse({ token: "t" })).mockResolvedValueOnce(jsonResponse({ message: "Pincode not serviceable", status_code: 404 }, { ok: false, status: 404 }));
+    await expect(getShippingProvider("SHIPROCKET").getServiceability({ pickupPostcode: "302001", deliveryPostcode: "999999", package: pkg, cod: false, settings: { environment: "LIVE" } })).rejects.toThrow();
+    expect((await diag()).lastServiceability).toMatchObject({ ok: false });
+  });
+});

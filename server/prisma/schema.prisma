@@ -592,6 +592,10 @@ model Shipment {
   status             String    @default("PENDING")
   rawProviderStatus  String?
   lastError          String?
+  pickupStatus      String?
+  lastSyncedAt      DateTime?
+  cancelledAt       DateTime?
+  events            ShipmentEvent[]
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
@@ -1491,4 +1495,20 @@ model PackagePreset {
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// Customer-facing shipment milestones. One row per distinct status the shipment reached; never holds provider
+// payloads, actors or webhook ids (those stay in WebhookEvent / OrderStatusHistory).
+model ShipmentEvent {
+  id         String   @id @default(uuid())
+  shipmentId String
+  orderId    String
+  status     String
+  label      String
+  occurredAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+  shipment   Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+  @@unique([shipmentId, status])
+  @@index([orderId])
 }

@@ -19,6 +19,7 @@ import {
   scheduleOrderShipmentPickup,
   getOrderShipmentLabel,
   refreshOrderShipmentTracking,
+  cancelOrderShipmentHandler,
 } from "./order.controller.js";
 
 export const checkoutRouter = Router();
@@ -40,6 +41,7 @@ adminOrderRouter.post("/:id/shipment/serviceability", asyncHandler(async (req, r
 adminOrderRouter.put("/:id/shipment", upsertOrderShipment);
 adminOrderRouter.post("/:id/shipment/create", createOrderShipment);
 adminOrderRouter.post("/:id/shipment/awb", generateOrderShipmentAwb);
+adminOrderRouter.post("/:id/shipment/cancel", cancelOrderShipmentHandler);
 adminOrderRouter.post("/:id/shipment/pickup", scheduleOrderShipmentPickup);
 adminOrderRouter.get("/:id/shipment/label", getOrderShipmentLabel);
 adminOrderRouter.post("/:id/shipment/refresh-tracking", refreshOrderShipmentTracking);
