@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { useSiteSettings } from "../hooks/useSiteSettings";
-import { fetchBanners } from "../lib/api";
+import { fetchBanners, resolveMediaUrl } from "../lib/api";
 
 const DEFAULT_BANNERS = [
   {
@@ -114,9 +114,9 @@ export default function HeroBannerCarousel({ bannersOverride }) {
               }`}
             >
               <picture className="h-full w-full">
-                <source media="(max-width: 639px)" srcSet={banner.mobileImage || banner.desktopImage} />
+                <source media="(max-width: 639px)" srcSet={resolveMediaUrl(banner.mobileImage || banner.desktopImage)} />
                 <img
-                  src={banner.desktopImage}
+                  src={resolveMediaUrl(banner.desktopImage)}
                   alt={banner.headline || banner.title || "Tushaqsa Banner"}
                   className="h-full w-full object-cover object-center"
                 />
