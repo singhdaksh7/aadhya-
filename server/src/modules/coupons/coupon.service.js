@@ -30,6 +30,9 @@ export function serializeCoupon(coupon) {
     usageCount: coupon.usageCount,
     perCustomerLimit: coupon.perCustomerLimit,
     isActive: coupon.isActive,
+    isPublic: coupon.isPublic,
+    displayTitle: coupon.displayTitle,
+    terms: coupon.terms,
     status,
     targets: coupon.targets || [],
     createdAt: coupon.createdAt,
@@ -103,6 +106,9 @@ export async function createCoupon(input) {
         usageLimit: rest.usageLimit ?? null,
         perCustomerLimit: rest.perCustomerLimit ?? null,
         isActive: rest.isActive ?? true,
+        isPublic: rest.isPublic ?? false,
+        displayTitle: rest.displayTitle || null,
+        terms: rest.terms || null,
         targetType,
       },
     });
@@ -160,6 +166,9 @@ export async function updateCoupon(id, input) {
         ...(rest.usageLimit !== undefined ? { usageLimit: rest.usageLimit } : {}),
         ...(rest.perCustomerLimit !== undefined ? { perCustomerLimit: rest.perCustomerLimit } : {}),
         ...(rest.isActive !== undefined ? { isActive: rest.isActive } : {}),
+        ...(rest.isPublic !== undefined ? { isPublic: rest.isPublic } : {}),
+        ...(rest.displayTitle !== undefined ? { displayTitle: rest.displayTitle || null } : {}),
+        ...(rest.terms !== undefined ? { terms: rest.terms || null } : {}),
       },
     });
 

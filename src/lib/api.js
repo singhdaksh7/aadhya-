@@ -341,6 +341,14 @@ export function listPublicActiveCoupons() {
   return api.get("/coupons/active");
 }
 
+// --- Offers & What's New ---
+export function fetchOffers() { return api.get("/offers"); }
+export function fetchWhatsNew() { return api.get("/whats-new"); }
+export function adminListWhatsNew() { return api.get("/admin/whats-new", { auth: "admin" }); }
+export function adminCreateWhatsNew(data) { return api.post("/admin/whats-new", data, { auth: "admin" }); }
+export function adminUpdateWhatsNew(id, data) { return api.patch(`/admin/whats-new/${id}`, data, { auth: "admin" }); }
+export function adminDeleteWhatsNew(id) { return api.delete(`/admin/whats-new/${id}`, { auth: "admin" }); }
+
 // --- Checkout / orders / payments ---
 export function checkoutPreview(payload) {
   const data = Array.isArray(payload) ? { items: payload } : payload;
@@ -577,6 +585,10 @@ export function adminUpdateBanner(id, data) { return api.put(`/admin/banners/${i
 export function adminDeleteBanner(id) { return api.delete(`/admin/banners/${id}`, { auth: "admin" }); }
 
 export function fetchPromos() { return api.get("/promos"); }
+// Promotional popup (SiteSetting "promoPopup"): public read is null unless enabled and inside its date window.
+export function fetchPromoPopup() { return api.get("/popup"); }
+export function adminGetPromoPopup() { return api.get("/admin/popup", { auth: "admin" }); }
+export function adminUpdatePromoPopup(data) { return api.put("/admin/popup", data, { auth: "admin" }); }
 export function adminListPromos() { return api.get("/admin/promos", { auth: "admin" }); }
 export function adminFetchPromos() { return adminListPromos(); }
 export function adminCreatePromo(data) { return api.post("/admin/promos", data, { auth: "admin" }); }

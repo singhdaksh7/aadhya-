@@ -6,6 +6,7 @@ const DESTINATION_LABELS = {
   CATEGORY: "Category",
   COLLECTION: "Collection",
   PAGE: "Page",
+  GIFTING: "Gifting page",
   BOOKS: "Books page",
   NEW_ARRIVALS: "New Arrivals",
   CUSTOM_URL: "Custom URL",
@@ -91,6 +92,7 @@ export default function NavItemEditor({ item, index, total, categories, onChange
 
   const handleTypeChange = (nextType) => {
     const updates = { destinationType: nextType };
+    if (nextType === "GIFTING") updates.destination = "/gifting";
     if (nextType === "BOOKS") updates.destination = "/books";
     if (nextType === "NEW_ARRIVALS") updates.destination = "/new-arrivals";
     if (nextType !== "CATEGORY") {
@@ -158,12 +160,12 @@ export default function NavItemEditor({ item, index, total, categories, onChange
             </select>
           </div>
         )}
-        {(type === "CUSTOM_URL" || type === "COLLECTION" || type === "PAGE" || type === "BOOKS" || (type === "CATEGORY" && !item.categoryId)) && (
+        {(type === "CUSTOM_URL" || type === "COLLECTION" || type === "PAGE" || type === "GIFTING" || type === "BOOKS" || (type === "CATEGORY" && !item.categoryId)) && (
           <div>
             <label className={labelCls} htmlFor={`nav-dest-${item.id}`}>
               {type === "COLLECTION" ? "Collection slug or URL" : type === "PAGE" ? "Page slug or URL" : "Destination"}
             </label>
-            <input id={`nav-dest-${item.id}`} type="text" value={item.destination || ""} onChange={(e) => onChange({ destination: e.target.value })} placeholder={type === "BOOKS" ? "/books" : "/shop/category/ceramics"} className={inputCls} />
+            <input id={`nav-dest-${item.id}`} type="text" value={item.destination || ""} onChange={(e) => onChange({ destination: e.target.value })} placeholder={type === "GIFTING" ? "/gifting" : type === "BOOKS" ? "/books" : "/shop/category/ceramics"} className={inputCls} />
           </div>
         )}
         <div className="flex items-end gap-4 pb-1">

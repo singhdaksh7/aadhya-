@@ -43,6 +43,8 @@ import AdminProductForm from "./pages/admin/AdminProductForm";
 import AdminCategories from "./pages/admin/AdminCategories";
 import AdminCollections from "./pages/admin/AdminCollections";
 import AdminCoupons from "./pages/admin/AdminCoupons";
+import AdminWhatsNew from "./pages/admin/AdminWhatsNew";
+import OffersPage from "./pages/OffersPage";
 import AdminNavigation from "./pages/admin/AdminNavigation";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminOrderList from "./pages/admin/AdminOrderList";
@@ -52,6 +54,8 @@ import AdminReturnDetail from "./pages/admin/AdminReturnDetail";
 import AdminHomepageBuilder from "./pages/admin/AdminHomepageBuilder";
 import AdminBanners from "./pages/admin/AdminBanners";
 import AdminPromos from "./pages/admin/AdminPromos";
+import AdminPopup from "./pages/admin/AdminPopup";
+import PromoPopup from "./components/PromoPopup";
 import AdminReviews from "./pages/admin/AdminReviews";
 import AdminFilters from "./pages/admin/AdminFilters";
 
@@ -143,6 +147,7 @@ function SiteLayout() {
 
                 {/* Informational & Policy Routes */}
                 <Route path="/gifting" element={<GiftingPage />} />
+                <Route path="/offers" element={<OffersPage />} />
                 <Route path="/about" element={<SystemPage slug="about" eyebrow="About" fallbackTitle="About" />} />
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/faq" element={<FAQ />} />
@@ -169,6 +174,7 @@ function SiteLayout() {
           </div>
           <CartDrawer />
           <BrochureModal />
+          <PromoPopup />
         </BrochureProvider>
       </WishlistProvider>
     </CartProvider>
@@ -194,6 +200,7 @@ function AdminRoutes() {
           <Route path="storefront/header" element={<AdminHeaderSettings />} />
           <Route path="banners" element={<AdminBanners />} />
           <Route path="promos" element={<AdminPromos />} />
+          <Route path="popup" element={<AdminPopup />} />
           <Route path="products" element={<AdminProductList />} />
           <Route path="products/new" element={<AdminProductForm />} />
           <Route path="products/:id" element={<AdminProductForm />} />
@@ -203,6 +210,7 @@ function AdminRoutes() {
           <Route path="collections" element={<AdminCollections />} />
           <Route path="filters" element={<AdminFilters />} />
           <Route path="coupons" element={<AdminCoupons />} />
+          <Route path="whats-new" element={<AdminWhatsNew />} />
           <Route path="customers" element={<AdminCustomers />} />
           <Route path="customers/:id" element={<AdminCustomers />} />
           <Route path="invoices" element={<AdminInvoices />} />

@@ -1,6 +1,43 @@
 import { DEFAULT_GIFTING_PAGE_SECTIONS } from "./gifting-content.js";
 import { prisma } from "../../lib/prisma.js";
 import { sanitizeRichText } from "../../utils/sanitizer.js";
+import { listPublicProducts, serializePublicProduct } from "../products/product.service.js";
+
+const GIFT_PRODUCT_INCLUDE = {
+  category: true,
+  images: { orderBy: { sortOrder: "asc" } },
+  bookDetail: true,
+  reviews: { where: { status: "APPROVED" }, select: { rating: true, status: true } },
+};
+
+// Resolves the FEATURED_GIFTS product list server-side from the admin's chosen source:
+// AUTO (flagged Featured), MANUAL (hand-picked ids, stored order), COLLECTION, or a dynamic QUERY.
+// Inactive/missing products are skipped. Returns null for AUTO so the storefront keeps its fallback.
+export async function resolveFeaturedGiftProducts(settings = {}) {
+  const limit = Math.min(Math.max(Number(settings.limit) || 4, 1), 24);
+  const mode = ["MANUAL", "COLLECTION", "QUERY"].includes(settings.sourceMode) ? settings.sourceMode : "AUTO";
+  const base = { page: 1, limit, sort: "newest" };
+  if (mode === "MANUAL") {
+    const ids = (Array.isArray(settings.productIds) ? settings.productIds : []).filter(Boolean);
+    if (!ids.length) return [];
+    const rows = await prisma.product.findMany({ where: { id: { in: ids }, isActive: true }, include: GIFT_PRODUCT_INCLUDE });
+    const byId = new Map(rows.map((p) => [p.id, p]));
+    return ids.map((id) => byId.get(id)).filter(Boolean).slice(0, limit).map(serializePublicProduct);
+  }
+  if (mode === "COLLECTION") {
+    if (!settings.collectionSlug) return [];
+    return (await listPublicProducts({ ...base, collection: settings.collectionSlug })).items;
+  }
+  if (mode === "QUERY") {
+    const query = { ...base, sort: settings.querySort || "newest" };
+    if (settings.queryCategory) query.category = settings.queryCategory;
+    if (settings.querySearch) query.search = settings.querySearch;
+    if (typeof settings.queryMinPrice === "number") query.minPrice = settings.queryMinPrice;
+    if (typeof settings.queryMaxPrice === "number") query.maxPrice = settings.queryMaxPrice;
+    return (await listPublicProducts(query)).items;
+  }
+  return null;
+}
 
 // Pages the storefront routes depend on (/about, /shipping, ...). They can be edited and
 // unpublished, but never moved to a different slug or deleted, so a route cannot break.
@@ -104,6 +141,19 @@ export async function getPageBySlug(slug, { allowDraft = false } = {}) {
     const error = new Error("CMS Page not found or not published");
     error.statusCode = 404;
     throw error;
+  }
+
+  if (normalizedSlug === "gifting" && Array.isArray(page.sections)) {
+    const sections = await Promise.all(page.sections.map(async (section) => {
+      if (section.type !== "FEATURED_GIFTS") return section;
+      try {
+        const products = await resolveFeaturedGiftProducts(section.settings || {});
+        return products ? { ...section, products } : section;
+      } catch {
+        return section;
+      }
+    }));
+    return { ...page, sections };
   }
 
   return page;

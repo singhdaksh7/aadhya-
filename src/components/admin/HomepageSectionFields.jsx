@@ -43,8 +43,8 @@ export default function HomepageSectionFields({ type, value = {}, onChange, coll
     {type === "TRUST_BANNER" && <TrustBannerSettings value={value} set={set} />}
     {type === "HOW_WE_WORK" && <HowWeWorkSettings value={value} set={set} />}
     {type === "OUR_JOURNEY" && <OurJourneyFields value={value} set={set} />}
-    {["GIFTING_HERO", "GIFTS_BY_OCCASION", "CURATED_STORIES", "GIFTS_BY_FESTIVAL", "GIFTING_BENEFITS", "GIFTS_BY_CRAFT", "GIFTS_BY_BUDGET", "GIFTING_SEO", "GIFTING_FAQ"].includes(type) && (
-      <GiftingSectionFields type={type} value={value} onChange={onChange} />
+    {["GIFTING_HERO", "GIFTS_BY_OCCASION", "CURATED_STORIES", "GIFTS_BY_FESTIVAL", "GIFTING_BENEFITS", "GIFTS_BY_CRAFT", "FEATURED_GIFTS", "GIFTS_BY_BUDGET", "GIFTING_SEO", "GIFTING_FAQ"].includes(type) && (
+      <GiftingSectionFields type={type} value={value} onChange={onChange} products={products} collections={collections} categories={categories} />
     )}
 
     {type === "TRUST_STRIP" && <div className="grid gap-3 rounded-xl border border-charcoal/10 p-3 sm:grid-cols-2"><Select label="Background" value={value.background || "SURFACE"} onChange={(v) => set("background", v)} options={[["SURFACE", "Soft surface"], ["PLAIN", "Plain page background"]]} /><Select label="Desktop columns" value={String(value.desktopColumns || 4)} onChange={(v) => set("desktopColumns", Number(v))} options={[["2", "2"], ["3", "3"], ["4", "4"]]} /><Select label="Mobile layout" value={value.mobileLayout || "STACKED"} onChange={(v) => set("mobileLayout", v)} options={[["STACKED", "Stacked list"], ["GRID", "2-column grid"], ["SCROLL", "Horizontal scroll"]]} /></div>}

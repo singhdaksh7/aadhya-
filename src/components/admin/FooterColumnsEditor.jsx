@@ -10,6 +10,7 @@ const TYPE_LABELS = {
   CMS_PAGE: "CMS page",
   CATEGORY: "Category (slug)",
   COLLECTION: "Collection (slug)",
+  GIFTING: "Gifting page",
 };
 
 /** Add / remove / reorder / enable footer link columns and the links inside each one. */
@@ -110,6 +111,9 @@ export default function FooterColumnsEditor({ columns, onChange, pages = [] }) {
                             </option>
                           ))}
                         </select>
+                      )}
+                      {type === "GIFTING" && (
+                        <p className="py-2 text-xs text-charcoal-soft">Links to the Gifting page (/gifting).</p>
                       )}
                       {(type === "CATEGORY" || type === "COLLECTION") && (
                         <input

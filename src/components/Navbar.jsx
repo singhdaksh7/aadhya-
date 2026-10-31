@@ -145,6 +145,19 @@ export default function Navbar() {
 
           {/* Right Column: Account / Wishlist / Cart */}
           <div className="flex items-center justify-end gap-6 store-text">
+            {/* Offers shortcut (label collapses to icon-only below xl so the row never overflows) */}
+            <Link
+              to="/offers"
+              className="flex items-center gap-1.5 p-1 store-text hover:store-primary transition group"
+              title="Offers & What's New"
+              aria-label="Offers"
+            >
+              <svg className="h-5 w-5 store-text group-hover:store-primary transition" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M7 7h.01M3 5a2 2 0 012-2h5.172a2 2 0 011.414.586l8.828 8.828a2 2 0 010 2.828l-5.172 5.172a2 2 0 01-2.828 0L3.586 11.586A2 2 0 013 10.172V5z" />
+              </svg>
+              <span className="hidden text-[11px] font-semibold uppercase tracking-wider xl:inline">Offers</span>
+            </Link>
+
             {/* Customer Account */}
             {mainHeaderConfig.showAccount !== false && (
               <Link
@@ -399,6 +412,13 @@ export default function Navbar() {
                       {user ? "My Account" : "Customer Login"}
                     </NavLink>
                   )}
+                  <NavLink
+                    to="/offers"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="rounded-xl px-4 py-2.5 text-sm font-medium store-text hover:bg-black/5"
+                  >
+                    Offers &amp; What&apos;s New
+                  </NavLink>
                   <NavLink
                     to="/track-order"
                     onClick={() => setMobileMenuOpen(false)}
