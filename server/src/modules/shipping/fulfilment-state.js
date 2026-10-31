@@ -73,7 +73,8 @@ export async function getFulfilmentState(orderId) {
     shipmentStatus: status,
     actions: {
       confirmPackage: isShiprocket && physical && !pkg?.lockedAt && !live,
-      checkServiceability: ready && pkgValid && !live,
+      // Also valid after creation while no AWB exists yet, so the Admin can pick a courier for the AWB step.
+      checkServiceability: ready && pkgValid && (!live || !sh?.awb) && !TERMINAL.has(status),
       createShipment: ready && pkgValid && (!sh || RETRYABLE.has(status)),
       assignAwb: base && live && !sh.awb && !TERMINAL.has(status),
       schedulePickup: base && live && !!sh.awb && !PICKUP_DONE.has(status),
