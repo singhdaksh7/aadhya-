@@ -55,12 +55,13 @@ function extractErrorMessage(payload, status) {
   return firstText || `Request failed with status ${status}`;
 }
 
-async function request(path, { method = "GET", body, headers, isForm = false, auth = false } = {}) {
+async function request(path, { method = "GET", body, headers, isForm = false, auth = false, signal } = {}) {
   const tokenKind = auth === true ? "customer" : auth || null;
   const token = tokenKind ? tokens[tokenKind] : null;
   const res = await fetch(`${API_URL}${path}`, {
     method,
     credentials: "include",
+    signal,
     headers: {
       ...(isForm ? {} : { "Content-Type": "application/json" }),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -381,6 +382,11 @@ export async function verifyCashfreePayment(cashfreeOrderId) {
 
 export function fetchOrderConfirmation(orderNumber, token) {
   return api.get(`/orders/${orderNumber}/confirmation?token=${encodeURIComponent(token)}`);
+}
+
+// Public delivery estimate for a pincode (no auth). Never returns courier names or rates.
+export function estimateDelivery(payload, opts = {}) {
+  return api.post("/shipping/estimate", payload, { signal: opts.signal });
 }
 
 export function trackOrder(payload) {

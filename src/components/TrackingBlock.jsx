@@ -6,10 +6,9 @@ const fmtDate = (v, withTime) => {
     ? { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" }
     : { day: "numeric", month: "short", year: "numeric" });
 };
-const isHttp = (u) => typeof u === "string" && /^https?:\/\//i.test(u);
 
 // Customer-safe shipment tracking. Renders ONLY the fields of the server's `tracking` object (courier, AWB,
-// friendly status, ETA, link, milestone events). Returns nothing when there is no tracking yet.
+// friendly status, ETA, milestone events). Never links off-site. Returns nothing when there is no tracking yet.
 export default function TrackingBlock({ tracking, className = "" }) {
   if (!tracking) return null;
   const events = [...(tracking.events || [])].sort((a, b) => new Date(b.at) - new Date(a.at));
@@ -23,11 +22,6 @@ export default function TrackingBlock({ tracking, className = "" }) {
           ? <div><dt className="text-xs font-semibold uppercase tracking-wider store-muted">Delivered on</dt><dd className="mt-1 store-text">{fmtDate(tracking.deliveredAt)}</dd></div>
           : tracking.estimatedDelivery && <div><dt className="text-xs font-semibold uppercase tracking-wider store-muted">Estimated delivery</dt><dd className="mt-1 store-text">{fmtDate(tracking.estimatedDelivery)}</dd></div>}
       </dl>
-      {isHttp(tracking.trackingUrl) && (
-        <a className="mt-4 inline-block rounded-full store-bg-primary px-5 py-2 text-xs font-semibold uppercase tracking-wider text-ivory" href={tracking.trackingUrl} target="_blank" rel="noopener noreferrer">
-          Track shipment
-        </a>
-      )}
       {events.length > 0 && (
         <ol data-testid="tracking-timeline" className="relative mt-5 space-y-4 border-l border-[var(--theme-border)]/15 pl-6">
           {events.map((ev, idx) => (

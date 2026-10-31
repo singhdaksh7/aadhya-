@@ -7,6 +7,7 @@ import { useCustomerAuth } from "../context/CustomerAuthContext";
 import { useSiteSettings } from "../hooks/useSiteSettings";
 import { formatInr } from "../lib/format";
 import { loadCashfreeScript } from "../lib/cashfree";
+import { CheckoutDeliveryEstimate } from "../components/DeliveryEstimate";
 import {
   checkoutPreview as fetchCheckoutPreview,
   createOrder,
@@ -545,6 +546,14 @@ export default function CheckoutPage() {
               }
               {sameAsShipping && <p className="text-xs store-muted">Shipping will use the billing / communication address above.</p>}
               </>
+              )}
+
+              {!isDigitalOnly && (
+                <CheckoutDeliveryEstimate
+                  pincode={sameAsShipping ? billingAddress.postalCode : form.postalCode}
+                  items={items.map((i) => ({ slug: i.product.slug, quantity: i.quantity, ...(i.variant?.id ? { variantId: i.variant.id } : {}) }))}
+                  cod={paymentMethod === "cod"}
+                />
               )}
 
               <fieldset className="space-y-4">
