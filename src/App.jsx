@@ -56,6 +56,7 @@ import AdminGifting from "./pages/admin/AdminGifting";
 import AdminBanners from "./pages/admin/AdminBanners";
 import AdminPromos from "./pages/admin/AdminPromos";
 import AdminPopup from "./pages/admin/AdminPopup";
+import AdminNewsletter from "./pages/admin/AdminNewsletter";
 import PromoPopup from "./components/PromoPopup";
 import AdminReviews from "./pages/admin/AdminReviews";
 import AdminFilters from "./pages/admin/AdminFilters";
@@ -203,6 +204,7 @@ function AdminRoutes() {
           <Route path="banners" element={<AdminBanners />} />
           <Route path="promos" element={<AdminPromos />} />
           <Route path="popup" element={<AdminPopup />} />
+          <Route path="newsletter" element={<AdminNewsletter />} />
           <Route path="products" element={<AdminProductList />} />
           <Route path="products/new" element={<AdminProductForm />} />
           <Route path="products/:id" element={<AdminProductForm />} />

@@ -16,7 +16,7 @@ import { orderPaymentRouter, cashfreeVerifyRouter } from "../modules/payments/pa
 import { getOrderDashboardStats } from "../modules/orders/order.service.js";
 import { publicCollectionRouter, adminCollectionRouter } from "../modules/collections/collection.routes.js";
 import { publicSettingsRouter, adminSettingsRouter } from "../modules/settings/settings.routes.js";
-import { newsletterRouter } from "../modules/newsletter/newsletter.routes.js";
+import { newsletterRouter, adminNewsletterRouter } from "../modules/newsletter/newsletter.routes.js";
 import adminCustomerRouter from "../modules/admin-customers/admin-customers.routes.js";
 import adminUserRouter from "../modules/admin-users/admin-users.routes.js";
 import { publicPopupRouter, adminPopupRouter } from "../modules/popup/popup.routes.js";
@@ -120,6 +120,7 @@ router.use("/admin/coupons", adminCouponRouter);
 router.use("/admin/whats-new", adminWhatsNewRouter);
 router.use("/admin/settings", adminSettingsRouter);
 router.use("/admin/popup", adminPopupRouter);
+router.use("/admin/newsletter", adminNewsletterRouter);
 router.use("/admin/customers", adminCustomerRouter);
 router.use("/admin/admin-users", adminUserRouter);
 router.use("/admin/banners", adminBannersRouter);
