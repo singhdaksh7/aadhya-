@@ -60,6 +60,10 @@ export const adminNavGroups = [
     ],
   },
   {
+    title: "Marketing",
+    items: [{ to: "/admin/popup", label: "Popup / Promotions" }],
+  },
+  {
     title: "Operations",
     items: [
       { to: "/admin/shipping", label: "Shipping" },

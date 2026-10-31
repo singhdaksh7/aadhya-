@@ -24,6 +24,24 @@ function SafeLink({ to, children, ...props }) {
   );
 }
 
+/** Resolves where a story's image sits: AUTO alternates by position, otherwise the CMS layout wins. */
+export function storyImageSide(layout, index) {
+  if (layout === "IMAGE_LEFT") return "left";
+  if (layout === "IMAGE_RIGHT") return "right";
+  if (layout === "IMAGE_TOP") return "top";
+  return index % 2 === 0 ? "right" : "left";
+}
+
+/** Budget tier link: explicit URL wins, otherwise /shop filtered by the configured price range. */
+export function budgetTierUrl(tier = {}) {
+  if (typeof tier.destinationUrl === "string" && tier.destinationUrl.trim()) return tier.destinationUrl.trim();
+  const params = new URLSearchParams();
+  if (typeof tier.minPrice === "number" && tier.minPrice > 0) params.set("minPrice", String(tier.minPrice));
+  if (typeof tier.maxPrice === "number" && tier.maxPrice > 0) params.set("maxPrice", String(tier.maxPrice));
+  const qs = params.toString();
+  return qs ? `/shop?${qs}` : "/shop";
+}
+
 // SECTION 1 — GIFTING HERO
 export function GiftingHeroSection({ section }) {
   const content = section.settings || section.content || {};
@@ -172,17 +190,20 @@ export function CuratedStoriesSection({ section }) {
 
         <div className="space-y-12 sm:space-y-16">
           {stories.map((story, idx) => {
-            const isEven = idx % 2 === 0;
+            const side = storyImageSide(story.layout, idx);
+            const stacked = side === "top";
+            const isEven = side === "right"; // text first (left), image second (right)
             const img = resolveProductImageUrl(story.image);
             return (
               <div
                 key={story.id || idx}
                 data-testid={`story-card-${idx}`}
+                data-layout={side}
                 className="grid grid-cols-1 md:grid-cols-12 gap-6 sm:gap-12 items-center overflow-hidden rounded-3xl border store-border store-surface p-5 sm:p-10 shadow-xs"
               >
                 <div
-                  className={`md:col-span-6 space-y-4 ${
-                    isEven ? "md:order-1" : "md:order-2"
+                  className={`${stacked ? "md:col-span-12 order-2" : "md:col-span-6"} space-y-4 ${
+                    stacked ? "" : isEven ? "md:order-1" : "md:order-2"
                   }`}
                 >
                   <span className="text-[11px] font-bold uppercase tracking-widest store-secondary">
@@ -207,8 +228,8 @@ export function CuratedStoriesSection({ section }) {
                 </div>
 
                 <div
-                  className={`group relative overflow-hidden rounded-2xl md:col-span-6 aspect-[4/3] sm:aspect-[16/10] bg-charcoal/5 ${
-                    isEven ? "md:order-2" : "md:order-1"
+                  className={`group relative overflow-hidden rounded-2xl ${stacked ? "md:col-span-12 order-1" : "md:col-span-6"} aspect-[4/3] sm:aspect-[16/10] bg-charcoal/5 ${
+                    stacked ? "" : isEven ? "md:order-2" : "md:order-1"
                   }`}
                 >
                   {img && (
@@ -333,8 +354,12 @@ export function GiftingBenefitsSection({ section }) {
                 data-testid={`benefit-card-${idx}`}
                 className="flex flex-col items-center text-center p-6 rounded-2xl border store-border store-bg shadow-xs space-y-3"
               >
-                <div className="flex h-12 w-12 items-center justify-center rounded-full store-bg-secondary-soft text-xl">
-                  {renderIcon(card.icon)}
+                <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full store-bg-secondary-soft text-xl">
+                  {card.image ? (
+                    <img src={resolveProductImageUrl(card.image)} alt="" loading="lazy" className="h-full w-full object-cover" data-testid={`benefit-image-${idx}`} />
+                  ) : (
+                    renderIcon(card.icon)
+                  )}
                 </div>
                 <h3 className="font-serif-display text-lg font-semibold store-text">{card.title}</h3>
                 <p className="text-xs store-muted leading-relaxed max-w-xs">{desc}</p>
@@ -408,7 +433,11 @@ export function GiftsByCraftSection({ section }) {
 // SECTION 7 — FEATURED GIFT PRODUCTS
 export function FeaturedGiftsSection({ section, products = [] }) {
   const content = section.settings || section.content || {};
-  const list = Array.isArray(section.products) && section.products.length > 0 ? section.products : products;
+  // The API resolves MANUAL / COLLECTION / QUERY sources server-side and attaches `section.products`.
+  // An explicit non-AUTO source that resolves to nothing must stay empty rather than show unrelated products.
+  const resolved = Array.isArray(section.products) ? section.products : null;
+  const explicitSource = ["MANUAL", "COLLECTION", "QUERY"].includes(content.sourceMode);
+  const list = resolved && (resolved.length > 0 || explicitSource) ? resolved : products;
 
   if (!list || list.length === 0) return null;
 
@@ -468,7 +497,7 @@ export function GiftsByBudgetSection({ section }) {
         {tiers.map((tier, idx) => (
           <SafeLink
             key={tier.id || idx}
-            to={tier.destinationUrl || "/shop"}
+            to={budgetTierUrl(tier)}
             data-testid={`budget-card-${idx}`}
             className="group flex flex-col justify-between p-6 sm:p-8 rounded-2xl border store-border store-surface shadow-xs transition hover:shadow-lg hover:border-[var(--theme-primary)]"
           >
