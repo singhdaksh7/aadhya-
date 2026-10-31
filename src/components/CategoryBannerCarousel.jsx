@@ -4,8 +4,8 @@ import { resolveMediaUrl } from "../lib/api";
 
 // 0 slides -> nothing, 1 -> static banner, 2+ -> carousel (arrows, dots, autoplay, swipe).
 // The frame sizes itself to the uploaded image (no fixed ratio, no cropping): a single banner uses its natural
-// height; in a carousel every slide shares one grid cell so the frame is as tall as the tallest slide and
-// shorter slides are centred, uncropped, inside it. Only the first image is eager.
+// height up to a responsive cap; in a carousel every slide shares one grid cell so the frame is as tall as the
+// tallest (capped) slide and shorter slides are centred, uncropped, inside it. Only the first image is eager.
 const isExternal = (u) => /^https?:\/\//i.test(u);
 
 function Cta({ slide }) {
@@ -16,7 +16,11 @@ function Cta({ slide }) {
     : <Link to={slide.ctaUrl} className={cls}>{slide.ctaLabel}</Link>;
 }
 
-function SlideImage({ slide, alt, first, fill = false }) {
+// Height cap keeps portrait/square uploads from creating a page-high banner; object-contain letterboxes inside the
+// capped box so the whole image is always visible (never cropped or stretched).
+const IMG_CLASS = "mx-auto block h-auto w-full max-h-[320px] object-contain sm:max-h-[420px] lg:max-h-[480px]";
+
+function SlideImage({ slide, alt, first }) {
   return (
     <picture>
       {slide.mobile && slide.desktop && slide.mobile !== slide.desktop && (
@@ -29,7 +33,7 @@ function SlideImage({ slide, alt, first, fill = false }) {
         fetchPriority={first ? "high" : "auto"}
         decoding={first ? "sync" : "async"}
         draggable={false}
-        className={fill ? "block h-full w-full object-contain" : "block h-auto w-full"}
+        className={IMG_CLASS}
       />
     </picture>
   );
@@ -103,9 +107,9 @@ export default function CategoryBannerCarousel({ slides = [], autoplay = false, 
             aria-roledescription="slide"
             aria-label={`${i + 1} of ${count}`}
             aria-hidden={i !== safeIndex}
-            className={`col-start-1 row-start-1 transition-opacity duration-500 motion-reduce:transition-none ${i === safeIndex ? "opacity-100" : "pointer-events-none opacity-0"}`}
+            className={`col-start-1 row-start-1 flex items-center justify-center transition-opacity duration-500 motion-reduce:transition-none ${i === safeIndex ? "opacity-100" : "pointer-events-none opacity-0"}`}
           >
-            <SlideImage slide={s} alt={alt(s)} first={i === 0} fill />
+            <SlideImage slide={s} alt={alt(s)} first={i === 0} />
             {i === safeIndex && overlay(s)}
           </div>
         ))}

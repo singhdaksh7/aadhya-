@@ -31,7 +31,8 @@ describe("category page banner", () => {
     const banner = await screen.findByTestId("category-banner");
     const img = banner.querySelector("img");
     expect(img.getAttribute("src")).toMatch(/\/uploads\/products\/decor\.jpg$/);
-    expect(img.className).toContain("object-cover");
+    expect(img.className).toContain("object-contain");
+    expect(img.className).not.toContain("object-cover");
     expect(banner.querySelector("source")).toBeNull();
     const heading = screen.getByRole("heading", { level: 1 });
     expect(heading.textContent).toBe("Home Decor");
