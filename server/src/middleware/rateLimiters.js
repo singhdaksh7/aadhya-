@@ -112,6 +112,16 @@ export const trackOrderLimiter = rateLimit({
   skip: skipInTest,
 });
 
+// Public delivery estimate (calls the courier API on cache misses).
+export const ESTIMATE_LIMIT = { windowMs: 10 * 60 * 1000, limit: 30 };
+export const estimateLimiter = rateLimit({
+  ...ESTIMATE_LIMIT,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: { code: "RATE_LIMITED", message: "Too many delivery estimate requests. Try again later." } },
+  skip: skipInTest,
+});
+
 // Public event-tracking sink — generous enough for real browsing sessions,
 // tight enough that it can't be used as a free-form write firehose.
 export const analyticsLimiter = rateLimit({
