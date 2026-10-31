@@ -1,3 +1,4 @@
+import { shippingInputSchema } from "../shipping/shipping-fields.js";
 import { asyncHandler } from "../../utils/asyncHandler.js";
 import { ok, created, noContent } from "../../utils/apiResponse.js";
 import { ApiError } from "../../utils/ApiError.js";
@@ -11,7 +12,7 @@ import * as productService from "./product.service.js";
 import { saveBuffer } from "../uploads/storage.js";
 import { z } from "zod";
 
-const variantSchema = z.object({ name: z.string().trim().min(1).max(120), sku: z.string().trim().min(1).max(64), priceOverride: z.number().nonnegative().nullable().optional(), stockQuantity: z.number().int().min(0), isActive: z.boolean().optional(), attributes: z.record(z.string().max(80), z.string().max(500)).nullable().optional() });
+const variantSchema = z.object({ name: z.string().trim().min(1).max(120), sku: z.string().trim().min(1).max(64), priceOverride: z.number().nonnegative().nullable().optional(), stockQuantity: z.number().int().min(0), isActive: z.boolean().optional(), attributes: z.record(z.string().max(80), z.string().max(500)).nullable().optional(), shipping: shippingInputSchema });
 
 export const listPublicProducts = asyncHandler(async (req, res) => {
   const query = listProductsQuerySchema.parse(req.query);

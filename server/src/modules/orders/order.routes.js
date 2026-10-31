@@ -1,5 +1,8 @@
 import { Router } from "express";
 import { requireAdmin } from "../../middleware/adminAuth.js";
+import { asyncHandler } from "../../utils/asyncHandler.js";
+import { ok } from "../../utils/apiResponse.js";
+import { getOrderPackageContext, confirmOrderPackage, confirmPackageSchema, checkOrderServiceability } from "../shipping/package.service.js";
 import { requireCustomer } from "../../middleware/customerAuth.js";
 import { checkoutLimiter, trackOrderLimiter } from "../../middleware/rateLimiters.js";
 import {
@@ -31,6 +34,9 @@ adminOrderRouter.use(requireAdmin);
 adminOrderRouter.get("/", listAdminOrders);
 adminOrderRouter.get("/:id", getAdminOrder);
 adminOrderRouter.patch("/:id/status", updateAdminOrderStatus);
+adminOrderRouter.get("/:id/package", asyncHandler(async (req, res) => ok(res, await getOrderPackageContext(req.params.id))));
+adminOrderRouter.put("/:id/package", asyncHandler(async (req, res) => ok(res, await confirmOrderPackage(req.params.id, confirmPackageSchema.parse(req.body), req.admin?.id))));
+adminOrderRouter.post("/:id/shipment/serviceability", asyncHandler(async (req, res) => ok(res, await checkOrderServiceability(req.params.id))));
 adminOrderRouter.put("/:id/shipment", upsertOrderShipment);
 adminOrderRouter.post("/:id/shipment/create", createOrderShipment);
 adminOrderRouter.post("/:id/shipment/awb", generateOrderShipmentAwb);

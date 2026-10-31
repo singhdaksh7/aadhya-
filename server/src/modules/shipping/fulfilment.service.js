@@ -2,6 +2,7 @@ import { prisma } from "../../lib/prisma.js";
 import { getShippingProvider } from "./provider.service.js";
 import { notifyOrderEvent } from "../mailer/mailer.service.js";
 import { ApiError } from "../../utils/ApiError.js";
+import { requireConfirmedPackage, lockOrderPackage, unlockOrderPackage, toShiprocketPackage } from "./package.service.js";
 
 // Required before any provider (non-MANUAL) shipment-create call is allowed
 // to proceed — an incomplete pickup profile at Shiprocket's end fails the
@@ -24,9 +25,9 @@ export function assertPickupConfigured(settings) {
 // three are genuinely final.
 const terminal = new Set(["DELIVERED", "CANCELLED", "RTO_DELIVERED"]);
 export const normalizeShippingStatus = (raw) => ({ shipped: "IN_TRANSIT", in_transit: "IN_TRANSIT", out_for_delivery: "OUT_FOR_DELIVERY", delivered: "DELIVERED", failed_attempt: "FAILED_ATTEMPT", rto: "RTO", rto_delivered: "RTO_DELIVERED", cancelled: "CANCELLED", picked_up: "PICKED_UP", pickup_scheduled: "PICKUP_SCHEDULED" }[String(raw || "").toLowerCase()] || "PENDING");
-export function buildShipmentPayload(order, settings = {}) {
+export function buildShipmentPayload(order, settings = {}, confirmedPackage = null, extra = {}) {
   const physicalItems = order.items.filter((item) => item.bookFormatSnapshot !== "PDF").map((item) => ({ name: item.productNameSnapshot, sku: item.variantSkuSnapshot || item.bookFormatSkuSnapshot || item.skuSnapshot || null, quantity: item.quantity, sellingPrice: Number(item.unitPrice), discount: 0, tax: 0 }));
-  return { idempotencyKey: `${order.id}:standard`, order: { id: order.id, number: order.orderNumber, date: order.createdAt, paymentMethod: order.paymentMethod, codAmount: order.paymentMethod === "cod" ? Number(order.totalAmount) : 0 }, customer: { name: order.customerName, email: order.customerEmail, phone: order.customerPhone, alternatePhone: order.customerAlternatePhone || null }, shippingAddress: order.address, billingAddress: order.billingAddress || order.address, items: physicalItems, package: settings.packageDefaults || { weight: 0.5, length: 20, width: 15, height: 10 }, pickup: settings.pickup || null };
+  return { idempotencyKey: `${order.id}:standard`, order: { id: order.id, number: order.orderNumber, date: order.createdAt, paymentMethod: order.paymentMethod, codAmount: order.paymentMethod === "cod" ? Number(order.totalAmount) : 0 }, customer: { name: order.customerName, email: order.customerEmail, phone: order.customerPhone, alternatePhone: order.customerAlternatePhone || null }, shippingAddress: order.address, billingAddress: order.billingAddress || order.address, items: physicalItems, package: confirmedPackage ? toShiprocketPackage(confirmedPackage) : (settings.packageDefaults || { weight: 0.5, length: 20, width: 15, height: 10 }), pickup: settings.pickup || null, courierCompanyId: extra.courierCompanyId || null };
 }
 export async function attemptAutomaticShipment(orderId) {
   const settingsRow = await prisma.siteSetting.findUnique({ where: { key: "shippingBusiness" } }); const settings = settingsRow?.value || {};
@@ -36,10 +37,17 @@ export async function attemptAutomaticShipment(orderId) {
   if (order.shipment && (terminal.has(order.shipment.status) || ["CREATED", "PICKUP_SCHEDULED", "PICKED_UP", "IN_TRANSIT", "OUT_FOR_DELIVERY"].includes(order.shipment.status))) return order.shipment;
   // Unique orderId is the durable idempotency key; a concurrent webhook is
   // reduced to the already-created row instead of sending a second order.
+  // Shiprocket never ships on guessed package data: wait for the Admin-confirmed package snapshot.
+  let confirmedPackage = null;
+  if ((settings.provider || "MANUAL") === "SHIPROCKET") {
+    confirmedPackage = await prisma.orderShipmentPackage.findUnique({ where: { orderId } });
+    if (!confirmedPackage) return null;
+  }
   try { await prisma.shipment.create({ data: { orderId, provider: settings.provider || "MANUAL", status: "CREATING" } }); } catch { return prisma.shipment.findUnique({ where: { orderId } }); }
   try {
     assertPickupConfigured(settings);
-    const result = await getShippingProvider(settings.provider || "MANUAL").createShipment({ order, input: buildShipmentPayload(order, settings), settings });
+    const result = await getShippingProvider(settings.provider || "MANUAL").createShipment({ order, input: buildShipmentPayload(order, settings, confirmedPackage), settings });
+    if (confirmedPackage) await lockOrderPackage(orderId);
     let shipment = await prisma.shipment.update({ where: { orderId }, data: { ...result, status: result.status || "CREATED", lastError: null } });
     // Chain AWB generation / pickup scheduling only when explicitly enabled
     // and fully awaited — no detached promises past the end of this call.

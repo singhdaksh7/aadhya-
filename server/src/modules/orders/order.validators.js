@@ -98,6 +98,7 @@ export const shipmentSchema = z.object({
   shippedDate: z.coerce.date().optional().nullable(),
   estimatedDelivery: z.coerce.date().optional().nullable(),
   deliveredDate: z.coerce.date().optional().nullable(),
+  courierCompanyId: z.coerce.number().int().positive().optional(),
 });
 
 export const listOrdersQuerySchema = z.object({

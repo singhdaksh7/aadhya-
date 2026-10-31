@@ -12,7 +12,8 @@ import { sendInvoiceEmail } from "../email/email.service.js";
 import { notifyOrderEvent, notifyOrderStatus } from "../mailer/mailer.service.js";
 import { ensureAccountForOrder } from "../customer-auth/guest-account.service.js";
 import { getShippingProvider } from "../shipping/provider.service.js";
-import { attemptAutomaticShipment, assertPickupConfigured, generateAwbForShipment, schedulePickupForShipment, getLabelForShipment, refreshTrackingForShipment, sanitizeProviderError } from "../shipping/fulfilment.service.js";
+import { requireConfirmedPackage, lockOrderPackage } from "../shipping/package.service.js";
+import { attemptAutomaticShipment, buildShipmentPayload, assertPickupConfigured, generateAwbForShipment, schedulePickupForShipment, getLabelForShipment, refreshTrackingForShipment, sanitizeProviderError } from "../shipping/fulfilment.service.js";
 
 const ADMIN_INCLUDE = {
   items: true,
@@ -518,8 +519,17 @@ export async function createOrderShipment(orderId, data) {
   const settings = setting?.value || {};
   const providerName = settings.provider || "MANUAL";
   assertPickupConfigured(settings);
+  // Real providers get the full order payload built from the Admin-confirmed package snapshot; MANUAL keeps the admin form values.
+  // Validation happens before the try block so a refusal never marks an existing shipment FAILED.
+  let input = data;
+  if (providerName === "SHIPROCKET") {
+    if (order.shipment?.providerShipmentId) throw ApiError.badRequest("A provider shipment already exists for this order.");
+    const confirmed = await requireConfirmedPackage(orderId);
+    input = buildShipmentPayload(order, settings, confirmed, { courierCompanyId: data.courierCompanyId });
+  }
   try {
-    const result = await getShippingProvider(providerName).createShipment({ order, input: data, settings });
+    const result = await getShippingProvider(providerName).createShipment({ order, input, settings });
+    if (providerName === "SHIPROCKET") await lockOrderPackage(orderId);
     let shipment = await prisma.shipment.upsert({ where: { orderId }, create: { orderId, ...result, shippedDate: data.shippedDate || null }, update: { ...result, shippedDate: data.shippedDate || undefined, lastError: null } });
     if (settings.autoGenerateAwb && shipment.providerShipmentId && !shipment.awb) shipment = await generateAwbForShipment(shipment.id, settings).catch(() => shipment);
     if (settings.autoSchedulePickup && shipment.awb) shipment = await schedulePickupForShipment(shipment.id, settings).catch(() => shipment);

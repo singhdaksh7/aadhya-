@@ -1,3 +1,4 @@
+import { shippingToColumns, withShipping } from "../shipping/shipping-fields.js";
 import { prisma } from "../../lib/prisma.js";
 import { slugify } from "../../utils/slugify.js";
 import { ApiError } from "../../utils/ApiError.js";
@@ -31,7 +32,7 @@ export function effectiveStock(product, variant = null) {
 }
 
 export function serializePublicProduct(product) {
-  const { variants = [], reviews = [], costPrice: _costPrice, ...safe } = product;
+  const { variants = [], reviews = [], costPrice: _costPrice, shipWeightGrams: _sw, shipLengthMm: _sl, shipWidthMm: _sd, shipHeightMm: _sh, ...safe } = product;
   const approvedReviews = Array.isArray(reviews) ? reviews.filter((r) => r.status === "APPROVED") : [];
   const reviewCount = approvedReviews.length;
   const sumRating = approvedReviews.reduce((sum, r) => sum + (r.rating || 0), 0);
@@ -267,24 +268,24 @@ export async function listAdminProducts(query) {
 export async function getAdminProductById(id) {
   const product = await prisma.product.findUnique({ where: { id }, include: ADMIN_INCLUDE });
   if (!product) throw ApiError.notFound("Product not found");
-  return product;
+  return { ...withShipping(product), variants: product.variants.map(withShipping) };
 }
 
 export async function listVariants(productId) {
   await getAdminProductById(productId);
-  return prisma.productVariant.findMany({ where: { productId }, orderBy: { createdAt: "asc" } });
+  return (await prisma.productVariant.findMany({ where: { productId }, orderBy: { createdAt: "asc" } })).map(withShipping);
 }
 
-export async function createVariant(productId, input) {
+export async function createVariant(productId, { shipping, ...input }) {
   await getAdminProductById(productId);
-  try { return await prisma.productVariant.create({ data: { productId, ...input } }); }
+  try { return withShipping(await prisma.productVariant.create({ data: { productId, ...input, ...shippingToColumns(shipping) } })); }
   catch (error) { if (error.code === "P2002") throw ApiError.conflict("Variant SKU is already in use"); throw error; }
 }
 
-export async function updateVariant(productId, variantId, input) {
+export async function updateVariant(productId, variantId, { shipping, ...input }) {
   const variant = await prisma.productVariant.findFirst({ where: { id: variantId, productId } });
   if (!variant) throw ApiError.notFound("Variant not found");
-  try { return await prisma.productVariant.update({ where: { id: variantId }, data: input }); }
+  try { return withShipping(await prisma.productVariant.update({ where: { id: variantId }, data: { ...input, ...shippingToColumns(shipping) } })); }
   catch (error) { if (error.code === "P2002") throw ApiError.conflict("Variant SKU is already in use"); throw error; }
 }
 
@@ -335,6 +336,7 @@ export async function createProduct(input) {
     tags: input.tags ?? [],
     materials: input.materials ?? null,
     dimensions: input.dimensions ?? null,
+    ...shippingToColumns(input.shipping),
     careInstructions: input.careInstructions ?? null,
     whatsIncluded: input.whatsIncluded ?? null,
     shippingInformation: input.shippingInformation ?? null,
@@ -417,6 +419,7 @@ export async function updateProduct(id, input) {
         ...(input.tags !== undefined ? { tags: input.tags } : {}),
         ...(input.materials !== undefined ? { materials: input.materials } : {}),
         ...(input.dimensions !== undefined ? { dimensions: input.dimensions } : {}),
+        ...shippingToColumns(input.shipping),
         ...(input.careInstructions !== undefined ? { careInstructions: input.careInstructions } : {}),
         ...(input.whatsIncluded !== undefined ? { whatsIncluded: input.whatsIncluded } : {}),
         ...(input.shippingInformation !== undefined ? { shippingInformation: input.shippingInformation } : {}),

@@ -478,7 +478,7 @@ describe("attemptAutomaticShipment: end-to-end with mocked Shiprocket HTTP", () 
   async function seedPhysicalOrder() {
     const category = await prisma.category.create({ data: { name: "Cat", slug: `cat-${Math.random().toString(36).slice(2)}` } });
     const product = await prisma.product.create({ data: { name: "Book", slug: `book-${Math.random().toString(36).slice(2)}`, productType: "BOOK", categoryId: category.id, price: 300, stockQuantity: 10 } });
-    return prisma.order.create({
+    const created = await prisma.order.create({
       data: {
         orderNumber: `ORD-AUTO-${Math.random().toString(36).slice(2, 8)}`,
         accessTokenHash: crypto.randomBytes(16).toString("hex"),
@@ -489,6 +489,8 @@ describe("attemptAutomaticShipment: end-to-end with mocked Shiprocket HTTP", () 
         items: { create: [{ productId: product.id, productNameSnapshot: "Book", productSlugSnapshot: product.slug, productTypeSnapshot: "BOOK", variantSkuSnapshot: "SKU-1", quantity: 1, unitPrice: 300, lineTotal: 300, bookFormatSnapshot: "PHYSICAL" }] },
       },
     });
+    await prisma.orderShipmentPackage.create({ data: { orderId: created.id, weightGrams: 500, lengthMm: 200, widthMm: 150, heightMm: 100, source: "MANUAL_OVERRIDE" } });
+    return created;
   }
 
   it("creates a shipment automatically via Shiprocket when autoCreateShipment is enabled", async () => {
@@ -689,8 +691,42 @@ describe("Pickup-location validation before provider shipment creation", () => {
       },
     });
 
+    await prisma.orderShipmentPackage.create({ data: { orderId: order.id, weightGrams: 500, lengthMm: 200, widthMm: 150, heightMm: 100, source: "MANUAL_OVERRIDE" } });
     const shipment = await attemptAutomaticShipment(order.id);
     expect(shipment.status).toBe("CREATION_FAILED");
     expect(shipment.lastError).toMatch(/Pickup location is incomplete/);
+  });
+});
+
+describe("Shiprocket adapter: serviceability with the confirmed package", () => {
+  it("sends kg/cm package + COD flag and maps the courier list without inventing fields", async () => {
+    await saveShiprocketCreds();
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse({ token: "tok" }))
+      .mockResolvedValueOnce(jsonResponse({ status: 200, data: { recommended_courier_company_id: 10, available_courier_companies: [
+        { courier_company_id: 10, courier_name: "Alpha", rate: 91.5, estimated_delivery_days: "3", etd: "Nov 04, 2026", cod: 1, rating: 4.4, charge_weight: 1 },
+        { courier_company_id: 11, courier_name: "Beta", freight_charge: 70, cod: 0 },
+      ] } }));
+    global.fetch = fetchMock;
+    const out = await getShippingProvider("SHIPROCKET").getServiceability({ pickupPostcode: "302001", deliveryPostcode: "560001", package: { weight: 0.75, length: 30, breadth: 25, height: 8 }, cod: true, declaredValue: 1499.4, settings: { environment: "LIVE" } });
+    const url = new URL(fetchMock.mock.calls[1][0]);
+    expect(url.pathname).toMatch(/courier\/serviceability\/$/);
+    expect(Object.fromEntries(url.searchParams)).toMatchObject({ pickup_postcode: "302001", delivery_postcode: "560001", weight: "0.75", cod: "1", declared_value: "1499", length: "30", breadth: "25", height: "8" });
+    expect(out.recommendedCourierCompanyId).toBe(10);
+    expect(out.couriers[0]).toMatchObject({ courierCompanyId: 10, name: "Alpha", rate: 91.5, cod: true, rating: 4.4 });
+    expect(out.couriers[1]).toMatchObject({ rate: 70, cod: false, rating: null });
+  });
+  it("sends the chosen courier when creating, and package dims in the order body", async () => {
+    await saveShiprocketCreds();
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse({ token: "t1" })).mockResolvedValueOnce(jsonResponse({ order_id: 5, shipment_id: 6 }))
+      .mockResolvedValueOnce(jsonResponse({ token: "t2" })).mockResolvedValueOnce(jsonResponse({ awb_assign_status: 1, response: { data: { awb_code: "AWB1", courier_name: "Alpha" } } }));
+    global.fetch = fetchMock;
+    const order = { id: "o1", orderNumber: "TUS-1", createdAt: new Date(), paymentMethod: "cashfree", totalAmount: 100, customerName: "A", customerEmail: "a@b.co", customerPhone: "9876543210", address: { fullName: "A", phone: "9876543210", addressLine1: "x", city: "c", state: "s", postalCode: "560001" }, items: [{ productNameSnapshot: "Bag", quantity: 1, unitPrice: 100 }] };
+    const input = buildShipmentPayload(order, {}, { weightGrams: 750, lengthMm: 300, widthMm: 250, heightMm: 80 }, { courierCompanyId: 10 });
+    await getShippingProvider("SHIPROCKET").createShipment({ input, settings: { environment: "LIVE", pickup: { location: "Primary" } } });
+    const body = JSON.parse(fetchMock.mock.calls[1][1].body);
+    expect(body).toMatchObject({ payment_method: "Prepaid", weight: 0.75, length: 30, breadth: 25, height: 8 });
+    expect(JSON.parse(fetchMock.mock.calls[3][1].body)).toMatchObject({ shipment_id: 6, courier_company_id: 10 });
   });
 });

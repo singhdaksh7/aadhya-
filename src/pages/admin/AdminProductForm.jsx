@@ -63,6 +63,10 @@ const emptyForm = {
   description: "",
   materials: "",
   dimensions: "",
+  shipWeightKg: "",
+  shipLengthCm: "",
+  shipWidthCm: "",
+  shipHeightCm: "",
   careInstructions: "",
   specifications: [],
   whatsIncluded: "",
@@ -134,6 +138,10 @@ export default function AdminProductForm() {
           description: p.description || "",
           materials: p.materials || "",
           dimensions: p.dimensions || "",
+          shipWeightKg: p.shipping?.weightKg != null ? String(p.shipping.weightKg) : "",
+          shipLengthCm: p.shipping?.lengthCm != null ? String(p.shipping.lengthCm) : "",
+          shipWidthCm: p.shipping?.widthCm != null ? String(p.shipping.widthCm) : "",
+          shipHeightCm: p.shipping?.heightCm != null ? String(p.shipping.heightCm) : "",
           careInstructions: p.careInstructions || "",
           specifications: normalizeSpecifications(p.specifications),
           whatsIncluded: p.whatsIncluded || "",
@@ -190,6 +198,12 @@ export default function AdminProductForm() {
       description: form.description || null,
       materials: form.materials || null,
       dimensions: form.dimensions || null,
+      shipping: {
+        weightKg: form.shipWeightKg === "" ? null : Number(form.shipWeightKg),
+        lengthCm: form.shipLengthCm === "" ? null : Number(form.shipLengthCm),
+        widthCm: form.shipWidthCm === "" ? null : Number(form.shipWidthCm),
+        heightCm: form.shipHeightCm === "" ? null : Number(form.shipHeightCm),
+      },
       careInstructions: form.careInstructions || null,
       specifications: normalizeSpecifications(form.specifications),
       whatsIncluded: form.whatsIncluded || null,
@@ -416,6 +430,26 @@ export default function AdminProductForm() {
         </section>
 
         {/* CONTENT SECTION */}
+        <section id="sec-shipping" className="admin-card space-y-4 p-5">
+          <h2 className="admin-card__title border-b border-charcoal/10 pb-2">Shipping &amp; Package Details</h2>
+          <p className="text-xs text-charcoal-soft">These values are used as the default package information for courier and serviceability calculations. They are separate from the customer-facing &ldquo;Dimensions&rdquo; text. You can leave them empty while drafting, but they are required before a Shiprocket shipment can be created.</p>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <Field label="Dead weight (kg)">
+              <input inputMode="decimal" value={form.shipWeightKg} onChange={(e) => set("shipWeightKg", e.target.value)} placeholder="e.g. 0.4" className={inputCls} />
+            </Field>
+            <Field label="Package length (cm)">
+              <input inputMode="decimal" value={form.shipLengthCm} onChange={(e) => set("shipLengthCm", e.target.value)} placeholder="e.g. 28" className={inputCls} />
+            </Field>
+            <Field label="Package width (cm)">
+              <input inputMode="decimal" value={form.shipWidthCm} onChange={(e) => set("shipWidthCm", e.target.value)} placeholder="e.g. 23" className={inputCls} />
+            </Field>
+            <Field label="Package height (cm)">
+              <input inputMode="decimal" value={form.shipHeightCm} onChange={(e) => set("shipHeightCm", e.target.value)} placeholder="e.g. 6" className={inputCls} />
+            </Field>
+          </div>
+          <p className="text-xs text-charcoal-soft">Variants inherit these values unless a variant sets its own (variant, then product, then missing).</p>
+        </section>
+
         <section id="sec-content" className="admin-card space-y-4 p-5">
           <h2 className="admin-card__title border-b border-charcoal/10 pb-2">Product Content & Specs</h2>
           <Field label="Short Description">
