@@ -3,6 +3,7 @@ import { SectionHeading, Button, Tag } from "../components/ui";
 import { trackOrder, ApiRequestError } from "../lib/api";
 import { formatInr } from "../lib/format";
 import { IconCheck } from "../components/icons";
+import TrackingBlock from "../components/TrackingBlock";
 
 const STATUS_TIMELINE = [
   { key: "CONFIRMED", label: "Order Confirmed", desc: "Your order has been confirmed." },
@@ -142,6 +143,13 @@ export default function TrackOrder() {
               })}
             </div>
           </div>
+
+          {order.tracking && (
+            <div className="border-t store-border pt-6">
+              <h3 className="font-serif-display text-lg store-text mb-4">Shipment</h3>
+              <TrackingBlock tracking={order.tracking} />
+            </div>
+          )}
 
           {/* Order Items List */}
           <div className="border-t store-border pt-6 space-y-3">
