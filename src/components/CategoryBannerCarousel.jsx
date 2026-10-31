@@ -3,7 +3,9 @@ import { Link } from "react-router-dom";
 import { resolveMediaUrl } from "../lib/api";
 
 // 0 slides -> nothing, 1 -> static banner, 2+ -> carousel (arrows, dots, autoplay, swipe).
-// The frame has a fixed aspect ratio so slides never shift layout; only the first image is eager.
+// The frame sizes itself to the uploaded image (no fixed ratio, no cropping): a single banner uses its natural
+// height; in a carousel every slide shares one grid cell so the frame is as tall as the tallest slide and
+// shorter slides are centred, uncropped, inside it. Only the first image is eager.
 const isExternal = (u) => /^https?:\/\//i.test(u);
 
 function Cta({ slide }) {
@@ -14,7 +16,7 @@ function Cta({ slide }) {
     : <Link to={slide.ctaUrl} className={cls}>{slide.ctaLabel}</Link>;
 }
 
-function SlideImage({ slide, alt, first }) {
+function SlideImage({ slide, alt, first, fill = false }) {
   return (
     <picture>
       {slide.mobile && slide.desktop && slide.mobile !== slide.desktop && (
@@ -27,7 +29,7 @@ function SlideImage({ slide, alt, first }) {
         fetchPriority={first ? "high" : "auto"}
         decoding={first ? "sync" : "async"}
         draggable={false}
-        className="absolute inset-0 h-full w-full object-cover"
+        className={fill ? "block h-full w-full object-contain" : "block h-auto w-full"}
       />
     </picture>
   );
@@ -51,7 +53,7 @@ export default function CategoryBannerCarousel({ slides = [], autoplay = false, 
 
   if (count === 0) return null;
 
-  const frame = "relative aspect-[2/1] w-full overflow-hidden rounded-2xl border border-[var(--theme-border)] store-surface md:aspect-[3/1] md:max-h-[300px]";
+  const frame = "relative w-full overflow-hidden rounded-2xl border border-[var(--theme-border)] store-surface";
   const alt = (s) => s.title || `${categoryName} banner`;
 
   const overlay = (s) => (s.title || s.subtitle || s.ctaLabel) && (
@@ -92,7 +94,7 @@ export default function CategoryBannerCarousel({ slides = [], autoplay = false, 
       onFocus={() => setPaused(true)}
       onBlur={() => setPaused(false)}
     >
-      <div className={frame} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} style={{ touchAction: "pan-y" }}>
+      <div className={`${frame} grid`} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} style={{ touchAction: "pan-y" }}>
         {slides.map((s, i) => (
           <div
             key={s.id}
@@ -101,9 +103,9 @@ export default function CategoryBannerCarousel({ slides = [], autoplay = false, 
             aria-roledescription="slide"
             aria-label={`${i + 1} of ${count}`}
             aria-hidden={i !== safeIndex}
-            className={`absolute inset-0 transition-opacity duration-500 motion-reduce:transition-none ${i === safeIndex ? "opacity-100" : "pointer-events-none opacity-0"}`}
+            className={`col-start-1 row-start-1 transition-opacity duration-500 motion-reduce:transition-none ${i === safeIndex ? "opacity-100" : "pointer-events-none opacity-0"}`}
           >
-            <SlideImage slide={s} alt={alt(s)} first={i === 0} />
+            <SlideImage slide={s} alt={alt(s)} first={i === 0} fill />
             {i === safeIndex && overlay(s)}
           </div>
         ))}
