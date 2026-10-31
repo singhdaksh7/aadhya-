@@ -60,10 +60,15 @@ export async function getAdminCouponById(id) {
 export async function listPublicActiveCoupons() {
   const now = new Date();
   const coupons = await prisma.coupon.findMany({
+    // Storefront-discoverable coupons only: explicitly public, enabled, started (a missing start date means
+    // "already started") and not expired. Private/manual codes stay usable via /validate but are never listed.
     where: {
       isActive: true,
-      validFrom: { lte: now },
-      OR: [{ validUntil: null }, { validUntil: { gte: now } }],
+      isPublic: true,
+      AND: [
+        { OR: [{ validFrom: null }, { validFrom: { lte: now } }] },
+        { OR: [{ validUntil: null }, { validUntil: { gte: now } }] },
+      ],
     },
     include: { targets: true },
     orderBy: { createdAt: "desc" },
