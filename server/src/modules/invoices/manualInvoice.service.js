@@ -48,7 +48,7 @@ async function resolveManualItem(rawItem, settings) {
       itemName: product.invoiceName || product.name,
       sku: product.sku || null,
       hsnCode: product.hsnCode || null,
-      gstRate: product.gstRate != null ? Number(product.gstRate) : 0,
+      gstRate: product.gstRate != null ? Number(product.gstRate) : num(settings.defaultTaxRate) > 0 ? num(settings.defaultTaxRate) : null,
       unit: product.unit || "PCS",
       taxPricingMode: product.taxPricingMode || settings.defaultTaxPricingMode || "TAX_EXCLUSIVE",
       quantity,
@@ -64,7 +64,7 @@ async function resolveManualItem(rawItem, settings) {
     itemName: rawItem.itemName,
     sku: null,
     hsnCode: rawItem.hsnCode || null,
-    gstRate: rawItem.gstRate != null ? Number(rawItem.gstRate) : 0,
+    gstRate: rawItem.gstRate != null ? Number(rawItem.gstRate) : num(settings.defaultTaxRate) > 0 ? num(settings.defaultTaxRate) : null,
     unit: rawItem.unit || "PCS",
     taxPricingMode: rawItem.taxPricingMode || settings.defaultTaxPricingMode || "TAX_EXCLUSIVE",
     quantity,
@@ -124,7 +124,9 @@ function computeManualTotals(resolvedItems, settings, { interState }) {
       cgstAmount,
       sgstAmount,
       igstAmount,
-      hasIncompleteTaxData: false,
+      // An item with no rate is not taxed (never invented); flag it so the PDF says "GST not configured".
+      unratedItemCount: items.filter((i) => i.gstRate == null).length,
+      hasIncompleteTaxData: items.some((i) => i.gstRate == null),
     },
   };
 }

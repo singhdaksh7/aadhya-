@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { adminGetInvoiceSettings, adminSaveInvoiceSettings, adminFetchSiteSettings } from "../../lib/api";
+import { adminGetInvoiceSettings, adminSaveInvoiceSettings, adminFetchSiteSettings, adminGetInvoiceTaxReadiness } from "../../lib/api";
+import InvoiceTaxReadiness from "../../components/admin/InvoiceTaxReadiness";
 import { Button } from "../../components/ui";
 import { LoadingNotice, ErrorNotice } from "../../components/StateNotice";
 import ImagePickerInput from "../../components/admin/ImagePickerInput";
@@ -58,7 +59,14 @@ export default function AdminInvoiceSettings() {
   const [generalGstin, setGeneralGstin] = useState("");
   const [gstinSuggestionDismissed, setGstinSuggestionDismissed] = useState(false);
 
+  const [counts, setCounts] = useState(null);
+  const loadCounts = () =>
+    adminGetInvoiceTaxReadiness()
+      .then((r) => setCounts({ missingRate: r.data.productsMissingGstRate, missingHsn: r.data.productsMissingHsn }))
+      .catch(() => setCounts(null));
+
   useEffect(() => {
+    loadCounts();
     Promise.all([adminGetInvoiceSettings(), adminFetchSiteSettings().catch(() => null)])
       .then(([invRes, siteRes]) => {
         const data = invRes.data || {};
@@ -143,7 +151,11 @@ export default function AdminInvoiceSettings() {
         </div>
       </div>
 
-      <form onSubmit={handleSave} className="mt-5 max-w-3xl space-y-4">
+      <div className="mt-5 max-w-3xl">
+        <InvoiceTaxReadiness settings={form} counts={counts} onApplied={loadCounts} />
+      </div>
+
+      <form onSubmit={handleSave} className="mt-4 max-w-3xl space-y-4">
         {/* BUSINESS IDENTITY */}
         <section className="admin-card space-y-4 p-5">
           <h2 className="admin-card__title border-b border-charcoal/10 pb-2">Business Identity</h2>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { adminGetInvoiceDetail, adminDownloadInvoice, adminResendInvoice, adminRegenerateInvoice } from "../../lib/api";
+import { adminGetInvoiceDetail, adminDownloadInvoice, adminResendInvoice, adminRegenerateInvoice, adminRecomputeInvoiceTax } from "../../lib/api";
 import { LoadingNotice, ErrorNotice } from "../../components/StateNotice";
 import { formatInr } from "../../lib/format";
 import { PageHeader, AdminCard, StatusBadge } from "../../components/admin/ui";
@@ -60,6 +60,20 @@ export default function AdminInvoiceDetail() {
     }
   };
 
+  const recomputeTax = async () => {
+    if (!window.confirm("Recompute GST on this invoice using the current settings and product GST data? The invoice number and total stay the same. This is logged.")) return;
+    setBusy(true);
+    try {
+      await adminRecomputeInvoiceTax(id);
+      setMessage("Tax recomputed and PDF regenerated. Invoice number unchanged.");
+      load();
+    } catch (err) {
+      setMessage(err.message || "Could not recompute invoice tax.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   if (status === "loading") return <LoadingNotice />;
   if (status === "error" || !invoice) return <ErrorNotice message="Unable to load invoice." onRetry={load} />;
 
@@ -89,6 +103,11 @@ export default function AdminInvoiceDetail() {
         <button type="button" disabled={busy} onClick={regenerate} className="admin-btn admin-btn--ghost">
           Regenerate PDF
         </button>
+        {invoice.source !== "MANUAL" && (
+          <button type="button" disabled={busy} onClick={recomputeTax} className="admin-btn admin-btn--ghost">
+            Recompute tax
+          </button>
+        )}
         {invoice.order?.id && (
           <Link to={`/admin/orders/${invoice.order.id}`} className="admin-btn admin-btn--ghost">
             View Order

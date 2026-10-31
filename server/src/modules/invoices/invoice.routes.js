@@ -6,6 +6,7 @@ import { asyncHandler } from "../../utils/asyncHandler.js";
 import { ok } from "../../utils/apiResponse.js";
 import { getInvoiceSettings, updateInvoiceSettings, getInvoiceFile, listCustomerInvoices, listAdminInvoices, assertCustomerInvoice, assertGuestInvoice, regenerateInvoicePdf, getInvoiceDetail } from "./invoice.service.js";
 import { createManualInvoiceDraft, editManualInvoiceDraft, issueManualInvoice, uploadExternalInvoicePdf, previewManualInvoice } from "./manualInvoice.service.js";
+import { getInvoiceTaxReadiness, applyDefaultGstToProducts, recomputeInvoiceTax } from "./invoice.taxAdmin.service.js";
 import { sendInvoiceEmail } from "../email/email.service.js";
 import { bookPdfUpload, verifyPdfContent } from "../uploads/upload.middleware.js";
 import { writeInvoicePdf } from "./invoice.storage.js";
@@ -43,9 +44,19 @@ adminInvoiceRouter.get("/", asyncHandler(async (req, res) => {
 }));
 adminInvoiceRouter.get("/settings", requireRole("SUPER_ADMIN"), asyncHandler(async (_req, res) => ok(res, await getInvoiceSettings())));
 adminInvoiceRouter.put("/settings", requireRole("SUPER_ADMIN"), asyncHandler(async (req, res) => ok(res, await updateInvoiceSettings(settingsSchema.parse(req.body)))));
-adminInvoiceRouter.get("/:id/download", asyncHandler(async (req, res) => sendFile(res, await getInvoiceFile(req.params.id))));
+adminInvoiceRouter.get("/tax-readiness", requireRole("SUPER_ADMIN"), asyncHandler(async (_req, res) => ok(res, await getInvoiceTaxReadiness())));
+adminInvoiceRouter.post("/apply-product-defaults", requireRole("SUPER_ADMIN"), asyncHandler(async (req, res) => {
+  const body = z.object({ gstRate: z.coerce.number().optional().nullable(), hsnCode: z.string().trim().max(20).optional().nullable(), confirm: z.boolean().optional().default(false) }).parse(req.body || {});
+  ok(res, await applyDefaultGstToProducts(req.admin.id, body));
+}));
+adminInvoiceRouter.post("/:id/recompute-tax", requireRole("SUPER_ADMIN"), asyncHandler(async (req, res) => ok(res, await recomputeInvoiceTax(req.params.id, req.admin.id))));
+adminInvoiceRouter.get("/:id/download",asyncHandler(async (req, res) => sendFile(res, await getInvoiceFile(req.params.id))));
 adminInvoiceRouter.get("/:id", asyncHandler(async (req, res) => ok(res, await getInvoiceDetail(req.params.id))));
-adminInvoiceRouter.post("/:id/regenerate", asyncHandler(async (req, res) => ok(res, await regenerateInvoicePdf(req.params.id))));
+adminInvoiceRouter.post("/:id/regenerate", asyncHandler(async (req, res) => {
+  const result = await regenerateInvoicePdf(req.params.id);
+  await prisma.adminAuditLog.create({ data: { adminId: req.admin.id, action: "INVOICE_PDF_REGENERATED", provider: "invoice", metadata: { invoiceId: req.params.id } } });
+  ok(res, result);
+}));
 adminInvoiceRouter.post("/:id/resend", asyncHandler(async (req, res) => ok(res, await sendInvoiceEmail(req.params.id, { resend: true, adminId: req.admin.id }))));
 
 // --- Manual/offline invoices (Phase 2) ---
