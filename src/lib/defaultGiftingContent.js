@@ -1,3 +1,14 @@
+export const BULK_GIFTING_DEFAULTS = {
+  enabled: true,
+  eyebrow: "Corporate & Celebratory Orders",
+  heading: "Planning a large gifting order?",
+  description: "Whether celebrating team milestones, weddings, festive gatherings, or bespoke client tokens, our artisans craft thoughtful keepsake gifts at scale.",
+  formHeading: "Request a Bulk Quote",
+  ctaLabel: "Submit Inquiry",
+  image: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?q=80&w=1200&auto=format&fit=crop",
+  successMessage: "Thank you for reaching out! Our gifting concierge has received your request and will contact you within 24 hours.",
+};
+
 export const GIFTING_HERO_DEFAULTS = {
   eyebrow: "Artisan Gifting",
   title: "Thoughtful gifts, handmade with heart.",
@@ -355,6 +366,7 @@ export const DEFAULT_GIFTING_PAGE_SECTIONS = [
   { type: "GIFTS_BY_CRAFT", name: "Gifts by Craft", sortOrder: 6, settings: GIFTS_BY_CRAFT_DEFAULTS },
   { type: "FEATURED_GIFTS", name: "Featured Handpicked Gifts", sortOrder: 7, settings: FEATURED_GIFTS_DEFAULTS },
   { type: "GIFTS_BY_BUDGET", name: "Gifts by Budget", sortOrder: 8, settings: GIFTS_BY_BUDGET_DEFAULTS },
+  { type: "BULK_GIFTING", name: "Bulk Gifting Inquiry", sortOrder: 9, settings: BULK_GIFTING_DEFAULTS },
   { type: "GIFTING_SEO", name: "Gifting SEO Story", sortOrder: 9, settings: GIFTING_SEO_DEFAULTS },
   { type: "GIFTING_FAQ", name: "Gifting FAQ Accordion", sortOrder: 10, settings: GIFTING_FAQ_DEFAULTS },
 ];
@@ -368,6 +380,7 @@ export const DEFAULT_GIFTING_CONTENT = {
   GIFTS_BY_CRAFT: GIFTS_BY_CRAFT_DEFAULTS,
   FEATURED_GIFTS: FEATURED_GIFTS_DEFAULTS,
   GIFTS_BY_BUDGET: GIFTS_BY_BUDGET_DEFAULTS,
+  BULK_GIFTING: BULK_GIFTING_DEFAULTS,
   GIFTING_SEO: GIFTING_SEO_DEFAULTS,
   GIFTING_FAQ: GIFTING_FAQ_DEFAULTS,
 };

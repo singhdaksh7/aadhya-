@@ -53,6 +53,7 @@ import AdminReturnList from "./pages/admin/AdminReturnList";
 import AdminReturnDetail from "./pages/admin/AdminReturnDetail";
 import AdminHomepageBuilder from "./pages/admin/AdminHomepageBuilder";
 import AdminGifting from "./pages/admin/AdminGifting";
+import AdminBulkInquiries from "./pages/admin/AdminBulkInquiries";
 import AdminBanners from "./pages/admin/AdminBanners";
 import AdminPromos from "./pages/admin/AdminPromos";
 import AdminPopup from "./pages/admin/AdminPopup";
@@ -198,6 +199,7 @@ function AdminRoutes() {
           <Route index element={<AdminDashboard />} />
           <Route path="homepage-builder" element={<AdminHomepageBuilder />} />
           <Route path="gifting" element={<AdminGifting />} />
+          <Route path="gifting/bulk-inquiries" element={<AdminBulkInquiries />} />
           <Route path="decorations" element={<AdminDecorations />} />
           <Route path="header-settings" element={<AdminHeaderSettings />} />
           <Route path="storefront/header" element={<AdminHeaderSettings />} />

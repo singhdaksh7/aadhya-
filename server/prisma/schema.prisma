@@ -32,6 +32,13 @@ enum OrderStatus {
   CANCELLED
 }
 
+enum BulkGiftingInquiryStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  CLOSED
+}
+
 enum PaymentStatus {
   PENDING
   PAID
@@ -1511,4 +1518,27 @@ model ShipmentEvent {
 
   @@unique([shipmentId, status])
   @@index([orderId])
+}
+
+// Dedicated model for bulk/corporate gifting inquiries submitted on /gifting.
+model BulkGiftingInquiry {
+  id            String                   @id @default(uuid())
+  name          String
+  email         String
+  phone         String
+  company       String?
+  quantity      Int
+  budget        String?
+  occasion      String
+  preferredDate String?
+  location      String?
+  message       String
+  status        BulkGiftingInquiryStatus @default(NEW)
+  source        String                   @default("STOREFRONT_GIFTING")
+  internalNotes String?
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
 }

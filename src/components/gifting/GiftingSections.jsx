@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import ProductCard from "../ProductCard";
-import { resolveProductImageUrl } from "../../lib/api";
+import { resolveProductImageUrl, resolveMediaUrl } from "../../lib/api";
 import { IconArrowRight, IconCheck } from "../icons";
 import { scriptCase } from "../HeroBannerCarousel";
 import RichTextRenderer from "../cms/RichTextRenderer";
@@ -619,6 +619,280 @@ export function GiftingFaqSection({ section }) {
             </div>
           );
         })}
+      </div>
+    </section>
+  );
+}
+
+/**
+ * Bulk & Corporate Gifting Section with inquiry form.
+ */
+export function BulkGiftingSection({ content = {} }) {
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    company: "",
+    quantity: "",
+    budget: "",
+    occasion: "",
+    preferredDate: "",
+    location: "",
+    message: "",
+    honeypot: "",
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const handleChange = (field) => (e) => {
+    setForm((prev) => ({ ...prev, [field]: e.target.value }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setErrorMessage("");
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/gifting/bulk-inquiry", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error?.message || data.error || "Failed to submit inquiry");
+      }
+      setSubmitted(true);
+    } catch (err) {
+      setErrorMessage(err.message || "An error occurred while submitting. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (content.enabled === false) return null;
+
+  const image = resolveMediaUrl(content.image) || "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?q=80&w=1200&auto=format&fit=crop";
+
+  return (
+    <section data-testid="bulk-gifting-section" className="mx-auto max-w-7xl px-4 sm:px-8 py-12 sm:py-20">
+      <div className="overflow-hidden rounded-3xl border store-border bg-white shadow-sm">
+        <div className="grid grid-cols-1 lg:grid-cols-12">
+          {/* Left / Editorial Info */}
+          <div className="lg:col-span-5 relative p-6 sm:p-10 flex flex-col justify-between bg-charcoal/5">
+            <div>
+              <Eyebrow value={content.eyebrow} fallback="Corporate & Celebratory Orders" />
+              <h2 className="mt-2 font-serif-display text-2xl sm:text-3xl lg:text-4xl font-bold store-text leading-tight">
+                {content.heading || "Planning a large gifting order?"}
+              </h2>
+              <p className="mt-4 text-xs sm:text-sm store-muted leading-relaxed">
+                {content.description ||
+                  "Whether celebrating team milestones, weddings, festive gatherings, or bespoke client tokens, our artisans craft thoughtful keepsake gifts at scale."}
+              </p>
+            </div>
+
+            <div className="mt-8 rounded-2xl overflow-hidden aspect-[4/3] relative">
+              <img src={image} alt="Bulk artisan gifts" className="w-full h-full object-cover" />
+            </div>
+          </div>
+
+          {/* Right / Form */}
+          <div className="lg:col-span-7 p-6 sm:p-10 flex flex-col justify-center">
+            {submitted ? (
+              <div data-testid="bulk-inquiry-success" className="py-12 text-center space-y-4 animate-fade-in">
+                <div className="mx-auto w-12 h-12 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                  <IconCheck className="w-6 h-6" />
+                </div>
+                <h3 className="font-serif-display text-2xl font-bold store-text">Inquiry Received</h3>
+                <p className="text-sm store-muted max-w-md mx-auto">
+                  {content.successMessage ||
+                    "Thank you for reaching out! Our gifting concierge has received your request and will contact you within 24 hours."}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSubmitted(false);
+                    setForm({
+                      name: "",
+                      email: "",
+                      phone: "",
+                      company: "",
+                      quantity: "",
+                      budget: "",
+                      occasion: "",
+                      preferredDate: "",
+                      location: "",
+                      message: "",
+                      honeypot: "",
+                    });
+                  }}
+                  className="mt-4 text-xs font-semibold uppercase tracking-wider underline store-primary"
+                >
+                  Send another inquiry
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmit} data-testid="bulk-inquiry-form" className="space-y-4">
+                <div>
+                  <h3 className="font-serif-display text-xl sm:text-2xl font-bold store-text">
+                    {content.formHeading || "Request a Bulk Quote"}
+                  </h3>
+                  <p className="mt-1 text-xs store-muted">Fill out your details below and our team will get back to you with custom catalog recommendations.</p>
+                </div>
+
+                {/* Honeypot anti-spam field */}
+                <input
+                  type="text"
+                  name="honeypot"
+                  value={form.honeypot}
+                  onChange={handleChange("honeypot")}
+                  style={{ display: "none" }}
+                  tabIndex={-1}
+                  autoComplete="off"
+                />
+
+                {errorMessage && (
+                  <div role="alert" className="p-3 text-xs rounded-xl bg-red-50 text-red-700 border border-red-200">
+                    {errorMessage}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <label className="block text-xs font-semibold store-text">
+                    Full Name <span className="text-red-500">*</span>
+                    <input
+                      type="text"
+                      required
+                      value={form.name}
+                      onChange={handleChange("name")}
+                      placeholder="e.g. Priya Nair"
+                      className="mt-1 w-full rounded-xl border store-border px-3 py-2.5 text-xs sm:text-sm focus:outline-none focus:ring-1 focus:ring-charcoal"
+                    />
+                  </label>
+
+                  <label className="block text-xs font-semibold store-text">
+                    Email Address <span className="text-red-500">*</span>
+                    <input
+                      type="email"
+                      required
+                      value={form.email}
+                      onChange={handleChange("email")}
+                      placeholder="e.g. priya@example.com"
+                      className="mt-1 w-full rounded-xl border store-border px-3 py-2.5 text-xs sm:text-sm focus:outline-none focus:ring-1 focus:ring-charcoal"
+                    />
+                  </label>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <label className="block text-xs font-semibold store-text">
+                    Phone Number <span className="text-red-500">*</span>
+                    <input
+                      type="tel"
+                      required
+                      value={form.phone}
+                      onChange={handleChange("phone")}
+                      placeholder="e.g. +91 98765 43210"
+                      className="mt-1 w-full rounded-xl border store-border px-3 py-2.5 text-xs sm:text-sm focus:outline-none focus:ring-1 focus:ring-charcoal"
+                    />
+                  </label>
+
+                  <label className="block text-xs font-semibold store-text">
+                    Company / Organization
+                    <input
+                      type="text"
+                      value={form.company}
+                      onChange={handleChange("company")}
+                      placeholder="Optional"
+                      className="mt-1 w-full rounded-xl border store-border px-3 py-2.5 text-xs sm:text-sm focus:outline-none focus:ring-1 focus:ring-charcoal"
+                    />
+                  </label>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <label className="block text-xs font-semibold store-text">
+                    Approximate Quantity <span className="text-red-500">*</span>
+                    <input
+                      type="number"
+                      required
+                      min="1"
+                      value={form.quantity}
+                      onChange={handleChange("quantity")}
+                      placeholder="e.g. 50"
+                      className="mt-1 w-full rounded-xl border store-border px-3 py-2.5 text-xs sm:text-sm focus:outline-none focus:ring-1 focus:ring-charcoal"
+                    />
+                  </label>
+
+                  <label className="block text-xs font-semibold store-text">
+                    Budget Range
+                    <input
+                      type="text"
+                      value={form.budget}
+                      onChange={handleChange("budget")}
+                      placeholder="e.g. ₹1,000 - ₹2,500 per gift"
+                      className="mt-1 w-full rounded-xl border store-border px-3 py-2.5 text-xs sm:text-sm focus:outline-none focus:ring-1 focus:ring-charcoal"
+                    />
+                  </label>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <label className="block text-xs font-semibold store-text">
+                    Occasion / Requirement <span className="text-red-500">*</span>
+                    <input
+                      type="text"
+                      required
+                      value={form.occasion}
+                      onChange={handleChange("occasion")}
+                      placeholder="e.g. Diwali Corporate, Wedding"
+                      className="mt-1 w-full rounded-xl border store-border px-3 py-2.5 text-xs sm:text-sm focus:outline-none focus:ring-1 focus:ring-charcoal"
+                    />
+                  </label>
+
+                  <label className="block text-xs font-semibold store-text">
+                    Preferred Delivery Date
+                    <input
+                      type="date"
+                      value={form.preferredDate}
+                      onChange={handleChange("preferredDate")}
+                      className="mt-1 w-full rounded-xl border store-border px-3 py-2.5 text-xs sm:text-sm focus:outline-none focus:ring-1 focus:ring-charcoal"
+                    />
+                  </label>
+                </div>
+
+                <label className="block text-xs font-semibold store-text">
+                  Delivery Location (City / Pincode)
+                  <input
+                    type="text"
+                    value={form.location}
+                    onChange={handleChange("location")}
+                    placeholder="e.g. Bangalore, 560001"
+                    className="mt-1 w-full rounded-xl border store-border px-3 py-2.5 text-xs sm:text-sm focus:outline-none focus:ring-1 focus:ring-charcoal"
+                  />
+                </label>
+
+                <label className="block text-xs font-semibold store-text">
+                  Message / Details <span className="text-red-500">*</span>
+                  <textarea
+                    required
+                    rows="3"
+                    value={form.message}
+                    onChange={handleChange("message")}
+                    placeholder="Tell us about specific items, custom branding, or packaging requirements..."
+                    className="mt-1 w-full rounded-xl border store-border px-3 py-2.5 text-xs sm:text-sm focus:outline-none focus:ring-1 focus:ring-charcoal"
+                  />
+                </label>
+
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full sm:w-auto inline-flex items-center justify-center rounded-full bg-charcoal px-8 py-3 text-xs sm:text-sm font-semibold tracking-wider uppercase text-white hover:bg-charcoal/90 transition disabled:opacity-50"
+                >
+                  {submitting ? "Sending..." : content.ctaLabel || "Submit Inquiry"}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
       </div>
     </section>
   );

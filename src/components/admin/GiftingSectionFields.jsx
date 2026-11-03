@@ -389,6 +389,30 @@ export default function GiftingSectionFields({ type, value = {}, onChange, produ
         </div>
       );
 
+    case "BULK_GIFTING":
+      return (
+        <div className="space-y-4">
+          <Toggle checked={value.enabled !== false} onChange={(v) => set("enabled", v)} label="Section Enabled" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <TextField label="Eyebrow" value={value.eyebrow} onChange={(v) => set("eyebrow", v)} />
+            <TextField label="Section Heading" value={value.heading} onChange={(v) => set("heading", v)} />
+          </div>
+          <label className="block text-xs font-semibold text-charcoal-soft">
+            Description
+            <textarea rows="3" value={value.description || ""} onChange={(e) => set("description", e.target.value)} className={TEXTAREA_CLS} />
+          </label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <TextField label="Form Heading" value={value.formHeading} onChange={(v) => set("formHeading", v)} />
+            <TextField label="Submit Button Label" value={value.ctaLabel} onChange={(v) => set("ctaLabel", v)} />
+          </div>
+          <ImageField label="Feature Image / Banner" value={value.image} onChange={(v) => set("image", v)} />
+          <label className="block text-xs font-semibold text-charcoal-soft">
+            Success Message
+            <textarea rows="2" value={value.successMessage || ""} onChange={(e) => set("successMessage", e.target.value)} className={TEXTAREA_CLS} />
+          </label>
+        </div>
+      );
+
     case "GIFTING_SEO":
       return (
         <div className="space-y-4">

@@ -837,6 +837,27 @@ export function adminCloseReturn(id) {
   return api.post(`/admin/returns/${id}/close`, undefined, { auth: "admin" });
 }
 
+
+// --- Bulk Gifting Inquiries ---
+export function submitBulkGiftingInquiry(data) {
+  return api.post("/gifting/bulk-inquiry", data);
+}
+
+export function adminFetchBulkGiftingInquiries(params = {}) {
+  const query = new URLSearchParams(
+    Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== "" && v !== null))
+  ).toString();
+  return api.get(`/admin/gifting/bulk-inquiries${query ? `?${query}` : ""}`, { auth: "admin" });
+}
+
+export function adminFetchBulkGiftingInquiry(id) {
+  return api.get(`/admin/gifting/bulk-inquiries/${id}`, { auth: "admin" });
+}
+
+export function adminUpdateBulkGiftingInquiry(id, data) {
+  return api.patch(`/admin/gifting/bulk-inquiries/${id}`, data, { auth: "admin" });
+}
+
 export { API_URL };
 
 export function customerOtpRequest(email) { return api.post("/auth/otp/request", { email }); }
