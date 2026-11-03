@@ -1,3 +1,4 @@
+import { publicBulkInquiryRouter, adminBulkInquiryRouter } from "../modules/gifting/bulk-inquiry.routes.js";
 import { Router } from "express";
 import { ok } from "../utils/apiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
@@ -68,6 +69,7 @@ router.use("/promos", publicPromosRouter);
 router.use("/search", publicSearchRouter);
 router.use("/analytics", publicAnalyticsRouter);
 router.use("/shipping", publicShippingEstimateRouter);
+router.use("/", publicBulkInquiryRouter);
 
 // Pages APIs: Specific /home route BEFORE parameterized /:slug route!
 router.use("/pages", publicPagesRouter);
@@ -143,6 +145,7 @@ router.use("/admin/notifications", adminNotificationRouter);
 router.use("/admin/inventory/low-stock", adminLowStockRouter);
 router.use("/admin", adminHealthRouter);
 router.use("/admin/email", adminEmailRouter);
+router.use("/admin", adminBulkInquiryRouter);
 
 router.get(
   "/admin/dashboard",

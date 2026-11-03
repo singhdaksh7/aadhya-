@@ -1,3 +1,14 @@
+
+export const BULK_GIFTING_DEFAULTS = {
+  enabled: true,
+  eyebrow: "Corporate & Celebratory Orders",
+  heading: "Planning a large gifting order?",
+  description: "Whether celebrating team milestones, weddings, festive gatherings, or bespoke client tokens, our artisans craft thoughtful keepsake gifts at scale.",
+  formHeading: "Request a Bulk Quote",
+  ctaLabel: "Submit Inquiry",
+  image: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?q=80&w=1200&auto=format&fit=crop",
+  successMessage: "Thank you for reaching out! Our gifting concierge has received your request and will contact you within 24 hours.",
+};
 import { z } from "zod";
 
 export const GIFTING_HERO_DEFAULTS = {
@@ -486,6 +497,18 @@ export const giftingSeoSchema = z.object({
   content: optionalText(5000),
 });
 
+
+export const bulkGiftingSchema = z.object({
+  enabled: z.boolean().optional(),
+  eyebrow: optionalText(120),
+  heading: text(200),
+  description: optionalText(1000),
+  formHeading: optionalText(160),
+  ctaLabel: optionalText(80),
+  image: optionalUrl,
+  successMessage: optionalText(400),
+});
+
 export const giftingFaqSchema = z.object({
   eyebrow: optionalText(120),
   heading: text(160),
@@ -508,6 +531,7 @@ export const DEFAULT_GIFTING_PAGE_SECTIONS = [
   { type: "GIFTS_BY_CRAFT", name: "Gifts by Craft", sortOrder: 6, settings: GIFTS_BY_CRAFT_DEFAULTS },
   { type: "FEATURED_GIFTS", name: "Featured Handpicked Gifts", sortOrder: 7, settings: FEATURED_GIFTS_DEFAULTS },
   { type: "GIFTS_BY_BUDGET", name: "Gifts by Budget", sortOrder: 8, settings: GIFTS_BY_BUDGET_DEFAULTS },
-  { type: "GIFTING_SEO", name: "Gifting SEO Story", sortOrder: 9, settings: GIFTING_SEO_DEFAULTS },
-  { type: "GIFTING_FAQ", name: "Gifting FAQ Accordion", sortOrder: 10, settings: GIFTING_FAQ_DEFAULTS },
+  { type: "BULK_GIFTING", name: "Bulk Gifting Inquiry", sortOrder: 9, settings: BULK_GIFTING_DEFAULTS },
+  { type: "GIFTING_SEO", name: "Gifting SEO Story", sortOrder: 10, settings: GIFTING_SEO_DEFAULTS },
+  { type: "GIFTING_FAQ", name: "Gifting FAQ Accordion", sortOrder: 11, settings: GIFTING_FAQ_DEFAULTS },
 ];
