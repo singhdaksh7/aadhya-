@@ -9,6 +9,7 @@ import {
   createAdminProduct,
   updateAdminProduct,
   deleteAdminProduct,
+  duplicateAdminProduct,
   uploadProductImage,
   deleteProductImage,
   setPrimaryProductImage,
@@ -36,6 +37,7 @@ adminProductRouter.post("/", createAdminProduct);
 adminProductRouter.get("/:id", getAdminProduct);
 adminProductRouter.patch("/:id", updateAdminProduct);
 adminProductRouter.delete("/:id", deleteAdminProduct);
+adminProductRouter.post("/:id/duplicate", duplicateAdminProduct);
 adminProductRouter.get("/:id/variants", listAdminVariants);
 adminProductRouter.post("/:id/variants", createAdminVariant);
 adminProductRouter.patch("/:id/variants/:variantId", updateAdminVariant);

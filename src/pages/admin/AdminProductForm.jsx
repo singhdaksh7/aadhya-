@@ -98,6 +98,7 @@ export default function AdminProductForm() {
   const [images, setImages] = useState([]);
   const [status, setStatus] = useState(isEdit ? "loading" : "ready");
   const [saving, setSaving] = useState(false);
+  const [duplicating, setDuplicating] = useState(false);
   const [error, setError] = useState(null);
   const [gstEnabled, setGstEnabled] = useState(false);
 
@@ -612,6 +613,17 @@ export default function AdminProductForm() {
           <Button type="button" variant="secondary" onClick={() => navigate("/admin/products")}>
             Cancel
           </Button>
+          {isEdit && (
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={duplicating || saving}
+              onClick={handleDuplicate}
+              className="text-charcoal border-charcoal/30 hover:bg-charcoal/10"
+            >
+              {duplicating ? "Duplicating…" : "Duplicate Product"}
+            </Button>
+          )}
           <Button disabled={saving}>{saving ? "Saving…" : isEdit ? "Save Changes" : "Create Product"}</Button>
         </div>
       </form>
