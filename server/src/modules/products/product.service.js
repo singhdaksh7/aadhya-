@@ -515,3 +515,222 @@ export async function reorderProductImages(productId, orderedIds) {
     orderedIds.map((id, index) => prisma.productImage.update({ where: { id }, data: { sortOrder: index } }))
   );
 }
+
+/**
+ * Duplicates an existing product with all its attributes, images, book details,
+ * and variants. Resets stock to 0, sets status to DRAFT (isActive: false),
+ * appends (Copy) to the name, generates a unique slug and unique SKUs,
+ * and records an admin audit log.
+ */
+export async function duplicateProduct(id, adminId) {
+  const original = await prisma.product.findUnique({
+    where: { id },
+    include: {
+      images: { orderBy: { sortOrder: "asc" } },
+      variants: { orderBy: { createdAt: "asc" } },
+      bookDetail: true,
+      bookFormats: true,
+    },
+  });
+
+  if (!original) throw ApiError.notFound("Product not found");
+
+  // Generate unique copy name
+  const copyName = `${original.name} (Copy)`;
+
+  // Generate unique slug
+  const baseSlug = slugify(original.slug.replace(/-copy(-\d+)?$/, "")) || "product";
+  let copySlug = `${baseSlug}-copy`;
+  let counter = 1;
+  while (await prisma.product.findUnique({ where: { slug: copySlug } })) {
+    counter += 1;
+    copySlug = `${baseSlug}-copy-${counter}`;
+  }
+
+  // Generate unique SKU for base product if SKU exists
+  let copySku = null;
+  if (original.sku) {
+    const rawSku = original.sku.replace(/-COPY(-\d+)?$/i, "");
+    copySku = `${rawSku}-COPY`;
+    let skuCounter = 1;
+    while (await prisma.product.findFirst({ where: { sku: copySku } })) {
+      skuCounter += 1;
+      copySku = `${rawSku}-COPY-${skuCounter}`;
+    }
+  }
+
+  return prisma.$transaction(async (tx) => {
+    // 1. Create duplicated base product
+    const duplicated = await tx.product.create({
+      data: {
+        name: copyName,
+        slug: copySlug,
+        brand: original.brand,
+        shortDescription: original.shortDescription,
+        description: original.description,
+        productType: original.productType,
+        categoryId: original.categoryId,
+        sku: copySku,
+        price: original.price,
+        salePrice: original.salePrice,
+        mrp: original.mrp,
+        costPrice: original.costPrice,
+        stockQuantity: 0, // Reset inventory to 0
+        lowStockThreshold: original.lowStockThreshold,
+        trackInventory: original.trackInventory,
+        isFeatured: false,
+        isBestSeller: false,
+        isNewArrival: false,
+        isTrending: false,
+        isActive: false, // DRAFT status
+        sortOrder: original.sortOrder,
+        tags: original.tags,
+        materials: original.materials,
+        dimensions: original.dimensions,
+        shipWeightGrams: original.shipWeightGrams,
+        shipLengthMm: original.shipLengthMm,
+        shipWidthMm: original.shipWidthMm,
+        shipHeightMm: original.shipHeightMm,
+        careInstructions: original.careInstructions,
+        whatsIncluded: original.whatsIncluded,
+        shippingInformation: original.shippingInformation,
+        specifications: original.specifications,
+        seoTitle: original.seoTitle ? `${original.seoTitle} (Copy)` : null,
+        seoDescription: original.seoDescription,
+        ogImage: original.ogImage,
+        attributes: original.attributes,
+        isDigital: original.isDigital,
+        hsnCode: original.hsnCode,
+        gstRate: original.gstRate,
+        unit: original.unit,
+        taxPricingMode: original.taxPricingMode,
+        invoiceName: original.invoiceName ? `${original.invoiceName} (Copy)` : null,
+      },
+    });
+
+    // 2. Duplicate Images
+    if (original.images && original.images.length > 0) {
+      for (const img of original.images) {
+        await tx.productImage.create({
+          data: {
+            productId: duplicated.id,
+            url: img.url,
+            altText: img.altText,
+            sortOrder: img.sortOrder,
+            isPrimary: img.isPrimary,
+          },
+        });
+      }
+    }
+
+    // 3. Duplicate Variants with unique SKUs and 0 stock
+    if (original.variants && original.variants.length > 0) {
+      for (let i = 0; i < original.variants.length; i++) {
+        const v = original.variants[i];
+        const vBaseSku = (v.sku || `VAR-${i + 1}`).replace(/-COPY(-\d+)?$/i, "");
+        let vCopySku = `${vBaseSku}-COPY`;
+        let vSkuCounter = 1;
+        while (await tx.productVariant.findFirst({ where: { sku: vCopySku } })) {
+          vSkuCounter += 1;
+          vCopySku = `${vBaseSku}-COPY-${vSkuCounter}`;
+        }
+
+        await tx.productVariant.create({
+          data: {
+            productId: duplicated.id,
+            name: v.name,
+            sku: vCopySku,
+            priceOverride: v.priceOverride,
+            stockQuantity: 0, // Reset inventory to 0
+            lowStockThreshold: v.lowStockThreshold,
+            isActive: false, // DRAFT variant
+            attributes: v.attributes,
+            hsnCode: v.hsnCode,
+            gstRate: v.gstRate,
+            unit: v.unit,
+            shipWeightGrams: v.shipWeightGrams,
+            shipLengthMm: v.shipLengthMm,
+            shipWidthMm: v.shipWidthMm,
+            shipHeightMm: v.shipHeightMm,
+          },
+        });
+      }
+    }
+
+    // 4. Duplicate Book Details if present
+    if (original.bookDetail) {
+      await tx.productBookDetails.create({
+        data: {
+          productId: duplicated.id,
+          author: original.bookDetail.author,
+          isbn: null, // Clear unique ISBN
+          publisher: original.bookDetail.publisher,
+          language: original.bookDetail.language,
+          pageCount: original.bookDetail.pageCount,
+          edition: original.bookDetail.edition,
+          publicationYear: original.bookDetail.publicationYear,
+        },
+      });
+    }
+
+    // 5. Duplicate Book Format Options if present
+    if (original.bookFormats && original.bookFormats.length > 0) {
+      for (const bf of original.bookFormats) {
+        let bfCopySku = null;
+        if (bf.sku) {
+          const bfBaseSku = bf.sku.replace(/-COPY(-\d+)?$/i, "");
+          bfCopySku = `${bfBaseSku}-COPY`;
+          let bfCounter = 1;
+          while (await tx.bookFormatOption.findFirst({ where: { sku: bfCopySku } })) {
+            bfCounter += 1;
+            bfCopySku = `${bfBaseSku}-COPY-${bfCounter}`;
+          }
+        }
+
+        await tx.bookFormatOption.create({
+          data: {
+            productId: duplicated.id,
+            format: bf.format,
+            price: bf.price,
+            salePrice: bf.salePrice,
+            mrp: bf.mrp,
+            sku: bfCopySku,
+            isActive: false,
+            stockQuantity: 0,
+            trackInventory: bf.trackInventory,
+            lowStockThreshold: bf.lowStockThreshold,
+            weightGrams: bf.weightGrams,
+            pdfFileKey: bf.pdfFileKey,
+            pdfOriginalName: bf.pdfOriginalName,
+            maxDownloads: bf.maxDownloads,
+            expiryDays: bf.expiryDays,
+          },
+        });
+      }
+    }
+
+    // 6. Record Admin Audit Log
+    if (adminId) {
+      await tx.adminAuditLog.create({
+        data: {
+          adminId,
+          action: "product.duplicate",
+          provider: "products",
+          metadata: {
+            originalProductId: original.id,
+            originalName: original.name,
+            originalSku: original.sku,
+            duplicatedProductId: duplicated.id,
+            duplicatedName: duplicated.name,
+            duplicatedSku: copySku,
+          },
+        },
+      });
+    }
+
+    return tx.product.findUnique({
+      where: { id: duplicated.id },
+      include: ADMIN_INCLUDE,
+    });
+  });
+}

@@ -87,3 +87,9 @@ export const listAdminVariants = asyncHandler(async (req, res) => ok(res, await 
 export const createAdminVariant = asyncHandler(async (req, res) => created(res, await productService.createVariant(req.params.id, variantSchema.parse(req.body))));
 export const updateAdminVariant = asyncHandler(async (req, res) => ok(res, await productService.updateVariant(req.params.id, req.params.variantId, variantSchema.partial().parse(req.body))));
 export const deleteAdminVariant = asyncHandler(async (req, res) => { await productService.deleteVariant(req.params.id, req.params.variantId); noContent(res); });
+
+export const duplicateAdminProduct = asyncHandler(async (req, res) => {
+  const adminId = req.admin?.id;
+  const product = await productService.duplicateProduct(req.params.id, adminId);
+  created(res, product);
+});

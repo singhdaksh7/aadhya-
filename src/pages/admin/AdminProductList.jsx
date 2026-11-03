@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { adminListProducts, adminUpdateProduct, adminDeleteProduct, adminGetInvoiceSettings } from "../../lib/api";
+import { adminListProducts, adminUpdateProduct, adminDeleteProduct, adminDuplicateProduct, adminGetInvoiceSettings } from "../../lib/api";
+import { useNavigate } from "react-router-dom";
 import { LoadingNotice, ErrorNotice } from "../../components/StateNotice";
 import { formatInr } from "../../lib/format";
 import ProductImage from "../../components/ProductImage";
@@ -16,6 +17,8 @@ import {
 import { FilterInput, FilterSelect } from "../../components/admin/ui/FilterBar";
 
 export default function AdminProductList() {
+  const navigate = useNavigate();
+  const [duplicatingId, setDuplicatingId] = useState(null);
   const [search, setSearch] = useState("");
   const [type, setType] = useState("");
   const [page, setPage] = useState(1);
@@ -48,6 +51,19 @@ export default function AdminProductList() {
   const toggleActive = async (product) => {
     await adminUpdateProduct(product.id, { isActive: !product.isActive });
     setReloadToken((t) => t + 1);
+  };
+
+  const duplicate = async (product) => {
+    try {
+      setDuplicatingId(product.id);
+      const res = await adminDuplicateProduct(product.id);
+      navigate(`/admin/products/${res.data.id}`, {
+        state: { message: "Product duplicated as Draft with 0 inventory. Update details before publishing." },
+      });
+    } catch (err) {
+      alert("Failed to duplicate product: " + (err.message || "Unknown error"));
+      setDuplicatingId(null);
+    }
   };
 
   const remove = async (product) => {
@@ -140,6 +156,9 @@ export default function AdminProductList() {
                     <Link to={`/admin/products/${product.id}`} className="admin-btn admin-btn--ghost">
                       Edit
                     </Link>
+                    <button type="button" disabled={duplicatingId === product.id} onClick={() => duplicate(product)} className="admin-btn admin-btn--ghost text-charcoal hover:bg-charcoal/10">
+                      {duplicatingId === product.id ? "Duplicating…" : "Duplicate"}
+                    </button>
                     <button type="button" onClick={() => toggleActive(product)} className="admin-btn admin-btn--ghost">
                       {product.isActive ? "Deactivate" : "Activate"}
                     </button>

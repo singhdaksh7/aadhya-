@@ -219,6 +219,10 @@ export function adminUpdateProduct(id, data) {
   return api.patch(`/admin/products/${id}`, data, { auth: "admin" });
 }
 
+export function adminDuplicateProduct(id) {
+  return api.post(`/admin/products/${id}/duplicate`, {}, { auth: "admin" });
+}
+
 export function adminDeleteProduct(id) {
   return api.delete(`/admin/products/${id}`, { auth: "admin" });
 }
