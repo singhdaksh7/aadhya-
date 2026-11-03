@@ -12,6 +12,7 @@ import {
   GiftsByCraftSection,
   FeaturedGiftsSection,
   GiftsByBudgetSection,
+  BulkGiftingSection,
   GiftingSeoSection,
   GiftingFaqSection,
 } from "../components/gifting/GiftingSections";
@@ -106,6 +107,8 @@ export default function GiftingPage() {
         return <FeaturedGiftsSection key={sec.id || sec.type} section={sec} products={featuredProducts} />;
       case "GIFTS_BY_BUDGET":
         return <GiftsByBudgetSection key={sec.id || sec.type} section={sec} />;
+      case "BULK_GIFTING":
+        return <BulkGiftingSection key={sec.id || sec.type} content={sec.settings || {}} />;
       case "GIFTING_SEO":
         return <GiftingSeoSection key={sec.id || sec.type} section={sec} />;
       case "GIFTING_FAQ":
