@@ -233,6 +233,21 @@ export default function AdminProductForm() {
     return payload;
   };
 
+  const handleDuplicate = async () => {
+    if (!id) return;
+    try {
+      setDuplicating(true);
+      const res = await adminDuplicateProduct(id);
+      navigate(`/admin/products/${res.data.id}`, {
+        state: { message: "Product duplicated as Draft with 0 inventory. Update details before publishing." },
+      });
+    } catch (err) {
+      alert("Failed to duplicate product: " + (err.message || "Unknown error"));
+    } finally {
+      setDuplicating(false);
+    }
+  };
+
   const onSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
