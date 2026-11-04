@@ -989,3 +989,20 @@ body {
   .prose h2 { font-size: 1.35rem; margin-top: 2rem; padding-top: 1.4rem; }
   .prose h3 { font-size: 1.1rem; }
 }
+
+/* ─── Footer Artwork Section ───
+   Responsive container height driven by admin CSS custom properties.
+   Ensures seamless browser width, zero side margins/padding, no distortion. */
+.footer-artwork-frame {
+  height: var(--fa-h-mobile, 220px);
+}
+@media (min-width: 768px) {
+  .footer-artwork-frame {
+    height: var(--fa-h-tablet, 280px);
+  }
+}
+@media (min-width: 1024px) {
+  .footer-artwork-frame {
+    height: var(--fa-h-desktop, 340px);
+  }
+}

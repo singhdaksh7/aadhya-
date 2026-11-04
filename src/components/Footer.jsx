@@ -5,6 +5,7 @@ import BrandLogo from "./BrandLogo";
 import { SITE_CREDIT } from "../lib/siteCredit";
 import { isExternalUrl } from "../lib/footerUrls";
 import { CompanyBlock, ContactItems, SeoBand, PaymentBadges, FooterImage, hasPaymentBadgeImages } from "./FooterSections";
+import FooterArtwork from "./FooterArtwork";
 
 // Footer logo: admin-controlled width/height (desktop + mobile, 0 = auto), with a style option so
 // dark artwork stays legible on the dark footer. Prefers the footer logo, then the light/secondary
@@ -130,9 +131,15 @@ export default function Footer() {
   // Up to 8 columns: the classic 3-column layout is unchanged; more columns wrap in a 4/6-track grid.
   const gridCls = columns.length > 3 ? "grid grid-cols-2 gap-x-6 gap-y-10 md:grid-cols-4 lg:grid-cols-6" : "grid grid-cols-2 gap-10 md:grid-cols-5";
 
+  const hasArtwork = Boolean(
+    footer?.artwork?.enabled === true &&
+    (Boolean(footer?.artwork?.desktopImage && String(footer.artwork.desktopImage).trim()) ||
+     Boolean(footer?.artwork?.mobileImage && String(footer.artwork.mobileImage).trim()))
+  );
+
   return (
-    <footer className="bg-charcoal text-[#F7F4EF] pt-16 pb-12 border-t border-charcoal/20">
-      <div className="mx-auto max-w-7xl px-5 sm:px-8">
+    <footer className={`bg-charcoal text-[#F7F4EF] pt-16 border-t border-charcoal/20 ${hasArtwork ? "pb-0" : "pb-12"}`}>
+      <div className={`mx-auto max-w-7xl px-5 sm:px-8 ${hasArtwork ? "pb-12" : ""}`}>
         <FooterImage config={footer?.image} placement="TOP" />
         <div className={gridCls}>
           {/* Brand Intro Column */}
@@ -240,6 +247,7 @@ export default function Footer() {
           © Copyright {new Date().getFullYear()}. All Rights Reserved. Made with ❤️ by <span className="font-semibold text-[#FAF6F0]/80">{SITE_CREDIT.team}</span>
         </p>
       </div>
+      <FooterArtwork artwork={footer?.artwork} />
     </footer>
   );
 }

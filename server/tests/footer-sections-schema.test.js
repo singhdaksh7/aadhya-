@@ -6,7 +6,7 @@ const many = (n, make) => Array.from({ length: n }, (_, i) => make(i));
 
 describe("footer sections defaults", () => {
   it("adds no new default sections (footer renders as before until configured)", () => {
-    for (const key of ["companyBlock", "contactItems", "seoSections", "paymentBadges", "image"]) {
+    for (const key of ["companyBlock", "contactItems", "seoSections", "paymentBadges", "image", "artwork"]) {
       expect(DEFAULT_SETTINGS.footer[key]).toBeUndefined();
     }
   });
@@ -101,5 +101,112 @@ describe("footer.footerColumns caps", () => {
   it("allows 8 columns and rejects 9", () => {
     expect(parse({ footerColumns: many(8, col) }).success).toBe(true);
     expect(parse({ footerColumns: many(9, col) }).success).toBe(false);
+  });
+});
+
+describe("footer.artwork", () => {
+  const validArtwork = {
+    enabled: true,
+    desktopImage: "/uploads/artwork-desktop.jpg",
+    mobileImage: "/uploads/artwork-mobile.jpg",
+    alt: "Handcrafted folk motifs border",
+    isDecorative: false,
+    fit: "cover",
+    desktopHeight: 340,
+    tabletHeight: 280,
+    mobileHeight: 220,
+    minHeight: 120,
+    maxHeight: 600,
+    positionPreset: "center",
+    positionX: 50,
+    positionY: 70,
+    offsetX: 5,
+    offsetY: -10,
+    topSpacing: -15,
+    backgroundColor: "#2B2723",
+    linkUrl: "/collections/handcrafted-decor",
+    openInNewTab: false,
+  };
+
+  it("accepts a full valid artwork configuration", () => {
+    expect(parse({ artwork: validArtwork }).success).toBe(true);
+  });
+
+  it("accepts fit modes: cover, contain, natural and rejects unknown", () => {
+    for (const fit of ["cover", "contain", "natural"]) {
+      expect(parse({ artwork: { fit } }).success).toBe(true);
+    }
+    expect(parse({ artwork: { fit: "stretch" } }).success).toBe(false);
+  });
+
+  it("accepts position presets and rejects unknown", () => {
+    for (const preset of ["center", "top", "bottom", "left", "right", "custom"]) {
+      expect(parse({ artwork: { positionPreset: preset } }).success).toBe(true);
+    }
+    expect(parse({ artwork: { positionPreset: "diagonal" } }).success).toBe(false);
+  });
+
+  it("bounds focal position percentages to 0-100", () => {
+    expect(parse({ artwork: { positionX: 0, positionY: 100 } }).success).toBe(true);
+    expect(parse({ artwork: { positionX: -1 } }).success).toBe(false);
+    expect(parse({ artwork: { positionX: 101 } }).success).toBe(false);
+    expect(parse({ artwork: { positionY: -5 } }).success).toBe(false);
+    expect(parse({ artwork: { positionY: 105 } }).success).toBe(false);
+  });
+
+  it("bounds visual offsets to -20px to +20px", () => {
+    expect(parse({ artwork: { offsetX: -20, offsetY: 20 } }).success).toBe(true);
+    expect(parse({ artwork: { offsetX: -21 } }).success).toBe(false);
+    expect(parse({ artwork: { offsetX: 21 } }).success).toBe(false);
+    expect(parse({ artwork: { offsetY: -21 } }).success).toBe(false);
+    expect(parse({ artwork: { offsetY: 21 } }).success).toBe(false);
+  });
+
+  it("bounds topSpacing to -40px to +40px", () => {
+    expect(parse({ artwork: { topSpacing: -40 } }).success).toBe(true);
+    expect(parse({ artwork: { topSpacing: 40 } }).success).toBe(true);
+    expect(parse({ artwork: { topSpacing: -41 } }).success).toBe(false);
+    expect(parse({ artwork: { topSpacing: 41 } }).success).toBe(false);
+  });
+
+  it("bounds responsive heights to safe ranges", () => {
+    expect(parse({ artwork: { desktopHeight: 40, tabletHeight: 40, mobileHeight: 40 } }).success).toBe(true);
+    expect(parse({ artwork: { desktopHeight: 1200, tabletHeight: 1000, mobileHeight: 800 } }).success).toBe(true);
+    expect(parse({ artwork: { desktopHeight: 39 } }).success).toBe(false);
+    expect(parse({ artwork: { desktopHeight: 1201 } }).success).toBe(false);
+    expect(parse({ artwork: { tabletHeight: 1001 } }).success).toBe(false);
+    expect(parse({ artwork: { mobileHeight: 801 } }).success).toBe(false);
+  });
+
+  it("bounds alt to 240 chars and rejects unsafe image/link URLs", () => {
+    expect(parse({ artwork: { alt: "x".repeat(240) } }).success).toBe(true);
+    expect(parse({ artwork: { alt: "x".repeat(241) } }).success).toBe(false);
+    expect(parse({ artwork: { desktopImage: "javascript:alert(1)" } }).success).toBe(false);
+    expect(parse({ artwork: { mobileImage: "data:image/svg+xml,<svg></svg>" } }).success).toBe(false);
+    expect(parse({ artwork: { linkUrl: "javascript:alert(1)" } }).success).toBe(false);
+    expect(parse({ artwork: { linkUrl: "tel:+123" } }).success).toBe(false);
+  });
+
+  it("allows null or empty values for optional fields", () => {
+    expect(parse({
+      artwork: {
+        enabled: false,
+        desktopImage: null,
+        mobileImage: "",
+        alt: "",
+        desktopHeight: null,
+        tabletHeight: null,
+        mobileHeight: null,
+        minHeight: null,
+        maxHeight: null,
+        positionX: null,
+        positionY: null,
+        offsetX: null,
+        offsetY: null,
+        topSpacing: null,
+        backgroundColor: null,
+        linkUrl: null,
+      }
+    }).success).toBe(true);
   });
 });

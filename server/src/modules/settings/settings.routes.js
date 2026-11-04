@@ -589,6 +589,28 @@ const footerSectionsSchema = {
     maxWidth: z.number().int().min(40).max(1200).optional(),
     showOnMobile: z.boolean().optional(),
   }).optional(),
+  artwork: z.object({
+    enabled: z.boolean().optional(),
+    desktopImage: safeLinkUrl(500).optional().nullable(),
+    mobileImage: safeLinkUrl(500).optional().nullable(),
+    alt: z.string().max(240).optional().nullable(),
+    isDecorative: z.boolean().optional(),
+    fit: z.enum(["cover", "contain", "natural"]).optional(),
+    desktopHeight: z.number().int().min(40).max(1200).optional().nullable(),
+    tabletHeight: z.number().int().min(40).max(1000).optional().nullable(),
+    mobileHeight: z.number().int().min(40).max(800).optional().nullable(),
+    minHeight: z.number().int().min(0).max(1200).optional().nullable(),
+    maxHeight: z.number().int().min(0).max(2000).optional().nullable(),
+    positionPreset: z.enum(["center", "top", "bottom", "left", "right", "custom"]).optional(),
+    positionX: z.number().min(0).max(100).optional().nullable(),
+    positionY: z.number().min(0).max(100).optional().nullable(),
+    offsetX: z.number().int().min(-20).max(20).optional().nullable(),
+    offsetY: z.number().int().min(-20).max(20).optional().nullable(),
+    topSpacing: z.number().int().min(-40).max(40).optional().nullable(),
+    backgroundColor: z.string().max(50).optional().nullable(),
+    linkUrl: safeLinkUrl(500).optional().nullable(),
+    openInNewTab: z.boolean().optional(),
+  }).optional(),
 };
 
 export const settingsValidationSchema = z.object({
