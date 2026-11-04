@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import ImagePickerInput from "./ImagePickerInput";
 import FooterColumnsEditor from "./FooterColumnsEditor";
 import { footerUrlError } from "../../lib/footerUrls";
+import { resolveMediaUrl } from "../../lib/api";
 import { fInputCls, fLabelCls, newId, renumber, moveItem, FieldError, RowControls, SectionCard, AddButton } from "./FooterEditorBits";
 
 const MAX_COMPANY_LINES = 10;
@@ -242,6 +243,401 @@ function FooterImageEditor({ image, onChange }) {
   );
 }
 
+function FooterArtworkEditor({ artwork, onChange }) {
+  const art = artwork || {};
+  const set = (patch) => onChange({ ...art, ...patch });
+  const [previewDevice, setPreviewDevice] = useState("desktop");
+
+  const desktopHeight = art.desktopHeight ?? 340;
+  const tabletHeight = art.tabletHeight ?? 280;
+  const mobileHeight = art.mobileHeight ?? 220;
+  const fit = art.fit || "cover";
+  const posX = art.positionX ?? 50;
+  const posY = art.positionY ?? 50;
+  const offX = art.offsetX ?? 0;
+  const offY = art.offsetY ?? 0;
+  const topSpacing = art.topSpacing ?? 0;
+
+  const currentPreviewHeight =
+    fit === "natural"
+      ? "auto"
+      : previewDevice === "mobile"
+      ? `${mobileHeight}px`
+      : previewDevice === "tablet"
+      ? `${tabletHeight}px`
+      : `${desktopHeight}px`;
+
+  const previewWidth =
+    previewDevice === "mobile" ? "max-w-[390px]" : previewDevice === "tablet" ? "max-w-[768px]" : "w-full";
+
+  const previewImage = previewDevice === "mobile" && art.mobileImage ? art.mobileImage : art.desktopImage || art.mobileImage;
+
+  const handlePresetChange = (preset) => {
+    if (preset === "center") set({ positionPreset: preset, positionX: 50, positionY: 50 });
+    else if (preset === "top") set({ positionPreset: preset, positionX: 50, positionY: 0 });
+    else if (preset === "bottom") set({ positionPreset: preset, positionX: 50, positionY: 100 });
+    else if (preset === "left") set({ positionPreset: preset, positionX: 0, positionY: 50 });
+    else if (preset === "right") set({ positionPreset: preset, positionX: 100, positionY: 50 });
+    else set({ positionPreset: "custom" });
+  };
+
+  const numVal = (v) => (v === "" || v === undefined || v === null ? undefined : Number(v));
+
+  return (
+    <SectionCard
+      title="Footer Artwork"
+      hint="Full-width decorative artwork displayed at the very bottom of the footer, seamless with the page bottom. Features non-destructive focal cropping, responsive heights, and natural height modes."
+    >
+      <div className="flex flex-wrap items-center gap-6">
+        <label className="flex items-center gap-2 text-xs font-semibold text-charcoal cursor-pointer">
+          <input
+            type="checkbox"
+            aria-label="Enable Footer Artwork"
+            checked={art.enabled === true}
+            onChange={(e) => set({ enabled: e.target.checked })}
+          />
+          Enable Footer Artwork
+        </label>
+        <label className="flex items-center gap-2 text-xs font-medium text-charcoal cursor-pointer">
+          <input
+            type="checkbox"
+            aria-label="Decorative Artwork"
+            checked={art.isDecorative === true}
+            onChange={(e) => set({ isDecorative: e.target.checked })}
+          />
+          Decorative Artwork (hide from screen readers / empty alt)
+        </label>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <ImagePickerInput
+          label="Desktop Image"
+          value={art.desktopImage || ""}
+          onChange={(url) => set({ desktopImage: url })}
+          pickerTitle="Select Desktop Footer Artwork"
+          inputClassName={fInputCls}
+        />
+        <ImagePickerInput
+          label="Mobile Image (Optional — falls back to desktop)"
+          value={art.mobileImage || ""}
+          onChange={(url) => set({ mobileImage: url })}
+          pickerTitle="Select Mobile Footer Artwork"
+          inputClassName={fInputCls}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div>
+          <label className={fLabelCls}>Alt Text {art.isDecorative && "(Ignored in Decorative mode)"}</label>
+          <input
+            aria-label="Footer artwork alt text"
+            className={fInputCls}
+            maxLength={240}
+            disabled={art.isDecorative === true}
+            placeholder={art.isDecorative ? "Decorative (empty alt)" : "Describe the artwork"}
+            value={art.alt || ""}
+            onChange={(e) => set({ alt: e.target.value })}
+          />
+        </div>
+        <div>
+          <label className={fLabelCls}>Optional Link URL</label>
+          <input
+            aria-label="Footer artwork link"
+            placeholder="/collections/artisan or https://..."
+            maxLength={500}
+            className={fInputCls}
+            value={art.linkUrl || ""}
+            onChange={(e) => set({ linkUrl: e.target.value })}
+          />
+          <FieldError message={footerUrlError(art.linkUrl)} />
+          <label className="mt-1.5 flex items-center gap-2 text-[11px] font-medium text-charcoal-soft cursor-pointer">
+            <input
+              type="checkbox"
+              aria-label="Open artwork link in new tab"
+              checked={art.openInNewTab === true}
+              onChange={(e) => set({ openInNewTab: e.target.checked })}
+            />
+            Open link in new tab
+          </label>
+        </div>
+      </div>
+
+      {/* Layout & Fit */}
+      <div className="rounded-xl border border-charcoal/10 bg-ivory/30 p-4 space-y-4">
+        <h4 className="text-xs font-bold uppercase tracking-wider text-charcoal">Layout &amp; Sizing</h4>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div>
+            <label htmlFor="footer-artwork-fit" className={fLabelCls}>Display Mode / Image Fit</label>
+            <select
+              id="footer-artwork-fit"
+              aria-label="Footer artwork fit mode"
+              className={fInputCls}
+              value={fit}
+              onChange={(e) => set({ fit: e.target.value })}
+            >
+              <option value="cover">Cover (Fixed height, crops overflow)</option>
+              <option value="contain">Contain (Full artwork visible, background color behind)</option>
+              <option value="natural">Natural / Auto Height (Original aspect ratio)</option>
+            </select>
+          </div>
+          <div>
+            <label htmlFor="footer-artwork-max-height" className={fLabelCls}>Max Height (px)</label>
+            <input
+              id="footer-artwork-max-height"
+              aria-label="Footer artwork max height"
+              type="number"
+              min={0}
+              max={2000}
+              placeholder="e.g. 600"
+              className={fInputCls}
+              value={art.maxHeight ?? ""}
+              onChange={(e) => set({ maxHeight: numVal(e.target.value) })}
+            />
+          </div>
+          <div>
+            <label htmlFor="footer-artwork-min-height" className={fLabelCls}>Min Height (px)</label>
+            <input
+              id="footer-artwork-min-height"
+              aria-label="Footer artwork min height"
+              type="number"
+              min={0}
+              max={1200}
+              placeholder="e.g. 120"
+              className={fInputCls}
+              value={art.minHeight ?? ""}
+              onChange={(e) => set({ minHeight: numVal(e.target.value) })}
+            />
+          </div>
+        </div>
+
+        {fit !== "natural" && (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 pt-1">
+            <div>
+              <label htmlFor="footer-artwork-desktop-height" className={fLabelCls}>Desktop Height (px)</label>
+              <input
+                id="footer-artwork-desktop-height"
+                aria-label="Footer artwork desktop height"
+                type="number"
+                min={40}
+                max={1200}
+                placeholder="340"
+                className={fInputCls}
+                value={art.desktopHeight ?? ""}
+                onChange={(e) => set({ desktopHeight: numVal(e.target.value) })}
+              />
+            </div>
+            <div>
+              <label htmlFor="footer-artwork-tablet-height" className={fLabelCls}>Tablet Height (px)</label>
+              <input
+                id="footer-artwork-tablet-height"
+                aria-label="Footer artwork tablet height"
+                type="number"
+                min={40}
+                max={1000}
+                placeholder="280"
+                className={fInputCls}
+                value={art.tabletHeight ?? ""}
+                onChange={(e) => set({ tabletHeight: numVal(e.target.value) })}
+              />
+            </div>
+            <div>
+              <label htmlFor="footer-artwork-mobile-height" className={fLabelCls}>Mobile Height (px)</label>
+              <input
+                id="footer-artwork-mobile-height"
+                aria-label="Footer artwork mobile height"
+                type="number"
+                min={40}
+                max={800}
+                placeholder="220"
+                className={fInputCls}
+                value={art.mobileHeight ?? ""}
+                onChange={(e) => set({ mobileHeight: numVal(e.target.value) })}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Crop, Position & Offset */}
+      <div className="rounded-xl border border-charcoal/10 bg-ivory/30 p-4 space-y-4">
+        <h4 className="text-xs font-bold uppercase tracking-wider text-charcoal">Focal Point &amp; Visual Offset</h4>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div>
+            <label htmlFor="footer-artwork-position-preset" className={fLabelCls}>Position Preset</label>
+            <select
+              id="footer-artwork-position-preset"
+              aria-label="Footer artwork position preset"
+              className={fInputCls}
+              value={art.positionPreset || "center"}
+              onChange={(e) => handlePresetChange(e.target.value)}
+            >
+              <option value="center">Center (50% 50%)</option>
+              <option value="top">Top (50% 0%)</option>
+              <option value="bottom">Bottom (50% 100%)</option>
+              <option value="left">Left (0% 50%)</option>
+              <option value="right">Right (100% 50%)</option>
+              <option value="custom">Custom Focal Point</option>
+            </select>
+          </div>
+          <div>
+            <label htmlFor="footer-artwork-position-x" className={fLabelCls}>Focal X Position (% 0-100)</label>
+            <input
+              id="footer-artwork-position-x"
+              aria-label="Footer artwork position X"
+              type="number"
+              min={0}
+              max={100}
+              placeholder="50"
+              className={fInputCls}
+              value={art.positionX ?? ""}
+              onChange={(e) => set({ positionX: numVal(e.target.value), positionPreset: "custom" })}
+            />
+          </div>
+          <div>
+            <label htmlFor="footer-artwork-position-y" className={fLabelCls}>Focal Y Position (% 0-100)</label>
+            <input
+              id="footer-artwork-position-y"
+              aria-label="Footer artwork position Y"
+              type="number"
+              min={0}
+              max={100}
+              placeholder="50"
+              className={fInputCls}
+              value={art.positionY ?? ""}
+              onChange={(e) => set({ positionY: numVal(e.target.value), positionPreset: "custom" })}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-4 pt-1">
+          <div>
+            <label htmlFor="footer-artwork-offset-x" className={fLabelCls}>Offset X (-20 to +20 px)</label>
+            <input
+              id="footer-artwork-offset-x"
+              aria-label="Footer artwork offset X"
+              type="number"
+              min={-20}
+              max={20}
+              placeholder="0"
+              className={fInputCls}
+              value={art.offsetX ?? ""}
+              onChange={(e) => set({ offsetX: numVal(e.target.value) })}
+            />
+          </div>
+          <div>
+            <label htmlFor="footer-artwork-offset-y" className={fLabelCls}>Offset Y (-20 to +20 px)</label>
+            <input
+              id="footer-artwork-offset-y"
+              aria-label="Footer artwork offset Y"
+              type="number"
+              min={-20}
+              max={20}
+              placeholder="0"
+              className={fInputCls}
+              value={art.offsetY ?? ""}
+              onChange={(e) => set({ offsetY: numVal(e.target.value) })}
+            />
+          </div>
+          <div>
+            <label htmlFor="footer-artwork-top-spacing" className={fLabelCls}>Top Spacing / Overlap (-40 to +40 px)</label>
+            <input
+              id="footer-artwork-top-spacing"
+              aria-label="Footer artwork top spacing"
+              type="number"
+              min={-40}
+              max={40}
+              placeholder="0"
+              className={fInputCls}
+              value={art.topSpacing ?? ""}
+              onChange={(e) => set({ topSpacing: numVal(e.target.value) })}
+            />
+          </div>
+          <div>
+            <label htmlFor="footer-artwork-bg-color" className={fLabelCls}>Background Color (optional)</label>
+            <input
+              id="footer-artwork-bg-color"
+              aria-label="Footer artwork background color"
+              placeholder="#2B2723 or blank"
+              maxLength={50}
+              className={fInputCls}
+              value={art.backgroundColor || ""}
+              onChange={(e) => set({ backgroundColor: e.target.value })}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Interactive Live Preview */}
+      {previewImage && (
+        <div className="space-y-2 rounded-xl border border-charcoal/15 bg-charcoal p-4 text-white" data-testid="footer-artwork-preview">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-2">
+            <div>
+              <span className="text-xs font-bold uppercase tracking-wider text-ivory">Artwork Live Preview</span>
+              <span className="ml-2 text-[11px] text-white/60">
+                Mode: {fit.toUpperCase()} • Focal: {posX}% {posY}% • Height: {currentPreviewHeight}
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 text-xs">
+              <span className="text-[11px] text-white/50 mr-1">Viewport:</span>
+              <button
+                type="button"
+                onClick={() => setPreviewDevice("desktop")}
+                className={`rounded px-2.5 py-1 text-xs font-medium transition ${
+                  previewDevice === "desktop" ? "bg-terracotta text-white" : "bg-white/10 text-white/80 hover:bg-white/20"
+                }`}
+              >
+                Desktop
+              </button>
+              <button
+                type="button"
+                onClick={() => setPreviewDevice("tablet")}
+                className={`rounded px-2.5 py-1 text-xs font-medium transition ${
+                  previewDevice === "tablet" ? "bg-terracotta text-white" : "bg-white/10 text-white/80 hover:bg-white/20"
+                }`}
+              >
+                Tablet
+              </button>
+              <button
+                type="button"
+                onClick={() => setPreviewDevice("mobile")}
+                className={`rounded px-2.5 py-1 text-xs font-medium transition ${
+                  previewDevice === "mobile" ? "bg-terracotta text-white" : "bg-white/10 text-white/80 hover:bg-white/20"
+                }`}
+              >
+                Mobile (390)
+              </button>
+            </div>
+          </div>
+
+          <div className="flex justify-center overflow-x-auto py-2">
+            <div
+              className={`relative overflow-hidden transition-all duration-300 ${previewWidth}`}
+              style={{
+                height: currentPreviewHeight,
+                backgroundColor: art.backgroundColor || "#2B2723",
+                marginTop: topSpacing ? `${topSpacing}px` : undefined,
+                maxHeight: art.maxHeight ? `${art.maxHeight}px` : fit === "natural" ? "600px" : undefined,
+                minHeight: art.minHeight ? `${art.minHeight}px` : undefined,
+              }}
+            >
+              <img
+                src={resolveMediaUrl(previewImage)}
+                alt="Preview"
+                className={`w-full block ${fit === "natural" ? "h-auto" : "h-full"}`}
+                style={{
+                  objectFit: fit === "cover" ? "cover" : "contain",
+                  objectPosition: `${posX}% ${posY}%`,
+                  transform: offX || offY ? `translate3d(${offX}px, ${offY}px, 0)` : undefined,
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+    </SectionCard>
+  );
+}
+
 /** All the optional, additive footer sections. `footer` is settings.footer; `onChange(patch)` merges keys into it. */
 export default function FooterSectionsEditor({ footer = {}, onChange, pages = [] }) {
   return (
@@ -252,6 +648,7 @@ export default function FooterSectionsEditor({ footer = {}, onChange, pages = []
       <SeoSectionsEditor sections={footer.seoSections} onChange={(v) => onChange({ seoSections: v })} />
       <PaymentBadgesEditor badges={footer.paymentBadges} onChange={(v) => onChange({ paymentBadges: v })} />
       <FooterImageEditor image={footer.image} onChange={(v) => onChange({ image: v })} />
+      <FooterArtworkEditor artwork={footer.artwork} onChange={(v) => onChange({ artwork: v })} />
     </div>
   );
 }
