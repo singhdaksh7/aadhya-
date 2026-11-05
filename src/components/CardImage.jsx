@@ -32,7 +32,7 @@ export default function CardImage({ sources = [], alt, priority = false, sizes =
   const failed = !src;
   return (
     <div className={`absolute inset-0 ${className}`}>
-      {!loaded && <div data-testid="image-skeleton" className="absolute inset-0 animate-pulse store-surface" />}
+      {!loaded && !failed && <div data-testid="image-skeleton" className="absolute inset-0 animate-pulse store-surface" />}
       {failed ? (
         <ImageFallback />
       ) : (
