@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { imageSizeError } from "../../lib/uploadLimits";
 import {
   adminListMedia,
   adminUploadMedia,
@@ -141,7 +142,7 @@ export default function AdminMedia() {
             <input
               type="file"
               accept="image/jpeg,image/png,image/webp"
-              onChange={(e) => setUploadFile(e.target.files[0])}
+              onChange={(e) => { const f = e.target.files[0]; const err = imageSizeError(f); if (err) { window.alert(err); e.target.value = ""; setUploadFile(null); } else setUploadFile(f); }}
               className="w-full text-xs text-charcoal border border-charcoal/15 rounded-xl p-1.5 bg-ivory/50"
               required
             />

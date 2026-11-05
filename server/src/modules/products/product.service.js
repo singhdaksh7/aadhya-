@@ -2,7 +2,7 @@ import { shippingToColumns, withShipping } from "../shipping/shipping-fields.js"
 import { prisma } from "../../lib/prisma.js";
 import { slugify } from "../../utils/slugify.js";
 import { ApiError } from "../../utils/ApiError.js";
-import { removeByUrl } from "../uploads/storage.js";
+import { removeByUrl, localUploadMissing } from "../uploads/storage.js";
 import { normalizeSpecifications } from "../../utils/specifications.js";
 
 const PUBLIC_INCLUDE = {
@@ -40,6 +40,9 @@ export function serializePublicProduct(product) {
 
   return {
     ...safe,
+    // Rows pointing at a local upload that is no longer on disk would 404 in every shopper's browser;
+    // keep them out of the public payload (scripts/audit-product-media.js still reports them).
+    ...(Array.isArray(safe.images) ? { images: safe.images.filter((img) => !localUploadMissing(img.url)) } : {}),
     specifications: normalizeSpecifications(product.specifications),
     averageRating,
     reviewCount,

@@ -2,6 +2,9 @@ import multer from "multer";
 import { env } from "../../config/env.js";
 import { ApiError } from "../../utils/ApiError.js";
 
+// Hard ceiling for storefront images: multi-MB originals are what made product cards load slowly on phones.
+export const IMAGE_MAX_MB = Math.min(env.uploads.maxFileSizeMb, 2);
+
 const ALLOWED_MIME_TYPES = new Set(["image/jpeg", "image/jpg", "image/png", "image/webp"]);
 const ALLOWED_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp"]);
 
@@ -27,7 +30,7 @@ function fileFilter(req, file, cb) {
 
 export const productImageMulter = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: env.uploads.maxFileSizeMb * 1024 * 1024, files: 1 },
+  limits: { fileSize: IMAGE_MAX_MB * 1024 * 1024, files: 1 },
   fileFilter,
 });
 
