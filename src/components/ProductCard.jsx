@@ -4,9 +4,10 @@ import { formatInr } from "../lib/format";
 import { useCart } from "../context/CartContext";
 import { useWishlist } from "../context/WishlistContext";
 import { IconCart, IconCheck } from "./icons";
+import CardImage from "./CardImage";
 import { trackAddToCart, trackWishlistAdd } from "../lib/analytics";
 
-export default function ProductCard({ product }) {
+export default function ProductCard({ product, priority = false }) {
   const { addItem, items } = useCart();
   const { isInWishlist, toggleWishlist } = useWishlist();
 
@@ -26,8 +27,11 @@ export default function ProductCard({ product }) {
   const discountPercent = onSale ? Math.round(((price - salePrice) / price) * 100) : 0;
 
   // Dual image logic
-  const primaryImg = product.images?.[0] || product.image || "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?q=80&w=800&auto=format&fit=crop";
+  // The second (hover) image is only mounted after the first hover, so it never costs a download on touch devices.
+  const primaryImg = product.images?.[0] || product.image;
   const hoverImg = product.images?.[1] || primaryImg;
+  const [hoverArmed, setHoverArmed] = useState(false);
+  const showHover = hoverArmed && hoverImg && hoverImg !== primaryImg;
 
 
   const handleQuickAdd = (e) => {
@@ -46,7 +50,7 @@ export default function ProductCard({ product }) {
     <div
       data-testid="product-card-root"
       className="group relative flex flex-col"
-      onMouseEnter={() => setIsHovered(true)}
+      onMouseEnter={() => { setIsHovered(true); setHoverArmed(true); }}
       onMouseLeave={() => setIsHovered(false)}
     >
       <div data-testid="product-card-media" className="relative aspect-[4/5] w-full overflow-hidden rounded-xl store-surface">
@@ -87,22 +91,17 @@ export default function ProductCard({ product }) {
         </button>
 
         <Link to={`/shop/${product.slug}`} aria-label={product.name} className="absolute inset-0 block">
-          <img
-            src={primaryImg}
+          <CardImage
+            sources={[...(product.images || []), product.image].filter(Boolean)}
             alt={product.name}
-            className={`h-full w-full object-cover transition-all duration-700 ease-out group-hover:scale-[1.03] ${
-              isHovered && hoverImg !== primaryImg ? "opacity-0" : "opacity-100"
-            }`}
-            loading="lazy"
+            priority={priority}
+            imgClassName={`transition-transform duration-700 ease-out group-hover:scale-[1.03] ${showHover && isHovered ? "!opacity-0" : ""}`}
           />
-          {hoverImg !== primaryImg && (
-            <img
-              src={hoverImg}
+          {showHover && (
+            <CardImage
+              sources={[hoverImg]}
               alt={`${product.name} lifestyle`}
-              className={`absolute inset-0 h-full w-full object-cover transition-all duration-700 ease-out group-hover:scale-[1.03] ${
-                isHovered ? "opacity-100" : "opacity-0"
-              }`}
-              loading="lazy"
+              imgClassName={`transition-all duration-700 ease-out group-hover:scale-[1.03] ${isHovered ? "!opacity-100" : "!opacity-0"}`}
             />
           )}
         </Link>

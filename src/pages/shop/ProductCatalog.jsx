@@ -318,8 +318,8 @@ function CatalogView({
               />
             ) : (
               <div className={gridClassName}>
-                {visibleProducts.map((product) => (
-                  <CardComponent key={product.id} product={product} />
+                {visibleProducts.map((product, index) => (
+                  <CardComponent key={product.id} product={product} priority={index < 2} />
                 ))}
               </div>
             )}

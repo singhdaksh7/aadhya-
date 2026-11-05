@@ -366,7 +366,7 @@ function ReelCard({ reel, soundOn, onSound, onHover, onSoundDenied, onShop, onOp
       <div className="relative aspect-[9/16] overflow-hidden rounded-2xl store-surface">
         {cover ? <img src={cover} alt={reel.title ? `${reel.title} cover` : ""} loading="lazy" className="absolute inset-0 h-full w-full object-cover" /> : <div data-testid="reel-fallback" aria-hidden="true" className="absolute inset-0 flex items-center justify-center store-muted"><svg viewBox="0 0 24 24" className="h-10 w-10 opacity-40" fill="currentColor"><path d="M8 5v14l11-7z" /></svg></div>}
         {playable && loaded && (
-          <video ref={videoRef} data-testid="reel-video" src={resolveMediaUrl(reel.videoUrl)} poster={cover || undefined} muted loop playsInline autoPlay={started && playing} preload="metadata" aria-label={title} className="absolute inset-0 h-full w-full object-cover" />
+          <video ref={videoRef} data-testid="reel-video" src={resolveMediaUrl(reel.videoUrl)} poster={cover || undefined} muted loop playsInline autoPlay={started && playing} preload={cover && !started && !loaded ? "none" : "metadata"} aria-label={title} className="absolute inset-0 h-full w-full object-cover" />
         )}
         {playable && (
           <button type="button" tabIndex={clone ? -1 : undefined} onClick={() => { toggle(); onOpenModal?.(reel); }} aria-label={playing ? `Pause ${title}` : `Play ${title}`} aria-pressed={playing} data-testid="reel-card-trigger" className="absolute inset-0 flex items-center justify-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-4px] cursor-pointer">

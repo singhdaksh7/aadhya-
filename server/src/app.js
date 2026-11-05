@@ -1,5 +1,7 @@
 import express from "express";
 import helmet from "helmet";
+import compression from "compression";
+import { variantMiddleware } from "./modules/uploads/imageVariants.js";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import morgan from "morgan";
@@ -18,6 +20,8 @@ export function createApp() {
   app.disable("x-powered-by");
   if (env.trustProxy > 0) app.set("trust proxy", env.trustProxy);
   app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
+  // JSON/text gzip (images are already compressed; compression skips them by content type).
+  app.use(compression());
   app.use(
     cors({
       origin: env.corsOrigins,
@@ -39,6 +43,7 @@ export function createApp() {
   app.use("/api", publicReadLimiter, adminApiLimiter, apiLimiter);
   // Upload filenames are random UUIDs and files are never rewritten in place, so a URL's content
 // never changes: let browsers/CDNs keep them for 30 days instead of revalidating every view.
+  app.use("/uploads/products", variantMiddleware(uploadRootDir));
   app.use("/uploads/products", express.static(uploadRootDir, { maxAge: "30d", immutable: true }));
   app.use("/api", routes);
 
