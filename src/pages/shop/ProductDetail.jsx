@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { ImageFallback } from "../../components/CardImage";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import ProductCard from "../../components/ProductCard";
 import ProductReviews from "../../components/ProductReviews";
@@ -161,9 +162,8 @@ export default function ProductDetail() {
     );
   }
 
-  const images = product.images?.length
-    ? product.images
-    : [product.image || "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?q=80&w=1000&auto=format&fit=crop"];
+  // No stock-photo stand-in: a product without a working photo shows the branded placeholder instead.
+  const images = product.images?.length ? product.images : product.image ? [product.image] : [];
 
   const hasFormats = bookFormats.length > 0;
   const activeFormatOption = hasFormats ? bookFormats.find((f) => f.format === selectedFormat) : null;
@@ -279,11 +279,15 @@ export default function ProductDetail() {
           {/* Gallery Column (7 cols) */}
           <div className="mx-auto w-full min-w-0 max-w-xl space-y-4 lg:sticky lg:top-24 lg:max-w-none">
             <div data-testid="pdp-gallery-main" className="relative aspect-square w-full overflow-hidden rounded-xl store-surface">
-              <img
-                src={images[activeImageIdx]}
-                alt={product.name}
-                className="h-full w-full object-contain transition-opacity duration-300"
-              />
+              {images.length ? (
+                <img
+                  src={images[activeImageIdx]}
+                  alt={product.name}
+                  className="h-full w-full object-contain transition-opacity duration-300"
+                />
+              ) : (
+                <ImageFallback />
+              )}
               {onSale && (
                 <span className="absolute top-4 left-4 rounded-full store-bg-primary px-3 py-1 text-xs font-bold uppercase tracking-wider text-white shadow-xs">
                   {discountPercent}% OFF
