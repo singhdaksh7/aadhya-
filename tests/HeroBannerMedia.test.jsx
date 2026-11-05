@@ -14,7 +14,7 @@ describe("hero banner media", () => {
   it("resolves admin-uploaded relative paths against the API origin (desktop and mobile)", () => {
     const banner = { id: "h", desktopImage: "/uploads/products/hero.png", mobileImage: "/uploads/products/hero-m.png", headline: "Decor", primaryCtaLabel: "Shop", primaryCtaUrl: "/shop" };
     const { container } = render(<BrowserRouter><HeroBannerCarousel bannersOverride={[banner]} /></BrowserRouter>);
-    expect(container.querySelector("img").getAttribute("src")).toBe("https://api.example.test/uploads/products/hero.png");
-    expect(container.querySelector("source").getAttribute("srcset")).toBe("https://api.example.test/uploads/products/hero-m.png");
+    expect(container.querySelector("img").getAttribute("src")).toMatch(/^https:\/\/api\.example\.test\/uploads\/products\/hero\.png(\?w=full)?$/);
+    expect(container.querySelector("source").getAttribute("srcset")).toBe("https://api.example.test/uploads/products/hero-m.png?w=full");
   });
 });

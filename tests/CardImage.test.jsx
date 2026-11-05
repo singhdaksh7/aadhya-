@@ -1,20 +1,17 @@
 import { describe, it, expect } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import CardImage from "../src/components/CardImage";
-import { buildSrcSet, variantUrl, canVariant, CARD_SIZES } from "../src/lib/imageVariants";
+import { optimizedUrl, canVariant } from "../src/lib/imageVariants";
 import { resolveProductImageUrl } from "../src/lib/api";
 
 const U = "https://api.x.com/uploads/products/abc-123.png";
 
 describe("image variants", () => {
-  it("builds responsive webp srcset for uploads only", () => {
+  it("serves same-dimension optimized WebP for uploads only", () => {
     expect(canVariant(U)).toBe(true);
-    expect(variantUrl(U, 480)).toBe(`${U}?w=480`);
-    expect(buildSrcSet(U)).toContain("?w=320 320w");
-    expect(buildSrcSet(U)).toContain("?w=1200 1200w");
-    expect(buildSrcSet("https://images.unsplash.com/a.jpg")).toBeUndefined();
-    expect(variantUrl("https://x.com/uploads/products/a.svg", 480)).toBe("https://x.com/uploads/products/a.svg");
-    expect(CARD_SIZES).toContain("50vw");
+    expect(optimizedUrl(U)).toBe(`${U}?w=full`);
+    expect(optimizedUrl("https://images.unsplash.com/a.jpg")).toBe("https://images.unsplash.com/a.jpg");
+    expect(optimizedUrl("https://x.com/uploads/products/a.svg")).toBe("https://x.com/uploads/products/a.svg");
   });
   it("normalizes media urls without double prefixing", () => {
     expect(resolveProductImageUrl(null)).toBeNull();
@@ -28,8 +25,8 @@ describe("CardImage", () => {
     const { rerender } = render(<CardImage sources={[U]} alt="Bag" />);
     let img = screen.getByAltText("Bag");
     expect(img).toHaveAttribute("loading", "lazy");
-    expect(img.getAttribute("srcset")).toContain("480w");
-    expect(img.getAttribute("sizes")).toBeTruthy();
+    expect(img.getAttribute("src")).toBe(`${U}?w=full`);
+    expect(img.hasAttribute("srcset")).toBe(false);
     expect(img).toHaveAttribute("width");
     rerender(<CardImage sources={[U]} alt="Bag" priority />);
     img = screen.getByAltText("Bag");

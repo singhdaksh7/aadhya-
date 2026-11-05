@@ -7,19 +7,20 @@ import { parseVariantRequest, ensureVariant } from "../src/modules/uploads/image
 
 describe("image variants", () => {
   it("accepts only whitelisted widths and safe raster names", () => {
-    expect(parseVariantRequest("a-b.png", "480")).toEqual({ width: 480, base: "a-b" });
-    expect(parseVariantRequest("a.png", "481")).toBeNull();
-    expect(parseVariantRequest("a.svg", "480")).toBeNull();
-    expect(parseVariantRequest("../a.png", "480")).toBeNull();
+    expect(parseVariantRequest("a-b.png", "full")).toEqual({ width: "full", base: "a-b" });
+    expect(parseVariantRequest("a.png", "480")).toBeNull();
+    expect(parseVariantRequest("a.svg", "full")).toBeNull();
+    expect(parseVariantRequest("../a.png", "full")).toBeNull();
   });
   it("generates a smaller webp, keeps the original, is idempotent, null when missing", async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "var-"));
     await sharp({ create: { width: 1600, height: 2000, channels: 3, background: "#c33" } }).png().toFile(path.join(dir, "x.png"));
-    const out = await ensureVariant(dir, "x.png", 480);
-    expect((await sharp(out).metadata()).width).toBe(480);
+    const out = await ensureVariant(dir, "x.png", "full");
+    expect((await sharp(out).metadata()).width).toBe(1600);
+    expect((await sharp(out).metadata()).height).toBe(2000);
     expect((await sharp(out).metadata()).format).toBe("webp");
     expect(fs.existsSync(path.join(dir, "x.png"))).toBe(true);
-    expect(await ensureVariant(dir, "x.png", 480)).toBe(out);
-    expect(await ensureVariant(dir, "nope.png", 480)).toBeNull();
+    expect(await ensureVariant(dir, "x.png", "full")).toBe(out);
+    expect(await ensureVariant(dir, "nope.png", "full")).toBeNull();
   });
 });
