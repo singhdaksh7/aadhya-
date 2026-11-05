@@ -329,3 +329,4 @@ describe("FooterArtworkEditor in Admin", () => {
     expect(within(preview).getByText(/Mode:/)).toBeInTheDocument();
   });
 });
+

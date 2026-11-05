@@ -30,7 +30,7 @@ describe("category page banner", () => {
     renderCategory();
     const banner = await screen.findByTestId("category-banner");
     const img = banner.querySelector("img");
-    expect(img.getAttribute("src")).toMatch(/\/uploads\/products\/decor\.jpg$/);
+    expect(img.getAttribute("src")).toMatch(/\/uploads\/products\/decor\.jpg(\?w=full)?$/);
     expect(img.className).toContain("object-contain");
     expect(img.className).not.toContain("object-cover");
     expect(banner.querySelector("source")).toBeNull();
@@ -72,7 +72,7 @@ describe("category page banner", () => {
     renderCategory();
     const banner = await screen.findByTestId("category-banner");
     expect(banner.querySelector("source").getAttribute("srcset")).toMatch(/m\.jpg$/);
-    expect(banner.querySelector("img").getAttribute("src")).toMatch(/d\.jpg$/);
+    expect(banner.querySelector("img").getAttribute("src")).toMatch(/d\.jpg(\?w=full)?$/);
   });
 
   it("falls back to desktopBanner on mobile when there is no mobileBanner", async () => {

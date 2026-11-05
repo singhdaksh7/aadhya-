@@ -87,7 +87,7 @@ describe("category page (subcategory)", () => {
     state.categories = [root({ desktopBanner: "/uploads/products/home.jpg" }), child()];
     renderAt("vases");
     const b = await screen.findByTestId("category-banner");
-    expect(b.querySelector("img").getAttribute("src")).toMatch(/home\.jpg$/);
+    expect(b.querySelector("img").getAttribute("src")).toMatch(/home\.jpg(\?w=full)?$/);
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Vases");
     expect(screen.getByRole("link", { name: "Home Decor" }).getAttribute("href")).toBe("/shop/category/home-decor");
   });
@@ -96,7 +96,7 @@ describe("category page (subcategory)", () => {
     state.categories = [root({ desktopBanner: "/uploads/products/home.jpg" }), child({ desktopBanner: "/uploads/products/vases.jpg" })];
     renderAt("vases");
     const b = await screen.findByTestId("category-banner");
-    expect(b.querySelector("img").getAttribute("src")).toMatch(/vases\.jpg$/);
+    expect(b.querySelector("img").getAttribute("src")).toMatch(/vases\.jpg(\?w=full)?$/);
   });
 
   it("keeps the text header when no banner exists anywhere in the chain", async () => {

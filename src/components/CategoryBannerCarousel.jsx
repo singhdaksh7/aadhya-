@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { bannerImgProps } from "../lib/imageVariants";
 import { Link } from "react-router-dom";
 import { resolveMediaUrl } from "../lib/api";
 
@@ -27,7 +28,7 @@ function SlideImage({ slide, alt, first }) {
         <source media="(max-width: 767px)" srcSet={resolveMediaUrl(slide.mobile)} />
       )}
       <img
-        src={resolveMediaUrl(slide.desktop || slide.mobile)}
+        {...bannerImgProps(resolveMediaUrl(slide.desktop || slide.mobile))}
         alt={alt}
         loading={first ? "eager" : "lazy"}
         fetchPriority={first ? "high" : "auto"}

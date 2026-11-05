@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { buildSrcSet, variantUrl, CARD_SIZES } from "../lib/imageVariants";
+import { optimizedUrl } from "../lib/imageVariants";
 
 // Branded, text-free fallback: no <img>, so the browser can never paint alt text or a broken icon.
 export function ImageFallback({ className = "" }) {
@@ -21,7 +21,7 @@ export function ImageFallback({ className = "" }) {
 
 // Fills its (already aspect-ratio'd) parent. Shows a skeleton until decoded, fades in, and walks
 // through fallback sources on error before settling on the branded placeholder.
-export default function CardImage({ sources = [], alt, priority = false, sizes = CARD_SIZES, className = "", imgClassName = "" }) {
+export default function CardImage({ sources = [], alt, priority = false, className = "", imgClassName = "" }) {
   const list = sources.filter(Boolean);
   const key = list.join("|");
   const [idx, setIdx] = useState(0);
@@ -39,9 +39,7 @@ export default function CardImage({ sources = [], alt, priority = false, sizes =
         <img
           key={src}
           ref={(el) => { if (el && el.complete && el.naturalWidth === 0 && el.currentSrc) setIdx((i) => i + 1); }}
-          src={variantUrl(src, 640)}
-          srcSet={buildSrcSet(src)}
-          sizes={buildSrcSet(src) ? sizes : undefined}
+          src={optimizedUrl(src)}
           alt={alt}
           width={800}
           height={1000}
