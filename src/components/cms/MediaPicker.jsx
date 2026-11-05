@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { imageSizeError } from "../../lib/uploadLimits";
 import { adminListMedia, adminUploadMedia, resolveProductImageUrl } from "../../lib/api";
 import { IconClose } from "../icons";
 
@@ -242,7 +243,7 @@ export default function MediaPicker({ isOpen, onClose, onSelect, title = "Select
                   id="media-picker-file"
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
-                  onChange={(e) => setUploadFile(e.target.files[0])}
+                  onChange={(e) => { const f = e.target.files[0]; const err = imageSizeError(f); if (err) { window.alert(err); e.target.value = ""; setUploadFile(null); } else setUploadFile(f); }}
                   className="w-full text-xs text-charcoal border border-charcoal/15 rounded-xl p-2 bg-white"
                   required
                 />

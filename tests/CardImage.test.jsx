@@ -57,3 +57,12 @@ describe("CardImage", () => {
     expect(screen.getByTestId("image-fallback")).toBeInTheDocument();
   });
 });
+
+import { imageSizeError, MAX_IMAGE_MB } from "../src/lib/uploadLimits";
+describe("admin upload size limit", () => {
+  it("rejects heavy images with a clear message and accepts small ones", () => {
+    expect(MAX_IMAGE_MB).toBe(2);
+    expect(imageSizeError({ size: 3 * 1048576 })).toMatch(/under 2 MB/);
+    expect(imageSizeError({ size: 500 * 1024 })).toBeNull();
+  });
+});

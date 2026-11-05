@@ -102,3 +102,9 @@ export async function saveBuffer(buffer, mimeType) { return storage.save(buffer,
 export async function removeByUrl(url) { return storage.remove(url); }
 
 export const uploadRootDir = UPLOAD_ROOT;
+
+// True only for local-disk upload URLs whose file is gone. External/S3 URLs are never judged.
+export function localUploadMissing(url) {
+  if (env.storage.driver !== "local" || typeof url !== "string" || !url.startsWith(`${PUBLIC_UPLOAD_PREFIX}/`)) return false;
+  return !fs.existsSync(path.join(UPLOAD_ROOT, path.basename(url)));
+}
