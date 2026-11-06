@@ -4,14 +4,14 @@
 export const showGiftingOnHomepage = (settings) => settings?.showGiftingOnHomepage === true;
 
 // The home page has no dedicated gifting section type: its gifting presence is a card inside generic sections
-// (Explore More "Gifting", the "Gift Edit" promo banner...). A card is gifting when it links to /gifting or is
-// titled like a gift.
+// (Explore More "Gifting", the "Gift Edit" promo banner...). A card is gifting ONLY when it is explicitly marked
+// (`kind: "GIFTING"`, set in the Homepage Builder) or its destination is exactly the /gifting page. Titles are
+// never inspected: a card called "Perfect Gift Ideas" is not gifting content unless marked.
 export const isGiftItem = (item) => {
   if (!item || typeof item !== "object") return false;
-  const url = String(item.url || item.ctaUrl || "");
-  return /^\/gifting(\/|\?|$)/i.test(url) || /\bgift/i.test(String(item.title || ""));
+  if (item.kind === "GIFTING") return true;
+  return [item.url, item.ctaUrl].some((u) => typeof u === "string" && u.trim().replace(/\/+$/, "") === "/gifting");
 };
-
 /**
  * Sections to render for the current setting. When OFF, gifting cards are removed from every section's `items`
  * (so their images are never requested) and a section left with no cards is dropped entirely: no empty wrapper,

@@ -1,12 +1,16 @@
 import React, { useEffect, useState } from "react";
 import HomepageRenderer from "../components/HomepageRenderer";
 import { fetchHomepage } from "../lib/api";
+import { useSiteSettingsSettled } from "../hooks/useSiteSettings";
 import { canonicalUrl, jsonLdProps } from "../lib/seo";
 
 export default function Home() {
   const [sections, setSections] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  // The homepage decides what to render from site settings (showGiftingOnHomepage). Wait for the shared settings
+  // load to settle (no extra request) so content is never rendered and then removed, or added late.
+  const settingsSettled = useSiteSettingsSettled();
 
   useEffect(() => {
     let active = true;
@@ -33,7 +37,7 @@ export default function Home() {
     };
   }, []);
 
-  if (isLoading) {
+  if (isLoading || !settingsSettled) {
     return (
       <div className="store-bg min-h-[60vh] flex items-center justify-center">
         <div className="text-center py-16">

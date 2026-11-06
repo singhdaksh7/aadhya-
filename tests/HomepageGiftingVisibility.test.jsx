@@ -21,7 +21,7 @@ vi.mock("../src/context/WishlistContext", () => ({ useWishlist: () => ({ isInWis
 import HomepageRenderer from "../src/components/HomepageRenderer";
 import GiftingHomepageSwitch from "../src/components/admin/GiftingHomepageSwitch";
 import { DEFAULT_SITE_SETTINGS } from "../src/hooks/useSiteSettings";
-import { applyGiftingVisibility, showGiftingOnHomepage } from "../src/lib/homeGifting";
+import { applyGiftingVisibility, showGiftingOnHomepage, isGiftItem } from "../src/lib/homeGifting";
 
 const sections = () => [
   { id: "explore", type: "EXPLORE_MORE", isEnabled: true, sortOrder: 1, settings: { title: "Explore More", items: [
@@ -29,7 +29,7 @@ const sections = () => [
     { id: "e2", title: "Gifting", url: "/gifting", enabled: true, sortOrder: 2, image: "/uploads/products/gift-explore.png" },
   ] } },
   { id: "promo", type: "PROMO_BANNERS_2UP", isEnabled: true, sortOrder: 2, settings: { layout: "FULL", items: [
-    { id: "p2", title: "Gift Edit", ctaUrl: "/shop/category/handcrafted-dolls", enabled: true, image: "/uploads/products/gift-promo.jpg" },
+    { id: "p2", kind: "GIFTING", title: "Gift Edit", ctaUrl: "/shop/category/handcrafted-dolls", enabled: true, image: "/uploads/products/gift-promo.jpg" },
   ] } },
   { id: "news", type: "NEWSLETTER", isEnabled: true, sortOrder: 3, settings: {} },
 ];
@@ -70,6 +70,35 @@ describe("showGiftingOnHomepage on the storefront", () => {
     expect(container.querySelector('a[href="/gifting"]')).toBeInTheDocument();
     expect(screen.getByText("Gift Edit")).toBeInTheDocument();
     expect(screen.getByTestId("promo-banners")).toBeInTheDocument();
+  });
+
+  it("matching rule: explicit kind or an exact /gifting destination; titles are never inspected", () => {
+    expect(isGiftItem({ kind: "GIFTING", title: "Anything", url: "/shop" })).toBe(true);
+    expect(isGiftItem({ title: "Gifting", url: "/gifting" })).toBe(true);
+    expect(isGiftItem({ title: "Gifting", ctaUrl: "/gifting/" })).toBe(true);
+    expect(isGiftItem({ title: "Perfect Gift Ideas", url: "/shop/category/gift-sets" })).toBe(false);
+    expect(isGiftItem({ title: "Gift Edit", ctaUrl: "/shop/category/handcrafted-dolls" })).toBe(false);
+    expect(isGiftItem({ title: "Gifting guide", url: "/gifting-guide" })).toBe(false);
+    expect(isGiftItem({ title: "x", url: "/gifting?occasion=diwali" })).toBe(false);
+    expect(isGiftItem({ kind: "OTHER", title: "x", url: "/shop" })).toBe(false);
+  });
+
+  it("OFF: an unmarked card whose title merely contains 'gift' stays visible", () => {
+    state.settings = { showGiftingOnHomepage: false };
+    const secs = sections();
+    secs[1].settings.items.push({ id: "p3", title: "Perfect Gift Ideas", ctaUrl: "/shop/category/gift-sets", enabled: true });
+    renderHome(secs);
+    expect(screen.getByText("Perfect Gift Ideas")).toBeInTheDocument();
+    expect(screen.queryByText("Gift Edit")).toBeNull();
+    expect(screen.getByTestId("promo-banners")).toBeInTheDocument();
+  });
+
+  it("OFF: a card pointing at /gifting is hidden without any marker (legacy data)", () => {
+    state.settings = { showGiftingOnHomepage: false };
+    const secs = sections();
+    delete secs[0].settings.items[1].kind;
+    renderHome(secs);
+    expect(screen.queryByText("Gifting")).toBeNull();
   });
 
   it("never mutates the stored CMS sections", () => {

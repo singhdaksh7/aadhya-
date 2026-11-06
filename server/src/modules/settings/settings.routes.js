@@ -102,6 +102,7 @@ export const DEFAULT_SETTINGS = {
           { label: "Books & Monographs", type: "CUSTOM_URL", url: "/books" },
           { label: "New Arrivals", type: "CUSTOM_URL", url: "/new-arrivals" },
           { label: "Best Sellers", type: "CUSTOM_URL", url: "/best-sellers" },
+          { label: "Gifting", type: "GIFTING", url: "/gifting" },
         ],
       },
       {

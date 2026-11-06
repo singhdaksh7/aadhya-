@@ -6,10 +6,10 @@
 import fs from "node:fs";
 import path from "node:path";
 
-const SITE_URL = (process.env.SITE_URL || "https://tushaqsa.aadyavocational.com").replace(/\/$/, "");
+export const SITE_URL = (process.env.SITE_URL || "https://tushaqsa.aadyavocational.com").replace(/\/$/, "");
 const API_URL = process.env.VITE_API_URL || "http://localhost:4100/api";
 
-const STATIC_ROUTES = [
+export const STATIC_ROUTES = [
   "/",
   "/training",
   "/consultation",
