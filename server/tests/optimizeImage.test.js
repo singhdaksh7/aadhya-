@@ -30,3 +30,25 @@ describe("upload auto-optimizer safety", () => {
     expect(await optimizeImageBuffer(bad, "image/png")).toEqual({ buffer: bad, mimeType: "image/png" });
   });
 });
+
+import fs from "node:fs";
+import path from "node:path";
+import { saveBufferWithInfo, uploadRootDir } from "../src/modules/uploads/storage.js";
+
+describe("every stored upload is compressed (regression guard)", () => {
+  it("saveBufferWithInfo stores a smaller WebP with the same dimensions", async () => {
+    const raw = crypto.randomBytes(1400 * 1000 * 3);
+    const png = await sharp(raw, { raw: { width: 1400, height: 1000, channels: 3 } }).png({ compressionLevel: 0 }).toBuffer();
+    const saved = await saveBufferWithInfo(png, "image/png");
+    const file = path.join(uploadRootDir, path.basename(saved.url));
+    try {
+      expect(saved.mimeType).toBe("image/webp");
+      expect(saved.size).toBeLessThan(png.length);
+      expect(fs.statSync(file).size).toBe(saved.size);
+      const meta = await sharp(fs.readFileSync(file)).metadata();
+      expect([meta.width, meta.height]).toEqual([1400, 1000]);
+    } finally {
+      try { fs.rmSync(file, { force: true }); } catch { /* OneDrive may briefly lock the temp file */ }
+    }
+  });
+});
