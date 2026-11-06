@@ -3,16 +3,18 @@ import { optimizedUrl } from "../../lib/imageVariants";
 import { Link } from "react-router-dom";
 import { formatInr } from "../../lib/format";
 import { resolveMediaUrl } from "../../lib/api";
+import { useProductLinkProps } from "../../hooks/useIsMobile";
 
 const cleanAuthor = (author) => (typeof author === "string" ? author.replace(/\s*\(demo sample\)\s*$/i, "").trim() : "");
 
 /** Book-specific card: portrait cover, title, author and a single price. No box around it. */
 export default function BookCard({ product }) {
+  const linkProps = useProductLinkProps();
   const cover = product.images?.[0]?.url || product.images?.[0] || product.image;
   const price = Number(product.salePrice ?? product.price);
   const author = cleanAuthor(product.bookDetail?.author);
   return (
-    <Link to={`/shop/${product.slug}`} data-testid="book-card" className="group block">
+    <Link to={`/shop/${product.slug}`} data-testid="book-card" className="group block" {...linkProps}>
       <div className="relative aspect-[2/3] w-full overflow-hidden rounded-[3px] store-surface shadow-[0_10px_24px_-14px_rgba(43,39,35,0.45)] transition duration-500 group-hover:-translate-y-1 group-hover:shadow-[0_18px_30px_-14px_rgba(43,39,35,0.5)]">
         {cover && <img src={optimizedUrl(resolveMediaUrl(cover))} alt={`${product.name} cover`} loading="lazy" className="h-full w-full object-cover" />}
         <span aria-hidden="true" className="absolute inset-y-0 left-0 w-2 bg-gradient-to-r from-black/20 to-transparent" />

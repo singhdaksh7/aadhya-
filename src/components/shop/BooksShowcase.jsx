@@ -5,6 +5,7 @@ import BookCard from "./BookCard";
 import HomepageSectionTitle from "../HomepageSectionTitle";
 import { resolveMediaUrl } from "../../lib/api";
 import { formatInr } from "../../lib/format";
+import { useProductLinkProps } from "../../hooks/useIsMobile";
 
 const cleanAuthor = (a) => (typeof a === "string" ? a.replace(/\s*\(demo sample\)\s*$/i, "").trim() : "");
 const byNewest = (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
@@ -48,6 +49,7 @@ function Row({ eyebrow, title, books, testId, anchor }) {
 
 /** Premium bookstore modules shown above the full books catalog. Renders nothing without books. */
 export default function BooksShowcase({ books = [], themes = [] }) {
+  const linkProps = useProductLinkProps();
   if (!books.length) return null;
   const { featured, newReleases, editorsPicks, popular } = buildBookModules(books);
   const cover = featured && (featured.images?.[0]?.url || featured.images?.[0] || featured.image);
@@ -68,7 +70,7 @@ export default function BooksShowcase({ books = [], themes = [] }) {
       {featured && (
         <section data-testid="books-featured" className="mx-auto max-w-7xl px-4 sm:px-8">
           <div className="grid items-center gap-8 overflow-hidden rounded-2xl store-surface p-6 sm:p-10 md:grid-cols-12 md:gap-12">
-            <Link to={`/shop/${featured.slug}`} className="mx-auto w-48 shrink-0 sm:w-60 md:col-span-4 md:w-full md:max-w-[17rem]">
+            <Link to={`/shop/${featured.slug}`} {...linkProps} className="mx-auto w-48 shrink-0 sm:w-60 md:col-span-4 md:w-full md:max-w-[17rem]">
               <div className="aspect-[2/3] overflow-hidden rounded-[3px] shadow-[0_24px_40px_-18px_rgba(43,39,35,0.55)]">
                 {cover && <img src={optimizedUrl(resolveMediaUrl(cover))} alt={`${featured.name} cover`} className="h-full w-full object-cover" />}
               </div>
@@ -79,7 +81,7 @@ export default function BooksShowcase({ books = [], themes = [] }) {
               {author && <p className="mt-2 text-sm italic store-muted">{author}</p>}
               <p className="mx-auto mt-4 max-w-xl text-sm font-light leading-relaxed store-muted md:mx-0">{excerpt(featured.shortDescription || featured.description)}</p>
               <p className="mt-5 text-lg font-medium store-primary">{formatInr(Number(featured.salePrice ?? featured.price))}</p>
-              <Link to={`/shop/${featured.slug}`} className="mt-6 inline-flex items-center gap-3 border border-[var(--theme-primary)] px-8 py-3 text-[11px] font-medium uppercase tracking-[0.2em] store-primary transition hover:bg-[var(--theme-primary)] hover:text-white">View book <span aria-hidden="true">&rarr;</span></Link>
+              <Link to={`/shop/${featured.slug}`} {...linkProps} className="mt-6 inline-flex items-center gap-3 border border-[var(--theme-primary)] px-8 py-3 text-[11px] font-medium uppercase tracking-[0.2em] store-primary transition hover:bg-[var(--theme-primary)] hover:text-white">View book <span aria-hidden="true">&rarr;</span></Link>
             </div>
           </div>
         </section>
