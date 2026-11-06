@@ -100,6 +100,7 @@ export default function ProductCard({ product, priority = false }) {
           {showHover && (
             <CardImage
               sources={[hoverImg]}
+              skeleton={false}
               alt={`${product.name} lifestyle`}
               imgClassName={`transition-all duration-700 ease-out group-hover:scale-[1.03] ${isHovered ? "!opacity-100" : "!opacity-0"}`}
             />
