@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import AdminHomepageBuilder, { sectionTypeLabels } from "./AdminHomepageBuilder";
 import GiftingSectionFields from "../../components/admin/GiftingSectionFields";
+import GiftingHomepageSwitch from "../../components/admin/GiftingHomepageSwitch";
 import ImagePickerInput from "../../components/admin/ImagePickerInput";
 import { Button } from "../../components/ui";
 import {
@@ -72,6 +73,7 @@ export function GiftingPageSettings({ page, onSaved }) {
         <h2 className="admin-card__title">Page settings &amp; SEO</h2>
         <span className="text-xs text-charcoal-soft">URL: /gifting (fixed)</span>
       </div>
+      <GiftingHomepageSwitch variant="page" />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <label className="block text-xs font-semibold text-charcoal-soft">
           Page name
