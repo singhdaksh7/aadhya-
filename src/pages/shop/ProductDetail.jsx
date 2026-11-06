@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { ImageFallback } from "../../components/CardImage";
+import { optimizedUrl } from "../../lib/imageVariants";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import ProductCard from "../../components/ProductCard";
 import ProductReviews from "../../components/ProductReviews";
@@ -281,7 +282,9 @@ export default function ProductDetail() {
             <div data-testid="pdp-gallery-main" className="relative aspect-square w-full overflow-hidden rounded-xl store-surface">
               {images.length ? (
                 <img
-                  src={images[activeImageIdx]}
+                  src={optimizedUrl(images[activeImageIdx])}
+                  fetchPriority="high"
+                  decoding="async"
                   alt={product.name}
                   className="h-full w-full object-contain transition-opacity duration-300"
                 />
@@ -313,7 +316,7 @@ export default function ProductDetail() {
                       idx === activeImageIdx ? "border-[var(--theme-primary)]" : "border-transparent opacity-70 hover:opacity-100"
                     }`}
                   >
-                    <img src={img} alt="" className="h-full w-full object-contain" />
+                    <img src={optimizedUrl(img)} alt="" loading="lazy" decoding="async" className="h-full w-full object-contain" />
                   </button>
                 ))}
               </div>
