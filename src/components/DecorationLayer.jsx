@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { optimizedUrl } from "../lib/imageVariants";
 import { useLocation } from "react-router-dom";
 import { useSiteSettings } from "../hooks/useSiteSettings";
 import { resolveMediaUrl } from "../lib/api";
@@ -54,7 +55,7 @@ function Art({ item, eager }) {
     >
       <div className="overflow-hidden" style={frameStyle(item)}>
         <img
-          src={resolveMediaUrl(item.image)}
+          src={optimizedUrl(resolveMediaUrl(item.image))}
           alt={item.alt}
           loading={eager ? "eager" : "lazy"}
           decoding="async"

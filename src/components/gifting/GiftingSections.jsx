@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { optimizedUrl } from "../../lib/imageVariants";
 import { Link } from "react-router-dom";
 import ProductCard from "../ProductCard";
 import { resolveProductImageUrl, resolveMediaUrl } from "../../lib/api";
@@ -76,7 +77,7 @@ export function GiftingHeroSection({ section }) {
               <picture>
                 {mobileImg && <source media="(max-width: 640px)" srcSet={mobileImg} />}
                 <img
-                  src={bgImg}
+                  src={optimizedUrl(bgImg)}
                   alt={content.title || "Gifting at Tushaqsa"}
                   className="h-full w-full object-cover object-center brightness-[0.70]"
                   loading="eager"
@@ -160,7 +161,7 @@ export function GiftsByOccasionSection({ section }) {
               <div className="relative aspect-square w-full overflow-hidden bg-charcoal/5">
                 {img ? (
                   <img
-                    src={img}
+                    src={optimizedUrl(img)}
                     alt={item.title}
                     loading="lazy"
                     className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
@@ -257,7 +258,7 @@ export function CuratedStoriesSection({ section }) {
                 >
                   {img && (
                     <img
-                      src={img}
+                      src={optimizedUrl(img)}
                       alt={story.heading}
                       loading="lazy"
                       className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
@@ -308,7 +309,7 @@ export function GiftsByFestivalSection({ section }) {
               <div className="relative aspect-[4/5] w-full overflow-hidden bg-charcoal/5">
                 {img ? (
                   <img
-                    src={img}
+                    src={optimizedUrl(img)}
                     alt={item.label}
                     loading="lazy"
                     className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
@@ -382,7 +383,7 @@ export function GiftingBenefitsSection({ section }) {
               >
                 <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full store-bg-secondary-soft text-xl">
                   {card.image ? (
-                    <img src={resolveProductImageUrl(card.image)} alt="" loading="lazy" className="h-full w-full object-cover" data-testid={`benefit-image-${idx}`} />
+                    <img src={optimizedUrl(resolveProductImageUrl(card.image))} alt="" loading="lazy" className="h-full w-full object-cover" data-testid={`benefit-image-${idx}`} />
                   ) : (
                     renderIcon(card.icon)
                   )}
@@ -431,7 +432,7 @@ export function GiftsByCraftSection({ section }) {
               <div className="relative aspect-[3/4] w-full overflow-hidden bg-charcoal/5">
                 {img ? (
                   <img
-                    src={img}
+                    src={optimizedUrl(img)}
                     alt={craft.title}
                     loading="lazy"
                     className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
@@ -693,7 +694,7 @@ export function BulkGiftingSection({ content = {} }) {
             </div>
 
             <div className="mt-8 rounded-2xl overflow-hidden aspect-[4/3] relative">
-              <img src={image} alt="Bulk artisan gifts" className="w-full h-full object-cover" />
+              <img src={optimizedUrl(image)} alt="Bulk artisan gifts" className="w-full h-full object-cover" />
             </div>
           </div>
 

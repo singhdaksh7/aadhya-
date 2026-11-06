@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { optimizedUrl } from "../lib/imageVariants";
 import HomepageSectionTitle from "./HomepageSectionTitle";
 import { resolveMediaUrl } from "../lib/api";
 
@@ -21,7 +22,7 @@ function Glyph({ name }) {
 function SafeImage({ src, alt = "", className }) {
   const [broken, setBroken] = useState(false);
   if (!src || broken) return null;
-  return <img src={resolveMediaUrl(src)} alt={alt} loading="lazy" decoding="async" onError={() => setBroken(true)} className={className} />;
+  return <img src={optimizedUrl(resolveMediaUrl(src))} alt={alt} loading="lazy" decoding="async" onError={() => setBroken(true)} className={className} />;
 }
 
 const visibleMilestones = (list) =>
@@ -69,7 +70,7 @@ export default function OurJourney({ config = {} }) {
         </ol>
         {sideImage && (
           <div data-testid="journey-side-image" className={`mt-10 overflow-hidden rounded-2xl lg:sticky lg:top-28 lg:mt-0 ${imageLeft ? "lg:order-1" : ""}`}>
-            <img src={sideImage} alt={config.imageAlt || ""} loading="lazy" decoding="async" onError={() => setImageBroken(true)} className="aspect-[4/5] w-full object-cover" />
+            <img src={optimizedUrl(sideImage)} alt={config.imageAlt || ""} loading="lazy" decoding="async" onError={() => setImageBroken(true)} className="aspect-[4/5] w-full object-cover" />
           </div>
         )}
       </div>

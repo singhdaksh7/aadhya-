@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { optimizedUrl } from "../../lib/imageVariants";
 import { Link } from "react-router-dom";
 import { formatInr } from "../../lib/format";
 import { getRecentlyViewed } from "../../lib/analytics";
@@ -25,7 +26,7 @@ export default function RecentlyViewed({ excludeSlug, title = "Recently Viewed" 
             to={`/products/${p.slug}`}
             className="min-w-[140px] flex-shrink-0 rounded-xl border border-[var(--theme-border)] store-surface p-3 hover:border-[var(--theme-primary)]/40"
           >
-            {p.image && <img src={p.image} alt={p.name} className="mb-2 h-24 w-full rounded-lg object-cover" />}
+            {p.image && <img src={optimizedUrl(p.image)} alt={p.name} className="mb-2 h-24 w-full rounded-lg object-cover" />}
             <p className="truncate text-xs font-medium store-text">{p.name}</p>
             <p className="text-xs store-primary">{formatInr(p.salePrice || p.price)}</p>
           </Link>

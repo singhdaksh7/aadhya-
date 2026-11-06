@@ -1,4 +1,5 @@
 import React from "react";
+import { optimizedUrl } from "../../lib/imageVariants";
 import { Link } from "react-router-dom";
 import { resolveProductImageUrl } from "../../lib/api";
 
@@ -21,7 +22,7 @@ export default function WhatsNewCard({ item }) {
     <article data-testid="whats-new-card" className="flex flex-col overflow-hidden rounded-2xl border border-[var(--theme-border)] bg-white shadow-sm">
       {img && (
         <div className="relative aspect-[4/3] bg-beige-light">
-          <img src={img} alt={item.title} loading="lazy" className="h-full w-full object-cover" />
+          <img src={optimizedUrl(img)} alt={item.title} loading="lazy" className="h-full w-full object-cover" />
           {item.badge && (
             <span className="absolute left-3 top-3 rounded-full bg-terracotta px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-ivory">{item.badge}</span>
           )}

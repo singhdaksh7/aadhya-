@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import { optimizedUrl } from "../lib/imageVariants";
 import { resolveMediaUrl } from "../lib/api";
 import NavAnchor from "./NavAnchor";
 import { ctaLabel } from "../lib/cta";
@@ -24,7 +25,7 @@ export function MegaPromoCard({ promo, onClose = () => {}, viewport = null }) {
         {promo.image && (
           <picture>
             {!mobile && promo.mobileImage && <source media="(max-width: 767px)" srcSet={resolveMediaUrl(promo.mobileImage)} />}
-            <img src={src} alt={promo.altText} className="absolute inset-0 h-full w-full object-cover transition duration-[1200ms] ease-out group-hover:scale-[1.04]" />
+            <img src={optimizedUrl(src)} alt={promo.altText} className="absolute inset-0 h-full w-full object-cover transition duration-[1200ms] ease-out group-hover:scale-[1.04]" />
           </picture>
         )}
         <div data-testid="mega-promo-overlay" className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-charcoal/75 via-charcoal/20 to-transparent p-5 text-white [text-shadow:0_1px_14px_rgba(0,0,0,0.35)]">

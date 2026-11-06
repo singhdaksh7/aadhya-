@@ -1,4 +1,5 @@
 import React from "react";
+import { optimizedUrl } from "../../lib/imageVariants";
 import { Link } from "react-router-dom";
 import BookCard from "./BookCard";
 import HomepageSectionTitle from "../HomepageSectionTitle";
@@ -69,7 +70,7 @@ export default function BooksShowcase({ books = [], themes = [] }) {
           <div className="grid items-center gap-8 overflow-hidden rounded-2xl store-surface p-6 sm:p-10 md:grid-cols-12 md:gap-12">
             <Link to={`/shop/${featured.slug}`} className="mx-auto w-48 shrink-0 sm:w-60 md:col-span-4 md:w-full md:max-w-[17rem]">
               <div className="aspect-[2/3] overflow-hidden rounded-[3px] shadow-[0_24px_40px_-18px_rgba(43,39,35,0.55)]">
-                {cover && <img src={resolveMediaUrl(cover)} alt={`${featured.name} cover`} className="h-full w-full object-cover" />}
+                {cover && <img src={optimizedUrl(resolveMediaUrl(cover))} alt={`${featured.name} cover`} className="h-full w-full object-cover" />}
               </div>
             </Link>
             <div className="text-center md:col-span-8 md:text-left">
