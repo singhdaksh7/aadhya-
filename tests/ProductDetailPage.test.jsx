@@ -37,6 +37,16 @@ async function open(product) {
 describe("ProductDetail page", () => {
   beforeEach(() => addItem.mockClear());
 
+  it("selecting a variant with its own image moves the shared gallery; variants without images leave it alone", async () => {
+    await open(base({ images: ["/a.jpg", "/b.jpg", "/c.jpg"], variants: [{ id: "v1", name: "Plain" }, { id: "v2", name: "Blue", image: "/c.jpg" }] }));
+    fireEvent.click(screen.getByRole("button", { name: "View image 2" }));
+    fireEvent.click(screen.getByRole("button", { name: "Plain" }));
+    expect(screen.getByRole("button", { name: "View image 2" })).toHaveAttribute("aria-current", "true");
+    fireEvent.click(screen.getByRole("button", { name: "Blue" }));
+    expect(screen.getByRole("button", { name: "View image 3" })).toHaveAttribute("aria-current", "true");
+    expect(screen.getByTestId("pdp-zoom-trigger").querySelector("img")).toHaveAttribute("src", "/c.jpg");
+  });
+
   it("uses the site-wide container width", async () => {
     await open(base());
     const c = screen.getByTestId("pdp-container");

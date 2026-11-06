@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ImageFallback } from "../../components/CardImage";
-import { optimizedUrl } from "../../lib/imageVariants";
+import ProductGallery from "../../components/shop/ProductGallery";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import ProductCard from "../../components/ProductCard";
 import ProductReviews from "../../components/ProductReviews";
@@ -185,6 +184,14 @@ export default function ProductDetail() {
 
   const isBook = product.categorySlug === "books" || product.isbn || product.productType === "BOOK";
 
+  // A variant that carries its own photo moves the shared gallery index to it (variants have no image today,
+  // so this is a no-op until one does). The same index drives the main image, thumbnails and lightbox.
+  const selectVariant = (v) => {
+    setSelectedVariant(v);
+    const vi = images.indexOf(v?.image || v?.imageUrl);
+    if (vi >= 0) setActiveImageIdx(vi);
+  };
+
   const handleAddToCart = () => {
     if (outOfStock || maxQty <= 0 || formatSelectionMissing) return;
     addItem(product, selectedFormat === "PDF" ? 1 : quantity, selectedVariant, hasFormats ? selectedFormat : null);
@@ -279,48 +286,18 @@ export default function ProductDetail() {
         <div className="grid gap-8 lg:grid-cols-2 lg:gap-14 items-start" data-testid="pdp-hero">
           {/* Gallery Column (7 cols) */}
           <div className="mx-auto w-full min-w-0 max-w-xl space-y-4 lg:sticky lg:top-24 lg:max-w-none">
-            <div data-testid="pdp-gallery-main" className="relative aspect-square w-full overflow-hidden rounded-xl store-surface">
-              {images.length ? (
-                <img
-                  src={optimizedUrl(images[activeImageIdx])}
-                  fetchPriority="high"
-                  decoding="async"
-                  alt={product.name}
-                  className="h-full w-full object-contain transition-opacity duration-300"
-                />
-              ) : (
-                <ImageFallback />
-              )}
+            <ProductGallery images={images} index={activeImageIdx} onIndexChange={setActiveImageIdx} alt={product.name}>
               {onSale && (
-                <span className="absolute top-4 left-4 rounded-full store-bg-primary px-3 py-1 text-xs font-bold uppercase tracking-wider text-white shadow-xs">
+                <span className="pointer-events-none absolute top-4 left-4 rounded-full store-bg-primary px-3 py-1 text-xs font-bold uppercase tracking-wider text-white shadow-xs">
                   {discountPercent}% OFF
                 </span>
               )}
               {product.isNew && (
-                <span className="absolute top-4 right-4 rounded-full bg-sage-light px-3 py-1 text-xs font-bold uppercase tracking-wider text-green-deep">
+                <span className="pointer-events-none absolute top-4 right-4 rounded-full bg-sage-light px-3 py-1 text-xs font-bold uppercase tracking-wider text-green-deep">
                   New
                 </span>
               )}
-            </div>
-
-            {/* Gallery Thumbnails */}
-            {images.length > 1 && (
-              <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
-                {images.map((img, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setActiveImageIdx(idx)}
-                    aria-label={`View image ${idx + 1}`}
-                    aria-current={idx === activeImageIdx}
-                    className={`h-16 w-16 sm:h-20 sm:w-20 shrink-0 overflow-hidden rounded-lg border-2 store-surface transition ${
-                      idx === activeImageIdx ? "border-[var(--theme-primary)]" : "border-transparent opacity-70 hover:opacity-100"
-                    }`}
-                  >
-                    <img src={optimizedUrl(img)} alt="" loading="lazy" decoding="async" className="h-full w-full object-contain" />
-                  </button>
-                ))}
-              </div>
-            )}
+            </ProductGallery>
           </div>
 
           {/* Product Purchase Column (5 cols) */}
@@ -441,7 +418,7 @@ export default function ProductDetail() {
                   {product.variants.map((v) => (
                     <button
                       key={v.id}
-                      onClick={() => setSelectedVariant(v)}
+                      onClick={() => selectVariant(v)}
                       className={`rounded-full px-4 py-2 text-xs font-medium border transition ${
                         selectedVariant?.id === v.id
                           ? "border-[var(--theme-primary)] store-bg-primary text-white"
