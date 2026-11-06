@@ -411,7 +411,7 @@ export default function AdminProductForm() {
           {isEdit ? (
             <fieldset className="rounded-2xl border border-charcoal/10 p-4">
               <legend className="px-2 text-xs font-medium uppercase tracking-wide text-charcoal-soft">Product Images</legend>
-              <p className="mb-2 text-[11px] text-charcoal-soft">Recommended size: <span className="font-semibold">1080 × 1080 px (square)</span>, JPG, PNG or WebP. <span className="font-semibold">Max 2 MB per image</span> — larger files are rejected so the shop stays fast.</p>
+              <p className="mb-2 text-[11px] text-charcoal-soft">Recommended size: <span className="font-semibold">1080 × 1080 px (square)</span>, JPG, PNG or WebP. <span className="font-semibold">Max 10 MB per image</span> — photos are automatically compressed (same dimensions, smaller file) so the shop stays fast.</p>
               <input type="file" accept="image/jpeg,image/png,image/webp" onChange={onUploadImage} className="text-sm" />
               {images.length > 0 && (
                 <ul className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-4">

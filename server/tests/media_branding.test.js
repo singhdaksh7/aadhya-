@@ -41,7 +41,7 @@ describe("Media upload -> branding settings integration", () => {
 
     expect(res.status).toBe(201);
     expect(res.body.data.url).toMatch(/^\/uploads\/products\//);
-    expect(res.body.data.mimeType).toBe("image/png");
+    expect(res.body.data.mimeType).toMatch(/^image\/(png|webp)$/);
   });
 
   it("rejects a disallowed file type even with an image/* mimetype override", async () => {

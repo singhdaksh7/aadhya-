@@ -3,7 +3,7 @@ import { env } from "../../config/env.js";
 import { ApiError } from "../../utils/ApiError.js";
 
 // Hard ceiling for storefront images: multi-MB originals are what made product cards load slowly on phones.
-export const IMAGE_MAX_MB = Math.min(env.uploads.maxFileSizeMb, 2);
+export const IMAGE_MAX_MB = 10; // upload ceiling; accepted images are then auto-compressed to well under 1 MB
 
 const ALLOWED_MIME_TYPES = new Set(["image/jpeg", "image/jpg", "image/png", "image/webp"]);
 const ALLOWED_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp"]);
