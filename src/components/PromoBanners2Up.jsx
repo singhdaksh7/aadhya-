@@ -1,4 +1,5 @@
 import React from "react";
+import { optimizedUrl } from "../lib/imageVariants";
 import { Link } from "react-router-dom";
 import { resolveMediaUrl } from "../lib/api";
 import { ctaLabel } from "../lib/cta";
@@ -47,7 +48,7 @@ export default function PromoBanners2Up({ promoCards, layout = "FULL", showSubti
             <picture>
               {card.mobileImage && <source media="(max-width: 767px)" srcSet={resolveMediaUrl(card.mobileImage)} />}
               <img
-                src={resolveMediaUrl(card.image)}
+                src={optimizedUrl(resolveMediaUrl(card.image))}
                 alt={card.imageAlt || card.title}
                 loading="lazy"
                 className="absolute inset-0 h-full w-full object-cover transition-transform duration-[1400ms] ease-out group-hover:scale-[1.03]"

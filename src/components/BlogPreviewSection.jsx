@@ -1,4 +1,5 @@
 import React from "react";
+import { optimizedUrl } from "../lib/imageVariants";
 import { Link } from "react-router-dom";
 import { resolveMediaUrl } from "../lib/api";
 import HomepageSectionTitle, { SectionCta } from "./HomepageSectionTitle";
@@ -29,7 +30,7 @@ export default function BlogPreviewSection({ section }) {
           <Link key={post.id} to={`/blog/${post.slug}`} data-testid="blog-card" className="group flex w-[80%] max-w-sm shrink-0 snap-start flex-col overflow-hidden sm:w-auto sm:max-w-none sm:shrink rounded-2xl border store-border store-surface transition hover:shadow-lg">
             <div className="aspect-[16/10] overflow-hidden store-surface">
               {post.featuredImage ? (
-                <img src={resolveMediaUrl(post.featuredImage)} alt={post.title} loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+                <img src={optimizedUrl(resolveMediaUrl(post.featuredImage))} alt={post.title} loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
               ) : (
                 <div data-testid="blog-image-placeholder" aria-hidden="true" className="h-full w-full bg-black/5" />
               )}

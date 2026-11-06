@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { optimizedUrl } from "../lib/imageVariants";
 import { resolveMediaUrl } from "../lib/api";
 import { isSafeFooterUrl } from "../lib/footerUrls";
 import { SafeFooterLink } from "./FooterSections";
@@ -57,7 +58,7 @@ export default function FooterArtwork({ artwork }) {
 
   const imgEl = (
     <img
-      src={resolveMediaUrl(primarySrc)}
+      src={optimizedUrl(resolveMediaUrl(primarySrc))}
       alt={altText}
       aria-hidden={isDecorative ? "true" : undefined}
       loading="lazy"

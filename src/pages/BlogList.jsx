@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { optimizedUrl } from "../lib/imageVariants";
 import { Link } from "react-router-dom";
 import { fetchBlogPosts, resolveProductImageUrl } from "../lib/api";
 import { canonicalUrl } from "../lib/seo";
@@ -88,7 +89,7 @@ export default function BlogList() {
               {featuredPost.featuredImage && (
                 <div className="aspect-[16/10] w-full rounded-2xl overflow-hidden store-surface border border-charcoal/5">
                   <img
-                    src={resolveProductImageUrl(featuredPost.featuredImage)}
+                    src={optimizedUrl(resolveProductImageUrl(featuredPost.featuredImage))}
                     alt={featuredPost.title}
                     className="w-full h-full object-cover hover:scale-105 transition duration-500"
                   />
@@ -139,7 +140,7 @@ export default function BlogList() {
                     {post.featuredImage && (
                       <div className="aspect-[16/10] rounded-xl overflow-hidden bg-ivory border border-charcoal/5">
                         <img
-                          src={resolveProductImageUrl(post.featuredImage)}
+                          src={optimizedUrl(resolveProductImageUrl(post.featuredImage))}
                           alt={post.title}
                           className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
                         />

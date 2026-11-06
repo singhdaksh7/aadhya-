@@ -1,4 +1,5 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { optimizedUrl } from "../lib/imageVariants";
 import { useSiteSettings } from "../hooks/useSiteSettings";
 import { fetchCategories, resolveMediaUrl } from "../lib/api";
 import { normalizeHeaderSettings } from "../lib/headerCmsHelpers";
@@ -168,7 +169,7 @@ export default function CircularCategoryNav({ categories: categoriesProp, cms: c
                       <picture>
                         {showMobileSource && <source media="(max-width: 767px)" srcSet={mobileSrc} />}
                         <img
-                          src={src}
+                          src={optimizedUrl(src)}
                           alt={cfg.showLabels !== false ? "" : item.name}
                           loading="lazy"
                           onError={() => setFailedImages((prev) => ({ ...prev, [item.id]: true }))}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { optimizedUrl } from "../lib/imageVariants";
 import { useParams, Link } from "react-router-dom";
 import { fetchBlogPostBySlug, fetchBlogPosts, resolveProductImageUrl } from "../lib/api";
 import RichTextRenderer from "../components/cms/RichTextRenderer";
@@ -113,7 +114,7 @@ export default function BlogDetail() {
         {/* Featured Image */}
         {featuredImgUrl && (
           <div className="rounded-3xl overflow-hidden shadow-sm border store-border max-h-[480px] w-full">
-            <img src={featuredImgUrl} alt={post.title} className="w-full h-full object-cover" />
+            <img src={optimizedUrl(featuredImgUrl)} alt={post.title} className="w-full h-full object-cover" />
           </div>
         )}
 
@@ -144,7 +145,7 @@ export default function BlogDetail() {
                   {rel.featuredImage && (
                     <div className="aspect-video rounded-xl overflow-hidden store-surface border border-charcoal/5">
                       <img
-                        src={resolveProductImageUrl(rel.featuredImage)}
+                        src={optimizedUrl(resolveProductImageUrl(rel.featuredImage))}
                         alt={rel.title}
                         className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                       />

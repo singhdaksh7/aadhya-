@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { optimizedUrl } from "../lib/imageVariants";
 import { Link } from "react-router-dom";
 import { resolveMediaUrl } from "../lib/api";
 import HomepageSectionTitle from "./HomepageSectionTitle";
@@ -24,7 +25,7 @@ function CardVisual({ item }) {
   if (src) {
     return (
       <div className="aspect-[4/3] overflow-hidden store-surface">
-        <img src={src} alt={item.imageAlt || ""} loading="lazy" decoding="async" onError={() => setBroken(true)} className="h-full w-full object-cover transition duration-700 group-hover:scale-105" />
+        <img src={optimizedUrl(src)} alt={item.imageAlt || ""} loading="lazy" decoding="async" onError={() => setBroken(true)} className="h-full w-full object-cover transition duration-700 group-hover:scale-105" />
       </div>
     );
   }

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { optimizedUrl } from "../lib/imageVariants";
 import { resolveMediaUrl } from "../lib/api";
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
@@ -25,7 +26,7 @@ function ItemIcon({ item }) {
   return (
     <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-current/15">
       {src && !broken
-        ? <img src={src} alt="" aria-hidden="true" loading="lazy" decoding="async" onError={() => setBroken(true)} className="h-5 w-5 object-contain" />
+        ? <img src={optimizedUrl(src)} alt="" aria-hidden="true" loading="lazy" decoding="async" onError={() => setBroken(true)} className="h-5 w-5 object-contain" />
         : <svg aria-hidden="true" className="h-5 w-5 store-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.25} d={HOW_WE_WORK_ICON_PATHS[item.icon] || HOW_WE_WORK_ICON_PATHS.sparkles} /></svg>}
     </span>
   );
@@ -81,7 +82,7 @@ export default function HowWeWork({ config = {} }) {
         {imageSrc && (
           <div data-testid="how-we-work-image" className={`relative min-h-[240px] overflow-hidden sm:min-h-[320px] lg:min-h-0 ${position === "LEFT" ? "lg:order-1" : "lg:order-2"}`}>
             {/* Absolutely positioned so the picture never sets the row height: on desktop the card is exactly as tall as the text and the image fills that height. */}
-            <img src={imageSrc} alt={config.imageAlt || ""} loading="lazy" decoding="async" onError={() => setImageBroken(true)} className="absolute inset-0 h-full w-full object-cover" />
+            <img src={optimizedUrl(imageSrc)} alt={config.imageAlt || ""} loading="lazy" decoding="async" onError={() => setImageBroken(true)} className="absolute inset-0 h-full w-full object-cover" />
           </div>
         )}
       </div>
