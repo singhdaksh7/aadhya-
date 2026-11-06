@@ -1,3 +1,4 @@
+import GiftingHomepageSwitch from "../../components/admin/GiftingHomepageSwitch";
 import React, { useEffect, useState } from "react";
 import {
   adminFetchHomepage,
@@ -73,7 +74,7 @@ const HOMEPAGE_CONFIG = {
   publish: () => adminPublishHomepage(),
   Fields: HomepageSectionFields,
   renderHeaderActions: null,
-  renderAfterHeader: null,
+  renderAfterHeader: () => <GiftingHomepageSwitch variant="builder" />,
 };
 
 export default function AdminHomepageBuilder({ config: configOverride } = {}) {

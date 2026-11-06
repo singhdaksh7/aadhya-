@@ -23,15 +23,18 @@ import { ctaLabel as cleanCtaLabel } from "../lib/cta";
 import { spacingClass } from "../lib/homepageConfig";
 import { useSiteSettings } from "../hooks/useSiteSettings";
 import { DecorationLayer } from "./DecorationLayer";
+import { applyGiftingVisibility, showGiftingOnHomepage } from "../lib/homeGifting";
 import { normalizeDecorations, sectionDecorations } from "../lib/decorations";
 
 const route = (value, fallback = "/shop") => typeof value === "string" && (value.startsWith("/") || /^https?:\/\//i.test(value)) ? value : fallback;
 function SafeLink({ to, children, ...props }) { const url = route(to); return url.startsWith("/") ? <Link to={url} {...props}>{children}</Link> : <a href={url} {...props}>{children}</a>; }
 const enabled = (items = []) => items.filter((item) => item.enabled !== false).sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
 
-export default function HomepageRenderer({ sections = [], newArrivals = [], bestSellers = [], featuredCollection = null, booksList = [], isLoading = false }) {
+export default function HomepageRenderer({ sections: allSections = [], newArrivals = [], bestSellers = [], featuredCollection = null, booksList = [], isLoading = false }) {
   const siteSettings = useSiteSettings();
   const artwork = useMemo(() => normalizeDecorations(siteSettings), [siteSettings]);
+  const showGifting = showGiftingOnHomepage(siteSettings);
+  const sections = useMemo(() => applyGiftingVisibility(allSections, showGifting), [allSections, showGifting]);
   if (!sections?.length) return null;
   const renderProducts = (products, limit, arrows = false) => {
     if (isLoading) return <ProductGridSkeleton count={limit || 4} />;

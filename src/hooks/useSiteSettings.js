@@ -3,6 +3,8 @@ import { fetchSiteSettings } from "../lib/api";
 import { lighten, darken, mix } from "../lib/color";
 
 export const DEFAULT_SITE_SETTINGS = {
+  // Home page gifting card visibility (admin: Homepage Builder + Gifting). OFF unless explicitly true.
+  showGiftingOnHomepage: false,
   general: {
     storeName: "Tushaqsa",
     legalName: "",
