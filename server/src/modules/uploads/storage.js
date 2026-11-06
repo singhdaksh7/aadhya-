@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { env } from "../../config/env.js";
+import { optimizeImageBuffer } from "./optimizeImage.js";
 import { DeleteObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
 // Local-disk storage today. Swap this module for an S3/Cloudinary-backed
@@ -98,7 +99,13 @@ export function createStorage(config = env.storage, client) {
 }
 
 const storage = createStorage();
-export async function saveBuffer(buffer, mimeType) { return storage.save(buffer, mimeType); }
+// Every image is auto-compressed (same dimensions, smaller file) before it is stored.
+export async function saveBufferWithInfo(buffer, mimeType) {
+  const optimized = await optimizeImageBuffer(buffer, mimeType);
+  const url = await storage.save(optimized.buffer, optimized.mimeType);
+  return { url, mimeType: optimized.mimeType, size: optimized.buffer.length };
+}
+export async function saveBuffer(buffer, mimeType) { return (await saveBufferWithInfo(buffer, mimeType)).url; }
 export async function removeByUrl(url) { return storage.remove(url); }
 
 export const uploadRootDir = UPLOAD_ROOT;

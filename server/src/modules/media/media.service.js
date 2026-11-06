@@ -1,5 +1,5 @@
 import { prisma } from "../../lib/prisma.js";
-import { saveBuffer, removeByUrl } from "../uploads/storage.js";
+import { saveBufferWithInfo, removeByUrl } from "../uploads/storage.js";
 import path from "node:path";
 import crypto from "node:crypto";
 
@@ -48,7 +48,8 @@ export async function createMediaAsset(file, metadata = {}, adminId = null) {
     throw error;
   }
 
-  const url = await saveBuffer(file.buffer, file.mimetype);
+  const saved = await saveBufferWithInfo(file.buffer, file.mimetype);
+  const url = saved.url;
   const fileName = path.basename(url);
   const storageKey = url;
 
@@ -59,8 +60,8 @@ export async function createMediaAsset(file, metadata = {}, adminId = null) {
       url,
       storageKey,
       storageDriver: "local",
-      mimeType: file.mimetype,
-      size: file.size || file.buffer.length,
+      mimeType: saved.mimeType,
+      size: saved.size,
       altText: metadata.altText || null,
       title: metadata.title || null,
       createdByAdminId: adminId || null
