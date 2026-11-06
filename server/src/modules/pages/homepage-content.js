@@ -41,7 +41,9 @@ const spacing = z.enum(SECTION_SPACING).optional();
 // Heading alignment for rails, reviews and blog (default CENTER on the storefront).
 const headingAlign = z.enum(["LEFT", "CENTER"]).optional();
 const hexColor = z.union([z.string().trim().regex(/^#[0-9a-fA-F]{6}$/, "Colour must be a #RRGGBB hex value"), z.literal("")]);
-const item = z.object({ id: optionalText(100), enabled: z.boolean().optional(), sortOrder: z.number().int().min(0).max(1000).optional() });
+// `kind: "GIFTING"` explicitly marks a card as homepage gifting content (hidden by the showGiftingOnHomepage setting).
+export const CARD_KINDS = ["GIFTING"];
+const item = z.object({ id: optionalText(100), enabled: z.boolean().optional(), sortOrder: z.number().int().min(0).max(1000).optional(), kind: z.enum(CARD_KINDS).optional() });
 
 const rawSchemas = {
   HOW_WE_WORK: howWeWorkSchema,
@@ -161,7 +163,7 @@ export const DEFAULT_HOMEPAGE_CONTENT = {
   BLOG_PREVIEW: { headingAlign: "CENTER", eyebrow: "The Journal", title: "Stories from Tushaqsa", subtitle: "", limit: 3, viewAllLabel: "Read Journal", showEmptyState: false, emptyStateMessage: "Stories coming soon.", showExcerpt: true, showAuthor: true, showDate: true, showReadingTime: true, showViewAll: true, viewAllUrl: "/blog" },
   PROMO_BANNERS_2UP: { layout: "FULL", showSubtitle: false, items: [
     { id: "promo-1", eyebrow: "Curated Edit", title: "Warm Neutrals", subtitle: "Unglazed Clay & Linen Textiles", image: "https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?q=80&w=1000&auto=format&fit=crop", ctaLabel: "Shop Collection", ctaUrl: "/collections/earth-collection", enabled: true, sortOrder: 1 },
-    { id: "promo-2", eyebrow: "Curated Edit", title: "Gift Edit", subtitle: "Handcrafted Heritage Objects", image: "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?q=80&w=1000&auto=format&fit=crop", ctaLabel: "Explore Gifts", ctaUrl: "/collections/gifts", enabled: true, sortOrder: 2 },
+    { id: "promo-2", eyebrow: "Curated Edit", title: "Gift Edit", subtitle: "Handcrafted Heritage Objects", image: "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?q=80&w=1000&auto=format&fit=crop", ctaLabel: "Explore Gifts", ctaUrl: "/collections/gifts", enabled: true, sortOrder: 2, kind: "GIFTING" },
   ] },
 };
 

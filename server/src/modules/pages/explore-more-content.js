@@ -17,6 +17,7 @@ export const exploreMoreSchema = z.object({
   items: z.array(z.object({
     id: optionalText(100),
     enabled: z.boolean().optional(),
+    kind: z.enum(["GIFTING"]).optional(), // explicit marker: hidden from the homepage when showGiftingOnHomepage is off
     sortOrder: z.number().int().min(0).max(1000).optional(),
     title: text(120),
     subtitle: optionalText(300),
@@ -32,7 +33,7 @@ export const EXPLORE_MORE_DEFAULTS = {
   eyebrow: "Discover", title: "Explore More", subtitle: "Offers, gifting ideas and the latest from our artisans.",
   items: [
     { id: "explore-1", title: "Offers", subtitle: "Current coupon codes and festive savings", image: "", imageAlt: "", icon: "tag", ctaLabel: "View Offers", url: "/offers", enabled: true, sortOrder: 1 },
-    { id: "explore-2", title: "Gifting", subtitle: "Thoughtful gifts by occasion, craft and budget", image: "", imageAlt: "", icon: "gift", ctaLabel: "Explore Gifting", url: "/gifting", enabled: true, sortOrder: 2 },
+    { id: "explore-2", title: "Gifting", subtitle: "Thoughtful gifts by occasion, craft and budget", image: "", imageAlt: "", icon: "gift", ctaLabel: "Explore Gifting", url: "/gifting", enabled: true, sortOrder: 2, kind: "GIFTING" },
     { id: "explore-3", title: "What's New", subtitle: "Fresh updates and arrivals from our studio", image: "", imageAlt: "", icon: "sparkles", ctaLabel: "See What's New", url: "/offers?tab=whats-new", enabled: true, sortOrder: 3 },
   ],
 };

@@ -29,7 +29,8 @@ vi.mock("../src/hooks/useSiteSettings", () => ({
   }),
 }));
 
-vi.mock("../src/lib/api", () => ({
+vi.mock("../src/lib/api", async (importOriginal) => ({
+  ...(await importOriginal()),
   fetchPageBySlug: vi.fn(() =>
     Promise.resolve({
       data: {
@@ -60,22 +61,32 @@ function renderWithProviders(ui) {
 }
 
 describe("Gifting Page Storefront Experience", () => {
-  it("renders all 10 core sections in the prescribed order", async () => {
+  it("renders every required core gifting section, in the prescribed order", async () => {
     renderWithProviders(<GiftingPage />);
+    await waitFor(() => expect(screen.getByTestId("gifting-hero")).toBeInTheDocument());
 
-    await waitFor(() => {
-      expect(screen.getByTestId("gifting-hero")).toBeInTheDocument();
-    });
-
-    expect(screen.getByTestId("gifts-by-occasion")).toBeInTheDocument();
-    expect(screen.getByTestId("curated-stories")).toBeInTheDocument();
-    expect(screen.getByTestId("gifts-by-festival")).toBeInTheDocument();
-    expect(screen.getByTestId("gifting-benefits")).toBeInTheDocument();
-    expect(screen.getByTestId("gifts-by-craft")).toBeInTheDocument();
-    expect(screen.getByTestId("featured-gifts")).toBeInTheDocument();
-    expect(screen.getByTestId("gifts-by-budget")).toBeInTheDocument();
-    expect(screen.getByTestId("gifting-seo")).toBeInTheDocument();
-    expect(screen.getByTestId("gifting-faq")).toBeInTheDocument();
+    // Required core architecture (section type -> rendered test id), in page order. Optional/extra CMS
+    // sections may appear anywhere; only the relative order of these required ones is asserted.
+    const REQUIRED = [
+      ["GIFTING_HERO", "gifting-hero"],
+      ["GIFTS_BY_OCCASION", "gifts-by-occasion"],
+      ["CURATED_STORIES", "curated-stories"],
+      ["GIFTS_BY_FESTIVAL", "gifts-by-festival"],
+      ["GIFTING_BENEFITS", "gifting-benefits"],
+      ["GIFTS_BY_CRAFT", "gifts-by-craft"],
+      ["FEATURED_GIFTS", "featured-gifts"],
+      ["GIFTS_BY_BUDGET", "gifts-by-budget"],
+      ["BULK_GIFTING", "bulk-gifting-section"],
+      ["GIFTING_SEO", "gifting-seo"],
+      ["GIFTING_FAQ", "gifting-faq"],
+    ];
+    // The default CMS content must still define every required type...
+    for (const [type] of REQUIRED) expect(DEFAULT_GIFTING_PAGE_SECTIONS.some((s) => s.type === type)).toBe(true);
+    // ...and the page must render each one, in order.
+    const nodes = REQUIRED.map(([, testId]) => screen.getByTestId(testId));
+    for (let i = 1; i < nodes.length; i += 1) {
+      expect(nodes[i - 1].compareDocumentPosition(nodes[i]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
   });
 
   it("renders Gifting Hero with correct title, description, and CTA", () => {

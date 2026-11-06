@@ -36,6 +36,7 @@ import {
   accountReturn,
 } from "../../lib/api";
 import { formatInr } from "../../lib/format";
+import { useProductLinkProps } from "../../hooks/useIsMobile";
 import TrackingBlock from "../../components/TrackingBlock";
 import { ORDER_STATUS_LABELS, StatusPill, SectionCard, EmptyPanel, SkeletonRows, OrderProgress, ItemThumb, formatDate } from "../../components/account/AccountUI";
 
@@ -1368,6 +1369,8 @@ export function AccountWishlist() {
   const { wishlist, loading, removeFromWishlist } = useWishlist();
   const { addItem } = useCart();
   const navigate = useNavigate();
+  // Product navigation only (image + name); same <768px new-tab rule as ProductCard/BookCard.
+  const productLinkProps = useProductLinkProps();
 
   const handleMoveToCart = (item) => {
     const p = item.product;
@@ -1408,7 +1411,7 @@ export function AccountWishlist() {
 
             return (
               <div key={item.id} className="group relative flex flex-col overflow-hidden rounded-3xl border border-[var(--theme-border)]/10 store-bg p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-[var(--theme-primary)]/35 hover:shadow-md">
-                <Link to={`/shop/${p.slug}`} className="relative aspect-square w-full overflow-hidden rounded-xl bg-ivory-dark/40 mb-3">
+                <Link to={`/shop/${p.slug}`} className="relative aspect-square w-full overflow-hidden rounded-xl bg-ivory-dark/40 mb-3" {...productLinkProps}>
                   <img
                     src={p.images?.[0] || p.image || "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?q=80&w=800&auto=format&fit=crop"}
                     alt={p.name}
@@ -1418,7 +1421,7 @@ export function AccountWishlist() {
                 </Link>
 
                 <div className="flex-1 flex flex-col">
-                  <Link to={`/shop/${p.slug}`} className="font-serif-display text-base store-text hover:text-[var(--theme-primary-hover)] line-clamp-1 font-bold">
+                  <Link to={`/shop/${p.slug}`} className="font-serif-display text-base store-text hover:text-[var(--theme-primary-hover)] line-clamp-1 font-bold" {...productLinkProps}>
                     {p.name}
                   </Link>
 

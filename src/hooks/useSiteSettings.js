@@ -335,18 +335,32 @@ export function applyThemeVariables(appearance) {
 // via refreshSiteSettings() without requiring a hard browser refresh.
 let sharedSettings = DEFAULT_SITE_SETTINGS;
 let hasFetchedOnce = false;
+// "Settled" = the first load attempt finished (success OR failure). Pages whose first render depends on a
+// setting (the homepage's gifting visibility) wait for this instead of rendering a guess and correcting it.
+let settled = false;
+let inflight = null;
 const subscribers = new Set();
+const settledSubscribers = new Set();
 
 function notifySubscribers() {
   subscribers.forEach((cb) => cb(sharedSettings));
 }
 
-function loadSiteSettings() {
+function markSettled() {
+  if (settled) return;
+  settled = true;
+  settledSubscribers.forEach((cb) => cb(true));
+}
+
+// One request at a time: components mounting together share the in-flight load instead of each fetching.
+// `force` (admin saves) always starts a fresh request so the result cannot predate the save.
+function loadSiteSettings({ force = false } = {}) {
+  if (inflight && !force) return inflight;
   try {
-    if (typeof fetchSiteSettings !== "function") return Promise.resolve();
+    if (typeof fetchSiteSettings !== "function") { markSettled(); return Promise.resolve(); }
     const promise = fetchSiteSettings();
-    if (!promise || typeof promise.then !== "function") return Promise.resolve();
-    return promise
+    if (!promise || typeof promise.then !== "function") { markSettled(); return Promise.resolve(); }
+    const run = promise
       .then((res) => {
         if (!res?.data) return;
         sharedSettings = { ...sharedSettings, ...res.data };
@@ -356,9 +370,13 @@ function loadSiteSettings() {
         }
         notifySubscribers();
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => { markSettled(); if (inflight === run) inflight = null; });
+    inflight = run;
+    return run;
   } catch {
     // Silently fall back to DEFAULT_SITE_SETTINGS if api mock omits fetchSiteSettings in test suite
+    markSettled();
     return Promise.resolve();
   }
 }
@@ -368,7 +386,7 @@ function loadSiteSettings() {
 // the change immediately instead of requiring a server restart or a hard
 // browser refresh.
 export function refreshSiteSettings() {
-  return loadSiteSettings();
+  return loadSiteSettings({ force: true });
 }
 
 export function useSiteSettings() {
@@ -389,3 +407,15 @@ export function useSiteSettings() {
   return settings;
 }
 
+
+/** True once the first settings load has finished (success or failure). Also kicks off that load if nothing has. */
+export function useSiteSettingsSettled() {
+  const [done, setDone] = useState(settled);
+  useEffect(() => {
+    settledSubscribers.add(setDone);
+    if (settled) setDone(true);
+    else if (!hasFetchedOnce) loadSiteSettings();
+    return () => { settledSubscribers.delete(setDone); };
+  }, []);
+  return done;
+}

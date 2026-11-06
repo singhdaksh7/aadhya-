@@ -15,6 +15,7 @@ const DEFAULT_PROMO_CARDS = [
   },
   {
     title: "Gift Edit",
+    kind: "GIFTING",
     subtitle: "Handcrafted Heritage Objects",
     image: "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?q=80&w=1000&auto=format&fit=crop",
     ctaLabel: "Explore Gifts",
