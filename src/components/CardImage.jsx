@@ -21,7 +21,7 @@ export function ImageFallback({ className = "" }) {
 
 // Fills its (already aspect-ratio'd) parent. Shows a skeleton until decoded, fades in, and walks
 // through fallback sources on error before settling on the branded placeholder.
-export default function CardImage({ sources = [], alt, priority = false, className = "", imgClassName = "" }) {
+export default function CardImage({ sources = [], alt, priority = false, skeleton = true, className = "", imgClassName = "" }) {
   const list = sources.filter(Boolean);
   const key = list.join("|");
   const [idx, setIdx] = useState(0);
@@ -32,23 +32,22 @@ export default function CardImage({ sources = [], alt, priority = false, classNa
   const failed = !src;
   return (
     <div className={`absolute inset-0 ${className}`}>
-      {!loaded && !failed && <div data-testid="image-skeleton" className="absolute inset-0 animate-pulse store-surface" />}
+      {skeleton && !loaded && !failed && <div data-testid="image-skeleton" className="absolute inset-0 animate-pulse store-surface" />}
       {failed ? (
         <ImageFallback />
       ) : (
         <img
           key={src}
-          ref={(el) => { if (el && el.complete && el.naturalWidth === 0 && el.currentSrc) setIdx((i) => i + 1); }}
+          ref={(el) => { if (!el || !el.complete || !el.currentSrc) return; if (el.naturalWidth === 0) setIdx((i) => i + 1); else if (!loaded) setLoaded(true); }}
           src={optimizedUrl(src)}
           alt={alt}
           width={800}
           height={1000}
           loading={priority ? "eager" : "lazy"}
           fetchPriority={priority ? "high" : "auto"}
-          decoding="async"
           onLoad={() => setLoaded(true)}
           onError={() => setIdx((i) => i + 1)}
-          className={`h-full w-full object-cover transition-opacity duration-300 ${loaded ? "opacity-100" : "opacity-0"} ${imgClassName}`}
+          className={`relative h-full w-full object-cover ${imgClassName}`}
         />
       )}
     </div>
