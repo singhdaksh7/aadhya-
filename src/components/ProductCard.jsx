@@ -5,11 +5,15 @@ import { useCart } from "../context/CartContext";
 import { useWishlist } from "../context/WishlistContext";
 import { IconCart, IconCheck } from "./icons";
 import CardImage from "./CardImage";
+import { useIsMobile } from "../hooks/useIsMobile";
 import { trackAddToCart, trackWishlistAdd } from "../lib/analytics";
 
 export default function ProductCard({ product, priority = false }) {
   const { addItem, items } = useCart();
   const { isInWishlist, toggleWishlist } = useWishlist();
+  // Phones open the product in a new tab (semantic link attributes, no window.open); tablet/desktop stay in-tab.
+  const isMobile = useIsMobile();
+  const navProps = isMobile ? { target: "_blank", rel: "noopener noreferrer" } : {};
 
   const [isHovered, setIsHovered] = useState(false);
   const [addedNotice, setAddedNotice] = useState(false);
@@ -90,7 +94,7 @@ export default function ProductCard({ product, priority = false }) {
           </svg>
         </button>
 
-        <Link to={`/shop/${product.slug}`} aria-label={product.name} className="absolute inset-0 block">
+        <Link to={`/shop/${product.slug}`} aria-label={product.name} className="absolute inset-0 block" {...navProps}>
           <CardImage
             sources={[...(product.images || []), product.image].filter(Boolean)}
             alt={product.name}
@@ -151,7 +155,7 @@ export default function ProductCard({ product, priority = false }) {
 
       {/* Minimal text: name and price. A discounted product shows the sale price plus the original MRP struck through. */}
       <div className="pt-3">
-        <Link to={`/shop/${product.slug}`} className="block">
+        <Link to={`/shop/${product.slug}`} className="block" {...navProps}>
           <h3 className="line-clamp-1 font-serif-display text-[15px] font-normal store-text transition hover:text-[var(--theme-primary)]">
             {product.name}
           </h3>
