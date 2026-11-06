@@ -18,3 +18,8 @@ export function useIsMobile() {
   }, []);
   return mobile;
 }
+
+// Link attributes for product navigation: phones open the product in a new tab, tablet/desktop stay in-tab.
+export function useProductLinkProps() {
+  return useIsMobile() ? { target: "_blank", rel: "noopener noreferrer" } : {};
+}
