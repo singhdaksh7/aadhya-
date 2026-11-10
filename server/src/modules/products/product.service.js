@@ -2,7 +2,8 @@ import { shippingToColumns, withShipping } from "../shipping/shipping-fields.js"
 import { prisma } from "../../lib/prisma.js";
 import { slugify } from "../../utils/slugify.js";
 import { ApiError } from "../../utils/ApiError.js";
-import { removeByUrl, localUploadMissing } from "../uploads/storage.js";
+import { localUploadMissing } from "../uploads/storage.js";
+import { removeLocalFileIfUnreferenced } from "../uploads/mediaReferences.js";
 import { normalizeSpecifications } from "../../utils/specifications.js";
 
 const PUBLIC_INCLUDE = {
@@ -460,7 +461,7 @@ export async function deleteProduct(id) {
   if (!product) throw ApiError.notFound("Product not found");
 
   await prisma.product.delete({ where: { id } });
-  await Promise.all(product.images.map((img) => removeByUrl(img.url)));
+  await Promise.all([...new Set(product.images.map((img) => img.url))].map(removeLocalFileIfUnreferenced));
 }
 
 export async function addProductImage(productId, { url, altText, isPrimary }) {
@@ -486,7 +487,7 @@ export async function deleteProductImage(productId, imageId) {
   if (!image) throw ApiError.notFound("Image not found");
 
   await prisma.productImage.delete({ where: { id: imageId } });
-  await removeByUrl(image.url);
+  await removeLocalFileIfUnreferenced(image.url);
 
   if (image.isPrimary) {
     const next = await prisma.productImage.findFirst({
