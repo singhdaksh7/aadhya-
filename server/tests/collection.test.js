@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import supertest from "supertest";
 import { createApp } from "../src/app.js";
 import { prisma } from "../src/lib/prisma.js";
+import { resetDb } from "./helpers.js";
 
 const app = createApp();
 const request = supertest(app);
@@ -16,6 +17,10 @@ describe("Collection Engine (Phase D)", () => {
   let manualCollectionId = "";
 
   beforeAll(async () => {
+    // Rule-based collections (e.g. PRICE_RANGE) match every product in the DB, so start clean:
+    // products left behind by earlier test files must not leak into these assertions.
+    await resetDb();
+
     // 1. Create admin user and get token
     const admin = await prisma.adminUser.upsert({
       where: { email: "collection_test_admin@aadya.com" },
