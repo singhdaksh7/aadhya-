@@ -33,4 +33,15 @@ else {
   for (const r of report) { const o = noImg.get(r.productId) || { name: r.productName, ok: 0 }; if (r.status.startsWith("OK")) o.ok++; noImg.set(r.productId, o); }
   for (const [id, o] of noImg) if (!o.ok) console.log(`PRODUCT_WITHOUT_WORKING_IMAGE\t${id}\t${o.name}`);
 }
+// --- ogImage references and files shared by several product-image rows (read-only) ---
+const fileMissing = (u) => u.startsWith("/uploads/products/") && !fs.existsSync(path.join(root, path.basename(u)));
+const ogs = await prisma.product.findMany({ where: { ogImage: { not: null } }, select: { id: true, name: true, ogImage: true } });
+const ogMissing = ogs.filter((p) => p.ogImage && fileMissing(p.ogImage));
+const shared = new Map();
+for (const r of report) shared.set(r.url, (shared.get(r.url) || new Set()).add(r.productId));
+const sharedUrls = [...shared].filter(([, set]) => set.size > 1);
+if (!asJson) {
+  for (const p of ogMissing) console.log(`OG_IMAGE_MISSING_FILE\t${p.id}\t${p.name}\t${p.ogImage}`);
+  console.log("Totals:", { imageRows: report.length, ogImageRefs: ogs.length, ogImageMissing: ogMissing.length, urlsSharedByMultipleProducts: sharedUrls.length });
+}
 await prisma.$disconnect();

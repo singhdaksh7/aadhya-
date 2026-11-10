@@ -101,7 +101,8 @@ export default function AdminMedia() {
       setSelectedAsset(null);
       loadMedia();
     } catch (err) {
-      if (err.status === 409 && !force) {
+      // Product-in-use conflicts can never be forced; show the message instead of offering force delete.
+      if (err.status === 409 && !force && !err.details?.productCount) {
         if (window.confirm("This media asset is currently referenced in published content. Are you sure you want to force delete it?")) {
           handleDelete(id, true);
         }

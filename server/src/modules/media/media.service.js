@@ -1,5 +1,7 @@
 import { prisma } from "../../lib/prisma.js";
-import { saveBufferWithInfo, removeByUrl } from "../uploads/storage.js";
+import { saveBufferWithInfo } from "../uploads/storage.js";
+import { countProductsUsingMedia, removeLocalFileIfUnreferenced } from "../uploads/mediaReferences.js";
+import { ApiError } from "../../utils/ApiError.js";
 import path from "node:path";
 import crypto from "node:crypto";
 
@@ -83,6 +85,13 @@ export async function updateMediaMetadata(id, data) {
 export async function deleteMediaAsset(id, { force = false } = {}) {
   const asset = await getMediaById(id);
 
+  // Products reference media by URL. `force` only overrides CMS references; it never allows
+  // breaking a product image.
+  const productCount = await countProductsUsingMedia(asset.url);
+  if (productCount > 0) {
+    throw ApiError.conflict(`This image is currently used by ${productCount} product${productCount === 1 ? "" : "s"} and cannot be deleted.`, { productCount });
+  }
+
   if (!force) {
     const urlPattern = asset.url;
     const [pageRef, blogRef, faqRef] = await Promise.all([
@@ -115,6 +124,7 @@ export async function deleteMediaAsset(id, { force = false } = {}) {
     }
   }
 
-  await removeByUrl(asset.url);
-  return prisma.mediaAsset.delete({ where: { id } });
+  const deleted = await prisma.mediaAsset.delete({ where: { id } });
+  await removeLocalFileIfUnreferenced(asset.url);
+  return deleted;
 }
