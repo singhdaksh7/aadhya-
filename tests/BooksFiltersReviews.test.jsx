@@ -229,7 +229,7 @@ describe("dynamic filters on category pages", () => {
     await waitFor(() => expect(names()).toHaveLength(3));
     const triggers = sidebar().getAllByRole("button", { expanded: true }).map((b) => b.textContent.replace(/[+−]/g, "").trim());
     expect(triggers.indexOf("Finish")).toBeLessThan(triggers.indexOf("Material"));
-    expect(sidebar().getByRole("checkbox", { name: /Brass/ }).closest("label").textContent).toContain("1");
+    expect(sidebar().getByRole("checkbox", { name: /Brass/ }).closest("label").textContent.trim()).toBe("Brass"); // no count beside the label
     expect(sidebar().queryByRole("button", { name: /^Author/ })).toBeNull();
   });
 

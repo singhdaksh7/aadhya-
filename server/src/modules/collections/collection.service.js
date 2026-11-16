@@ -2,6 +2,7 @@ import { prisma } from "../../lib/prisma.js";
 import { slugify } from "../../utils/slugify.js";
 import { ApiError } from "../../utils/ApiError.js";
 import { serializePublicProduct } from "../products/product.service.js";
+import { newArrivalWhere } from "../products/newArrival.js";
 import { getAllCategoryDescendantIds } from "../categories/category.service.js";
 
 const PUBLIC_INCLUDE = {
@@ -113,7 +114,7 @@ export async function resolveCollectionProducts(collection, query = {}) {
   } else if (type === "BEST_SELLER") {
     productWhere.isBestSeller = true;
   } else if (type === "NEW_ARRIVAL") {
-    productWhere.isNewArrival = true;
+    productWhere.AND = [...(productWhere.AND || []), newArrivalWhere(true)];
   } else if (type === "TRENDING") {
     productWhere.isTrending = true;
   } else if (type === "PRICE_RANGE") {
