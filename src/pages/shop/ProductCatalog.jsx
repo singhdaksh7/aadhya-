@@ -50,6 +50,7 @@ function CatalogView({
   lockedCategory = null,
   lockedCollection = null,
   lockedType = null,
+  lockedNewArrival = false,
   isCollectionRoute = false,
   beforeCatalog = null,
   CardComponent = ProductCard,
@@ -89,6 +90,7 @@ function CatalogView({
         sortBy,
       };
       if (lockedType) params.category = lockedType;
+      if (lockedNewArrival) params.newArrival = true;
       try {
         const res = await getProducts(params);
         if (!active) return;
@@ -101,7 +103,7 @@ function CatalogView({
     }
     fetchCatalog();
     return () => { active = false; };
-  }, [fetchCategory, selectedCollection, sortBy, lockedType]);
+  }, [fetchCategory, selectedCollection, sortBy, lockedType, lockedNewArrival]);
 
   const priceMax = useMemo(() => priceCeiling(products), [products]);
   const effectiveMaxPrice = maxPrice == null ? priceMax : Math.min(maxPrice, priceMax);
