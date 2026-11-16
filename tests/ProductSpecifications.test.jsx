@@ -39,7 +39,7 @@ describe("ProductSpecifications (product page)", () => {
   });
 
   it("falls back to filled legacy fields only, never placeholders", () => {
-    expect(productSpecRows({ materials: "Brass", dimensions: "", weight: null })).toEqual([{ label: "Materials", value: "Brass" }]);
+    expect(productSpecRows({ materials: "Brass", dimensions: "", weight: null })).toEqual([{ label: "Material", value: "Brass" }]);
     const { container } = render(<ProductSpecifications product={{ materials: "", dimensions: "" }} />);
     expect(container).toBeEmptyDOMElement();
   });

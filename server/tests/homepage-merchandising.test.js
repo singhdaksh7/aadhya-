@@ -85,6 +85,8 @@ describe("Homepage product merchandising (New Arrivals / Best Sellers)", () => {
         price: 299,
         stockQuantity: 5,
         isActive: true,
+        // Older than the automatic 7-day New Arrival window, so it is genuinely "plain".
+        createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
       },
     });
     plainProductId = plain.id;

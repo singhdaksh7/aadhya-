@@ -170,12 +170,14 @@ describe("context-aware category filters", () => {
     expect(categoryButtons()).not.toContain("Lighting");
   });
 
-  it("counts are computed from the real products of each subtree", async () => {
+  it("category options show no counts, and each still scopes to its real subtree", async () => {
     renderCatalog();
     await waitFor(() => expect(names()).toHaveLength(3));
-    const count = (label) => sidebar().getByRole("button", { name: new RegExp(`^${label}`) }).textContent.match(/(\d+)$/)[1];
-    expect(count("Home Decor")).toBe("3");
-    expect(count("Vases")).toBe("1");
+    const btn = (label) => sidebar().getByRole("button", { name: new RegExp(`^${label}`) });
+    expect(btn("Home Decor").textContent.trim()).toBe("Home Decor");
+    expect(btn("Vases").textContent.trim()).toBe("Vases");
+    fireEvent.click(btn("Vases"));
+    await waitFor(() => expect(names()).toEqual(["Blue Vase"]));
   });
 
   it("buildCategoryOptions never leaks other roots and hides empty nodes once loaded", () => {

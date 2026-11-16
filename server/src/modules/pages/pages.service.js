@@ -3,6 +3,7 @@ import { ApiError } from "../../utils/ApiError.js";
 import { ensureDefaultGiftingPage } from "./page.service.js";
 import { DEFAULT_HOMEPAGE_CONTENT, DEMO_REVIEWS, mergeMissingSettings, settingsEqual, validateHomepageSettings } from "./homepage-content.js";
 import { serializePublicProduct } from "../products/product.service.js";
+import { newArrivalWhere } from "../products/newArrival.js";
 import { listCategories } from "../categories/category.service.js";
 import { resolveReelsSection } from "./reels.js";
 
@@ -20,7 +21,7 @@ const PRODUCT_SECTION_INCLUDE = {
 async function resolveProductSectionItems(section) {
   const settings = section.settings || {};
   const limit = Math.min(Math.max(Number(settings.limit) || 4, 1), 24);
-  const flagField = section.type === "NEW_ARRIVALS" ? "isNewArrival" : "isBestSeller";
+  const flagWhere = section.type === "NEW_ARRIVALS" ? newArrivalWhere(true) : { isBestSeller: true };
   const sourceMode = settings.sourceMode === "MANUAL" ? "MANUAL" : "AUTO";
 
   if (sourceMode === "MANUAL") {
@@ -35,7 +36,7 @@ async function resolveProductSectionItems(section) {
   }
 
   const products = await prisma.product.findMany({
-    where: { isActive: true, [flagField]: true },
+    where: { isActive: true, ...flagWhere },
     include: PRODUCT_SECTION_INCLUDE,
     orderBy: { createdAt: "desc" },
     take: limit,

@@ -600,7 +600,7 @@ export default function AdminProductForm() {
             <Checkbox label="Active (Visible in Storefront)" checked={form.isActive} onChange={(v) => set("isActive", v)} />
             <Checkbox label="Featured Product" checked={form.isFeatured} onChange={(v) => set("isFeatured", v)} />
             <Checkbox label="Best Seller" checked={form.isBestSeller} onChange={(v) => set("isBestSeller", v)} />
-            <Checkbox label="New Arrival" checked={form.isNewArrival} onChange={(v) => set("isNewArrival", v)} />
+            <Checkbox label="Keep in New Arrivals manually (new products are included automatically for 7 days)" checked={form.isNewArrival} onChange={(v) => set("isNewArrival", v)} />
             <Checkbox label="Trending Now" checked={form.isTrending} onChange={(v) => set("isTrending", v)} />
           </div>
         </section>

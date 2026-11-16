@@ -71,7 +71,6 @@ export default function CatalogFilters({
               className={optionCls(selectedCategory === opt.slug)}
             >
               <span>{opt.name}</span>
-              <span className="text-xs opacity-75">{opt.count}</span>
             </button>
           ))}
         </div>
@@ -123,7 +122,7 @@ export default function CatalogFilters({
         <div className="space-y-0.5" role="group" aria-label={g.label}>
           {options.map((o) => (
             <button key={o.value} type="button" onClick={() => onToggleFacet(g, o.value)} aria-pressed={selected.includes(o.value)} className={optionCls(selected.includes(o.value))}>
-              <span>{o.label}</span><span className="text-xs opacity-75">{o.count}</span>
+              <span>{o.label}</span>
             </button>
           ))}
         </div>
@@ -137,7 +136,6 @@ export default function CatalogFilters({
               <input type="checkbox" checked={selected.includes(o.value)} onChange={() => onToggleFacet(g, o.value)} className="h-4 w-4 rounded border-[var(--theme-border)] accent-[var(--theme-primary)]" />
               <span>{o.label}</span>
             </span>
-            <span className="text-xs store-muted">{o.count}</span>
           </label>
         ))}
       </div>

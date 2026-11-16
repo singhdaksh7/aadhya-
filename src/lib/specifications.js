@@ -15,15 +15,27 @@ export function normalizeSpecifications(raw) {
     .filter((row) => row.label && row.value);
 }
 
-// Rows shown on the product page. Products without specification rows fall back to their legacy
-// materials/dimensions fields (only when filled in), so nothing is lost and nothing is invented.
+// Labels a custom specification row may use for the dedicated Material / Dimensions fields.
+const DEDICATED_SPEC_FIELDS = [
+  { field: "materials", label: "Material", aliases: ["material", "materials"] },
+  { field: "dimensions", label: "Dimensions", aliases: ["dimension", "dimensions"] },
+];
+const labelKey = (label) => label.toLowerCase().replace(/[^a-z]/g, "");
+
+// Rows shown on the product page: the dedicated Material and Dimensions fields (when filled in),
+// followed by the custom specification rows. When a custom row repeats Material/Dimensions and the
+// dedicated field is populated, the dedicated field wins and the duplicate custom row is skipped;
+// if the dedicated field is empty the custom row is kept as-is. Empty values never render a row.
 export function productSpecRows(product) {
-  const rows = normalizeSpecifications(product?.specifications);
-  if (rows.length) return rows;
-  return [
-    ["Materials", product?.materials],
-    ["Dimensions", product?.dimensions],
-  ]
-    .filter(([, value]) => typeof value === "string" && value.trim())
-    .map(([label, value]) => ({ label, value: value.trim() }));
+  const custom = normalizeSpecifications(product?.specifications);
+  const dedicated = [];
+  const hidden = new Set();
+  for (const { field, label, aliases } of DEDICATED_SPEC_FIELDS) {
+    const value = product?.[field];
+    if (typeof value === "string" && value.trim()) {
+      dedicated.push({ label, value: value.trim() });
+      aliases.forEach((a) => hidden.add(a));
+    }
+  }
+  return [...dedicated, ...custom.filter((row) => !hidden.has(labelKey(row.label)))];
 }

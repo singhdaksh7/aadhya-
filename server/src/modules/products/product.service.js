@@ -5,6 +5,7 @@ import { ApiError } from "../../utils/ApiError.js";
 import { localUploadMissing } from "../uploads/storage.js";
 import { removeLocalFileIfUnreferenced } from "../uploads/mediaReferences.js";
 import { normalizeSpecifications } from "../../utils/specifications.js";
+import { isEffectiveNewArrival, newArrivalWhere } from "./newArrival.js";
 
 const PUBLIC_INCLUDE = {
   category: true,
@@ -45,6 +46,9 @@ export function serializePublicProduct(product) {
     // keep them out of the public payload (scripts/audit-product-media.js still reports them).
     ...(Array.isArray(safe.images) ? { images: safe.images.filter((img) => !localUploadMissing(img.url)) } : {}),
     specifications: normalizeSpecifications(product.specifications),
+    // Public payloads expose the EFFECTIVE flag (auto 7-day window OR manual); the raw manual flag is kept alongside.
+    isNewArrival: isEffectiveNewArrival(product),
+    isNewArrivalManual: product.isNewArrival === true,
     averageRating,
     reviewCount,
     price: Number(product.price),
@@ -137,7 +141,7 @@ function buildWhere(query, { forceActive, categoryIds } = {}) {
 
   if (query.featured !== undefined) where.isFeatured = query.featured;
   if (query.bestSeller !== undefined) where.isBestSeller = query.bestSeller;
-  if (query.newArrival !== undefined) where.isNewArrival = query.newArrival;
+  if (query.newArrival !== undefined) where.AND = [...(where.AND || []), newArrivalWhere(query.newArrival)];
   if (query.trending !== undefined) where.isTrending = query.trending;
   if (query.collection) where.collections = { some: { collection: { slug: query.collection, isActive: true } } };
   if (query.minPrice !== undefined || query.maxPrice !== undefined) where.price = { ...(query.minPrice !== undefined ? { gte: query.minPrice } : {}), ...(query.maxPrice !== undefined ? { lte: query.maxPrice } : {}) };

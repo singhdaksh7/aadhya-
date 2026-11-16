@@ -63,7 +63,30 @@ describe("ProductDetail page", () => {
 
   it("falls back to legacy materials/dimensions", async () => {
     await open(base({ materials: "Brass", dimensions: "10 cm" }));
-    expect(screen.getAllByTestId("spec-item").map((i) => i.querySelector("dt").textContent)).toEqual(["Materials", "Dimensions"]);
+    expect(screen.getAllByTestId("spec-item").map((i) => i.querySelector("dt").textContent)).toEqual(["Material", "Dimensions"]);
+  });
+
+  it("shows dedicated Material and Dimensions alongside custom specifications and care", async () => {
+    await open(base({ materials: "Cotton", dimensions: "16 × 16 inches", careInstructions: "Hand wash", specifications: [{ label: "Finish", value: "Matte" }] }));
+    const rows = screen.getAllByTestId("spec-item").map((i) => [i.querySelector("dt").textContent, i.querySelector("dd").textContent]);
+    expect(rows).toEqual([["Material", "Cotton"], ["Dimensions", "16 × 16 inches"], ["Finish", "Matte"]]);
+    expect(screen.getByTestId("pdp-care")).toHaveTextContent("Hand wash");
+  });
+
+  it("hides empty Material/Dimensions rows", async () => {
+    await open(base({ materials: " ", dimensions: null, specifications: [{ label: "Finish", value: "Matte" }] }));
+    expect(screen.getAllByTestId("spec-item").map((i) => i.querySelector("dt").textContent)).toEqual(["Finish"]);
+  });
+
+  it("does not duplicate Material/Dimensions that also exist as custom specifications", async () => {
+    await open(base({ materials: "Cotton", dimensions: "16 in", specifications: [{ label: "Materials", value: "Old" }, { label: "dimension", value: "Old" }, { label: "Weight", value: "1 kg" }] }));
+    const rows = screen.getAllByTestId("spec-item").map((i) => [i.querySelector("dt").textContent, i.querySelector("dd").textContent]);
+    expect(rows).toEqual([["Material", "Cotton"], ["Dimensions", "16 in"], ["Weight", "1 kg"]]);
+  });
+
+  it("keeps a custom Material row when the dedicated field is empty", async () => {
+    await open(base({ materials: "", specifications: [{ label: "Material", value: "Clay" }] }));
+    expect(screen.getAllByTestId("spec-item").map((i) => i.querySelector("dd").textContent)).toEqual(["Clay"]);
   });
 
   it("hides sections without content but keeps shipping & returns and related", async () => {
