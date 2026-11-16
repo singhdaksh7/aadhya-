@@ -33,6 +33,7 @@ export async function getProducts(params = {}) {
     collectionSlug,
     search,
     isNew,
+    newArrival,
     isBestSeller,
     minPrice,
     maxPrice,
@@ -43,6 +44,8 @@ export async function getProducts(params = {}) {
   if (categorySlug) query.category = categorySlug;
   if (category === "BOOK" || category === "PHYSICAL") query.type = category;
   if (search) query.search = search;
+  // Server-side effective New Arrival rule (auto 7-day window OR manual flag); never recomputed here.
+  if (newArrival) query.newArrival = "true";
   if (sortBy === "price-low") query.sort = "price_asc";
   else if (sortBy === "price-high") query.sort = "price_desc";
   else if (sortBy === "newest") query.sort = "newest";

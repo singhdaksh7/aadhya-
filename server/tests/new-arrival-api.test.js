@@ -86,4 +86,19 @@ describe("effective New Arrivals across list API, homepage and collections", () 
     const res = await request.get(`/api/products?newArrival=true&category=na-cat-${suffix}&limit=50`);
     expect(res.body.data.map((p) => p.id)).not.toContain(ids.old);
   });
+
+  it("MANUAL mode still returns exactly the curated products (and AUTO restores the effective rule)", async () => {
+    await updatePageSection(sectionId, { settings: { limit: 24, sourceMode: "MANUAL", productIds: [ids.old] } });
+    try {
+      const res = await request.get("/api/pages/home");
+      const section = res.body.data.sections.find((s) => s.id === sectionId);
+      expect(section.products.map((p) => p.id)).toEqual([ids.old]);
+    } finally {
+      await updatePageSection(sectionId, { settings: { limit: 24, sourceMode: "AUTO" } });
+    }
+    const after = await request.get("/api/pages/home");
+    const auto = after.body.data.sections.find((s) => s.id === sectionId).products.map((p) => p.id);
+    expect(auto).not.toContain(ids.old);
+    expect(auto).toContain(ids.fresh);
+  });
 });

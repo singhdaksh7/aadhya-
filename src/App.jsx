@@ -114,7 +114,7 @@ function SiteLayout() {
                 <Route path="/shop/category/:slug" element={<CategoryStorefront />} />
                 <Route path="/books" element={<BooksStorefront />} />
                 <Route path="/shop/books" element={<BooksStorefront />} />
-                <Route path="/new-arrivals" element={<ProductCatalog eyebrow="Fresh Drops" title="New Arrivals" />} />
+                <Route path="/new-arrivals" element={<ProductCatalog eyebrow="Fresh Drops" title="New Arrivals" lockedNewArrival />} />
                 <Route path="/best-sellers" element={<ProductCatalog eyebrow="Customer Favorites" title="Best Sellers" />} />
                 <Route path="/search" element={<SearchResults />} />
 
